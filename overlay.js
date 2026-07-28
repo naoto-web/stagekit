@@ -142,14 +142,39 @@
     return window.Derive.raceKey(v.name, rNo);
   }
 
+  /** 買い目1行を車番色チップの並びとして描画する */
+  function lineChips(raw, small) {
+    return window.Keirin.displayTokens(raw).map(function (tk) {
+      switch (tk.t) {
+        case "car": return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + '">' + tk.v + "</i>";
+        case "sep": return '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
+        case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
+        case "all": return '<span class="pl-all">全</span>';
+        case "gap": return '<span class="pl-gap"></span>';
+        default: return '<span class="pl-txt">' + esc(tk.v) + "</span>";
+      }
+    }).join("");
+  }
+
   function renderPreds() {
     var key = currentKey();
     ["a", "b"].forEach(function (slot, idx) {
       var rc = state.racers[idx];
       var name = rc ? rc.name : "";
+      var color = rc ? window.Derive.colorOf(rc.color) : "";
       ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
         var el = $(p + slot);
-        if (el) el.textContent = name;
+        if (!el) return;
+        el.textContent = name;
+        // チームカラー：ネームプレートのアクセントとカメラ枠線
+        var plate = el.parentElement;
+        if (plate && plate.classList.contains("nameplate")) {
+          plate.style.borderLeftColor = color;
+          var dot = plate.querySelector(".np-dot");
+          if (dot) dot.style.background = color;
+        }
+        var cam = el.closest(".cam");
+        if (cam) cam.style.borderColor = color;
       });
       var head = $("pred-head-" + slot);
       if (head) head.textContent = name + " 予想";
@@ -159,9 +184,8 @@
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
       var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok; }) : [];
       var memos = rp ? rp.parsed.memos : [];
-      var sizeStyle = okLines.length > 3 ? ' style="font-size:22px"' : "";
       var linesHtml = okLines.map(function (l) {
-        return '<div class="pred-line"' + sizeStyle + ">" + esc(l.raw.trim()) + "</div>";
+        return '<div class="pred-line chips">' + lineChips(l.raw) + "</div>";
       }).join("");
       var metaParts = [];
       if (memos.length) metaParts.push(esc(memos.join("　")));
@@ -172,7 +196,7 @@
       if (body) body.innerHTML = linesHtml + metaHtml;
       var band = $("band-pred-" + slot);
       if (band) band.innerHTML =
-        okLines.map(function (l) { return "<div>" + esc(l.raw.trim()) + "</div>"; }).join("") +
+        okLines.map(function (l) { return '<div class="buy-line-row">' + lineChips(l.raw, true) + "</div>"; }).join("") +
         (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点</div>" : "");
 
       // 投資/回収＝日次累計（§8）
@@ -415,7 +439,7 @@
     var merged = Object.assign({}, base, s);
     merged.cfg = Object.assign({}, base.cfg, s.cfg || {});
     merged.ad = Object.assign({}, base.ad, s.ad || {});
-    state = merged;
+    state = window.Derive.normalizeState(merged);
     derived = window.Derive.day(state);
     syncPath = path;
     lastSyncAt = new Date();
