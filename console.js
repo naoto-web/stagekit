@@ -492,6 +492,11 @@
             var next = nextRaceOf(v.name);
             if (next) state.currentRace[v.name] = next.no;
           }
+          // グレードはタイムテーブルの自動取得値をプリセット（手で上書き可）
+          if (!state.grade[v.name]) {
+            var tv = (timetable && timetable.venues || []).filter(function (x) { return x.name === v.name; })[0];
+            if (tv && tv.grade) state.grade[v.name] = tv.grade;
+          }
         });
         renderSettings();
       });
