@@ -15,7 +15,10 @@
   <span class="next-race" id="next-race"></span>
 </header>
 <div class="warn hidden" id="stale-warn"></div>
-<div class="warn key-warn hidden" id="key-warn">⚠ 書込キー未設定：URL末尾に <code>?key=…</code> が必要です</div>
+<div class="warn key-warn hidden" id="key-warn">⚠ 書込キー未設定（保存ができません）
+  <input type="password" id="key-input" class="inp slim" placeholder="書込キーを貼り付け">
+  <button class="btn small" id="btn-key-save">保存して再読込</button>
+</div>
 <div class="warn newday hidden" id="newday-warn">
   <span id="newday-text"></span>
   <button class="btn small" id="btn-newday">新しい日を開始</button>
@@ -89,7 +92,7 @@
 </section>
 
 <!-- ══════════ 本日設定 ══════════ -->
-<details class="card">
+<details class="card" id="setup-card">
   <summary><h2>本日設定</h2></summary>
   <label class="lbl">本日の場（タイムテーブルから最大2つ選択）</label>
   <div class="venue-pick" id="venue-pick"></div>
