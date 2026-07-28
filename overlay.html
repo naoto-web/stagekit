@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>overlay</title>
+<link rel="stylesheet" href="overlay.css">
+</head>
+<body class="scene-talk" data-theme="a">
+
+<div class="stage" id="stage">
+  <svg id="backdrop" width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="none"></svg>
+
+  <!-- ==== 全シーン共通ヘッダー ==== -->
+  <header class="gbar">
+    <div class="brand"><span class="brand-mark">OKL</span><span class="brand-sub">競輪LIVE</span></div>
+    <div class="venue-tabs" id="vtabs"></div>
+    <div class="clock-box"><span class="clock-date" data-clock-date></span><span class="clock-time" data-clock-time></span></div>
+    <div class="sp-logo">SPONSOR<br>ロゴ</div>
+  </header>
+
+  <!-- ================= ①トークシーン ================= -->
+  <section class="scene" id="scene-talk">
+    <div class="talk-cams">
+      <div class="cam" data-hole><div class="cam-ph">👤</div><div class="nameplate letter"><i class="np-dot"></i><span id="np-talk-a"></span></div></div>
+      <div class="cam" data-hole><div class="cam-ph">👤</div><div class="nameplate letter"><i class="np-dot alt"></i><span id="np-talk-b"></span></div></div>
+    </div>
+
+    <div class="talk-band">
+      <div class="panel pred-panel">
+        <div class="panel-head" id="pred-head-a">予想</div><div class="pred-body" id="pred-a"></div>
+      </div>
+      <div class="panel invest-panel" id="invest-a"></div>
+      <div class="panel pred-panel">
+        <div class="panel-head" id="pred-head-b">予想</div><div class="pred-body" id="pred-b"></div>
+      </div>
+      <div class="panel invest-panel" id="invest-b"></div>
+    </div>
+
+    <aside class="vrail">
+      <div class="panel timer-panel">
+        <div class="panel-head">レースタイマー</div>
+        <ul class="timer-list" id="timer-talk"></ul>
+      </div>
+      <div class="panel hits-panel">
+        <div class="panel-head">的中速報<span class="panel-head-sub">本日・無料公開分</span></div>
+        <ul class="hits-list" id="hits-talk"></ul>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ================= ②レース観戦シーン ================= -->
+  <section class="scene" id="scene-race">
+    <div class="video-frame">
+      <div class="vf-top">
+        <span class="vf-venue" id="video-label"></span><span class="vf-grade" id="vf-grade"></span>
+        <span class="vf-start" id="vf-start"></span>
+      </div>
+      <div class="vf-screen" data-hole><div class="video-ph">レース映像（許諾映像）</div></div>
+      <div class="vf-bottom">
+        <span class="vf-shime" id="vf-shime"></span>
+        <span class="vf-count"><em id="vf-count-label"></em><span id="vf-count"></span></span>
+      </div>
+    </div>
+
+    <aside class="vrail race-rail">
+      <div class="panel timer-panel">
+        <div class="panel-head">レースタイマー</div>
+        <ul class="timer-list" id="timer-race"></ul>
+      </div>
+      <div class="race-grid">
+        <div class="cam" data-hole><div class="cam-ph small">👤</div><div class="nameplate mini"><i class="np-dot"></i><span id="np-race-a"></span></div></div>
+        <div class="cam" data-hole><div class="cam-ph small">👤</div><div class="nameplate mini"><i class="np-dot alt"></i><span id="np-race-b"></span></div></div>
+        <div class="panel"><div class="panel-head sm" id="band-head-a">予想</div><div class="buy-line" id="band-pred-a"></div></div>
+        <div class="panel"><div class="panel-head sm" id="band-head-b">予想</div><div class="buy-line" id="band-pred-b"></div></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ================= ③結果・的中シーン ================= -->
+  <section class="scene" id="scene-result">
+    <div class="panel race-chips" id="race-chips"><span class="chips-title">本日の結果</span><span id="race-chips-body"></span></div>
+
+    <div class="panel result-panel">
+      <div class="panel-head" id="result-title">レース結果</div>
+      <div class="result-rows" id="result-rows"></div>
+      <div class="payout-grid" id="payout-grid"></div>
+    </div>
+
+    <div class="hit-badge hidden" id="hit-badge"><span class="hit-main" id="hit-main"></span><span class="hit-sub" id="hit-sub"></span></div>
+
+    <div class="cams small-cams">
+      <div class="cam" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot"></i><span id="np-result-a"></span></div></div>
+      <div class="cam" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot alt"></i><span id="np-result-b"></span></div></div>
+    </div>
+
+    <div class="ticker" id="ticker"><div class="ticker-inner" id="ticker-result"></div></div>
+  </section>
+
+  <!-- ================= ④待機シーン ================= -->
+  <section class="scene" id="scene-brb">
+    <div class="brb-center">
+      <div class="brand big"><span class="brand-mark">OKL</span><span class="brand-sub">競輪LIVE</span></div>
+      <div class="brb-msg" id="brb-msg"></div>
+      <div class="brb-next" id="brb-next"></div>
+      <ul class="brb-list" id="brb-list"></ul>
+    </div>
+  </section>
+
+  <!-- ================= ⑤広告シーン ================= -->
+  <section class="scene" id="scene-ad">
+    <div class="panel ad-panel">
+      <div class="ad-logo">SPONSOR LOGO</div>
+      <div class="ad-title" id="ad-title"></div>
+      <ul class="ad-list" id="ad-list"></ul>
+      <div class="ad-progress" id="ad-progress">
+        <span class="ad-goal" id="ad-goal"></span>
+        <div class="ad-bar"><div class="ad-bar-fill" id="ad-bar-fill"></div></div>
+        <span class="ad-nums" id="ad-nums"></span>
+      </div>
+    </div>
+
+    <div class="ad-wipes">
+      <div class="cam ad-wipe" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot"></i><span id="np-ad-a"></span></div></div>
+      <div class="cam ad-wipe" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot alt"></i><span id="np-ad-b"></span></div></div>
+    </div>
+
+    <div class="promo-chip">プロモーションを含みます（有料プロモーション設定ON）</div>
+  </section>
+</div>
+
+<div class="dbg" id="dbg"></div>
+
+<script src="config.js"></script>
+<script src="keirin.js"></script>
+<script src="derive.js"></script>
+<script src="sync.js"></script>
+<script src="overlay.js"></script>
+</body>
+</html>
