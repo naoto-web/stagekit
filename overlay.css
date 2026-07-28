@@ -173,6 +173,11 @@ body.debug .cam-ph { display: flex; }
 .sl-sub { margin-left: auto; font-size: 13px; color: var(--sub); font-weight: 700;
   text-align: right; font-variant-numeric: tabular-nums; }
 .slist-empty { padding: 14px; color: var(--sub); font-weight: 700; font-size: 15px; list-style: none; }
+/* 並び（ライン）＝出走表の下に車番チップをグループ表示 */
+.narabi-row { display: flex; align-items: center; gap: 16px; padding: 10px 12px;
+  border-top: 1.5px solid var(--panel-line); flex-wrap: wrap; background: rgba(0,0,0,.25); }
+.nb-label { font-size: 14px; font-weight: 900; color: var(--sub); letter-spacing: .1em; }
+.nb-group { display: flex; gap: 4px; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }
@@ -296,6 +301,7 @@ body.debug .video-ph { display: flex; }
   display: inline-flex; white-space: nowrap; font-size: 22px; font-weight: 800; color: var(--txt);
   animation: tick 28s linear infinite;
 }
+.ticker-inner.static { animation: none; padding-left: 24px; color: var(--sub); }
 .tick-copy { display: inline-flex; gap: 64px; padding-right: 64px; }
 @keyframes tick { to { transform: translateX(-50%); } }
 .tick-manche { color: #ff4d4d; font-weight: 900; }
