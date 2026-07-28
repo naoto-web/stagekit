@@ -290,4 +290,3 @@ body.debug .video-ph { display: flex; }
   font-size: 14px; font-weight: 700; color: #fff; background: rgba(0,0,0,.7);
   padding: 6px 12px; border-radius: 6px; font-family: Consolas, monospace; }
 body.debug .dbg { display: block; }
-body.debug .vtab { pointer-events: auto; cursor: pointer; }
