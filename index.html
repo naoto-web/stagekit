@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>live tools</title>
+<style>
+  body { font-family: "Yu Gothic UI", sans-serif; background: #1c1e24; color: #e8e8ec;
+         max-width: 640px; margin: 40px auto; padding: 0 20px; line-height: 2; }
+  a { color: #d9a441; }
+  h1 { font-size: 18px; }
+  code { background: #2a2d34; padding: 2px 8px; border-radius: 4px; font-size: 13px; }
+  li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<h1>配信ツール</h1>
+<ul>
+  <li><a href="console.html">コンソール</a>（OBSカスタムドック用・要 <code>?key=</code>）</li>
+  <li>オーバーレイ（OBSブラウザソース用・1920×1080）
+    <ul>
+      <li><a href="overlay.html?scene=talk&debug=1">①トーク</a></li>
+      <li><a href="overlay.html?scene=race&debug=1">②レース観戦</a></li>
+      <li><a href="overlay.html?scene=result&debug=1">③結果・的中</a></li>
+      <li><a href="overlay.html?scene=brb&debug=1">④待機</a></li>
+      <li><a href="overlay.html?scene=ad&debug=1">⑤広告</a></li>
+    </ul>
+  </li>
+</ul>
+<p>ブラウザ確認用リンクは <code>debug=1</code> 付き（カメラ・映像枠にプレースホルダ表示）。<br>
+OBSに設定するURLからは <code>&amp;debug=1</code> を外す（透過穴になる）。<br>
+配色プレビュー：URL末尾に <code>&amp;theme=b</code> または <code>&amp;theme=c</code>。</p>
+</body>
+</html>
