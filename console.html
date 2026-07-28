@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>配信コンソール</title>
+<link rel="stylesheet" href="console.css">
+</head>
+<body>
+
+<!-- ステータスバー（常時表示） -->
+<header class="statusbar">
+  <span class="sync-dot" id="sync-dot"></span>
+  <span class="sync-text" id="sync-text">接続中…</span>
+  <span class="next-race" id="next-race"></span>
+</header>
+<div class="warn hidden" id="stale-warn"></div>
+<div class="warn key-warn hidden" id="key-warn">⚠ 書込キー未設定：URL末尾に <code>?key=…</code> が必要です</div>
+<div class="warn newday hidden" id="newday-warn">
+  <span id="newday-text"></span>
+  <button class="btn small" id="btn-newday">新しい日を開始</button>
+</div>
+
+<!-- ══════════ 場・レース ══════════ -->
+<section class="card">
+  <h2>場・レース</h2>
+  <div class="venue-row" id="venue-row"></div>
+  <div class="race-chip-grid" id="race-chips"></div>
+  <div class="row gap">
+    <button class="btn" id="btn-next-race">次のレースへ ▶</button>
+  </div>
+</section>
+
+<!-- ══════════ 予想入力 ══════════ -->
+<section class="card">
+  <h2>予想入力 <span class="h-sub" id="pred-target"></span></h2>
+  <div id="pred-forms"></div>
+</section>
+
+<!-- ══════════ 結果入力 ══════════ -->
+<section class="card">
+  <h2>結果入力 <span class="h-sub" id="result-target"></span></h2>
+
+  <label class="lbl">着順（例：1-9-2）</label>
+  <input type="text" id="res-order" class="inp big" placeholder="1-9-2" inputmode="numeric">
+
+  <div class="grid3">
+    <input type="text" id="res-name-1" class="inp" placeholder="1着 選手名(任意)">
+    <input type="text" id="res-name-2" class="inp" placeholder="2着 選手名(任意)">
+    <input type="text" id="res-name-3" class="inp" placeholder="3着 選手名(任意)">
+  </div>
+  <div class="grid3">
+    <input type="text" id="res-kim-1" class="inp" placeholder="決まり手(任意)">
+    <input type="text" id="res-kim-2" class="inp" placeholder="上がり等(任意)">
+    <span></span>
+  </div>
+
+  <label class="lbl">払戻（100円あたり・円）</label>
+  <div id="payout-rows"></div>
+  <div class="row gap">
+    <select id="payout-add-type" class="inp slim">
+      <option>3連単</option><option>3連複</option><option>2車単</option><option>2車複</option><option>ワイド</option>
+    </select>
+    <input type="text" id="payout-add-combo" class="inp slim" placeholder="組合せ 1-9-2">
+    <button class="btn small" id="btn-payout-add">行を追加</button>
+  </div>
+
+  <details class="exp">
+    <summary>結果ページ貼り付け解析（実験的）</summary>
+    <textarea id="res-paste" class="inp" rows="4" placeholder="結果・払戻ページの文字列を貼り付け"></textarea>
+    <button class="btn small" id="btn-paste-parse">解析して転記</button>
+    <div class="hint" id="paste-hint"></div>
+  </details>
+
+  <div class="settle-preview" id="settle-preview"></div>
+  <button class="btn primary" id="btn-settle">結果を確定（的中・回収を自動更新）</button>
+</section>
+
+<!-- ══════════ 的中速報 ══════════ -->
+<section class="card">
+  <h2>的中速報</h2>
+  <ul class="hit-admin" id="hit-admin"></ul>
+  <div class="row gap">
+    <select id="hit-add-racer" class="inp slim"></select>
+    <input type="text" id="hit-add-place" class="inp slim" placeholder="場R（例:玉野7R）">
+    <input type="number" id="hit-add-mult" class="inp slim" placeholder="倍率">
+    <button class="btn small" id="btn-hit-add">追加</button>
+  </div>
+</section>
+
+<!-- ══════════ 本日設定 ══════════ -->
+<details class="card">
+  <summary><h2>本日設定</h2></summary>
+  <label class="lbl">本日の場（タイムテーブルから最大2つ選択）</label>
+  <div class="venue-pick" id="venue-pick"></div>
+  <div id="grade-inputs"></div>
+
+  <label class="lbl">配信者（2名）</label>
+  <div class="row gap">
+    <select id="racer-1" class="inp"></select>
+    <select id="racer-2" class="inp"></select>
+  </div>
+  <label class="lbl">ロースター（改行区切り・表示名）</label>
+  <textarea id="roster" class="inp" rows="3"></textarea>
+
+  <div class="row gap">
+    <label class="lbl inline">公式締切 発走−<input type="number" id="cfg-close" class="inp tiny">分</label>
+    <label class="lbl inline">ネット締切 発走−<input type="number" id="cfg-netclose" class="inp tiny">分</label>
+  </div>
+  <button class="btn" id="btn-save-settings">設定を保存</button>
+</details>
+
+<!-- ══════════ 画面素材（広告・待機） ══════════ -->
+<details class="card">
+  <summary><h2>広告・待機シーン</h2></summary>
+  <label class="lbl">⑤広告：タイトル</label>
+  <input type="text" id="ad-title" class="inp">
+  <label class="lbl">内容（1行1項目）</label>
+  <textarea id="ad-lines" class="inp" rows="3"></textarea>
+  <div class="row gap">
+    <label class="lbl inline"><input type="checkbox" id="ad-show-progress"> 進捗バー</label>
+    <input type="text" id="ad-goal" class="inp slim" placeholder="ラベル(応募状況)">
+    <input type="number" id="ad-cur" class="inp tiny" placeholder="現在">
+    <input type="number" id="ad-max" class="inp tiny" placeholder="目標">
+    <input type="text" id="ad-unit" class="inp tiny" placeholder="単位(名)">
+  </div>
+  <label class="lbl">④待機メッセージ</label>
+  <input type="text" id="brb-msg" class="inp">
+  <button class="btn" id="btn-save-assets">保存</button>
+</details>
+
+<!-- ══════════ 接続・診断 ══════════ -->
+<details class="card">
+  <summary><h2>接続・診断</h2></summary>
+  <div class="hint" id="diag-info"></div>
+  <div class="row gap">
+    <button class="btn small" id="btn-bc-test">オーバーレイ疎通テスト(BC)</button>
+    <button class="btn small" id="btn-tt-refresh">タイムテーブル再取得</button>
+  </div>
+  <div class="hint" id="diag-result"></div>
+</details>
+
+<script src="config.js"></script>
+<script src="keirin.js"></script>
+<script src="derive.js"></script>
+<script src="sync.js"></script>
+<script src="console.js"></script>
+</body>
+</html>
