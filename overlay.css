@@ -195,6 +195,8 @@ body.debug .video-ph { display: flex; }
   font-size: 40px; font-weight: 900; color: var(--hot); font-variant-numeric: tabular-nums; }
 .vf-count em { font-style: normal; font-size: 18px; color: var(--sub); font-weight: 700; }
 
+/* タイマーを固定高にして、下のワイプ穴の座標を不変にする（OBS側カメラ位置とのズレ防止） */
+.race-rail .timer-panel { flex: 0 0 248px; }
 .race-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 118px 1fr; gap: 0; }
 .buy-line { padding: 12px 14px; font-size: 21px; font-weight: 900;
   font-variant-numeric: tabular-nums; letter-spacing: .03em; line-height: 1.7; }
