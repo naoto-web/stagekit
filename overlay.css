@@ -146,7 +146,25 @@ body.debug .cam-ph { display: flex; }
 
 .pred-body { padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
 .pred-line { font-size: 32px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: .05em; }
+.pred-line.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .pred-meta { font-size: 16px; color: var(--sub); font-weight: 700; }
+
+/* 買い目の色チップ表示（車番＝競輪9色・記号は控えめに） */
+.car.sm { width: 26px; height: 26px; font-size: 15px; border-radius: 5px; }
+.pl-sep { font-size: 26px; font-weight: 900; color: var(--sub); padding: 0 3px; }
+.pl-type { font-size: 14px; font-weight: 900; color: var(--acc-text); background: var(--acc);
+  padding: 3px 9px; border-radius: 6px; margin-right: 4px; }
+.pl-txt { font-size: 16px; font-weight: 800; color: var(--sub); }
+.pl-all {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 6px; font-weight: 900; font-size: 17px;
+  background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.3); color: var(--txt);
+}
+.pl-gap { width: 12px; }
+.buy-line-row { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin-bottom: 8px; }
+.buy-line-row .pl-sep { font-size: 18px; padding: 0 1px; }
+.buy-line-row .pl-all { width: 26px; height: 26px; font-size: 14px; }
+.buy-line-row .pl-type { font-size: 12px; padding: 2px 6px; }
 
 .vrail { position: absolute; right: 8px; top: 96px; width: 400px; bottom: 8px;
   display: flex; flex-direction: column; gap: 0; }
