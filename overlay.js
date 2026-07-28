@@ -206,7 +206,9 @@
     var v = state.venues[state.activeVenue];
     var rNo = v ? state.currentRace[v.name] : null;
     $("video-label").textContent = v && rNo ? v.name + " " + rNo + "R" : (v ? v.name : "");
-    $("vf-grade").textContent = v ? (state.grade[v.name] || "") : "";
+    var gradeText = v ? (state.grade[v.name] || "") : "";
+    $("vf-grade").textContent = gradeText;
+    $("vf-grade").style.display = gradeText ? "" : "none"; // 空のバッジ枠を残さない
     var race = v && rNo ? findRace(v.name, rNo) : null;
     $("vf-start").textContent = race ? "発走 " + race.start : "";
     if (race) {
