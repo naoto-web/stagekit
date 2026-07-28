@@ -1,0 +1,152 @@
+/* console.css — OBSカスタムドック用（幅300〜450px想定・ダーク） */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  background: #1c1e24; color: #e8e8ec; font-size: 14px;
+  padding-bottom: 40px;
+}
+
+/* ---------- ステータスバー ---------- */
+.statusbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  background: #26292f; border-bottom: 1px solid #3a3e46;
+}
+.sync-dot { width: 10px; height: 10px; border-radius: 50%; background: #777; flex: 0 0 auto; }
+.sync-dot.ok { background: #37d67a; }
+.sync-dot.err { background: #ff5d5d; }
+.sync-text { font-size: 12px; color: #9aa0ab; }
+.next-race { margin-left: auto; font-size: 13px; font-weight: 900; color: #d9a441; font-variant-numeric: tabular-nums; }
+
+.warn {
+  margin: 8px 10px 0; padding: 8px 12px; border-radius: 8px;
+  background: #4a3419; border: 1px solid #d9a441; color: #ffd98a;
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.warn.key-warn { background: #4a1919; border-color: #ff5d5d; color: #ffb3b3; }
+.warn code { background: rgba(0,0,0,.4); padding: 1px 6px; border-radius: 4px; }
+.hidden { display: none !important; }
+
+/* ---------- カード ---------- */
+.card {
+  margin: 10px; padding: 12px; border-radius: 10px;
+  background: #24272e; border: 1px solid #363a43;
+}
+.card h2 { font-size: 15px; color: #d9a441; margin-bottom: 10px; display: inline-block; }
+.h-sub { font-size: 12px; color: #9aa0ab; font-weight: 700; margin-left: 6px; }
+details.card summary { cursor: pointer; list-style: none; }
+details.card summary h2 { margin-bottom: 0; }
+details.card summary::before { content: "▸ "; color: #9aa0ab; }
+details.card[open] summary::before { content: "▾ "; }
+details.card[open] summary { margin-bottom: 10px; }
+
+.lbl { display: block; font-size: 12px; color: #9aa0ab; font-weight: 700; margin: 10px 0 4px; }
+.lbl.inline { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+.row { display: flex; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.row.gap { gap: 8px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
+
+.inp {
+  width: 100%; font: inherit; font-size: 14px; color: #e8e8ec;
+  background: #1a1c21; border: 1px solid #4a4f59; border-radius: 6px;
+  padding: 7px 10px;
+}
+.inp:focus { outline: none; border-color: #d9a441; }
+.inp.big { font-size: 20px; font-weight: 900; letter-spacing: .1em; }
+.inp.slim { width: auto; flex: 1; min-width: 70px; }
+.inp.tiny { width: 64px; flex: 0 0 auto; }
+textarea.inp { resize: vertical; line-height: 1.6; }
+
+.btn {
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  padding: 8px 14px; border-radius: 8px;
+  border: 1px solid #4a4f59; background: #31353d; color: #d6d9de;
+}
+.btn:hover { background: #3a3f49; }
+.btn.small { font-size: 12px; padding: 5px 10px; }
+.btn.primary {
+  width: 100%; margin-top: 10px; padding: 12px;
+  background: #d9a441; border-color: #d9a441; color: #1a1a1a; font-weight: 900; font-size: 15px;
+}
+.btn.primary:hover { background: #e5b455; }
+.btn.danger { background: #6e2424; border-color: #a33; color: #ffd6d6; }
+.btn.confirm { background: #a33; border-color: #ff5d5d; color: #fff; }
+
+/* ---------- 場・レース ---------- */
+.venue-row { display: flex; gap: 8px; }
+.vbtn {
+  flex: 1; font: inherit; font-size: 16px; font-weight: 900; cursor: pointer;
+  padding: 10px; border-radius: 8px; border: 1.5px solid #4a4f59;
+  background: #1a1c21; color: #d6d9de;
+}
+.vbtn.active { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
+.vbtn small { display: block; font-size: 11px; font-weight: 700; opacity: .8; }
+
+.race-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rc {
+  font: inherit; font-size: 14px; font-weight: 900; cursor: pointer;
+  width: 44px; padding: 7px 0; text-align: center; border-radius: 8px;
+  border: 1px solid #4a4f59; background: #1a1c21; color: #d6d9de;
+  font-variant-numeric: tabular-nums;
+}
+.rc.cur { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
+.rc.next { border-color: #ff5d5d; box-shadow: 0 0 0 1px #ff5d5d inset; }
+.rc.done { opacity: .45; }
+.rc small { display: block; font-size: 9px; font-weight: 700; }
+
+/* ---------- 予想フォーム ---------- */
+.pred-form { margin-top: 10px; padding: 10px; border-radius: 8px; background: #1f2127; border: 1px solid #363a43; }
+.pred-form h3 { font-size: 14px; color: #29c7d6; margin-bottom: 6px; }
+.pred-form h3 .alt { color: #ff8181; }
+.parse-info { margin-top: 6px; font-size: 12px; line-height: 1.7; color: #9aa0ab; font-variant-numeric: tabular-nums; }
+.parse-info .pl-ok b { color: #d9a441; }
+.parse-info .pl-memo { color: #6d7480; }
+.parse-total { margin-top: 4px; font-size: 13px; font-weight: 900; color: #e8e8ec; }
+.pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.pred-opts .lbl { margin: 0; }
+
+/* ---------- 払戻・精算 ---------- */
+.payout-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.payout-row .pr-label { flex: 0 0 auto; width: 110px; font-size: 13px; font-weight: 700; color: #9aa0ab; font-variant-numeric: tabular-nums; }
+.payout-row .inp { flex: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.payout-row .pr-del { flex: 0 0 auto; cursor: pointer; color: #6d7480; background: none; border: none; font-size: 14px; }
+
+.settle-preview {
+  margin-top: 10px; padding: 8px 12px; border-radius: 8px;
+  background: #1a1c21; border: 1px dashed #4a4f59;
+  font-size: 13px; line-height: 1.8; font-variant-numeric: tabular-nums;
+}
+.settle-preview .hit { color: #37d67a; font-weight: 900; }
+.settle-preview .manche { color: #ff4d4d; font-weight: 900; }
+.settle-preview .miss { color: #6d7480; }
+
+/* ---------- 的中管理 ---------- */
+.hit-admin { list-style: none; }
+.hit-admin li {
+  display: flex; align-items: center; gap: 8px; padding: 6px 4px;
+  border-bottom: 1px solid #31353d; font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hit-admin .ha-name { color: #d9a441; }
+.hit-admin .ha-mult { margin-left: auto; }
+.hit-admin li.manche .ha-mult { color: #ff4d4d; font-weight: 900; }
+.hit-admin .ha-del { cursor: pointer; color: #6d7480; background: none; border: none; font-size: 13px; }
+
+/* ---------- 設定・その他 ---------- */
+.venue-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.vp {
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid #4a4f59;
+  background: #1a1c21; color: #d6d9de;
+}
+.vp.sel { background: #29c7d6; border-color: #29c7d6; color: #04181b; }
+
+.exp { margin-top: 10px; }
+.exp summary { font-size: 12px; color: #9aa0ab; cursor: pointer; }
+.exp textarea { margin-top: 6px; }
+.exp .btn { margin-top: 6px; }
+
+.hint { margin-top: 6px; font-size: 12px; color: #9aa0ab; line-height: 1.7; word-break: break-all; }
