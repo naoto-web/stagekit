@@ -516,21 +516,31 @@
         '<input type="text" class="inp grade-inp" data-n="' + esc(v.name) + '" value="' + esc(state.grade[v.name] || "") + '" placeholder="例）F1 ナイター">';
     }).join("");
 
-    var opts = state.roster.map(function (n) { return "<option>" + esc(n) + "</option>"; }).join("");
+    var opts = state.roster.map(function (r) { return "<option>" + esc(r.name) + "</option>"; }).join("");
     $("racer-1").innerHTML = opts;
     $("racer-2").innerHTML = opts;
     if (state.racers[0]) $("racer-1").value = state.racers[0].name;
     if (state.racers[1]) $("racer-2").value = state.racers[1].name;
-    $("roster").value = state.roster.join("\n");
+    $("roster").value = state.roster.map(function (r) {
+      return r.name + (r.color ? " " + r.color : "");
+    }).join("\n");
     $("cfg-close").value = state.cfg.closeMin;
     $("cfg-netclose").value = state.cfg.netCloseMin;
   }
 
   $("btn-save-settings").addEventListener("click", function () {
-    state.roster = $("roster").value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    state.roster = $("roster").value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean)
+      .map(function (line) {
+        var parts = line.split(/\s+/);
+        return { name: parts[0], color: parts.slice(1).join(" ") };
+      });
+    var colorFor = function (name) {
+      var m = state.roster.filter(function (r) { return r.name === name; })[0];
+      return m ? m.color : "";
+    };
     state.racers = [
-      { id: "r1", name: $("racer-1").value || "配信者1" },
-      { id: "r2", name: $("racer-2").value || "配信者2" },
+      { id: "r1", name: $("racer-1").value || "配信者1", color: colorFor($("racer-1").value) },
+      { id: "r2", name: $("racer-2").value || "配信者2", color: colorFor($("racer-2").value) },
     ];
     document.querySelectorAll(".grade-inp").forEach(function (inp) {
       state.grade[inp.getAttribute("data-n")] = inp.value.trim();
@@ -698,6 +708,7 @@
       state = Object.assign({}, base, s);
       state.cfg = Object.assign({}, base.cfg, s.cfg || {});
       state.ad = Object.assign({}, base.ad, s.ad || {});
+      window.Derive.normalizeState(state);
     } else {
       state = window.Derive.defaultState(todayStr());
     }
