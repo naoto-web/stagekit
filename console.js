@@ -172,7 +172,7 @@
         '<label class="lbl inline">式別 <select class="inp tiny pf-type">' +
         window.Keirin.TYPES.map(function (t) { return "<option" + (t === p.defaultType ? " selected" : "") + ">" + t + "</option>"; }).join("") +
         "</select></label>" +
-        '<label class="lbl inline">単価 <input type="number" class="inp tiny pf-unit" value="' + (p.unit || "") + '">円</label>' +
+        '<label class="lbl inline">単価 <input type="number" class="inp tiny pf-unit" step="100" min="0" value="' + (p.unit || "") + '">円</label>' +
         '<label class="lbl inline">投資額 <input type="number" class="inp tiny pf-invest" value="' + (p.investInput || "") + '" placeholder="自動">円</label>' +
         "</div>" +
         '<div class="parse-total pf-total"></div>' +
@@ -189,6 +189,14 @@
       var update = function () { updatePredInfo(form, key); };
       ["pf-text", "pf-type", "pf-unit", "pf-invest"].forEach(function (cls) {
         form.querySelector("." + cls).addEventListener("input", update);
+      });
+      form.addEventListener("click", function (e) {
+        var t = e.target;
+        if (t.classList && t.classList.contains("snap-unit")) {
+          form.querySelector(".pf-unit").value = t.getAttribute("data-u");
+          form.querySelector(".pf-invest").value = "";
+          updatePredInfo(form, key);
+        }
       });
       form.querySelector(".pf-save").addEventListener("click", function () {
         var entry = ensurePredEntry(key, racerId);
@@ -220,16 +228,25 @@
     }).join("");
     var unit = +form.querySelector(".pf-unit").value || 0;
     var investInput = +form.querySelector(".pf-invest").value || 0;
-    var invest, unitShow;
+    var invest, unitExact;
     if (investInput > 0) {
       invest = investInput;
-      unitShow = parsed.points ? Math.round(investInput / parsed.points) : 0;
+      unitExact = parsed.points ? investInput / parsed.points : 0;
     } else {
       invest = parsed.points * unit;
-      unitShow = unit;
+      unitExact = unit;
     }
-    form.querySelector(".pf-total").textContent =
-      "合計 " + parsed.points + "点 × " + unitShow.toLocaleString("ja-JP") + "円 ＝ " + fmtYen(invest);
+    var unitShow = Math.round(unitExact);
+    var html = "合計 " + parsed.points + "点 × " + unitShow.toLocaleString("ja-JP") + "円 ＝ " + fmtYen(invest);
+    // 車券は100円単位。割り切れない単価は実買不可なので丸め候補を提示
+    if (parsed.points > 0 && unitExact > 0 && unitExact % 100 !== 0) {
+      var lo = Math.floor(unitExact / 100) * 100;
+      var hi = lo + 100;
+      html += '<div class="unit-warn">⚠ 1点' + unitShow + "円は車券で買えない額（100円単位）→ ";
+      if (lo > 0) html += '<button class="btn small snap-unit" data-u="' + lo + '">' + lo + "円/点=" + fmtYen(lo * parsed.points) + "</button> ";
+      html += '<button class="btn small snap-unit" data-u="' + hi + '">' + hi + "円/点=" + fmtYen(hi * parsed.points) + "</button></div>";
+    }
+    form.querySelector(".pf-total").innerHTML = html;
   }
 
   /* ---------- 結果入力 ---------- */
