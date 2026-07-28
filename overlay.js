@@ -189,15 +189,30 @@
     });
   }
 
-  /* ---------- 的中速報 ---------- */
-  function renderHits() {
-    var el = $("hits-talk");
+  /* ---------- 出走表（①トーク右下・現在の場/レースに連動） ---------- */
+  function renderStartList() {
+    var el = $("slist-talk");
     if (!el) return;
-    el.innerHTML = derived.hits.slice(0, 8).map(function (h) {
-      return '<li class="hit-row' + (h.manche ? " manche" : "") + '">' +
-        '<span class="h-name">' + esc(h.racerName) + "</span>" +
-        '<span class="h-place">' + esc(h.place) + "</span>" +
-        '<span class="h-mult">' + h.mult + "倍</span></li>";
+    var v = state.venues[state.activeVenue];
+    var rNo = v ? state.currentRace[v.name] : null;
+    var race = null;
+    if (v && rNo && timetable) {
+      (timetable.venues || []).forEach(function (tv) {
+        if (tv.name !== v.name) return;
+        (tv.races || []).forEach(function (r) { if (r.no === +rNo) race = r; });
+      });
+    }
+    $("slist-sub").textContent = v && rNo
+      ? v.name + " " + rNo + "R" + (race && race.cls ? "　" + race.cls : "")
+      : "";
+    if (!race || !race.racers || !race.racers.length) {
+      el.innerHTML = '<li class="slist-empty">出走表データ取得待ち</li>';
+      return;
+    }
+    el.innerHTML = race.racers.map(function (p) {
+      var sub = [p.pref, p.term ? p.term + "期" : ""].filter(Boolean).join("・");
+      return '<li class="slist-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
+        '<span class="sl-name">' + esc(p.name) + '</span><span class="sl-sub">' + esc(sub) + "</span></li>";
     }).join("");
   }
 
@@ -286,11 +301,6 @@
   }
 
   function renderTicker() {
-    var el = $("ticker-result");
-    var wrap = $("ticker");
-    if (!el) return;
-    if (!derived.hits.length) { wrap.classList.add("hidden"); return; }
-    wrap.classList.remove("hidden");
     var items = derived.hits.slice().reverse().map(function (h) { // 古い順に流す
       if (h.manche && h.amount) {
         return '<span class="tick-manche">💥 万車速報：' + esc(h.place) + " " + esc(h.type) + " " + fmtYen(h.amount) + "</span>";
@@ -298,7 +308,15 @@
       return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + " " + esc(h.type) + " " + h.mult + "倍 的中</span>";
     }).join("");
     var copy = '<div class="tick-copy">' + items + "</div>";
-    el.innerHTML = copy + copy; // 同一コピー2つ＋半幅移動で継ぎ目なしループ
+    // ③結果と①トークの両方のティッカーに同じ内容を流す
+    [["ticker", "ticker-result"], ["ticker-talk-wrap", "ticker-talk"]].forEach(function (pair) {
+      var wrap = $(pair[0]);
+      var el = $(pair[1]);
+      if (!wrap || !el) return;
+      if (!derived.hits.length) { wrap.classList.add("hidden"); return; }
+      wrap.classList.remove("hidden");
+      el.innerHTML = copy + copy; // 同一コピー2つ＋半幅移動で継ぎ目なしループ
+    });
   }
 
   /* ---------- ④待機 ---------- */
@@ -386,7 +404,7 @@
   function renderAll() {
     renderVenueTabs();
     renderPreds();
-    renderHits();
+    renderStartList();
     renderRaceScene();
     renderResultScene();
     renderBrb();
@@ -416,6 +434,7 @@
       renderTimers();
       renderRaceScene();
       renderBrb();
+      renderStartList();
     }).catch(function () { /* 次回again */ });
   }
   loadTimetable();
