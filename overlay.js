@@ -214,6 +214,22 @@
       return '<li class="slist-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
         '<span class="sl-name">' + esc(p.name) + '</span><span class="sl-sub">' + esc(sub) + "</span></li>";
     }).join("");
+    renderNarabi(v, rNo);
+  }
+
+  /** 並び（ライン）＝コンソール入力の「135 27 46」を車番チップのグループ表示に */
+  function renderNarabi(v, rNo) {
+    var nb = $("narabi-talk");
+    if (!nb) return;
+    var txt = v && rNo ? ((state.narabi || {})[window.Derive.raceKey(v.name, rNo)] || "") : "";
+    var groups = window.Keirin.normalize(txt).split(/[^0-9]+/).filter(Boolean);
+    if (!groups.length) { nb.classList.add("hidden"); return; }
+    nb.classList.remove("hidden");
+    nb.innerHTML = '<span class="nb-label">並び</span>' + groups.map(function (g) {
+      return '<span class="nb-group">' + g.split("").map(function (n) {
+        return '<i class="car c' + n + '">' + n + "</i>";
+      }).join("") + "</span>";
+    }).join("");
   }
 
   /* ---------- ②レース観戦 ---------- */
@@ -308,13 +324,18 @@
       return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + " " + esc(h.type) + " " + h.mult + "倍 的中</span>";
     }).join("");
     var copy = '<div class="tick-copy">' + items + "</div>";
-    // ③結果と①トークの両方のティッカーに同じ内容を流す
+    // ③結果と①トークの両方のティッカーに同じ内容を流す（的中ゼロでもバーは常時表示）
     [["ticker", "ticker-result"], ["ticker-talk-wrap", "ticker-talk"]].forEach(function (pair) {
       var wrap = $(pair[0]);
       var el = $(pair[1]);
       if (!wrap || !el) return;
-      if (!derived.hits.length) { wrap.classList.add("hidden"); return; }
       wrap.classList.remove("hidden");
+      if (!derived.hits.length) {
+        el.classList.add("static");
+        el.innerHTML = "<span>🎯 的中速報｜本日の的中はここに流れます</span>";
+        return;
+      }
+      el.classList.remove("static");
       el.innerHTML = copy + copy; // 同一コピー2つ＋半幅移動で継ぎ目なしループ
     });
   }
