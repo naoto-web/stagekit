@@ -1,0 +1,293 @@
+/* ==========================================================
+   OBS配信画面オーバーレイ（本実装）— モックv2のデザインを踏襲
+   1920x1080固定・OBSブラウザソース用。
+   カメラ枠([data-hole])とレース映像枠は透過穴＝下のOBSレイヤーが見える。
+   配色はCSS変数（body[data-theme=a/b/c]）で一括切替。
+   ========================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 1920px; height: 1080px; overflow: hidden;
+  background: transparent;
+  font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+}
+
+.stage { position: absolute; inset: 0; width: 1920px; height: 1080px; color: var(--txt); }
+#backdrop { position: absolute; inset: 0; z-index: 0; }
+
+/* ---------- テーマ変数 ---------- */
+body {
+  --bg1: #0d1b2e; --bg2: #13253d;
+  --panel: rgba(16, 30, 50, .88); --panel-line: rgba(217, 164, 65, .45);
+  --acc: #d9a441; --acc-text: #1c1608;
+  --txt: #f2f4f8; --sub: #9fb0c6; --hot: #ff5d5d;
+  --cam-bg1: #2a3a52; --cam-bg2: #1a2638;
+}
+body[data-theme="b"] {
+  --bg1: #0e1114; --bg2: #14181d;
+  --panel: rgba(14, 20, 26, .9); --panel-line: rgba(41, 199, 214, .5);
+  --acc: #29c7d6; --acc-text: #04181b;
+  --txt: #eef6f8; --sub: #8fa6ad; --hot: #ff6161;
+  --cam-bg1: #1d2b31; --cam-bg2: #12191d;
+}
+body[data-theme="c"] {
+  --bg1: #17141a; --bg2: #221a1e;
+  --panel: rgba(26, 18, 22, .9); --panel-line: rgba(214, 60, 60, .55);
+  --acc: #d63c3c; --acc-text: #fff3f0;
+  --txt: #f5efee; --sub: #b09a9a; --hot: #ffb03a;
+  --cam-bg1: #3a2530; --cam-bg2: #211419;
+}
+
+/* ---------- シーン切替（URLパラメータで固定） ---------- */
+.scene { display: none; position: absolute; inset: 0; z-index: 1; }
+body.scene-talk   #scene-talk   { display: block; }
+body.scene-race   #scene-race   { display: block; }
+body.scene-result #scene-result { display: block; }
+body.scene-brb    #scene-brb    { display: block; }
+body.scene-ad     #scene-ad     { display: block; }
+
+/* ---------- 全シーン共通ヘッダー ---------- */
+.gbar {
+  position: absolute; top: 0; left: 0; right: 0; height: 96px; z-index: 10;
+  display: flex; align-items: center; gap: 22px; padding: 0 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.12));
+}
+
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand-mark {
+  font-size: 40px; font-weight: 900; letter-spacing: .04em; color: var(--acc);
+  text-shadow: 0 2px 10px rgba(0,0,0,.55);
+}
+.brand-sub { font-size: 18px; font-weight: 700; color: var(--sub); letter-spacing: .2em; }
+.brand.big { justify-content: center; }
+.brand.big .brand-mark { font-size: 96px; }
+.brand.big .brand-sub { font-size: 30px; }
+
+.clock-box { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.clock-date { font-size: 16px; color: var(--sub); font-weight: 700; }
+.clock-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+.venue-tabs { display: flex; gap: 10px; }
+.vtab {
+  padding: 8px 20px; border-radius: 10px; border: 1.5px solid var(--panel-line);
+  background: rgba(0,0,0,.35); font-weight: 900; font-size: 21px; color: var(--txt);
+  font-family: inherit; pointer-events: none;
+}
+.vtab.active { background: var(--acc); color: var(--acc-text); }
+.vtab small { font-size: 15px; margin-left: 4px; }
+
+.sp-logo {
+  width: 170px; height: 62px; border: 1px dashed var(--panel-line); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--sub); font-weight: 900; letter-spacing: .1em; font-size: 13px;
+  text-align: center; line-height: 1.5; background: rgba(0,0,0,.3);
+}
+
+.panel {
+  position: relative;
+  background: var(--panel); border: 1.5px solid var(--panel-line); border-radius: 0;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 20px; font-weight: 900; padding: 10px 16px;
+  background: linear-gradient(90deg, var(--acc), transparent 130%); color: var(--acc-text);
+}
+.panel-head.sm { font-size: 16px; padding: 7px 12px; }
+.panel-head-sub { margin-left: auto; font-size: 13px; font-weight: 700; opacity: .75; }
+
+/* 車番チップ（競輪標準9色） */
+.car {
+  display: inline-flex; align-items: center; justify-content: center; font-style: normal;
+  width: 34px; height: 34px; border-radius: 6px; font-weight: 900; font-size: 19px;
+  border: 2px solid rgba(0,0,0,.35);
+}
+.c1 { background: #fff;    color: #16181c; }
+.c2 { background: #17181c; color: #fff; border-color: rgba(255,255,255,.5); }
+.c3 { background: #d63b3b; color: #fff; }
+.c4 { background: #2f66d0; color: #fff; }
+.c5 { background: #e8c22e; color: #16181c; }
+.c6 { background: #2e9e4f; color: #fff; }
+.c7 { background: #ef7f1a; color: #fff; }
+.c8 { background: #e77fae; color: #16181c; }
+.c9 { background: #7d4fc9; color: #fff; }
+
+/* ---------- カメラ枠＝透過穴（枠線とネームプレートだけ描く） ---------- */
+.cam { position: relative; border-radius: 0; overflow: hidden;
+  background: transparent; border: 1.5px solid var(--panel-line); }
+.cam-ph { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; font-size: 110px; opacity: .28; }
+.cam-ph.small { font-size: 54px; }
+body.debug .cam-ph { display: flex; }
+.nameplate {
+  position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
+  font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 8px;
+  background: rgba(0,0,0,.62); border-left: 6px solid var(--acc); color: var(--txt);
+}
+.nameplate.mini { font-size: 15px; padding: 3px 10px; border-left-width: 4px; }
+.nameplate.letter { font-size: 26px; padding: 4px 22px; }
+.np-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--acc); }
+.np-dot.alt { background: var(--hot); }
+
+/* ---------- ①トーク ---------- */
+.talk-cams { position: absolute; left: 8px; top: 96px; width: 1504px; display: flex; gap: 0; }
+.talk-cams .cam { width: 752px; height: 423px; }
+
+.talk-band { position: absolute; left: 8px; top: 519px; bottom: 8px; width: 1504px; display: flex; gap: 0; }
+.talk-band .pred-panel { width: 452px; }
+.invest-panel { width: 300px; display: flex; flex-direction: column; gap: 12px;
+  padding: 18px; font-weight: 800; }
+.inv-row { display: flex; justify-content: space-between; align-items: baseline; }
+.inv-label { color: var(--sub); font-size: 15px; font-weight: 900; }
+.inv-num { font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 900; }
+.inv-rate2 { margin-top: auto; font-size: 20px; font-weight: 900; color: var(--sub); text-align: right; }
+.inv-rate2.plus { color: #37d67a; }
+
+.pred-body { padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.pred-line { font-size: 32px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: .05em; }
+.pred-meta { font-size: 16px; color: var(--sub); font-weight: 700; }
+
+.vrail { position: absolute; right: 8px; top: 96px; width: 400px; bottom: 8px;
+  display: flex; flex-direction: column; gap: 0; }
+.timer-panel { flex: 0 0 auto; }
+.timer-list { list-style: none; padding: 2px 0; }
+.timer-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.07); }
+.timer-row:last-child { border-bottom: none; }
+.t-venue { font-size: 20px; font-weight: 900; }
+.t-race { color: var(--acc); font-weight: 900; font-size: 20px; }
+.t-times { margin-left: auto; text-align: right; font-size: 13px; color: var(--sub);
+  line-height: 1.45; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer-row.active { background: rgba(255,255,255,.07); border-left: 4px solid var(--hot); padding-left: 10px; }
+.t-count { display: block; color: var(--hot); font-weight: 900; font-size: 14px; }
+
+.hits-panel { flex: 1; }
+.hits-list { list-style: none; padding: 2px 0; }
+.hit-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.07); font-size: 17px; font-weight: 800; }
+.h-name { color: var(--acc); flex: 0 0 auto; }
+.h-place { color: var(--sub); font-size: 15px; }
+.h-mult { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 19px; }
+.hit-row.manche .h-mult, .hit-row.manche .h-place { color: #ff4d4d; }
+.hit-row.manche .h-mult { font-weight: 900; }
+
+/* ---------- ②レース観戦 ---------- */
+.video-frame {
+  position: absolute; left: 8px; top: 96px; width: 1504px; bottom: 8px;
+  display: flex; flex-direction: column;
+  border: 1.5px solid var(--panel-line); border-radius: 0; overflow: hidden;
+  background: transparent;
+}
+.vf-top { height: 54px; flex: 0 0 auto; display: flex; align-items: center; gap: 14px; padding: 0 22px;
+  background: linear-gradient(90deg, var(--acc), var(--panel) 140%); color: var(--acc-text); }
+.vf-venue { font-size: 26px; font-weight: 900; }
+.vf-grade { font-size: 15px; font-weight: 900; padding: 2px 10px; border-radius: 6px;
+  background: rgba(0,0,0,.35); color: #fff; }
+.vf-start { margin-left: auto; font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.vf-screen { position: relative; flex: 1; background: transparent; }
+.video-ph { display: none; position: absolute; inset: 0; align-items: center; justify-content: center;
+  font-size: 38px; font-weight: 900; opacity: .3; letter-spacing: .08em; color: var(--txt); }
+body.debug .video-ph { display: flex; }
+.vf-bottom { height: 74px; flex: 0 0 auto; display: flex; align-items: center; gap: 20px; padding: 0 22px;
+  background: rgba(0,0,0,.72); border-top: 1.5px solid var(--panel-line); }
+.vf-shime { font-size: 19px; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; }
+.vf-count { margin-left: auto; display: flex; align-items: baseline; gap: 12px;
+  font-size: 40px; font-weight: 900; color: var(--hot); font-variant-numeric: tabular-nums; }
+.vf-count em { font-style: normal; font-size: 18px; color: var(--sub); font-weight: 700; }
+
+.race-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 118px 1fr; gap: 0; }
+.buy-line { padding: 12px 14px; font-size: 21px; font-weight: 900;
+  font-variant-numeric: tabular-nums; letter-spacing: .03em; line-height: 1.7; }
+.buy-meta { font-size: 13px; color: var(--sub); font-weight: 700; margin-top: 10px; letter-spacing: 0; }
+
+/* ---------- ③結果・的中 ---------- */
+.race-chips { position: absolute; left: 8px; right: 8px; top: 96px; height: 56px;
+  display: flex; align-items: center; gap: 8px; padding: 0 14px; overflow: hidden; }
+#race-chips-body { display: flex; align-items: center; gap: 8px; }
+.chips-title { font-size: 20px; font-weight: 900; color: var(--sub); margin-right: 8px; flex: 0 0 auto; }
+.rchip {
+  font-family: inherit; font-size: 16px; font-weight: 900; padding: 7px 14px;
+  border-radius: 8px; border: 1px solid var(--panel-line);
+  background: rgba(0,0,0,.3); color: var(--txt); white-space: nowrap;
+}
+.rchip.active { background: var(--acc); color: var(--acc-text); }
+
+.result-panel { position: absolute; left: 340px; top: 152px; width: 900px; height: 500px; }
+.result-rows { padding: 12px 24px; display: flex; flex-direction: column; gap: 8px; }
+.result-row { display: flex; align-items: center; gap: 18px; padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.pos { font-size: 24px; font-weight: 900; color: var(--acc); width: 74px; }
+.r-name { font-size: 30px; font-weight: 900; }
+.r-kim { margin-left: auto; font-size: 18px; color: var(--sub); font-weight: 700; }
+.payout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; padding: 14px 28px; }
+.payout-grid div { display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; color: var(--sub); }
+.payout-grid b { font-size: 23px; color: var(--txt); font-variant-numeric: tabular-nums; }
+
+.hit-badge {
+  position: absolute; left: 1120px; top: 120px; transform: rotate(6deg);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 26px 38px; border-radius: 16px; background: var(--acc); color: var(--acc-text);
+  box-shadow: 0 10px 34px rgba(0,0,0,.5);
+}
+.hit-badge.hidden { display: none; }
+.hit-main { font-size: 34px; font-weight: 900; }
+.hit-sub { font-size: 24px; font-weight: 900; }
+
+.small-cams { position: absolute; left: 480px; top: 652px; width: 960px; display: flex; gap: 0; }
+.small-cams .cam { width: 480px; height: 270px; }
+
+/* ---------- ④待機（BRB） ---------- */
+.brb-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 26px;
+}
+.brb-msg { font-size: 34px; font-weight: 900; letter-spacing: .3em; color: var(--sub); }
+.brb-next { display: flex; align-items: baseline; gap: 20px; font-size: 44px; font-weight: 900; }
+.brb-count { font-size: 30px; color: var(--hot); font-variant-numeric: tabular-nums; }
+.brb-list { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 22px; font-weight: 700; color: var(--sub); }
+.brb-list span { display: inline-block; width: 90px; color: var(--acc); font-weight: 900; }
+
+/* ---------- ⑤広告 ---------- */
+.ad-panel { position: absolute; left: 8px; top: 96px; width: 1344px; bottom: 70px; padding: 36px 44px;
+  display: flex; flex-direction: column; gap: 28px; }
+.ad-logo { width: 320px; height: 110px; border: 1px dashed var(--panel-line); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--sub); font-weight: 900; letter-spacing: .12em; background: rgba(0,0,0,.3); }
+.ad-title { font-size: 52px; font-weight: 900; color: var(--acc); }
+.ad-list { list-style: none; font-size: 24px; font-weight: 700; line-height: 2.1; color: var(--txt); }
+.ad-list li::before { content: "◆ "; color: var(--acc); }
+.ad-progress { display: flex; align-items: center; gap: 18px; margin-top: auto; }
+.ad-progress.hidden { display: none; }
+.ad-goal { font-size: 18px; font-weight: 900; color: var(--sub); }
+.ad-bar { flex: 1; height: 22px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+.ad-bar-fill { height: 100%; background: var(--acc); border-radius: 99px; }
+.ad-nums { font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+.ad-wipes { position: absolute; left: 1352px; top: 96px; width: 560px;
+  display: flex; flex-direction: column; gap: 0; }
+.ad-wipe { width: 560px; height: 315px; }
+
+.promo-chip { position: absolute; left: 8px; top: 1022px;
+  font-size: 16px; font-weight: 700; color: var(--sub);
+  padding: 8px 18px; border: 1px dashed var(--panel-line); border-radius: 8px;
+  background: rgba(0,0,0,.3); }
+
+/* ---------- ティッカー ---------- */
+.ticker {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 60px; overflow: hidden;
+  background: rgba(0,0,0,.66); border-top: 2px solid var(--acc); display: flex; align-items: center;
+}
+.ticker.hidden { display: none; }
+.ticker-inner {
+  display: inline-flex; white-space: nowrap; font-size: 22px; font-weight: 800; color: var(--txt);
+  animation: tick 28s linear infinite;
+}
+.tick-copy { display: inline-flex; gap: 64px; padding-right: 64px; }
+@keyframes tick { to { transform: translateX(-50%); } }
+.tick-manche { color: #ff4d4d; font-weight: 900; }
+
+/* ---------- デバッグバッジ（?debug=1のみ） ---------- */
+.dbg { display: none; position: absolute; left: 8px; bottom: 70px; z-index: 40;
+  font-size: 14px; font-weight: 700; color: #fff; background: rgba(0,0,0,.7);
+  padding: 6px 12px; border-radius: 6px; font-family: Consolas, monospace; }
+body.debug .dbg { display: block; }
+body.debug .vtab { pointer-events: auto; cursor: pointer; }
