@@ -328,6 +328,7 @@
       if (!rp.points) return "<div>" + esc(rc.name) + "：予想なし</div>";
       if (!s.hits.length) return "<div>" + esc(rc.name) + '：<span class="miss">不的中</span>（投資 ' + fmtYen(s.invest) + "）</div>";
       return "<div>" + esc(rc.name) + "：" + s.hits.map(function (h) {
+        if (!h.amount) return '<span class="manche">🎯 ' + h.type + " " + h.comboLabel + " 払戻未入力</span>";
         return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + h.mult + "倍</span>";
       }).join(" ") + "　回収 " + fmtYen(s.refund) + "</div>";
     }).join("");
@@ -338,6 +339,21 @@
     if (!key) return;
     var order = parseOrderInput();
     if (!order) { $("settle-preview").innerHTML = '<span class="manche">着順が読めません（例：1-9-2）</span>'; return; }
+    // 的中しているのに払戻が未入力なら確定させない（0倍の的中速報が画面に載る事故防止）
+    var validPayouts = payoutRows.filter(function (p) { return p.amount > 0; });
+    var missing = [];
+    state.racers.forEach(function (rc) {
+      var rp = window.Derive.resolvePred(state, key, rc.id);
+      window.Keirin.settle(rp.parsed, rp.unit, order, validPayouts).hits.forEach(function (h) {
+        var label = h.type + " " + h.comboLabel;
+        if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
+      });
+    });
+    if (missing.length) {
+      $("settle-preview").innerHTML = '<span class="manche">⚠ 的中買目の払戻が未入力：' + missing.map(esc).join(" / ") +
+        "　→ 上の払戻欄に入力すると倍率・回収を自動計算して確定できます</span>";
+      return;
+    }
     state.results[key] = {
       order: order,
       names: [$("res-name-1").value.trim(), $("res-name-2").value.trim(), $("res-name-3").value.trim()],
