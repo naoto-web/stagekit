@@ -135,6 +135,14 @@
     });
   }
 
+  $("btn-narabi-save").addEventListener("click", function () {
+    var key = currentKey();
+    if (!key) return;
+    if (!state.narabi) state.narabi = {};
+    state.narabi[key] = $("narabi-input").value.trim();
+    save();
+  });
+
   $("btn-next-race").addEventListener("click", function () {
     var name = activeVenueName();
     if (!name) return;
@@ -158,6 +166,7 @@
   function renderPredForms() {
     var key = currentKey();
     $("pred-target").textContent = key ? key.replace("|", " ") + "R" : "（場・レース未選択）";
+    $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }
     var race = state.preds[key] || { cars: 9 };
