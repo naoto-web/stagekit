@@ -334,6 +334,31 @@
     return rows;
   }
 
+  /* ---------- 表示用トークン化 ----------
+     買い目行を「車番チップ＋区切り記号」で描画するための構造化。
+     入力された記法をそのまま保つ（意味解釈はしない）。式別キーワードはラベルとして分離。 */
+  function displayTokens(raw) {
+    var s = normalize(raw);
+    var ex = extractType(s);
+    var tokens = [];
+    if (ex.type) tokens.push({ t: "label", v: ex.type });
+    var buf = "";
+    var flush = function () {
+      if (buf.trim()) tokens.push({ t: "txt", v: buf.trim() });
+      buf = "";
+    };
+    ex.rest.split("").forEach(function (c) {
+      if (/[1-9]/.test(c)) { flush(); tokens.push({ t: "car", v: +c }); }
+      else if (c === "-") { flush(); tokens.push({ t: "sep", v: "-" }); }
+      else if (c === "=") { flush(); tokens.push({ t: "sep", v: "=" }); }
+      else if (c === "全") { flush(); tokens.push({ t: "all" }); }
+      else if (c === " ") { flush(); tokens.push({ t: "gap" }); }
+      else buf += c;
+    });
+    flush();
+    return tokens;
+  }
+
   return {
     TYPES: TYPES,
     normalize: normalize,
@@ -343,5 +368,6 @@
     settle: settle,
     standardCombos: standardCombos,
     comboLabel: comboLabel,
+    displayTokens: displayTokens,
   };
 });
