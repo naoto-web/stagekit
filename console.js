@@ -630,10 +630,18 @@
     renderDiag();
     checkNewDay();
     tickStatus();
+    // 初回（場未選択）は本日設定を自動で開く
+    if (state && !state.venues.length) $("setup-card").open = true;
   }
 
   /* ---------- 起動 ---------- */
   if (!KEY) $("key-warn").classList.remove("hidden");
+  $("btn-key-save").addEventListener("click", function () {
+    var v = $("key-input").value.trim();
+    if (!v) return;
+    localStorage.setItem("console_key", v);
+    location.reload();
+  });
 
   window.Sync.initChannel(function () { /* pong受信でbcAliveが立つ */ });
 
