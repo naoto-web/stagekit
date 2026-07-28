@@ -133,7 +133,8 @@ body.debug .cam-ph { display: flex; }
 .talk-cams { position: absolute; left: 8px; top: 96px; width: 1504px; display: flex; gap: 0; }
 .talk-cams .cam { width: 752px; height: 423px; }
 
-.talk-band { position: absolute; left: 8px; top: 519px; bottom: 8px; width: 1504px; display: flex; gap: 0; }
+/* トークは下端に的中速報ティッカー(60px)が乗るため、パネル類は68pxで止める */
+.talk-band { position: absolute; left: 8px; top: 519px; bottom: 68px; width: 1504px; display: flex; gap: 0; }
 .talk-band .pred-panel { width: 452px; }
 .invest-panel { width: 300px; display: flex; flex-direction: column; gap: 12px;
   padding: 18px; font-weight: 800; }
@@ -149,6 +150,7 @@ body.debug .cam-ph { display: flex; }
 
 .vrail { position: absolute; right: 8px; top: 96px; width: 400px; bottom: 8px;
   display: flex; flex-direction: column; gap: 0; }
+#scene-talk .vrail { bottom: 68px; }
 .timer-panel { flex: 0 0 auto; }
 .timer-list { list-style: none; padding: 2px 0; }
 .timer-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
@@ -160,6 +162,17 @@ body.debug .cam-ph { display: flex; }
   line-height: 1.45; font-weight: 700; font-variant-numeric: tabular-nums; }
 .timer-row.active { background: rgba(255,255,255,.07); border-left: 4px solid var(--hot); padding-left: 10px; }
 .t-count { display: block; color: var(--hot); font-weight: 900; font-size: 14px; }
+
+/* 出走表パネル（①トーク右下） */
+.slist-panel { flex: 1; }
+.slist { list-style: none; padding: 2px 0; }
+.slist-row { display: flex; align-items: center; gap: 12px; padding: 6px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.07); }
+.slist-row:last-child { border-bottom: none; }
+.sl-name { font-size: 21px; font-weight: 900; }
+.sl-sub { margin-left: auto; font-size: 13px; color: var(--sub); font-weight: 700;
+  text-align: right; font-variant-numeric: tabular-nums; }
+.slist-empty { padding: 14px; color: var(--sub); font-weight: 700; font-size: 15px; list-style: none; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }
