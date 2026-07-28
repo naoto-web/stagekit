@@ -17,6 +17,7 @@
       activeVenue: 0,
       currentRace: {},
       grade: {},
+      narabi: {},
       preds: {},
       results: {},
       resultView: null,
