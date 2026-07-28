@@ -7,12 +7,33 @@
 
   function raceKey(venue, r) { return venue + "|" + r; }
 
+  /* チームカラー：名簿の色は日本語（またはhex）で保存し、表示時にhexへ変換 */
+  var COLOR_MAP = {
+    "青": "#3b82f6", "緑": "#22c55e", "オレンジ": "#f97316", "橙": "#f97316",
+    "赤": "#ef4444", "ピンク": "#ec4899", "桃": "#ec4899",
+    "黄": "#eab308", "黄色": "#eab308", "紫": "#8b5cf6", "水色": "#38bdf8",
+  };
+  function colorOf(word) {
+    if (!word) return "";
+    return COLOR_MAP[word] || (/^#[0-9a-fA-F]{3,8}$/.test(word) ? word : "");
+  }
+
   function defaultState(dateStr) {
     return {
       rev: 0,
       date: dateStr,
-      racers: [{ id: "r1", name: "配信者1" }, { id: "r2", name: "配信者2" }],
-      roster: ["配信者1", "配信者2", "配信者3", "配信者4", "配信者5", "配信者6"],
+      racers: [
+        { id: "r1", name: "しょーた", color: "青" },
+        { id: "r2", name: "ピーター", color: "緑" },
+      ],
+      roster: [
+        { name: "しょーた", color: "青" },
+        { name: "ピーター", color: "緑" },
+        { name: "えーす", color: "オレンジ" },
+        { name: "カズ", color: "赤" },
+        { name: "もとき", color: "ピンク" },
+        { name: "むねお", color: "黄色" },
+      ],
       venues: [],
       activeVenue: 0,
       currentRace: {},
@@ -135,9 +156,26 @@
     return { totals: totals, hits: hits, chips: chips };
   }
 
+  /** 旧形式（文字列名簿）からの移行と、配信者への色引き当て */
+  function normalizeState(state) {
+    state.roster = (state.roster || []).map(function (r) {
+      return typeof r === "string" ? { name: r, color: "" } : r;
+    });
+    state.narabi = state.narabi || {};
+    (state.racers || []).forEach(function (rc) {
+      if (!rc.color) {
+        var m = state.roster.filter(function (r) { return r.name === rc.name; })[0];
+        if (m) rc.color = m.color;
+      }
+    });
+    return state;
+  }
+
   root.Derive = {
     raceKey: raceKey,
     defaultState: defaultState,
+    normalizeState: normalizeState,
+    colorOf: colorOf,
     predOf: predOf,
     resolvePred: resolvePred,
     settleRace: settleRace,
