@@ -121,9 +121,13 @@
 
   /* 警告音：Web Audio合成（素材ファイル不使用＝ライセンス管理外）。
      OBSでは5シーンのソースが常時動いているため、二重発音を避けて既定は②レースのソースだけが鳴らす。
-     &sound=1でどのシーンでも有効化／&sound=0で無効化。 */
+     &sound=1でどのシーンでも有効化／&sound=0で無効化。
+     色切替と音ズレしないよう、コンテキストは起動時に初期化しておく（鳴らす瞬間の初期化遅延をなくす）。 */
   var SOUND = params.get("sound") === "1" || (params.get("sound") !== "0" && SCENE === "race");
   var audioCtx = null;
+  if (SOUND) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  }
   function beep() {
     if (!SOUND) return;
     try {
@@ -156,16 +160,30 @@
   }
   function renderTimers() {
     var cards = nextByVenue();
-    var activeName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : null;
-    var keys = cards.map(function (c) { return c.venue + "|" + (c.race ? c.race.no : "-"); }).join(",") + "|" + activeName;
+    var now = nowSec();
+    var offSec = (state.cfg.closeMin || 3) * 60;
+    // 公式締切〜発走の間は「締切ました」CTAカードに切り替える（モードもキーに含めて跨いだ瞬間に再構築）
+    var keys = cards.map(function (c) {
+      var closed = c.race && now >= c.race.startSec - offSec;
+      return c.venue + "|" + (c.race ? c.race.no : "-") + (closed ? "C" : "");
+    }).join(",");
     if (keys !== timerRowKeys) {
       timerRowKeys = keys;
       var html = cards.map(function (c) {
+        var closed = c.race && now >= c.race.startSec - offSec;
         var head = '<div class="vt-head">' + esc(c.venue) +
-          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + "</div>";
+          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") +
+          (closed ? '<span class="vt-start-s">発走' + c.race.start + "</span>" : "") + "</div>";
         var body;
         if (!c.race) {
           body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
+        } else if (closed) {
+          body = '<div class="vt-rows vt-cta">' +
+            '<div class="vt-cta-main">🔔 締切ました</div>' +
+            '<div class="vt-cta-line">チャンネル登録</div>' +
+            '<div class="vt-cta-line">グッドボタン</div>' +
+            '<div class="vt-cta-line">お願いします!!</div>' +
+            "</div>";
         } else {
           body = '<div class="vt-rows">' +
             '<div class="vt-row"><span>発走</span><b>' + c.race.start + "</b></div>" +
@@ -173,7 +191,7 @@
             '<div class="vt-row"><span>公式締切</span><b data-off="' + c.race.startSec + '"></b></div>' +
             "</div>";
         }
-        return '<li class="vt-card' + (c.venue === activeName ? " active" : "") + '" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
+        return '<li class="vt-card" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
       }).join("");
       ["timer-talk", "timer-race"].forEach(function (id) {
         var el = $(id);
@@ -223,6 +241,15 @@
     return window.Derive.raceKey(v.name, rNo);
   }
 
+  /** メンバーカラー背景に対する文字色（明るい色＝黒・暗い色＝白） */
+  function textOn(hex) {
+    var m = /^#?([0-9a-fA-F]{6})$/.exec(hex || "");
+    if (!m) return "#fff";
+    var n = parseInt(m[1], 16);
+    var yiq = ((n >> 16 & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000;
+    return yiq >= 150 ? "#16181c" : "#fff";
+  }
+
   /** 買い目1行を車番色チップの並びとして描画する */
   function lineChips(raw, small) {
     return window.Keirin.displayTokens(raw).map(function (tk) {
@@ -259,8 +286,17 @@
       });
       var head = $("pred-head-" + slot);
       if (head) head.textContent = name + " 予想";
+      // ②映像下の予想枠＝配信者のメンバーカラー（ヘッダー塗り＋枠線）
       var bandHead = $("band-head-" + slot);
-      if (bandHead) bandHead.textContent = name + " 予想";
+      if (bandHead) {
+        bandHead.textContent = name + " 予想";
+        if (color) {
+          bandHead.style.background = color;
+          bandHead.style.color = textOn(color);
+          var bandPanel = bandHead.parentElement;
+          if (bandPanel) bandPanel.style.borderColor = color;
+        }
+      }
 
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
       var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok; }) : [];
@@ -550,7 +586,7 @@
     tickClock();
     renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
-  }, 1000);
+  }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
   tickClock();
   renderAll();
