@@ -545,8 +545,8 @@
     document.querySelectorAll(".grade-inp").forEach(function (inp) {
       state.grade[inp.getAttribute("data-n")] = inp.value.trim();
     });
-    state.cfg.closeMin = +$("cfg-close").value || 5;
-    state.cfg.netCloseMin = +$("cfg-netclose").value || 15;
+    state.cfg.closeMin = +$("cfg-close").value || 3;
+    state.cfg.netCloseMin = +$("cfg-netclose").value || 5;
     save();
     renderAll();
   });
@@ -621,7 +621,7 @@
       }
     });
     if (best) {
-      var close = best.startSec - (state.cfg.closeMin || 5) * 60;
+      var close = best.startSec - (state.cfg.closeMin || 3) * 60;
       var label = now < close ? "締切まで " + fmtCount(close - now)
         : now < best.startSec ? "発走まで " + fmtCount(best.startSec - now) : "発走中";
       $("next-race").textContent = "▶ " + best.name + best.no + "R " + label;
