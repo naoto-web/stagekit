@@ -158,8 +158,8 @@
   }
   function tickTimerCounts() {
     var now = nowSec();
-    var netSec = (state.cfg.netCloseMin || 15) * 60;
-    var offSec = (state.cfg.closeMin || 5) * 60;
+    var netSec = (state.cfg.netCloseMin || 5) * 60;
+    var offSec = (state.cfg.closeMin || 3) * 60;
     document.querySelectorAll("[data-net]").forEach(function (el) {
       setCount(el, +el.getAttribute("data-net") - netSec - now);
     });
