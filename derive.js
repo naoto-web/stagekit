@@ -46,7 +46,7 @@
       hitsHidden: [],
       ad: { title: "", lines: [], goalLabel: "応募状況", cur: 0, max: 0, showProgress: false },
       brbMsg: "まもなく再開します",
-      cfg: { closeMin: 5, netCloseMin: 15, timerCount: 3 },
+      cfg: { closeMin: 3, netCloseMin: 5, timerCount: 3 }, // 公式＝発走−3分・民間＝発走−5分（7/29 Naoto指定）
     };
   }
 
