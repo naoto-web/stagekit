@@ -50,17 +50,21 @@
 
   <!-- ================= ②レース観戦シーン ================= -->
   <section class="scene" id="scene-race">
+    <!-- 場名/Rのバーは置かない：映像は別ウィンドウのキャプチャで、実際に映るレースと
+         コンソールの場情報がズレうるため（7/29 FB4）。映像枠は16:9固定 -->
     <div class="video-frame">
-      <div class="vf-top">
-        <span class="vf-venue" id="video-label"></span><span class="vf-grade" id="vf-grade"></span>
-        <span class="vf-start" id="vf-start"></span>
-      </div>
       <div class="vf-screen" data-hole><div class="video-ph">レース映像（許諾映像）</div></div>
     </div>
 
     <div class="race-band">
-      <div class="panel"><div class="panel-head sm" id="band-head-a">予想</div><div class="buy-line" id="band-pred-a"></div></div>
-      <div class="panel"><div class="panel-head sm" id="band-head-b">予想</div><div class="buy-line" id="band-pred-b"></div></div>
+      <div class="panel">
+        <div class="panel-head band-head" id="band-head-a"><span id="band-name-a">予想</span><span class="band-inv" id="band-inv-a"></span></div>
+        <div class="buy-line" id="band-pred-a"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head band-head" id="band-head-b"><span id="band-name-b">予想</span><span class="band-inv" id="band-inv-b"></span></div>
+        <div class="buy-line" id="band-pred-b"></div>
+      </div>
     </div>
 
     <aside class="vrail race-rail">
