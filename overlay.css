@@ -164,36 +164,49 @@ body.debug .cam-ph { display: flex; }
   display: flex; flex-direction: column; gap: 0; }
 #scene-talk .vrail { bottom: 68px; }
 
-/* タイマー＝場別締切カード（現行配信の締切ボード踏襲・場ごとに次レースの発走/民間締切/公式締切） */
+/* タイマー＝場別締切カード（現行配信の締切ボード踏襲・場ごとに次レースの発走/民間締切/公式締切）
+   通常時は黒白基調。信号機色はヘッダー＋中身まるごと切り替える。 */
 .timer-cards { list-style: none; display: flex; gap: 0; flex: 0 0 168px; }
 .vt-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
   background: var(--panel); border: 1.5px solid var(--panel-line); overflow: hidden; }
 .vt-head { display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 8px 6px; font-size: 24px; font-weight: 900; background: rgba(255,255,255,.08); }
 .vt-head .vt-r { color: var(--acc); }
-.vt-card.active .vt-head { background: #d63b3b; color: #fff; }
-.vt-card.active .vt-head .vt-r { color: #fff; }
+.vt-head .vt-start-s { font-size: 16px; font-weight: 900; }
 .vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 4px 16px; }
 .vt-row { display: flex; justify-content: space-between; align-items: baseline;
-  font-size: 15px; font-weight: 800; color: var(--sub); }
-.vt-row b { font-size: 24px; font-weight: 900; color: var(--txt); font-variant-numeric: tabular-nums; }
-.vt-row b.closed { color: var(--sub); font-size: 20px; }
+  font-size: 24px; font-weight: 900; color: var(--txt); }
+.vt-rows .vt-row:first-child { border-bottom: 1px solid rgba(255,255,255,.28); padding-bottom: 5px; }
+.vt-row b { font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.vt-row b.closed { font-size: 20px; }
 .vt-done { text-align: center; color: var(--sub); font-weight: 900; font-size: 17px; }
-/* 民間締切の信号機色（残5分＝緑→残3分＝黄→残1分＝赤・締切後も赤キープ） */
-.vt-card.zone-green .vt-rows { background: #2e9e4f; }
-.vt-card.zone-yellow .vt-rows { background: #e8c22e; }
-.vt-card.zone-red .vt-rows { background: #d63b3b; }
-.vt-card.zone-green .vt-row, .vt-card.zone-red .vt-row { color: rgba(255,255,255,.85); }
-.vt-card.zone-green .vt-row b, .vt-card.zone-red .vt-row b { color: #fff; }
-.vt-card.zone-yellow .vt-row { color: rgba(0,0,0,.7); }
-.vt-card.zone-yellow .vt-row b { color: #16181c; }
+/* 公式締切後＝「締切ました」CTAカード */
+.vt-cta { align-items: center; text-align: center; }
+.vt-cta-main { font-size: 20px; font-weight: 900; color: var(--txt); }
+.vt-cta-line { font-size: 17px; font-weight: 900; color: var(--txt); }
+/* 民間締切の信号機色（残5分＝緑→残3分＝黄→残1分＝赤・民間締切後も公式締切までは赤）
+   ヘッダーも中身も同色に塗る。黄のみ黒文字。 */
+.vt-card.zone-green .vt-head, .vt-card.zone-green .vt-rows { background: #2e9e4f; }
+.vt-card.zone-yellow .vt-head, .vt-card.zone-yellow .vt-rows { background: #e8c22e; }
+.vt-card.zone-red .vt-head, .vt-card.zone-red .vt-rows { background: #d63b3b; }
+.vt-card.zone-green, .vt-card.zone-red { color: #fff; }
+.vt-card.zone-green .vt-head, .vt-card.zone-green .vt-head .vt-r,
+.vt-card.zone-red .vt-head, .vt-card.zone-red .vt-head .vt-r { color: #fff; }
+.vt-card.zone-green .vt-row, .vt-card.zone-green .vt-row b,
+.vt-card.zone-red .vt-row, .vt-card.zone-red .vt-row b { color: #fff; }
+.vt-card.zone-yellow .vt-head, .vt-card.zone-yellow .vt-head .vt-r { color: #16181c; }
+.vt-card.zone-yellow .vt-row, .vt-card.zone-yellow .vt-row b { color: #16181c; }
+.vt-card.zone-yellow .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.32); }
 /* ①トーク右レール（400px幅）は小サイズ表示 */
 #scene-talk .timer-cards { flex: 0 0 150px; }
 #scene-talk .vt-head { font-size: 18px; padding: 6px 4px; }
+#scene-talk .vt-head .vt-start-s { font-size: 12px; }
 #scene-talk .vt-rows { padding: 2px 10px; }
-#scene-talk .vt-row { font-size: 12px; }
+#scene-talk .vt-row { font-size: 17px; }
 #scene-talk .vt-row b { font-size: 17px; }
 #scene-talk .vt-row b.closed { font-size: 15px; }
+#scene-talk .vt-cta-main { font-size: 15px; }
+#scene-talk .vt-cta-line { font-size: 13px; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
