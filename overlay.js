@@ -72,7 +72,7 @@
   }
   function upcoming() {
     var now = nowSec();
-    return allRaces().filter(function (r) { return r.startSec + 120 > now; });
+    return allRaces().filter(function (r) { return r.startSec > now; }); // 発走したら即・次レースへ
   }
   function findRace(venueName, no) {
     var hit = null;
@@ -101,7 +101,8 @@
 
   /* ---------- タイマー（右レール共通）＝場別締切カード
      現行配信の締切ボードを踏襲：場ごとに次レースの 発走／民間締切／公式締切 をMM:SSでカウントダウン。
-     表示中の場のカードは赤ヘッダー。発走2分後に次レースへ自動送り。 ---------- */
+     表示中の場のカードは赤ヘッダー。発走時刻を過ぎたら即・次レースへ自動送り。
+     民間締切の信号機色：残5分＝緑→残3分＝黄→残1分＝赤（締切後も赤キープ）＋切替時にピピッ音。 ---------- */
   function nextByVenue() {
     var names = state.venues.map(function (v) { return v.name; });
     if (!names.length && timetable) {
@@ -112,10 +113,46 @@
     return names.map(function (name) {
       var next = null;
       races.forEach(function (r) {
-        if (r.venue === name && r.startSec + 120 > now && !next) next = r;
+        if (r.venue === name && r.startSec > now && !next) next = r;
       });
       return { venue: name, race: next };
     });
+  }
+
+  /* 警告音：Web Audio合成（素材ファイル不使用＝ライセンス管理外）。
+     OBSでは5シーンのソースが常時動いているため、二重発音を避けて既定は②レースのソースだけが鳴らす。
+     &sound=1でどのシーンでも有効化／&sound=0で無効化。 */
+  var SOUND = params.get("sound") === "1" || (params.get("sound") !== "0" && SCENE === "race");
+  var audioCtx = null;
+  function beep() {
+    if (!SOUND) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var t = audioCtx.currentTime;
+      [0, 0.18].forEach(function (off) { // 短音2連＝ピピッ
+        var o = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        o.type = "square";
+        o.frequency.value = 1175;
+        g.gain.setValueAtTime(0.0001, t + off);
+        g.gain.exponentialRampToValueAtTime(0.18, t + off + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + off + 0.13);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(t + off);
+        o.stop(t + off + 0.15);
+      });
+    } catch (e) { /* 音を出せない環境では無音のまま */ }
+  }
+
+  var zoneRank = { "": 0, green: 1, yellow: 2, red: 3 };
+  var zones = {}; // 場名 → 現在の信号機色（切替検知・発音用）
+  function zoneOf(remain) {
+    if (remain <= 60) return "red";     // 締切後もキープ
+    if (remain <= 180) return "yellow";
+    if (remain <= 300) return "green";
+    return "";
   }
   function renderTimers() {
     var cards = nextByVenue();
@@ -136,7 +173,7 @@
             '<div class="vt-row"><span>公式締切</span><b data-off="' + c.race.startSec + '"></b></div>' +
             "</div>";
         }
-        return '<li class="vt-card' + (c.venue === activeName ? " active" : "") + '">' + head + body + "</li>";
+        return '<li class="vt-card' + (c.venue === activeName ? " active" : "") + '" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
       }).join("");
       ["timer-talk", "timer-race"].forEach(function (id) {
         var el = $(id);
@@ -149,10 +186,8 @@
     if (remain <= 0) {
       el.textContent = "締切";
       el.classList.add("closed");
-      el.classList.remove("hot");
     } else {
       el.textContent = fmtCount(remain);
-      el.classList.toggle("hot", remain <= 180); // 残り3分で赤
       el.classList.remove("closed");
     }
   }
@@ -161,7 +196,18 @@
     var netSec = (state.cfg.netCloseMin || 5) * 60;
     var offSec = (state.cfg.closeMin || 3) * 60;
     document.querySelectorAll("[data-net]").forEach(function (el) {
-      setCount(el, +el.getAttribute("data-net") - netSec - now);
+      var remain = +el.getAttribute("data-net") - netSec - now;
+      setCount(el, remain);
+      // 民間締切ベースの信号機色をカードに反映＋色が上がった瞬間にピピッ
+      var card = el.closest(".vt-card");
+      if (!card) return;
+      var venue = card.getAttribute("data-venue");
+      var z = zoneOf(remain);
+      card.classList.remove("zone-green", "zone-yellow", "zone-red");
+      if (z) card.classList.add("zone-" + z);
+      var prev = zones[venue];
+      zones[venue] = z;
+      if (prev !== undefined && zoneRank[z] > zoneRank[prev]) beep();
     });
     document.querySelectorAll("[data-off]").forEach(function (el) {
       setCount(el, +el.getAttribute("data-off") - offSec - now);
