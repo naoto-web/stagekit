@@ -37,10 +37,7 @@
     </div>
 
     <aside class="vrail">
-      <div class="panel timer-panel">
-        <div class="panel-head">レースタイマー</div>
-        <ul class="timer-list" id="timer-talk"></ul>
-      </div>
+      <ul class="timer-cards" id="timer-talk"></ul>
       <div class="panel slist-panel">
         <div class="panel-head">出走表<span class="panel-head-sub" id="slist-sub"></span></div>
         <ul class="slist" id="slist-talk"></ul>
@@ -59,23 +56,17 @@
         <span class="vf-start" id="vf-start"></span>
       </div>
       <div class="vf-screen" data-hole><div class="video-ph">レース映像（許諾映像）</div></div>
-      <div class="vf-bottom">
-        <span class="vf-shime" id="vf-shime"></span>
-        <span class="vf-count"><em id="vf-count-label"></em><span id="vf-count"></span></span>
-      </div>
+    </div>
+
+    <div class="race-band">
+      <div class="panel"><div class="panel-head sm" id="band-head-a">予想</div><div class="buy-line" id="band-pred-a"></div></div>
+      <div class="panel"><div class="panel-head sm" id="band-head-b">予想</div><div class="buy-line" id="band-pred-b"></div></div>
     </div>
 
     <aside class="vrail race-rail">
-      <div class="panel timer-panel">
-        <div class="panel-head">レースタイマー</div>
-        <ul class="timer-list" id="timer-race"></ul>
-      </div>
-      <div class="race-grid">
-        <div class="cam" data-hole><div class="cam-ph small">👤</div><div class="nameplate mini"><i class="np-dot"></i><span id="np-race-a"></span></div></div>
-        <div class="cam" data-hole><div class="cam-ph small">👤</div><div class="nameplate mini"><i class="np-dot alt"></i><span id="np-race-b"></span></div></div>
-        <div class="panel"><div class="panel-head sm" id="band-head-a">予想</div><div class="buy-line" id="band-pred-a"></div></div>
-        <div class="panel"><div class="panel-head sm" id="band-head-b">予想</div><div class="buy-line" id="band-pred-b"></div></div>
-      </div>
+      <ul class="timer-cards" id="timer-race"></ul>
+      <div class="cam" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot"></i><span id="np-race-a"></span></div></div>
+      <div class="cam" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot alt"></i><span id="np-race-b"></span></div></div>
     </aside>
   </section>
 
