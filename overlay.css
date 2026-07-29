@@ -117,14 +117,12 @@ body.scene-ad     #scene-ad     { display: block; }
 .cam { position: relative; border-radius: 0; overflow: hidden;
   background: transparent; border: 1.5px solid var(--panel-line); }
 .cam-ph { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; font-size: 110px; opacity: .28; }
-.cam-ph.small { font-size: 54px; }
 body.debug .cam-ph { display: flex; }
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
   font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 8px;
   background: rgba(0,0,0,.62); border-left: 6px solid var(--acc); color: var(--txt);
 }
-.nameplate.mini { font-size: 15px; padding: 3px 10px; border-left-width: 4px; }
 .nameplate.letter { font-size: 26px; padding: 4px 22px; }
 .np-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--acc); }
 .np-dot.alt { background: var(--hot); }
@@ -161,25 +159,34 @@ body.debug .cam-ph { display: flex; }
   background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.3); color: var(--txt);
 }
 .pl-gap { width: 12px; }
-.buy-line-row { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin-bottom: 8px; }
-.buy-line-row .pl-sep { font-size: 18px; padding: 0 1px; }
-.buy-line-row .pl-all { width: 26px; height: 26px; font-size: 14px; }
-.buy-line-row .pl-type { font-size: 12px; padding: 2px 6px; }
 
 .vrail { position: absolute; right: 8px; top: 96px; width: 400px; bottom: 8px;
   display: flex; flex-direction: column; gap: 0; }
 #scene-talk .vrail { bottom: 68px; }
-.timer-panel { flex: 0 0 auto; }
-.timer-list { list-style: none; padding: 2px 0; }
-.timer-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
-  border-bottom: 1px solid rgba(255,255,255,.07); }
-.timer-row:last-child { border-bottom: none; }
-.t-venue { font-size: 20px; font-weight: 900; }
-.t-race { color: var(--acc); font-weight: 900; font-size: 20px; }
-.t-times { margin-left: auto; text-align: right; font-size: 13px; color: var(--sub);
-  line-height: 1.45; font-weight: 700; font-variant-numeric: tabular-nums; }
-.timer-row.active { background: rgba(255,255,255,.07); border-left: 4px solid var(--hot); padding-left: 10px; }
-.t-count { display: block; color: var(--hot); font-weight: 900; font-size: 14px; }
+
+/* タイマー＝場別締切カード（現行配信の締切ボード踏襲・場ごとに次レースの発走/民間締切/公式締切） */
+.timer-cards { list-style: none; display: flex; gap: 0; flex: 0 0 168px; }
+.vt-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  background: var(--panel); border: 1.5px solid var(--panel-line); overflow: hidden; }
+.vt-head { display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 8px 6px; font-size: 24px; font-weight: 900; background: rgba(255,255,255,.08); }
+.vt-head .vt-r { color: var(--acc); }
+.vt-card.active .vt-head { background: #d63b3b; color: #fff; }
+.vt-card.active .vt-head .vt-r { color: #fff; }
+.vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 4px 16px; }
+.vt-row { display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 15px; font-weight: 800; color: var(--sub); }
+.vt-row b { font-size: 24px; font-weight: 900; color: var(--txt); font-variant-numeric: tabular-nums; }
+.vt-row b.hot { color: var(--hot); }
+.vt-row b.closed { color: var(--sub); font-size: 20px; }
+.vt-done { text-align: center; color: var(--sub); font-weight: 900; font-size: 17px; }
+/* ①トーク右レール（400px幅）は小サイズ表示 */
+#scene-talk .timer-cards { flex: 0 0 150px; }
+#scene-talk .vt-head { font-size: 18px; padding: 6px 4px; }
+#scene-talk .vt-rows { padding: 2px 10px; }
+#scene-talk .vt-row { font-size: 12px; }
+#scene-talk .vt-row b { font-size: 17px; }
+#scene-talk .vt-row b.closed { font-size: 15px; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
@@ -207,9 +214,11 @@ body.debug .cam-ph { display: flex; }
 .hit-row.manche .h-mult, .hit-row.manche .h-place { color: #ff4d4d; }
 .hit-row.manche .h-mult { font-weight: 900; }
 
-/* ---------- ②レース観戦 ---------- */
+/* ---------- ②レース観戦 ----------
+   映像1360幅（16:9）＋映像下に予想帯（左右2パネル）＋右レール544px＝タイマー・ワイプ縦積み。
+   タイマーは固定高＝下のワイプ穴の座標を不変にする（OBS側カメラ位置とのズレ防止） */
 .video-frame {
-  position: absolute; left: 8px; top: 96px; width: 1504px; bottom: 8px;
+  position: absolute; left: 8px; top: 96px; width: 1360px; height: 822px;
   display: flex; flex-direction: column;
   border: 1.5px solid var(--panel-line); border-radius: 0; overflow: hidden;
   background: transparent;
@@ -224,19 +233,16 @@ body.debug .cam-ph { display: flex; }
 .video-ph { display: none; position: absolute; inset: 0; align-items: center; justify-content: center;
   font-size: 38px; font-weight: 900; opacity: .3; letter-spacing: .08em; color: var(--txt); }
 body.debug .video-ph { display: flex; }
-.vf-bottom { height: 74px; flex: 0 0 auto; display: flex; align-items: center; gap: 20px; padding: 0 22px;
-  background: rgba(0,0,0,.72); border-top: 1.5px solid var(--panel-line); }
-.vf-shime { font-size: 19px; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; }
-.vf-count { margin-left: auto; display: flex; align-items: baseline; gap: 12px;
-  font-size: 40px; font-weight: 900; color: var(--hot); font-variant-numeric: tabular-nums; }
-.vf-count em { font-style: normal; font-size: 18px; color: var(--sub); font-weight: 700; }
 
-/* タイマーを固定高にして、下のワイプ穴の座標を不変にする（OBS側カメラ位置とのズレ防止） */
-.race-rail .timer-panel { flex: 0 0 248px; }
-.race-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 118px 1fr; gap: 0; }
-.buy-line { padding: 12px 14px; font-size: 21px; font-weight: 900;
-  font-variant-numeric: tabular-nums; letter-spacing: .03em; line-height: 1.7; }
-.buy-meta { font-size: 13px; color: var(--sub); font-weight: 700; margin-top: 10px; letter-spacing: 0; }
+.race-band { position: absolute; left: 8px; top: 918px; width: 1360px; bottom: 8px;
+  display: flex; gap: 0; }
+.race-band .panel { flex: 1 1 0; min-width: 0; }
+.race-band .buy-line { display: flex; flex-wrap: wrap; align-content: flex-start;
+  align-items: center; gap: 10px 30px; padding: 10px 18px; }
+.buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
+
+.race-rail { width: 544px; }
+.race-rail .cam { flex: 1 1 0; }
 
 /* ---------- ③結果・的中 ---------- */
 .race-chips { position: absolute; left: 8px; right: 8px; top: 96px; height: 56px;
