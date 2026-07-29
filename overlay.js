@@ -74,11 +74,6 @@
     var now = nowSec();
     return allRaces().filter(function (r) { return r.startSec > now; }); // 発走したら即・次レースへ
   }
-  function findRace(venueName, no) {
-    var hit = null;
-    allRaces().forEach(function (r) { if (r.venue === venueName && r.no === +no) hit = r; });
-    return hit;
-  }
 
   /* ---------- ヘッダー ---------- */
   function renderVenueTabs() {
@@ -286,10 +281,16 @@
       });
       var head = $("pred-head-" + slot);
       if (head) head.textContent = name + " 予想";
-      // ②映像下の予想枠＝配信者のメンバーカラー（ヘッダー塗り＋枠線）
+      // ②映像下の予想枠＝配信者のメンバーカラー（ヘッダー塗り＋枠線）＋投資/回収の日次累計
       var bandHead = $("band-head-" + slot);
       if (bandHead) {
-        bandHead.textContent = name + " 予想";
+        var bandName = $("band-name-" + slot);
+        if (bandName) bandName.textContent = name + " 予想";
+        var bandInv = $("band-inv-" + slot);
+        if (bandInv) {
+          var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
+          bandInv.textContent = bt ? "投資 " + fmtYen(bt.invest) + "　回収 " + fmtYen(bt.refund) : "";
+        }
         if (color) {
           bandHead.style.background = color;
           bandHead.style.color = textOn(color);
@@ -374,18 +375,8 @@
     }).join("");
   }
 
-  /* ---------- ②レース観戦 ---------- */
-  function renderRaceScene() {
-    var v = state.venues[state.activeVenue];
-    var rNo = v ? state.currentRace[v.name] : null;
-    $("video-label").textContent = v && rNo ? v.name + " " + rNo + "R" : (v ? v.name : "");
-    var gradeText = v ? (state.grade[v.name] || "") : "";
-    $("vf-grade").textContent = gradeText;
-    $("vf-grade").style.display = gradeText ? "" : "none"; // 空のバッジ枠を残さない
-    // 締切カウントダウンは右レールの場別タイマーカードに一本化（7/29 FB2でvf-bottom廃止）
-    var race = v && rNo ? findRace(v.name, rNo) : null;
-    $("vf-start").textContent = race ? "発走 " + race.start : "";
-  }
+  /* ②レース観戦：場名/Rバーは廃止（7/29 FB4＝映像は別ウィンドウのキャプチャで
+     コンソールの場情報と実映像がズレうるため）。シーン固有の描画はタイマーカードと予想帯のみ */
 
   /* ---------- ③結果・的中 ---------- */
   function renderResultScene() {
@@ -547,7 +538,6 @@
     renderVenueTabs();
     renderPreds();
     renderStartList();
-    renderRaceScene();
     renderResultScene();
     renderBrb();
     renderAd();
@@ -574,7 +564,6 @@
       timetable = t;
       timerRowKeys = ""; // 行再構築
       renderTimers();
-      renderRaceScene();
       renderBrb();
       renderStartList();
     }).catch(function () { /* 次回again */ });
