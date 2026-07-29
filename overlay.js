@@ -99,20 +99,44 @@
     document.querySelectorAll("[data-clock-time]").forEach(function (el) { el.textContent = t; });
   }
 
-  /* ---------- タイマー（右レール共通） ---------- */
+  /* ---------- タイマー（右レール共通）＝場別締切カード
+     現行配信の締切ボードを踏襲：場ごとに次レースの 発走／民間締切／公式締切 をMM:SSでカウントダウン。
+     表示中の場のカードは赤ヘッダー。発走2分後に次レースへ自動送り。 ---------- */
+  function nextByVenue() {
+    var names = state.venues.map(function (v) { return v.name; });
+    if (!names.length && timetable) {
+      names = (timetable.venues || []).slice(0, 2).map(function (v) { return v.name; });
+    }
+    var now = nowSec();
+    var races = allRaces();
+    return names.map(function (name) {
+      var next = null;
+      races.forEach(function (r) {
+        if (r.venue === name && r.startSec + 120 > now && !next) next = r;
+      });
+      return { venue: name, race: next };
+    });
+  }
   function renderTimers() {
-    var cfg = state.cfg;
-    var rows = upcoming().slice(0, cfg.timerCount || 3);
-    var keys = rows.map(function (r) { return r.venue + r.no; }).join(",");
+    var cards = nextByVenue();
+    var activeName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : null;
+    var keys = cards.map(function (c) { return c.venue + "|" + (c.race ? c.race.no : "-"); }).join(",") + "|" + activeName;
     if (keys !== timerRowKeys) {
       timerRowKeys = keys;
-      var html = rows.map(function (r, i) {
-        var close = secToHHMM(r.startSec - (cfg.closeMin || 5) * 60);
-        return '<li class="timer-row' + (i === 0 ? " active" : "") + '">' +
-          '<span class="t-venue">' + esc(r.venue) + '</span><span class="t-race">' + r.no + 'R</span>' +
-          '<span class="t-times">締切 ' + close + "<br>発走 " + r.start +
-          (i === 0 ? '<span class="t-count" data-count="' + r.startSec + '"></span>' : "") +
-          "</span></li>";
+      var html = cards.map(function (c) {
+        var head = '<div class="vt-head">' + esc(c.venue) +
+          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + "</div>";
+        var body;
+        if (!c.race) {
+          body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
+        } else {
+          body = '<div class="vt-rows">' +
+            '<div class="vt-row"><span>発走</span><b>' + c.race.start + "</b></div>" +
+            '<div class="vt-row"><span>民間締切</span><b data-net="' + c.race.startSec + '"></b></div>' +
+            '<div class="vt-row"><span>公式締切</span><b data-off="' + c.race.startSec + '"></b></div>' +
+            "</div>";
+        }
+        return '<li class="vt-card' + (c.venue === activeName ? " active" : "") + '">' + head + body + "</li>";
       }).join("");
       ["timer-talk", "timer-race"].forEach(function (id) {
         var el = $(id);
@@ -121,15 +145,26 @@
     }
     tickTimerCounts();
   }
+  function setCount(el, remain) {
+    if (remain <= 0) {
+      el.textContent = "締切";
+      el.classList.add("closed");
+      el.classList.remove("hot");
+    } else {
+      el.textContent = fmtCount(remain);
+      el.classList.toggle("hot", remain <= 180); // 残り3分で赤
+      el.classList.remove("closed");
+    }
+  }
   function tickTimerCounts() {
     var now = nowSec();
-    var closeMin = (state.cfg.closeMin || 5) * 60;
-    document.querySelectorAll(".t-count").forEach(function (el) {
-      var start = +el.getAttribute("data-count");
-      var close = start - closeMin;
-      if (now < close) el.textContent = "締切まで " + fmtCount(close - now);
-      else if (now < start) el.textContent = "発走まで " + fmtCount(start - now);
-      else el.textContent = "発走中";
+    var netSec = (state.cfg.netCloseMin || 15) * 60;
+    var offSec = (state.cfg.closeMin || 5) * 60;
+    document.querySelectorAll("[data-net]").forEach(function (el) {
+      setCount(el, +el.getAttribute("data-net") - netSec - now);
+    });
+    document.querySelectorAll("[data-off]").forEach(function (el) {
+      setCount(el, +el.getAttribute("data-off") - offSec - now);
     });
   }
 
@@ -194,9 +229,10 @@
 
       var body = $("pred-" + slot);
       if (body) body.innerHTML = linesHtml + metaHtml;
+      // ②の予想帯（映像下・左右2パネル）＝フルサイズの色チップで横流し表示
       var band = $("band-pred-" + slot);
       if (band) band.innerHTML =
-        okLines.map(function (l) { return '<div class="buy-line-row">' + lineChips(l.raw, true) + "</div>"; }).join("") +
+        okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.raw) + "</div>"; }).join("") +
         (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点</div>" : "");
 
       // 投資/回収＝日次累計（§8）
@@ -264,30 +300,9 @@
     var gradeText = v ? (state.grade[v.name] || "") : "";
     $("vf-grade").textContent = gradeText;
     $("vf-grade").style.display = gradeText ? "" : "none"; // 空のバッジ枠を残さない
+    // 締切カウントダウンは右レールの場別タイマーカードに一本化（7/29 FB2でvf-bottom廃止）
     var race = v && rNo ? findRace(v.name, rNo) : null;
     $("vf-start").textContent = race ? "発走 " + race.start : "";
-    if (race) {
-      var net = secToHHMM(race.startSec - (state.cfg.netCloseMin || 15) * 60);
-      var close = secToHHMM(race.startSec - (state.cfg.closeMin || 5) * 60);
-      $("vf-shime").textContent = "ネット投票締切 " + net + " ／ 公式締切 " + close;
-      $("vf-count").setAttribute("data-start", race.startSec);
-    } else {
-      $("vf-shime").textContent = "";
-      $("vf-count").removeAttribute("data-start");
-      $("vf-count-label").textContent = "";
-      $("vf-count").textContent = "";
-    }
-    tickRaceCount();
-  }
-  function tickRaceCount() {
-    var el = $("vf-count");
-    if (!el || !el.getAttribute("data-start")) return;
-    var start = +el.getAttribute("data-start");
-    var close = start - (state.cfg.closeMin || 5) * 60;
-    var now = nowSec();
-    if (now < close) { $("vf-count-label").textContent = "締切まで"; el.textContent = fmtCount(close - now); }
-    else if (now < start) { $("vf-count-label").textContent = "発走まで"; el.textContent = fmtCount(start - now); }
-    else { $("vf-count-label").textContent = ""; el.textContent = "発走中"; }
   }
 
   /* ---------- ③結果・的中 ---------- */
@@ -487,8 +502,7 @@
 
   setInterval(function () {
     tickClock();
-    renderTimers();     // 行セット変化時のみDOM再構築
-    tickRaceCount();
+    renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
   }, 1000);
 
