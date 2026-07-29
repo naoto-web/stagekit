@@ -177,9 +177,16 @@ body.debug .cam-ph { display: flex; }
 .vt-row { display: flex; justify-content: space-between; align-items: baseline;
   font-size: 15px; font-weight: 800; color: var(--sub); }
 .vt-row b { font-size: 24px; font-weight: 900; color: var(--txt); font-variant-numeric: tabular-nums; }
-.vt-row b.hot { color: var(--hot); }
 .vt-row b.closed { color: var(--sub); font-size: 20px; }
 .vt-done { text-align: center; color: var(--sub); font-weight: 900; font-size: 17px; }
+/* 民間締切の信号機色（残5分＝緑→残3分＝黄→残1分＝赤・締切後も赤キープ） */
+.vt-card.zone-green .vt-rows { background: #2e9e4f; }
+.vt-card.zone-yellow .vt-rows { background: #e8c22e; }
+.vt-card.zone-red .vt-rows { background: #d63b3b; }
+.vt-card.zone-green .vt-row, .vt-card.zone-red .vt-row { color: rgba(255,255,255,.85); }
+.vt-card.zone-green .vt-row b, .vt-card.zone-red .vt-row b { color: #fff; }
+.vt-card.zone-yellow .vt-row { color: rgba(0,0,0,.7); }
+.vt-card.zone-yellow .vt-row b { color: #16181c; }
 /* ①トーク右レール（400px幅）は小サイズ表示 */
 #scene-talk .timer-cards { flex: 0 0 150px; }
 #scene-talk .vt-head { font-size: 18px; padding: 6px 4px; }
