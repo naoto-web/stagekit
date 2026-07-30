@@ -12,9 +12,13 @@
   var DEBUG = params.get("debug") === "1";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "");
-  if (["a", "b", "c"].indexOf(params.get("theme")) >= 0) {
-    document.body.setAttribute("data-theme", params.get("theme"));
-  }
+  // テーマ：①トーク・②レース観戦は白（w）が既定（7/30 FB10）。
+  // URLの &theme=a|b|c|w が最優先＝OBS側だけで即時に戻せる保険
+  var THEMES = ["a", "b", "c", "w"];
+  var theme = THEMES.indexOf(params.get("theme")) >= 0
+    ? params.get("theme")
+    : (SCENE === "talk" || SCENE === "race" ? "w" : "a");
+  document.body.setAttribute("data-theme", theme);
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
