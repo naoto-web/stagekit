@@ -544,9 +544,12 @@
       var m = state.roster.filter(function (r) { return r.name === name; })[0];
       return m ? m.color : "";
     };
+    // IDは人ベース（＝名前）：シフト交代で名前を入れ替えても前半の実績が付け替わらない
+    var rname1 = $("racer-1").value || "配信者1";
+    var rname2 = $("racer-2").value || "配信者2";
     state.racers = [
-      { id: "r1", name: $("racer-1").value || "配信者1", color: colorFor($("racer-1").value) },
-      { id: "r2", name: $("racer-2").value || "配信者2", color: colorFor($("racer-2").value) },
+      { id: rname1, name: rname1, color: colorFor(rname1) },
+      { id: rname2, name: rname2, color: colorFor(rname2) },
     ];
     document.querySelectorAll(".grade-inp").forEach(function (inp) {
       state.grade[inp.getAttribute("data-n")] = inp.value.trim();
