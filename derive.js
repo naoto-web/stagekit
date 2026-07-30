@@ -22,9 +22,11 @@
     return {
       rev: 0,
       date: dateStr,
+      // 配信者IDは「人ベース（＝名前）」。枠ベース（r1/r2）だとシフト交代で
+      // 前半配信者の投資/回収/的中が後半の名前に付け替わってしまうため（7/30修正）
       racers: [
-        { id: "r1", name: "しょーた", color: "青" },
-        { id: "r2", name: "ピーター", color: "緑" },
+        { id: "しょーた", name: "しょーた", color: "青" },
+        { id: "ピーター", name: "ピーター", color: "緑" },
       ],
       roster: [
         { name: "しょーた", color: "青" },
@@ -74,14 +76,17 @@
     return { entry: p, parsed: parsed, points: parsed.points, unit: unit, invest: invest };
   }
 
-  /** 1レースの精算（結果が無ければ null） */
+  /** 1レースの精算（結果が無ければ null）。
+      現在の配信者ではなく「そのレースに予想を入れた人」全員を精算する
+      ＝シフト交代後でも前半配信者の的中・回収が本人名義のまま残る */
   function settleRace(state, key) {
     var result = state.results[key];
     if (!result || !result.order || result.order.length < 2) return null;
     var byRacer = {};
-    state.racers.forEach(function (rc) {
-      var rp = resolvePred(state, key, rc.id);
-      byRacer[rc.id] = K.settle(rp.parsed, rp.unit, result.order, result.payouts || []);
+    var br = (state.preds[key] || {}).byRacer || {};
+    Object.keys(br).forEach(function (pid) {
+      var rp = resolvePred(state, key, pid);
+      byRacer[pid] = K.settle(rp.parsed, rp.unit, result.order, result.payouts || []);
     });
     return { result: result, byRacer: byRacer };
   }
@@ -90,21 +95,27 @@
     return key + "|" + racerId + "|" + hit.type + "|" + hit.comboLabel;
   }
 
-  /** 日次派生データ一式 */
+  /** 日次派生データ一式。
+      集計は「予想を入れた人」単位（人ベースID＝名前）＝現在の配信者が誰かに依存しない。
+      表示側は totals[現在の配信者id] を参照するので、シフト交代直後は自然に0スタートになる */
   function day(state) {
     var totals = {};
     state.racers.forEach(function (rc) { totals[rc.id] = { invest: 0, refund: 0 }; });
+    function tOf(pid) {
+      if (!totals[pid]) totals[pid] = { invest: 0, refund: 0 };
+      return totals[pid];
+    }
 
     var hits = [];
     var raceHitFlags = {}; // key → 的中ありフラグ（結果チップの🎯用）
     var hidden = {};
     (state.hitsHidden || []).forEach(function (h) { hidden[h] = true; });
 
-    // 投資は結果の有無に関係なく全予想を合算
+    // 投資は結果の有無に関係なく全予想を合算（入れた本人に計上）
     Object.keys(state.preds || {}).forEach(function (key) {
-      state.racers.forEach(function (rc) {
-        var rp = resolvePred(state, key, rc.id);
-        if (totals[rc.id]) totals[rc.id].invest += rp.invest;
+      var br = (state.preds[key] || {}).byRacer || {};
+      Object.keys(br).forEach(function (pid) {
+        tOf(pid).invest += resolvePred(state, key, pid).invest;
       });
     });
 
@@ -113,17 +124,17 @@
       var s = settleRace(state, key);
       if (!s) return;
       var parts = key.split("|");
-      state.racers.forEach(function (rc) {
-        var res = s.byRacer[rc.id];
+      Object.keys(s.byRacer).forEach(function (pid) {
+        var res = s.byRacer[pid];
         if (!res) return;
-        if (totals[rc.id]) totals[rc.id].refund += res.refund;
+        tOf(pid).refund += res.refund;
         res.hits.forEach(function (h) {
-          var id = hitId(key, rc.id, h);
+          var id = hitId(key, pid, h);
           if (hidden[id]) return;
           raceHitFlags[key] = true;
           hits.push({
             id: id, auto: true,
-            racerName: rc.name,
+            racerName: pid,
             place: parts[0] + parts[1] + "R",
             type: h.type, comboLabel: h.comboLabel,
             mult: h.mult, amount: h.amount, manche: h.manche,
@@ -157,12 +168,32 @@
     return { totals: totals, hits: hits, chips: chips };
   }
 
-  /** 旧形式（文字列名簿）からの移行と、配信者への色引き当て */
+  /** 旧形式（文字列名簿・枠ID）からの移行と、配信者への色引き当て */
   function normalizeState(state) {
     state.roster = (state.roster || []).map(function (r) {
       return typeof r === "string" ? { name: r, color: "" } : r;
     });
     state.narabi = state.narabi || {};
+    // 旧スロットID（r1/r2）→ 人ベースID（名前）へ移行。
+    // 予想データのキーも現在の割当で付け替える（移行時点の割当までしか遡れない点は許容）
+    var idMap = {};
+    (state.racers || []).forEach(function (rc) {
+      if ((rc.id === "r1" || rc.id === "r2") && rc.name) {
+        idMap[rc.id] = rc.name;
+        rc.id = rc.name;
+      }
+    });
+    if (idMap.r1 || idMap.r2) {
+      Object.keys(state.preds || {}).forEach(function (key) {
+        var br = state.preds[key].byRacer;
+        if (!br) return;
+        Object.keys(idMap).forEach(function (old) {
+          if (!br[old]) return;
+          if (!br[idMap[old]]) br[idMap[old]] = br[old];
+          delete br[old];
+        });
+      });
+    }
     (state.racers || []).forEach(function (rc) {
       if (!rc.color) {
         var m = state.roster.filter(function (r) { return r.name === rc.name; })[0];
