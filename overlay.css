@@ -16,6 +16,14 @@ html, body {
 .stage { position: absolute; inset: 0; width: 1920px; height: 1080px; color: var(--txt); }
 #backdrop { position: absolute; inset: 0; z-index: 0; }
 
+/* 時計・タイマー数字＝完全等幅（Yu Gothic UIは数字が比例幅でtnumも効かず「：」が左右にぶれるため、
+   tnum対応のSegoe UIを数字系にだけ当てる） */
+.clock-time, .vt-row b, .brb-count {
+  font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
 /* ---------- テーマ変数 ---------- */
 body {
   --bg1: #0d1b2e; --bg2: #13253d;
@@ -119,7 +127,7 @@ body.scene-ad     #scene-ad     { display: block; }
 .panel-head {
   display: flex; align-items: center; gap: 10px;
   font-size: 20px; font-weight: 900; padding: 10px 16px;
-  background: linear-gradient(90deg, var(--acc), transparent 130%); color: var(--acc-text);
+  background: var(--acc); color: var(--acc-text); /* 単色塗り＝右端の白文字が沈まない */
 }
 .panel-head.sm { font-size: 16px; padding: 7px 12px; }
 .panel-head-sub { margin-left: auto; font-size: 13px; font-weight: 700; opacity: .75; }
