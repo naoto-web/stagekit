@@ -245,8 +245,11 @@ body.debug .video-ph { display: flex; }
 .band-head { font-size: 28px; padding: 10px 20px; }
 .band-head .band-inv { margin-left: auto; font-size: 24px; font-weight: 900;
   font-variant-numeric: tabular-nums; }
-.race-band .buy-line, .talk-band .buy-line { display: flex; flex-wrap: wrap; align-content: flex-start;
-  align-items: center; gap: 10px 30px; padding: 12px 18px; }
+/* 買い目は縦に並べ、高さが足りなくなったら右の列へ折り返す（列間は広めに離す） */
+.race-band .panel, .talk-band .panel { display: flex; flex-direction: column; }
+.race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;
+  display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start;
+  align-items: flex-start; gap: 8px 46px; padding: 12px 18px; overflow: hidden; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
 .buy-line .car { width: 18px; border-radius: 4px; }
