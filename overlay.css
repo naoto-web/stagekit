@@ -214,6 +214,8 @@ body.debug .cam-ph { display: flex; }
 .narabi-row { display: flex; align-items: center; gap: 16px; padding: 10px 12px;
   border-top: 1.5px solid var(--panel-line); flex-wrap: wrap; background: rgba(0,0,0,.25); }
 .nb-label { font-size: 14px; font-weight: 900; color: var(--sub); letter-spacing: .1em; }
+.nb-arrow { font-size: 24px; font-weight: 900; color: var(--txt); }
+.nb-dot { font-size: 20px; font-weight: 900; color: var(--sub); }
 .nb-group { display: flex; gap: 4px; }
 
 .hits-panel { flex: 1; }
