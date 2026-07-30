@@ -16,12 +16,10 @@ html, body {
 .stage { position: absolute; inset: 0; width: 1920px; height: 1080px; color: var(--txt); }
 #backdrop { position: absolute; inset: 0; z-index: 0; }
 
-/* 時計・タイマー数字＝完全等幅（Yu Gothic UIは数字が比例幅でtnumも効かず「：」が左右にぶれるため、
-   tnum対応のSegoe UIを数字系にだけ当てる） */
+/* 時計・タイマー数字＝真の等幅フォント（Consolas）で固定。
+   Yu Gothic UI/Segoe UIは「1」だけ幅が狭く、桁が1のとき全体が横ずれするため */
 .clock-time, .vt-row b, .brb-count {
-  font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
+  font-family: Consolas, "Courier New", monospace;
 }
 
 /* ---------- テーマ変数 ---------- */
@@ -130,7 +128,7 @@ body.scene-ad     #scene-ad     { display: block; }
   background: var(--acc); color: var(--acc-text); /* 単色塗り＝右端の白文字が沈まない */
 }
 .panel-head.sm { font-size: 16px; padding: 7px 12px; }
-.panel-head-sub { margin-left: auto; font-size: 13px; font-weight: 700; opacity: .75; }
+.panel-head-sub { margin-left: auto; font-size: 20px; font-weight: 800; opacity: .95; }
 
 /* 車番チップ（競輪標準9色） */
 .car {
@@ -238,7 +236,9 @@ body.debug .cam-ph { display: flex; }
 .sl-sub { margin-left: auto; font-size: 13px; color: var(--sub); font-weight: 700;
   text-align: right; font-variant-numeric: tabular-nums; }
 .sl-score { flex: 0 0 62px; text-align: right; font-size: 17px; font-weight: 900;
-  color: var(--acc); font-variant-numeric: tabular-nums; }
+  color: var(--txt); font-variant-numeric: tabular-nums; }
+.sl-score.top1 { color: #d63b3b; }  /* 競走得点1位＝赤 */
+.sl-score.top2 { color: #2f66d0; }  /* 2位＝青 */
 .slist-empty { padding: 14px; color: var(--sub); font-weight: 700; font-size: 15px; list-style: none; }
 /* ライン（並び予想）＝出走表の下に1行で車番チップをグループ表示（折返しなし） */
 .narabi-row { display: flex; align-items: center; gap: 7px; padding: 8px 10px;
