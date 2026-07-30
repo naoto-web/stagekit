@@ -282,14 +282,17 @@
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
       var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok; }) : [];
       var memos = rp ? rp.parsed.memos : [];
+      var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";      // 俺たち目（無料公開1点・表示専用）
+      var isNote = !!(rp && rp.entry.isNote);                          // note予想（勝負レース）
 
       // 予想帯＝①トーク（tband-）と②レース観戦（band-）で同一様式：
-      // メンバーカラーのヘッダー（〇〇予想＋投資/回収の日次累計）＋フルサイズ買い目チップ
+      // メンバーカラーのヘッダー（〇〇予想＋noteバッジ＋投資/回収の日次累計）＋俺たち目＋買い目チップ
       ["band-", "tband-"].forEach(function (bp) {
         var bandHead = $(bp + "head-" + slot);
         if (!bandHead) return;
         var bandName = $(bp + "name-" + slot);
-        if (bandName) bandName.textContent = name + " 予想";
+        if (bandName) bandName.innerHTML = esc(name) + " 予想" +
+          (isNote ? '<span class="note-badge">🔥 note予想（勝負レース）</span>' : "");
         var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
           var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
@@ -302,9 +305,11 @@
         }
         var band = $(bp + "pred-" + slot);
         if (band) band.innerHTML =
+          (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore) + "</div>" : "") +
           okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.raw) + "</div>"; }).join("") +
           (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
-          (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点</div>" : "");
+          (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点" +
+            (rp.invest > 0 ? "　投資 " + fmtYen(rp.invest) : "") + "</div>" : "");
       });
     });
   }
