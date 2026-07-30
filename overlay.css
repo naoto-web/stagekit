@@ -43,11 +43,16 @@ body[data-theme="c"] {
    戻す時＝overlay.jsの既定1行 or ソースURLに &theme=a */
 body[data-theme="w"] {
   --bg1: #dde4ec; --bg2: #f9fbfd;
-  --panel: rgba(255, 255, 255, .94); --panel-line: rgba(22, 32, 46, .30);
+  --panel: rgba(255, 255, 255, .94); --panel-line: rgba(22, 32, 46, .45);
   --acc: #b8860b; --acc-text: #ffffff;
   --txt: #16202e; --sub: #5c6b7e; --hot: #d32f2f;
   --cam-bg1: #cfd6de; --cam-bg2: #e8ecf1;
 }
+/* 白背景では細枠が沈むため枠を太く（要素外形サイズは不変＝OBSの穴座標に影響なし） */
+body[data-theme="w"] .panel,
+body[data-theme="w"] .cam,
+body[data-theme="w"] .video-frame,
+body[data-theme="w"] .vt-card { border-width: 3px; }
 body[data-theme="w"] .gbar { background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.35)); }
 body[data-theme="w"] .brand-mark { text-shadow: none; }
 body[data-theme="w"] .vtab { background: rgba(0,0,0,.05); }
@@ -143,7 +148,8 @@ body.debug .cam-ph { display: flex; }
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
   font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 8px;
-  background: rgba(0,0,0,.62); border-left: 6px solid var(--acc); color: var(--txt);
+  background: rgba(0,0,0,.62); border-left: 6px solid var(--acc);
+  color: #f2f4f8; /* 帯は常に暗色なので文字は白固定（テーマ変数にしない＝白テーマで黒文字化する事故防止） */
 }
 .nameplate.letter { font-size: 26px; padding: 4px 22px; }
 .np-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--acc); }
