@@ -360,19 +360,41 @@
     renderNarabi(v, rNo);
   }
 
-  /** 並び（ライン）＝コンソール入力の「135 27 46」を車番チップのグループ表示に */
+  /** ライン（並び予想）＝Kドリームスから自動取得。コンソールの手入力があればそちらを優先（修正用） */
+  var narabiAuto = {}; // raceKey → { val, pending }
+  function joCodeOf(venueName) {
+    var jo = null;
+    if (timetable) {
+      (timetable.venues || []).forEach(function (tv) { if (tv.name === venueName) jo = tv.joCode; });
+    }
+    return jo;
+  }
+  function ensureNarabi(v, rNo, key) {
+    if (narabiAuto[key]) return;
+    var jo = joCodeOf(v.name);
+    if (!jo) return; // 時刻表の取得待ち
+    narabiAuto[key] = { val: "", pending: true };
+    window.Sync.fetchNarabi(jo, rNo).then(function (val) {
+      narabiAuto[key] = { val: val };
+      if (val) renderStartList();
+    }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
+  }
   function renderNarabi(v, rNo) {
     var nb = $("narabi-talk");
     if (!nb) return;
-    var txt = v && rNo ? ((state.narabi || {})[window.Derive.raceKey(v.name, rNo)] || "") : "";
-    var groups = window.Keirin.normalize(txt).split(/[^0-9]+/).filter(Boolean);
+    var key = v && rNo ? window.Derive.raceKey(v.name, rNo) : null;
+    var manual = key ? ((state.narabi || {})[key] || "") : "";
+    var auto = key && narabiAuto[key] ? narabiAuto[key].val : "";
+    if (key && !manual && !auto) ensureNarabi(v, rNo, key);
+    var groups = window.Keirin.normalize(manual || auto).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
-    nb.innerHTML = '<span class="nb-label">ライン</span>' + groups.map(function (g) {
-      return '<span class="nb-group">' + g.split("").map(function (n) {
-        return '<i class="car c' + n + '">' + n + "</i>";
-      }).join("") + "</span>";
-    }).join("");
+    nb.innerHTML = '<span class="nb-label">ライン</span><span class="nb-arrow">←</span>' +
+      groups.map(function (g) {
+        return '<span class="nb-group">' + g.split("").map(function (n) {
+          return '<i class="car c' + n + '">' + n + "</i>";
+        }).join("") + "</span>";
+      }).join('<span class="nb-dot">・</span>');
   }
 
   /* ②レース観戦：場名/Rバーは廃止（7/29 FB4＝映像は別ウィンドウのキャプチャで
@@ -603,6 +625,10 @@
     window.Sync.fetchTimetable(0).then(function (t) {
       timetable = t;
       timerRowKeys = ""; // 行再構築
+      // 未発表で空だったラインは10分ごとに再試行（GAS側にも10分のネガティブキャッシュあり）
+      Object.keys(narabiAuto).forEach(function (k) {
+        if (!narabiAuto[k].pending && !narabiAuto[k].val) delete narabiAuto[k];
+      });
       renderTimers();
       renderBrb();
       renderStartList();
