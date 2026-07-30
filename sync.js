@@ -50,14 +50,14 @@
           return j.timetable;
         });
     },
-    /** 並び予想（ライン）の自動取得。'147 26 35' 形式、未提供なら '' */
+    /** 並び予想（ライン）＋競走得点の自動取得。{narabi:'147 26 35', scores:{車番:'111.72'}} */
     fetchNarabi: function (jo, race) {
       var url = cfg.GAS_URL + "?action=narabi&jo=" + encodeURIComponent(jo) + "&race=" + (+race || 0);
       return fetch(url, { redirect: "follow" })
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "narabi fetch failed");
-          return j.narabi || "";
+          return { narabi: j.narabi || "", scores: j.scores || {} };
         });
     },
 
