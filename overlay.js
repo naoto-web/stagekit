@@ -340,12 +340,22 @@
     }
     var key = window.Derive.raceKey(v.name, rNo);
     var scores = narabiAuto[key] ? narabiAuto[key].scores || {} : {};
+    // 競走得点の1位＝赤・2位＝青（同点は同色）
+    var scoreVals = [];
+    race.racers.forEach(function (p) {
+      var sv = parseFloat(scores[String(p.no)]);
+      if (!isNaN(sv) && scoreVals.indexOf(sv) < 0) scoreVals.push(sv);
+    });
+    scoreVals.sort(function (a, b) { return b - a; });
+    var top1 = scoreVals[0], top2 = scoreVals[1];
     el.innerHTML = race.racers.map(function (p) {
       var sub = [p.pref, p.term ? p.term + "期" : ""].filter(Boolean).join("・");
       var sc = scores[String(p.no)] || "";
+      var sv = parseFloat(sc);
+      var scls = "sl-score" + (sv === top1 ? " top1" : sv === top2 ? " top2" : "");
       return '<li class="slist-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
         '<span class="sl-name">' + esc(p.name) + '</span><span class="sl-sub">' + esc(sub) + "</span>" +
-        (sc ? '<span class="sl-score">' + esc(sc) + "</span>" : "") + "</li>";
+        (sc ? '<span class="' + scls + '">' + esc(sc) + "</span>" : "") + "</li>";
     }).join("");
     renderNarabi(v, rNo);
   }
