@@ -131,21 +131,13 @@ body.debug .cam-ph { display: flex; }
 .talk-cams { position: absolute; left: 8px; top: 96px; width: 1504px; display: flex; gap: 0; }
 .talk-cams .cam { width: 752px; height: 423px; }
 
-/* トークは下端に的中速報ティッカー(60px)が乗るため、パネル類は68pxで止める */
+/* トークは下端に的中速報ティッカー(60px)が乗るため、パネル類は68pxで止める。
+   予想帯は②レース観戦と同一様式（メンバーカラーヘッダー＋投資/回収＋買い目チップ） */
 .talk-band { position: absolute; left: 8px; top: 519px; bottom: 68px; width: 1504px; display: flex; gap: 0; }
-.talk-band .pred-panel { width: 452px; }
-.invest-panel { width: 300px; display: flex; flex-direction: column; gap: 12px;
-  padding: 18px; font-weight: 800; }
-.inv-row { display: flex; justify-content: space-between; align-items: baseline; }
-.inv-label { color: var(--sub); font-size: 15px; font-weight: 900; }
-.inv-num { font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 900; }
-.inv-rate2 { margin-top: auto; font-size: 20px; font-weight: 900; color: var(--sub); text-align: right; }
-.inv-rate2.plus { color: #37d67a; }
+.talk-band .panel { flex: 1 1 0; min-width: 0; }
 
-.pred-body { padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
 .pred-line { font-size: 32px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: .05em; }
 .pred-line.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.pred-meta { font-size: 16px; color: var(--sub); font-weight: 700; }
 
 /* 買い目の色チップ表示（車番＝競輪9色・記号は控えめに） */
 .car.sm { width: 26px; height: 26px; font-size: 15px; border-radius: 5px; }
@@ -209,14 +201,18 @@ body.debug .cam-ph { display: flex; }
 .sl-name { font-size: 21px; font-weight: 900; }
 .sl-sub { margin-left: auto; font-size: 13px; color: var(--sub); font-weight: 700;
   text-align: right; font-variant-numeric: tabular-nums; }
+.sl-score { flex: 0 0 62px; text-align: right; font-size: 17px; font-weight: 900;
+  color: var(--acc); font-variant-numeric: tabular-nums; }
 .slist-empty { padding: 14px; color: var(--sub); font-weight: 700; font-size: 15px; list-style: none; }
-/* 並び（ライン）＝出走表の下に車番チップをグループ表示 */
-.narabi-row { display: flex; align-items: center; gap: 16px; padding: 10px 12px;
-  border-top: 1.5px solid var(--panel-line); flex-wrap: wrap; background: rgba(0,0,0,.25); }
-.nb-label { font-size: 14px; font-weight: 900; color: var(--sub); letter-spacing: .1em; }
-.nb-arrow { font-size: 24px; font-weight: 900; color: var(--txt); }
-.nb-dot { font-size: 20px; font-weight: 900; color: var(--sub); }
-.nb-group { display: flex; gap: 4px; }
+/* ライン（並び予想）＝出走表の下に1行で車番チップをグループ表示（折返しなし） */
+.narabi-row { display: flex; align-items: center; gap: 7px; padding: 8px 10px;
+  border-top: 1.5px solid var(--panel-line); flex-wrap: nowrap; overflow: hidden;
+  background: rgba(0,0,0,.25); }
+.nb-label { font-size: 12px; font-weight: 900; color: var(--sub); letter-spacing: .08em; flex: 0 0 auto; }
+.nb-arrow { font-size: 20px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
+.nb-dot { font-size: 13px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
+.nb-group { display: flex; gap: 2px; flex: 0 0 auto; }
+.narabi-row .car { width: 26px; height: 26px; font-size: 15px; border-radius: 5px; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }
@@ -249,7 +245,7 @@ body.debug .video-ph { display: flex; }
 .band-head { font-size: 28px; padding: 10px 20px; }
 .band-head .band-inv { margin-left: auto; font-size: 24px; font-weight: 900;
   font-variant-numeric: tabular-nums; }
-.race-band .buy-line { display: flex; flex-wrap: wrap; align-content: flex-start;
+.race-band .buy-line, .talk-band .buy-line { display: flex; flex-wrap: wrap; align-content: flex-start;
   align-items: center; gap: 10px 30px; padding: 12px 18px; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
 
