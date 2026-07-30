@@ -158,7 +158,7 @@
   function ensurePredEntry(key, racerId) {
     if (!state.preds[key]) state.preds[key] = { cars: 9, byRacer: {} };
     if (!state.preds[key].byRacer[racerId]) {
-      state.preds[key].byRacer[racerId] = { text: "", defaultType: "3連単", unit: 100, investInput: null };
+      state.preds[key].byRacer[racerId] = { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
     }
     return state.preds[key].byRacer[racerId];
   }
@@ -172,11 +172,15 @@
     var race = state.preds[key] || { cars: 9 };
 
     wrap.innerHTML = state.racers.map(function (rc, idx) {
-      var p = (race.byRacer && race.byRacer[rc.id]) || { text: "", defaultType: "3連単", unit: 100, investInput: null };
+      var p = (race.byRacer && race.byRacer[rc.id]) || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
       return '<div class="pred-form" data-racer="' + rc.id + '">' +
         '<h3><span class="' + (idx === 1 ? "alt" : "") + '">' + esc(rc.name) + "</span> の予想</h3>" +
         '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(p.text) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
+        '<div class="pred-opts">' +
+        '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(p.oreTachi || "") + '" placeholder="無料公開の1点（例 1-2-3）"></label>' +
+        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (p.isNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
+        "</div>" +
         '<div class="pred-opts">' +
         '<label class="lbl inline">式別 <select class="inp tiny pf-type">' +
         window.Keirin.TYPES.map(function (t) { return "<option" + (t === p.defaultType ? " selected" : "") + ">" + t + "</option>"; }).join("") +
@@ -214,6 +218,8 @@
         entry.unit = +form.querySelector(".pf-unit").value || 0;
         var inv = +form.querySelector(".pf-invest").value;
         entry.investInput = inv > 0 ? inv : null;
+        entry.oreTachi = form.querySelector(".pf-ore").value.trim();
+        entry.isNote = form.querySelector(".pf-note").checked;
         state.preds[key].cars = +($("pred-cars").value) || 9;
         save();
         renderSettlePreview();
