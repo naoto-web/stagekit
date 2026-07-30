@@ -368,7 +368,7 @@
     var groups = window.Keirin.normalize(txt).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
-    nb.innerHTML = '<span class="nb-label">並び</span>' + groups.map(function (g) {
+    nb.innerHTML = '<span class="nb-label">ライン</span>' + groups.map(function (g) {
       return '<span class="nb-group">' + g.split("").map(function (n) {
         return '<i class="car c' + n + '">' + n + "</i>";
       }).join("") + "</span>";
@@ -492,6 +492,45 @@
     }
   }
 
+  /* ---------- 的中演出（結果入力で的中が出たら当たった配信者のワイプに表示） ----------
+     状態更新のたびに的中リストを前回と比較し、増えた的中だけ発火（リロード時は再生しない）。 */
+  var seenHits = null; // null＝初回未初期化
+  var HIT_FX_MS = 12000;
+  function checkNewHits() {
+    var ids = {};
+    derived.hits.forEach(function (h) { ids[h.id] = h; });
+    if (seenHits === null) { seenHits = ids; return; }
+    Object.keys(ids).forEach(function (id) {
+      if (seenHits[id]) return;
+      var h = ids[id];
+      state.racers.forEach(function (rc, idx) {
+        if (rc.name === h.racerName) fireHitFx(idx === 0 ? "a" : "b", h);
+      });
+    });
+    seenHits = ids;
+  }
+  function fireHitFx(slot, hit) {
+    ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
+      var el = $(p + slot);
+      if (!el) return;
+      var cam = el.closest(".cam");
+      if (!cam) return;
+      var old = cam.querySelector(".hit-fx-badge");
+      if (old) old.parentNode.removeChild(old);
+      var badge = document.createElement("div");
+      badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "");
+      badge.textContent = hit.manche
+        ? "💥 万車的中！" + (hit.mult ? " " + hit.mult + "倍" : "")
+        : "🎯 的中！" + (hit.type ? " " + hit.type : "") + (hit.mult ? " " + hit.mult + "倍" : "");
+      cam.appendChild(badge);
+      cam.classList.add("hit-fx");
+      setTimeout(function () {
+        if (badge.parentNode) badge.parentNode.removeChild(badge);
+        if (!cam.querySelector(".hit-fx-badge")) cam.classList.remove("hit-fx");
+      }, HIT_FX_MS);
+    });
+  }
+
   /* ---------- 背景（透過穴つき） ---------- */
   function buildBackdrop() {
     var svg = $("backdrop");
@@ -532,6 +571,7 @@
     syncPath = path;
     lastSyncAt = new Date();
     renderAll();
+    checkNewHits();
   }
 
   function renderAll() {
