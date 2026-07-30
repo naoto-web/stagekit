@@ -38,6 +38,28 @@ body[data-theme="c"] {
   --txt: #f5efee; --sub: #b09a9a; --hot: #ffb03a;
   --cam-bg1: #3a2530; --cam-bg2: #211419;
 }
+/* 白テーマ（w）＝①トーク・②レース観戦の既定（7/30 FB10）。
+   メンバーカラー・信号機色・車番9色は絶対色なのでそのまま。
+   戻す時＝overlay.jsの既定1行 or ソースURLに &theme=a */
+body[data-theme="w"] {
+  --bg1: #dde4ec; --bg2: #f9fbfd;
+  --panel: rgba(255, 255, 255, .94); --panel-line: rgba(22, 32, 46, .30);
+  --acc: #b8860b; --acc-text: #ffffff;
+  --txt: #16202e; --sub: #5c6b7e; --hot: #d32f2f;
+  --cam-bg1: #cfd6de; --cam-bg2: #e8ecf1;
+}
+body[data-theme="w"] .gbar { background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.35)); }
+body[data-theme="w"] .brand-mark { text-shadow: none; }
+body[data-theme="w"] .vtab { background: rgba(0,0,0,.05); }
+body[data-theme="w"] .sp-logo { background: rgba(0,0,0,.03); }
+body[data-theme="w"] .vt-head { background: rgba(0,0,0,.06); }
+body[data-theme="w"] .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.18); }
+body[data-theme="w"] .slist-row { border-bottom-color: rgba(0,0,0,.08); }
+body[data-theme="w"] .narabi-row { background: rgba(0,0,0,.05); }
+body[data-theme="w"] .ore-row { background: rgba(0,0,0,.04); }
+body[data-theme="w"] .pl-all { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.3); }
+body[data-theme="w"] .ticker { background: rgba(255,255,255,.88); }
+body[data-theme="w"] .tick-manche { color: #d32f2f; }
 
 /* ---------- シーン切替（URLパラメータで固定） ---------- */
 .scene { display: none; position: absolute; inset: 0; z-index: 1; }
