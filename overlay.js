@@ -279,14 +279,18 @@
         var cam = el.closest(".cam");
         if (cam) cam.style.borderColor = color;
       });
-      var head = $("pred-head-" + slot);
-      if (head) head.textContent = name + " 予想";
-      // ②映像下の予想枠＝配信者のメンバーカラー（ヘッダー塗り＋枠線）＋投資/回収の日次累計
-      var bandHead = $("band-head-" + slot);
-      if (bandHead) {
-        var bandName = $("band-name-" + slot);
+      var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
+      var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok; }) : [];
+      var memos = rp ? rp.parsed.memos : [];
+
+      // 予想帯＝①トーク（tband-）と②レース観戦（band-）で同一様式：
+      // メンバーカラーのヘッダー（〇〇予想＋投資/回収の日次累計）＋フルサイズ買い目チップ
+      ["band-", "tband-"].forEach(function (bp) {
+        var bandHead = $(bp + "head-" + slot);
+        if (!bandHead) return;
+        var bandName = $(bp + "name-" + slot);
         if (bandName) bandName.textContent = name + " 予想";
-        var bandInv = $("band-inv-" + slot);
+        var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
           var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
           bandInv.textContent = bt ? "投資 " + fmtYen(bt.invest) + "　回収 " + fmtYen(bt.refund) : "";
@@ -294,41 +298,14 @@
         if (color) {
           bandHead.style.background = color;
           bandHead.style.color = textOn(color);
-          var bandPanel = bandHead.parentElement;
-          if (bandPanel) bandPanel.style.borderColor = color;
+          if (bandHead.parentElement) bandHead.parentElement.style.borderColor = color;
         }
-      }
-
-      var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
-      var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok; }) : [];
-      var memos = rp ? rp.parsed.memos : [];
-      var linesHtml = okLines.map(function (l) {
-        return '<div class="pred-line chips">' + lineChips(l.raw) + "</div>";
-      }).join("");
-      var metaParts = [];
-      if (memos.length) metaParts.push(esc(memos.join("　")));
-      if (rp && rp.points) metaParts.push("合計 " + rp.points + "点");
-      var metaHtml = metaParts.length ? '<div class="pred-meta">' + metaParts.join("。") + "</div>" : "";
-
-      var body = $("pred-" + slot);
-      if (body) body.innerHTML = linesHtml + metaHtml;
-      // ②の予想帯（映像下・左右2パネル）＝フルサイズの色チップで横流し表示
-      var band = $("band-pred-" + slot);
-      if (band) band.innerHTML =
-        okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.raw) + "</div>"; }).join("") +
-        (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点</div>" : "");
-
-      // 投資/回収＝日次累計（§8）
-      var inv = $("invest-" + slot);
-      if (inv && rc) {
-        var t = derived.totals[rc.id] || { invest: 0, refund: 0 };
-        var rate = t.invest > 0 ? Math.round((t.refund / t.invest) * 100) : null;
-        inv.innerHTML =
-          '<div class="inv-row"><span class="inv-label">投資</span><span class="inv-num">' + fmtYen(t.invest) + "</span></div>" +
-          '<div class="inv-row"><span class="inv-label">回収</span><span class="inv-num">' + fmtYen(t.refund) + "</span></div>" +
-          '<div class="inv-rate2' + (rate !== null && rate >= 100 ? " plus" : "") + '">' +
-          (rate === null ? "" : "回収率 " + rate + "%") + "</div>";
-      }
+        var band = $(bp + "pred-" + slot);
+        if (band) band.innerHTML =
+          okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.raw) + "</div>"; }).join("") +
+          (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
+          (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点</div>" : "");
+      });
     });
   }
 
@@ -352,16 +329,20 @@
       el.innerHTML = '<li class="slist-empty">出走表データ取得待ち</li>';
       return;
     }
+    var key = window.Derive.raceKey(v.name, rNo);
+    var scores = narabiAuto[key] ? narabiAuto[key].scores || {} : {};
     el.innerHTML = race.racers.map(function (p) {
       var sub = [p.pref, p.term ? p.term + "期" : ""].filter(Boolean).join("・");
+      var sc = scores[String(p.no)] || "";
       return '<li class="slist-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
-        '<span class="sl-name">' + esc(p.name) + '</span><span class="sl-sub">' + esc(sub) + "</span></li>";
+        '<span class="sl-name">' + esc(p.name) + '</span><span class="sl-sub">' + esc(sub) + "</span>" +
+        (sc ? '<span class="sl-score">' + esc(sc) + "</span>" : "") + "</li>";
     }).join("");
     renderNarabi(v, rNo);
   }
 
-  /** ライン（並び予想）＝Kドリームスから自動取得。コンソールの手入力があればそちらを優先（修正用） */
-  var narabiAuto = {}; // raceKey → { val, pending }
+  /** ライン（並び予想）＋競走得点＝Kドリームスから自動取得。並びは手入力があれば優先（修正用） */
+  var narabiAuto = {}; // raceKey → { val, scores, pending }
   function joCodeOf(venueName) {
     var jo = null;
     if (timetable) {
@@ -369,14 +350,17 @@
     }
     return jo;
   }
+  function hasRaceInfo(e) {
+    return e && (e.val || (e.scores && Object.keys(e.scores).length > 0));
+  }
   function ensureNarabi(v, rNo, key) {
     if (narabiAuto[key]) return;
     var jo = joCodeOf(v.name);
     if (!jo) return; // 時刻表の取得待ち
-    narabiAuto[key] = { val: "", pending: true };
-    window.Sync.fetchNarabi(jo, rNo).then(function (val) {
-      narabiAuto[key] = { val: val };
-      if (val) renderStartList();
+    narabiAuto[key] = { val: "", scores: {}, pending: true };
+    window.Sync.fetchNarabi(jo, rNo).then(function (info) {
+      narabiAuto[key] = { val: info.narabi, scores: info.scores };
+      if (hasRaceInfo(narabiAuto[key])) renderStartList();
     }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
   }
   function renderNarabi(v, rNo) {
@@ -385,7 +369,7 @@
     var key = v && rNo ? window.Derive.raceKey(v.name, rNo) : null;
     var manual = key ? ((state.narabi || {})[key] || "") : "";
     var auto = key && narabiAuto[key] ? narabiAuto[key].val : "";
-    if (key && !manual && !auto) ensureNarabi(v, rNo, key);
+    if (key && !narabiAuto[key]) ensureNarabi(v, rNo, key); // 得点も要るため手入力の有無に関わらず取得
     var groups = window.Keirin.normalize(manual || auto).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
@@ -625,9 +609,9 @@
     window.Sync.fetchTimetable(0).then(function (t) {
       timetable = t;
       timerRowKeys = ""; // 行再構築
-      // 未発表で空だったラインは10分ごとに再試行（GAS側にも10分のネガティブキャッシュあり）
+      // 未発表で空だったライン/得点は10分ごとに再試行（GAS側にも10分のネガティブキャッシュあり）
       Object.keys(narabiAuto).forEach(function (k) {
-        if (!narabiAuto[k].pending && !narabiAuto[k].val) delete narabiAuto[k];
+        if (!narabiAuto[k].pending && !hasRaceInfo(narabiAuto[k])) delete narabiAuto[k];
       });
       renderTimers();
       renderBrb();
