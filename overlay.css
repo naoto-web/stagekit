@@ -197,16 +197,8 @@ body.debug .cam-ph { display: flex; }
 .vt-card.zone-yellow .vt-head, .vt-card.zone-yellow .vt-head .vt-r { color: #16181c; }
 .vt-card.zone-yellow .vt-row, .vt-card.zone-yellow .vt-row b { color: #16181c; }
 .vt-card.zone-yellow .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.32); }
-/* ①トーク右レール（400px幅）は小サイズ表示 */
-#scene-talk .timer-cards { flex: 0 0 150px; }
-#scene-talk .vt-head { font-size: 18px; padding: 6px 4px; }
-#scene-talk .vt-head .vt-start-s { font-size: 12px; }
-#scene-talk .vt-rows { padding: 2px 10px; }
-#scene-talk .vt-row { font-size: 17px; }
-#scene-talk .vt-row b { font-size: 17px; }
-#scene-talk .vt-row b.closed { font-size: 15px; }
-#scene-talk .vt-cta-main { font-size: 15px; }
-#scene-talk .vt-cta-line { font-size: 13px; }
+/* ①トーク右レール（400px幅）＝②と同じフルサイズカードを縦積みで使う（7/30 FB5） */
+#scene-talk .timer-cards { flex-direction: column; flex: 0 0 336px; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
@@ -332,6 +324,24 @@ body.debug .video-ph { display: flex; }
   font-size: 16px; font-weight: 700; color: var(--sub);
   padding: 8px 18px; border: 1px dashed var(--panel-line); border-radius: 8px;
   background: rgba(0,0,0,.3); }
+
+/* ---------- 的中演出（当たった配信者のワイプに12秒表示） ---------- */
+.cam.hit-fx { animation: hitPulse 1s ease-in-out infinite; }
+@keyframes hitPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 79, 0), inset 0 0 0 3px rgba(255, 213, 79, .25); }
+  50% { box-shadow: 0 0 44px 10px rgba(255, 213, 79, .8), inset 0 0 0 3px rgba(255, 213, 79, .9); }
+}
+.hit-fx-badge {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%) rotate(-3deg);
+  background: #ffd54f; color: #1c1608;
+  font-size: 26px; font-weight: 900; padding: 8px 22px; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5); white-space: nowrap; z-index: 5;
+  animation: hitPop .45s cubic-bezier(.2, 1.6, .4, 1);
+}
+.hit-fx-badge.manche { background: #d63b3b; color: #fff; }
+@keyframes hitPop {
+  from { transform: translateX(-50%) scale(.2) rotate(-3deg); opacity: 0; }
+}
 
 /* ---------- ティッカー ---------- */
 .ticker {
