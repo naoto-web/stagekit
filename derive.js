@@ -50,11 +50,12 @@
     };
   }
 
-  /** 1配信者×1レースの予想エントリ（無ければ空を返す） */
+  /** 1配信者×1レースの予想エントリ（無ければ空を返す）
+      oreTachi＝無料公開の俺たち目1点（表示専用・点数/的中計算には入れない）／isNote＝note予想（勝負レース）フラグ */
   function predOf(state, key, racerId) {
     var race = state.preds[key];
     var p = race && race.byRacer && race.byRacer[racerId];
-    return p || { text: "", defaultType: "3連単", unit: 100, investInput: null };
+    return p || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
   }
 
   /** 予想エントリをパースして投資額・単価を解決する */
