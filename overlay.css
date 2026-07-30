@@ -212,7 +212,7 @@ body.debug .cam-ph { display: flex; }
 .nb-arrow { font-size: 20px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
 .nb-dot { font-size: 13px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
 .nb-group { display: flex; gap: 2px; flex: 0 0 auto; }
-.narabi-row .car { width: 26px; height: 26px; font-size: 15px; border-radius: 5px; }
+.narabi-row .car { width: 14px; height: 26px; font-size: 14px; border-radius: 3px; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }
@@ -248,6 +248,17 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line, .talk-band .buy-line { display: flex; flex-wrap: wrap; align-content: flex-start;
   align-items: center; gap: 10px 30px; padding: 12px 18px; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
+/* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
+.buy-line .car { width: 18px; border-radius: 4px; }
+.buy-line .pl-all { width: 26px; font-size: 15px; }
+/* 俺たち目（無料公開1点）＝金枠で強調 */
+.ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
+  border: 2px solid var(--acc); border-radius: 10px; background: rgba(0,0,0,.35); }
+.ore-label { font-size: 15px; font-weight: 900; color: var(--acc); margin-right: 5px; }
+/* note予想（勝負レース）バッジ＝帯ヘッダー内 */
+.note-badge { display: inline-block; margin-left: 14px; padding: 3px 14px; border-radius: 8px;
+  background: rgba(0,0,0,.62); color: #ffd54f; font-size: 17px; font-weight: 900;
+  vertical-align: middle; white-space: nowrap; }
 
 .race-rail { width: 544px; }
 .race-rail .cam { flex: 1 1 0; }
