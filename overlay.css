@@ -16,9 +16,9 @@ html, body {
 .stage { position: absolute; inset: 0; width: 1920px; height: 1080px; color: var(--txt); }
 #backdrop { position: absolute; inset: 0; z-index: 0; }
 
-/* 時計・タイマー数字＝真の等幅フォント（Consolas）で固定。
-   Yu Gothic UI/Segoe UIは「1」だけ幅が狭く、桁が1のとき全体が横ずれするため */
-.clock-time, .vt-row b, .brb-count {
+/* 時計・タイマー数字・競走得点＝真の等幅フォント（Consolas）で固定。
+   Yu Gothic UI/Segoe UIは「1」だけ幅が狭く、桁により横ずれ・小数点の縦位置ズレが起きるため */
+.clock-time, .vt-row b, .brb-count, .sl-score {
   font-family: Consolas, "Courier New", monospace;
 }
 
