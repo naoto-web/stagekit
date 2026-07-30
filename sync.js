@@ -50,6 +50,16 @@
           return j.timetable;
         });
     },
+    /** 並び予想（ライン）の自動取得。'147 26 35' 形式、未提供なら '' */
+    fetchNarabi: function (jo, race) {
+      var url = cfg.GAS_URL + "?action=narabi&jo=" + encodeURIComponent(jo) + "&race=" + (+race || 0);
+      return fetch(url, { redirect: "follow" })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) throw new Error(j.error || "narabi fetch failed");
+          return j.narabi || "";
+        });
+    },
 
     /* ---------- GAS書き込み（コンソール専用・keyが要る） ----------
        Content-Type: text/plain でプリフライトを回避（GASはOPTIONSに応答しないため） */
