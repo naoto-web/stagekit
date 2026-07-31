@@ -87,6 +87,10 @@ body.scene-ad     #scene-ad     { display: block; }
   background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.12));
 }
 
+/* ヘッダー左上＝チャンネルバナー画像（俺たちの競輪ライブ・7/31差し替え） */
+.brand-img { height: 64px; width: auto; display: block; border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+
 .brand { display: flex; align-items: baseline; gap: 10px; }
 .brand-mark {
   font-size: 40px; font-weight: 900; letter-spacing: .04em; color: var(--acc);
