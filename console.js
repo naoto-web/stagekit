@@ -499,7 +499,7 @@
         var n = b.getAttribute("data-n");
         var i = selected.indexOf(n);
         if (i >= 0) selected.splice(i, 1);
-        else { if (selected.length >= 2) selected.shift(); selected.push(n); }
+        else { if (selected.length >= 4) selected.shift(); selected.push(n); } // 最大4場（モーニング→昼の並走帯対応）
         state.venues = selected.map(function (x) { return { name: x }; });
         if (state.activeVenue >= state.venues.length) state.activeVenue = 0;
         state.venues.forEach(function (v) {
