@@ -227,8 +227,26 @@ body.debug .cam-ph { display: flex; }
 .vt-card.zone-yellow .vt-head, .vt-card.zone-yellow .vt-head .vt-r { color: #16181c; }
 .vt-card.zone-yellow .vt-row, .vt-card.zone-yellow .vt-row b { color: #16181c; }
 .vt-card.zone-yellow .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.32); }
-/* ①トーク右レール（400px幅）＝②と同じフルサイズカードを縦積みで使う（7/30 FB5） */
-#scene-talk .timer-cards { flex-direction: column; flex: 0 0 336px; }
+/* 3〜4場同時表示（モーニング→昼の並走帯）＝カードを段階的にコンパクト化 */
+.timer-cards.vt-n3 .vt-head { font-size: 19px; gap: 6px; }
+.timer-cards.vt-n3 .vt-head .vt-start-s { font-size: 12px; }
+.timer-cards.vt-n3 .vt-rows { padding: 4px 10px; }
+.timer-cards.vt-n3 .vt-row { font-size: 17px; }
+.timer-cards.vt-n3 .vt-row b { font-size: 19px; }
+.timer-cards.vt-n3 .vt-row b.closed { font-size: 16px; }
+.timer-cards.vt-n4 .vt-head { font-size: 16px; gap: 5px; }
+.timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 10px; }
+.timer-cards.vt-n4 .vt-rows { padding: 3px 8px; }
+.timer-cards.vt-n4 .vt-row { font-size: 13px; }
+.timer-cards.vt-n4 .vt-row b { font-size: 16px; }
+.timer-cards.vt-n4 .vt-row b.closed { font-size: 14px; }
+.timer-cards.vt-n3 .vt-cta-main, .timer-cards.vt-n4 .vt-cta-main { font-size: 15px; }
+.timer-cards.vt-n3 .vt-cta-line, .timer-cards.vt-n4 .vt-cta-line { font-size: 12px; }
+
+/* ①トーク右レール（400px幅）＝2場は②と同じフルサイズカード縦積み・3〜4場は2列グリッド（高さ336px固定） */
+#scene-talk .timer-cards { flex-flow: column nowrap; flex: 0 0 336px; }
+#scene-talk .timer-cards.vt-n3, #scene-talk .timer-cards.vt-n4 { flex-flow: row wrap; }
+#scene-talk .timer-cards.vt-n3 .vt-card, #scene-talk .timer-cards.vt-n4 .vt-card { flex: 1 1 40%; min-width: 0; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
