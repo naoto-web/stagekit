@@ -194,7 +194,10 @@
       }).join("");
       ["timer-talk", "timer-race"].forEach(function (id) {
         var el = $(id);
-        if (el) el.innerHTML = html;
+        if (!el) return;
+        el.innerHTML = html;
+        // 場数に応じてカードをコンパクト化（3〜4場＝モーニング→昼の並走帯）
+        el.className = "timer-cards vt-n" + Math.max(2, Math.min(cards.length, 4));
       });
     }
     tickTimerCounts();
