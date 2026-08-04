@@ -712,20 +712,30 @@
     return jo;
   }
 
-  function pollResults() {
-    if (!state || !timetable || !state.venues.length) return;
-    state.venues.forEach(function (v) {
+  function pollResults(force) {
+    if (!state || !timetable || !state.venues.length) return Promise.resolve();
+    return Promise.all(state.venues.map(function (v) {
       var jo = joCodeOfName(v.name);
-      if (!jo) return;
-      window.Sync.fetchResults(jo).then(function (list) {
+      if (!jo) return null;
+      return window.Sync.fetchResults(jo, force).then(function (list) {
         (list || []).forEach(function (r) {
           autoResults[window.Derive.raceKey(v.name, r.no)] = r;
         });
         applyAutoResults();
         renderResultHint();
       }).catch(function () { /* 次回ポーリングで再試行 */ });
-    });
+    }));
   }
+
+  $("btn-res-refresh").addEventListener("click", function () {
+    var hint = $("res-refresh-hint");
+    hint.textContent = "取得中…";
+    pollResults(true).then(function () {
+      var key = currentKey();
+      var got = key && (autoResults[key] || (state.results && state.results[key]));
+      hint.textContent = got ? "" : "公式の結果がまだ出ていません（確定し次第、自動で反映されます）";
+    });
+  });
 
   function applyAutoResults() {
     if (!state || !state.cfg || !state.cfg.autoResults) return;
