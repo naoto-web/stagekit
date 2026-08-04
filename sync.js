@@ -51,8 +51,8 @@
         });
     },
     /** 確定済みレース結果の自動取得。[{no, order, names, kimarite, payouts}] */
-    fetchResults: function (jo) {
-      var url = cfg.GAS_URL + "?action=results&jo=" + encodeURIComponent(jo);
+    fetchResults: function (jo, force) {
+      var url = cfg.GAS_URL + "?action=results&jo=" + encodeURIComponent(jo) + (force ? "&force=1" : "");
       return fetch(url, { redirect: "follow" })
         .then(function (r) { return r.json(); })
         .then(function (j) {
