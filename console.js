@@ -287,7 +287,8 @@
   function syncPayoutPresets() {
     var order = parseOrderInput();
     if (order && order.length >= 2) {
-      window.Keirin.standardCombos(order).forEach(function (sc) {
+      // プリセット行は3連単のみ（買い目が3連単運用のため・8/4）。他形式は「行を追加」か自動取得で入る
+      window.Keirin.standardCombos(order).filter(function (sc) { return sc.type === "3連単"; }).forEach(function (sc) {
         var exists = payoutRows.some(function (p) {
           return p.type === sc.type &&
             window.Keirin.comboLabel(p.type, p.combo) === window.Keirin.comboLabel(sc.type, sc.combo);
