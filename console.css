@@ -27,6 +27,8 @@ body {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
 .warn.key-warn { background: #4a1919; border-color: #ff5d5d; color: #ffb3b3; }
+#stale-warn { cursor: pointer; user-select: none; }
+#stale-warn:hover { background: #5a4020; }
 .warn code { background: rgba(0,0,0,.4); padding: 1px 6px; border-radius: 4px; }
 .hidden { display: none !important; }
 
