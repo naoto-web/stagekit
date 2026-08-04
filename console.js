@@ -37,6 +37,7 @@
   var state = null;
   var timetable = null;
   var payoutRows = [];     // 結果入力中の払戻行（ローカル編集用）
+  var refundInputs = {};   // 配信者id→回収額（手入力・確定時にresults.refundsへ保存）
   var saveCount = 0;
   var savePending = false;
   var saveRunning = false;
@@ -185,8 +186,7 @@
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
         '<input type="hidden" class="pf-type" value="3連単">' +
-        '<label class="lbl inline">単価 <input type="number" class="inp tiny pf-unit" step="100" min="0" value="' + (p.unit || "") + '">円</label>' +
-        '<label class="lbl inline">投資額 <input type="number" class="inp tiny pf-invest" value="' + (p.investInput || "") + '" placeholder="自動">円</label>' +
+        '<label class="lbl inline">投資額 <input type="number" class="inp slim pf-invest" value="' + (p.investInput || "") + '" placeholder="実際に買った総額">円</label>' +
         "</div>" +
         '<div class="parse-total pf-total"></div>' +
         '<button class="btn small pf-save">この予想を保存</button>' +
@@ -200,22 +200,14 @@
     wrap.querySelectorAll(".pred-form").forEach(function (form) {
       var racerId = form.getAttribute("data-racer");
       var update = function () { updatePredInfo(form, key); };
-      ["pf-text", "pf-type", "pf-unit", "pf-invest"].forEach(function (cls) {
+      ["pf-text", "pf-invest"].forEach(function (cls) {
         form.querySelector("." + cls).addEventListener("input", update);
-      });
-      form.addEventListener("click", function (e) {
-        var t = e.target;
-        if (t.classList && t.classList.contains("snap-unit")) {
-          form.querySelector(".pf-unit").value = t.getAttribute("data-u");
-          form.querySelector(".pf-invest").value = "";
-          updatePredInfo(form, key);
-        }
       });
       form.querySelector(".pf-save").addEventListener("click", function () {
         var entry = ensurePredEntry(key, racerId);
         entry.text = form.querySelector(".pf-text").value;
         entry.defaultType = form.querySelector(".pf-type").value;
-        entry.unit = +form.querySelector(".pf-unit").value || 0;
+        entry.unit = 0; // 単価×点数方式は廃止（投資・回収とも実額入力）
         var inv = +form.querySelector(".pf-invest").value;
         entry.investInput = inv > 0 ? inv : null;
         entry.oreTachi = form.querySelector(".pf-ore").value.trim();
@@ -241,25 +233,10 @@
         ? '<div class="pl-ok">' + esc(l.raw.trim()) + "　→ " + esc(l.type) + " <b>" + l.points + "点</b></div>"
         : '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ メモ行（点数外）</div>";
     }).join("");
-    var unit = +form.querySelector(".pf-unit").value || 0;
     var investInput = +form.querySelector(".pf-invest").value || 0;
-    var invest, unitExact;
-    if (investInput > 0) {
-      invest = investInput;
-      unitExact = parsed.points ? investInput / parsed.points : 0;
-    } else {
-      invest = parsed.points * unit;
-      unitExact = unit;
-    }
-    var unitShow = Math.round(unitExact);
-    var html = "合計 " + parsed.points + "点 × " + unitShow.toLocaleString("ja-JP") + "円 ＝ " + fmtYen(invest);
-    // 車券は100円単位。割り切れない単価は実買不可なので丸め候補を提示
-    if (parsed.points > 0 && unitExact > 0 && unitExact % 100 !== 0) {
-      var lo = Math.floor(unitExact / 100) * 100;
-      var hi = lo + 100;
-      html += '<div class="unit-warn">⚠ 1点' + unitShow + "円は車券で買えない額（100円単位）→ ";
-      if (lo > 0) html += '<button class="btn small snap-unit" data-u="' + lo + '">' + lo + "円/点=" + fmtYen(lo * parsed.points) + "</button> ";
-      html += '<button class="btn small snap-unit" data-u="' + hi + '">' + hi + "円/点=" + fmtYen(hi * parsed.points) + "</button></div>";
+    var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput);
+    if (parsed.points > 0 && !investInput) {
+      html += '<div class="unit-warn">⚠ 投資額が未入力（画面の投資・回収の累計に乗りません）</div>';
     }
     form.querySelector(".pf-total").innerHTML = html;
   }
@@ -293,6 +270,10 @@
       $("res-order").value = "";
       ["res-name-1", "res-name-2", "res-name-3", "res-kim-1", "res-kim-2"].forEach(function (id) { $(id).value = ""; });
       payoutRows = [];
+    }
+    refundInputs = {};
+    if (existing && existing.refunds) {
+      Object.keys(existing.refunds).forEach(function (pid) { refundInputs[pid] = existing.refunds[pid]; });
     }
     syncPayoutPresets();
     renderResultHint();
@@ -357,14 +338,21 @@
     var payouts = payoutRows.filter(function (p) { return p.amount > 0; });
     el.innerHTML = state.racers.map(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
-      var s = window.Keirin.settle(rp.parsed, rp.unit, order, payouts);
+      var s = window.Keirin.settle(rp.parsed, 0, order, payouts);
       if (!rp.points) return "<div>" + esc(rc.name) + "：予想なし</div>";
-      if (!s.hits.length) return "<div>" + esc(rc.name) + '：<span class="miss">不的中</span>（投資 ' + fmtYen(s.invest) + "）</div>";
+      if (!s.hits.length) return "<div>" + esc(rc.name) + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）</div>";
+      var refund = refundInputs[rc.id];
       return "<div>" + esc(rc.name) + "：" + s.hits.map(function (h) {
         if (!h.amount) return '<span class="manche">🎯 ' + h.type + " " + h.comboLabel + " 払戻未入力</span>";
         return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + h.mult + "倍</span>";
-      }).join(" ") + "　回収 " + fmtYen(s.refund) + "</div>";
+      }).join(" ") +
+        '　回収 <input type="number" class="inp sp-refund" data-racer="' + esc(rc.id) + '" value="' + (refund > 0 ? refund : "") + '" placeholder="実額">円</div>';
     }).join("");
+    el.querySelectorAll(".sp-refund").forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        refundInputs[inp.getAttribute("data-racer")] = +inp.value || 0;
+      });
+    });
   }
 
   $("btn-settle").addEventListener("click", function () {
@@ -375,23 +363,39 @@
     // 的中しているのに払戻が未入力なら確定させない（0倍の的中速報が画面に載る事故防止）
     var validPayouts = payoutRows.filter(function (p) { return p.amount > 0; });
     var missing = [];
+    var missingRefund = [];
     state.racers.forEach(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
-      window.Keirin.settle(rp.parsed, rp.unit, order, validPayouts).hits.forEach(function (h) {
+      var s = window.Keirin.settle(rp.parsed, 0, order, validPayouts);
+      s.hits.forEach(function (h) {
         var label = h.type + " " + h.comboLabel;
         if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
       });
+      // 投資額が入っている予想が的中したのに回収額未入力→確定不可（回収¥0が画面に載る事故防止）
+      if (s.hits.length && rp.invest > 0 && !(refundInputs[rc.id] > 0)) missingRefund.push(rc.name);
     });
     if (missing.length) {
       $("settle-preview").innerHTML = '<span class="manche">⚠ 的中買目の払戻が未入力：' + missing.map(esc).join(" / ") +
-        "　→ 上の払戻欄に入力すると倍率・回収を自動計算して確定できます</span>";
+        "　→ 上の払戻欄に入力すると倍率を計算して確定できます</span>";
       return;
     }
+    if (missingRefund.length) {
+      renderSettlePreview();
+      $("settle-preview").insertAdjacentHTML("beforeend",
+        '<div class="manche">⚠ 回収額が未入力：' + missingRefund.map(esc).join(" / ") +
+        "　→ 投票サイトの的中金額をそのまま入力してください</div>");
+      return;
+    }
+    var refunds = {};
+    Object.keys(refundInputs).forEach(function (pid) {
+      if (refundInputs[pid] > 0) refunds[pid] = refundInputs[pid];
+    });
     state.results[key] = {
       order: order,
       names: [$("res-name-1").value.trim(), $("res-name-2").value.trim(), $("res-name-3").value.trim()],
       kimarite: [$("res-kim-1").value.trim(), $("res-kim-2").value.trim(), ""],
       payouts: payoutRows.filter(function (p) { return p.amount > 0; }),
+      refunds: refunds,
       settledAt: new Date().toISOString(),
     };
     state.resultView = key; // ③結果シーンに即反映
@@ -772,6 +776,36 @@
     });
   });
 
+  /* 回収未入力の的中を横断チェック（結果の自動確定は回収を知らないため）。
+     警告バーのタップで該当レースへジャンプ→回収を入れて再確定してもらう */
+  function checkRefundGaps() {
+    var el = $("refund-warn");
+    if (!el || !state) return;
+    var gap = null;
+    Object.keys(state.results || {}).forEach(function (key) {
+      if (gap) return;
+      var s = window.Derive.settleRace(state, key);
+      if (!s) return;
+      Object.keys(s.byRacer).forEach(function (pid) {
+        var r = s.byRacer[pid];
+        if (!gap && r.hits.length && r.invest > 0 && !r.refund) gap = { key: key, pid: pid };
+      });
+    });
+    if (!gap) { el.classList.add("hidden"); el.textContent = ""; el.onclick = null; return; }
+    var parts = gap.key.split("|");
+    el.textContent = "⚠ 回収額が未入力の的中：" + parts[0] + parts[1] + "R（" + gap.pid + "）→ タップでこのレースを開く";
+    el.classList.remove("hidden");
+    el.onclick = function () {
+      var idx = -1;
+      state.venues.forEach(function (v, i) { if (v.name === parts[0]) idx = i; });
+      if (idx < 0) return;
+      state.activeVenue = idx;
+      state.currentRace[parts[0]] = +parts[1];
+      save();
+      renderAll();
+    };
+  }
+
   /* ---------- 描画一括 ---------- */
   function renderAll() {
     renderVenueRow();
@@ -783,6 +817,7 @@
     renderAssets();
     renderDiag();
     checkNewDay();
+    checkRefundGaps();
     tickStatus();
     // 初回（場未選択）は本日設定を自動で開く
     if (state && !state.venues.length) $("setup-card").open = true;
