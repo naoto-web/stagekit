@@ -283,6 +283,11 @@
     renderResultHint();
   }
 
+  /** 払戻は3連単のみ扱う（買い目が3連単運用のため・8/4）。例外形式は「行を追加」で手動追加 */
+  function keepPayouts(payouts) {
+    return (payouts || []).filter(function (p) { return p.type === "3連単"; });
+  }
+
   /** 着順から標準の払戻行を用意（入力済み金額は保持） */
   function syncPayoutPresets() {
     var order = parseOrderInput();
@@ -709,7 +714,7 @@
         order: r.order.slice(),
         names: (r.names || []).slice(),
         kimarite: (r.kimarite || []).slice(),
-        payouts: r.payouts.map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; }),
+        payouts: keepPayouts(r.payouts).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; }),
         settledAt: new Date().toISOString(),
         auto: true,
       };
@@ -729,7 +734,7 @@
     for (var i = 0; i < 3; i++) $("res-name-" + (i + 1)).value = (r.names && r.names[i]) || "";
     $("res-kim-1").value = (r.kimarite && r.kimarite[0]) || "";
     $("res-kim-2").value = (r.kimarite && r.kimarite[1]) || "";
-    payoutRows = (r.payouts || []).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
+    payoutRows = keepPayouts(r.payouts).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
     syncPayoutPresets(); // 標準行の補完＋的中プレビュー再計算
   }
 
