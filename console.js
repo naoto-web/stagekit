@@ -183,9 +183,8 @@
         '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (p.isNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
         "</div>" +
         '<div class="pred-opts">' +
-        '<label class="lbl inline">式別 <select class="inp tiny pf-type">' +
-        window.Keirin.TYPES.map(function (t) { return "<option" + (t === p.defaultType ? " selected" : "") + ">" + t + "</option>"; }).join("") +
-        "</select></label>" +
+        // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
+        '<input type="hidden" class="pf-type" value="3連単">' +
         '<label class="lbl inline">単価 <input type="number" class="inp tiny pf-unit" step="100" min="0" value="' + (p.unit || "") + '">円</label>' +
         '<label class="lbl inline">投資額 <input type="number" class="inp tiny pf-invest" value="' + (p.investInput || "") + '" placeholder="自動">円</label>' +
         "</div>" +
