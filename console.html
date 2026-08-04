@@ -37,11 +37,14 @@
 <!-- ══════════ 予想入力 ══════════ -->
 <section class="card">
   <h2>予想入力 <span class="h-sub" id="pred-target"></span></h2>
-  <div class="row gap">
-    <input type="text" id="narabi-input" class="inp slim" placeholder="並び上書き（自動取得済・修正時のみ）" inputmode="numeric">
-    <button class="btn small" id="btn-narabi-save">並びを保存</button>
-  </div>
   <div id="pred-forms"></div>
+  <details class="exp">
+    <summary>並びを手で直す（自動取得が間違っている時だけ）</summary>
+    <div class="row gap">
+      <input type="text" id="narabi-input" class="inp slim" placeholder="例）61 82 35 47 9（スペース区切り）" inputmode="numeric">
+      <button class="btn small" id="btn-narabi-save">並びを保存</button>
+    </div>
+  </details>
 </section>
 
 </div>
