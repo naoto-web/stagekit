@@ -50,6 +50,16 @@
           return j.timetable;
         });
     },
+    /** 確定済みレース結果の自動取得。[{no, order, names, kimarite, payouts}] */
+    fetchResults: function (jo) {
+      var url = cfg.GAS_URL + "?action=results&jo=" + encodeURIComponent(jo);
+      return fetch(url, { redirect: "follow" })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) throw new Error(j.error || "results fetch failed");
+          return j.results || [];
+        });
+    },
     /** 並び予想（ライン）＋競走得点の自動取得。{narabi:'147 26 35', scores:{車番:'111.72'}} */
     fetchNarabi: function (jo, race) {
       var url = cfg.GAS_URL + "?action=narabi&jo=" + encodeURIComponent(jo) + "&race=" + (+race || 0);
