@@ -267,6 +267,7 @@ body.debug .cam-ph { display: flex; }
   border-top: 1.5px solid var(--panel-line); flex-wrap: nowrap; overflow: hidden;
   background: rgba(0,0,0,.25); }
 .nb-label { font-size: 12px; font-weight: 900; color: var(--sub); letter-spacing: .08em; flex: 0 0 auto; }
+.nb-type { font-size: 13px; font-weight: 900; color: var(--acc); flex: 0 0 auto; }
 .nb-arrow { font-size: 20px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
 .nb-dot { font-size: 13px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
 .nb-group { display: flex; gap: 2px; flex: 0 0 auto; }
