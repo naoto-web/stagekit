@@ -60,20 +60,14 @@
     return p || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
   }
 
-  /** 予想エントリをパースして投資額・単価を解決する */
+  /** 予想エントリをパースして投資額を解決する。
+      投資＝手入力の実額のみ（単価×点数方式は廃止・2026/8/4）。回収も結果側の手入力実額 */
   function resolvePred(state, key, racerId) {
     var race = state.preds[key] || {};
     var p = predOf(state, key, racerId);
     var parsed = K.parsePrediction(p.text, p.defaultType, race.cars || 9);
-    var invest, unit;
-    if (p.investInput > 0) {
-      invest = p.investInput;
-      unit = parsed.points ? p.investInput / parsed.points : 0;
-    } else {
-      unit = p.unit > 0 ? p.unit : 0;
-      invest = parsed.points * unit;
-    }
-    return { entry: p, parsed: parsed, points: parsed.points, unit: unit, invest: invest };
+    var invest = p.investInput > 0 ? p.investInput : 0;
+    return { entry: p, parsed: parsed, points: parsed.points, unit: 0, invest: invest };
   }
 
   /** 1レースの精算（結果が無ければ null）。
@@ -86,7 +80,10 @@
     var br = (state.preds[key] || {}).byRacer || {};
     Object.keys(br).forEach(function (pid) {
       var rp = resolvePred(state, key, pid);
-      byRacer[pid] = K.settle(rp.parsed, rp.unit, result.order, result.payouts || []);
+      var s = K.settle(rp.parsed, 0, result.order, result.payouts || []);
+      s.invest = rp.invest;
+      s.refund = (result.refunds || {})[pid] || 0; // 回収＝手入力の実額
+      byRacer[pid] = s;
     });
     return { result: result, byRacer: byRacer };
   }
