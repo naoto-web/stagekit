@@ -129,6 +129,10 @@
     var name = activeVenueName();
     if (!name) { el.innerHTML = ""; return; }
     var races = venueRaces(name);
+    if (!races.length) {
+      el.innerHTML = '<div class="hint">タイムテーブル取得中…（自動で再試行します。急ぐ時は「接続・診断」→再取得）</div>';
+      return;
+    }
     var next = nextRaceOf(name);
     var now = nowSec();
     el.innerHTML = races.map(function (r) {
@@ -881,11 +885,19 @@
     renderAll();
   });
 
-  window.Sync.fetchTimetable(0).then(function (t) {
-    timetable = t;
-    renderAll();
-    pollResults();
-  }).catch(function () { /* 診断から再取得可能 */ });
+  /* タイムテーブル：失敗したら15秒後に自動リトライ＋10分ごとに定期再取得。
+     （旧実装は起動時1回きり・失敗すると無言でチップが空のままになるバグがあった） */
+  function loadTimetable() {
+    window.Sync.fetchTimetable(0).then(function (t) {
+      timetable = t;
+      renderAll();
+      pollResults();
+    }).catch(function () {
+      setTimeout(loadTimetable, 15000);
+    });
+  }
+  loadTimetable();
+  setInterval(loadTimetable, window.APP_CONFIG.TT_POLL_MS || 600000);
 
   setInterval(tickStatus, 1000);
 })();
