@@ -71,6 +71,18 @@
     var v = (timetable.venues || []).filter(function (x) { return x.name === name; })[0];
     return v ? v.races : [];
   }
+  /** 車数の自動判定：出走表の最大車番で7車/9車を決める（欠場があっても車番は詰まらないため件数でなく最大値）。
+      タイムテーブル未着・出走表なしは9車扱い */
+  function autoCars(key) {
+    if (!key) return 9;
+    var parts = key.split("|");
+    var race = venueRaces(parts[0]).filter(function (r) { return r.no === +parts[1]; })[0];
+    if (!race || !race.racers || !race.racers.length) return 9;
+    var maxNo = 0;
+    race.racers.forEach(function (p) { if (+p.no > maxNo) maxNo = +p.no; });
+    return maxNo >= 8 ? 9 : 7;
+  }
+
   function nextRaceOf(name) {
     var now = nowSec();
     var rs = venueRaces(name).filter(function (r) {
@@ -167,7 +179,7 @@
 
   function renderPredForms() {
     var key = currentKey();
-    $("pred-target").textContent = key ? key.replace("|", " ") + "R" : "（場・レース未選択）";
+    $("pred-target").textContent = key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）";
     $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }
@@ -191,11 +203,7 @@
         '<div class="parse-total pf-total"></div>' +
         '<button class="btn small pf-save">この予想を保存</button>' +
         "</div>";
-    }).join("") +
-      '<div class="pred-opts"><label class="lbl inline">車数 <select class="inp tiny" id="pred-cars">' +
-      '<option value="9"' + (race.cars !== 7 ? " selected" : "") + ">9車</option>" +
-      '<option value="7"' + (race.cars === 7 ? " selected" : "") + ">7車</option>" +
-      "</select></label></div>";
+    }).join("");
 
     wrap.querySelectorAll(".pred-form").forEach(function (form) {
       var racerId = form.getAttribute("data-racer");
@@ -212,20 +220,16 @@
         entry.investInput = inv > 0 ? inv : null;
         entry.oreTachi = form.querySelector(".pf-ore").value.trim();
         entry.isNote = form.querySelector(".pf-note").checked;
-        state.preds[key].cars = +($("pred-cars").value) || 9;
+        state.preds[key].cars = autoCars(key);
         save();
         renderSettlePreview();
       });
       update();
     });
-    var carsSel = $("pred-cars");
-    if (carsSel) carsSel.addEventListener("change", function () {
-      wrap.querySelectorAll(".pred-form").forEach(function (f) { updatePredInfo(f, key); });
-    });
   }
 
   function updatePredInfo(form, key) {
-    var cars = +($("pred-cars") ? $("pred-cars").value : 9) || 9;
+    var cars = autoCars(key);
     var type = form.querySelector(".pf-type").value;
     var parsed = window.Keirin.parsePrediction(form.querySelector(".pf-text").value, type, cars);
     form.querySelector(".pf-info").innerHTML = parsed.lines.map(function (l) {
