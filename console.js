@@ -143,7 +143,8 @@
     save();
   });
 
-  $("btn-next-race").addEventListener("click", function () {
+  // 出しっぱなし警告バー：タップで次レースへ切替（旧「次のレースへ」ボタンの代替）
+  $("stale-warn").addEventListener("click", function () {
     var name = activeVenueName();
     if (!name) return;
     var next = nextRaceOf(name);
@@ -650,7 +651,7 @@
       var s = races.length ? timeToSec(races[0].start) : null;
       var next = nextRaceOf(name);
       if (s !== null && now > s + 180 && next && next.no !== rNo) {
-        warn.textContent = "⚠ " + name + rNo + "R は発走済み。次は " + next.no + "R（" + next.start + "）— 上の「次のレースへ」で切替";
+        warn.textContent = "⚠ " + name + rNo + "R は発走済み → タップで " + next.no + "R（" + next.start + "）へ切替";
         warn.classList.remove("hidden");
       } else {
         warn.classList.add("hidden");
