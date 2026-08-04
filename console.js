@@ -479,6 +479,8 @@
   /* ---------- 的中速報管理 ---------- */
   function renderHitAdmin() {
     var derived = window.Derive.day(state);
+    var cnt = $("hit-count");
+    if (cnt) cnt.textContent = derived.hits.length ? "本日 " + derived.hits.length + "件" : "";
     $("hit-admin").innerHTML = derived.hits.map(function (h) {
       return '<li class="' + (h.manche ? "manche" : "") + '">' +
         '<span class="ha-name">' + esc(h.racerName) + "</span>" +
