@@ -83,6 +83,12 @@
       var s = K.settle(rp.parsed, 0, result.order, result.payouts || []);
       s.invest = rp.invest;
       s.refund = (result.refunds || {})[pid] || 0; // 回収＝手入力の実額
+      // 俺たち目（無料公開1点）も的中判定に参加（8/4）。金額計算には入れない＝投資/回収は不変
+      s.oreHits = [];
+      if (rp.entry.oreTachi) {
+        var op = K.parsePrediction(rp.entry.oreTachi, "3連単", (state.preds[key] || {}).cars || 9);
+        s.oreHits = K.settle(op, 0, result.order, result.payouts || []).hits;
+      }
       byRacer[pid] = s;
     });
     return { result: result, byRacer: byRacer };
@@ -134,6 +140,19 @@
             racerName: pid,
             place: parts[0] + parts[1] + "R",
             type: h.type, comboLabel: h.comboLabel,
+            mult: h.mult, amount: h.amount, manche: h.manche,
+            at: s.result.settledAt || "",
+          });
+        });
+        (res.oreHits || []).forEach(function (h) {
+          var id = hitId(key, pid, { type: "俺たち目", comboLabel: h.comboLabel });
+          if (hidden[id]) return;
+          raceHitFlags[key] = true;
+          hits.push({
+            id: id, auto: true,
+            racerName: pid,
+            place: parts[0] + parts[1] + "R",
+            type: "俺たち目", comboLabel: h.comboLabel,
             mult: h.mult, amount: h.amount, manche: h.manche,
             at: s.result.settledAt || "",
           });
