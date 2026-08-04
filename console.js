@@ -295,6 +295,7 @@
       payoutRows = [];
     }
     syncPayoutPresets();
+    renderResultHint();
   }
 
   /** 着順から標準の払戻行を用意（入力済み金額は保持） */
@@ -532,6 +533,7 @@
     }).join("\n");
     $("cfg-close").value = state.cfg.closeMin;
     $("cfg-netclose").value = state.cfg.netCloseMin;
+    $("cfg-autoresults").checked = !!state.cfg.autoResults;
   }
 
   $("btn-save-settings").addEventListener("click", function () {
@@ -556,6 +558,7 @@
     });
     state.cfg.closeMin = +$("cfg-close").value || 3;
     state.cfg.netCloseMin = +$("cfg-netclose").value || 5;
+    state.cfg.autoResults = $("cfg-autoresults").checked;
     save();
     renderAll();
   });
@@ -657,6 +660,91 @@
     }
   }
 
+  /* ---------- 結果の自動取得（keirin.jp JSJ018・60秒ポーリング） ----------
+     取得結果はいったんautoResultsに保持し、
+     ・自動確定OFF（既定）＝結果入力フォームに「⚡取得済み→反映」ボタンを出す（確定は人が1タップ）
+     ・自動確定ON＝未確定レースへ即時反映→§8の的中判定〜演出まで人手ゼロ */
+  var autoResults = {}; // raceKey → {no, order, names, kimarite, payouts}
+
+  function joCodeOfName(name) {
+    var jo = null;
+    if (timetable) {
+      (timetable.venues || []).forEach(function (tv) { if (tv.name === name) jo = tv.joCode; });
+    }
+    return jo;
+  }
+
+  function pollResults() {
+    if (!state || !timetable || !state.venues.length) return;
+    state.venues.forEach(function (v) {
+      var jo = joCodeOfName(v.name);
+      if (!jo) return;
+      window.Sync.fetchResults(jo).then(function (list) {
+        (list || []).forEach(function (r) {
+          autoResults[window.Derive.raceKey(v.name, r.no)] = r;
+        });
+        applyAutoResults();
+        renderResultHint();
+      }).catch(function () { /* 次回ポーリングで再試行 */ });
+    });
+  }
+
+  function applyAutoResults() {
+    if (!state || !state.cfg || !state.cfg.autoResults) return;
+    var addedKey = null;
+    Object.keys(autoResults).forEach(function (key) {
+      if (state.results[key]) return; // 手入力済み・確定済みは触らない
+      var r = autoResults[key];
+      if (!r.order || r.order.length < 2 || !r.payouts || !r.payouts.length) return;
+      state.results[key] = {
+        order: r.order.slice(),
+        names: (r.names || []).slice(),
+        kimarite: (r.kimarite || []).slice(),
+        payouts: r.payouts.map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; }),
+        settledAt: new Date().toISOString(),
+        auto: true,
+      };
+      addedKey = key;
+    });
+    if (addedKey) {
+      state.resultView = addedKey; // ③結果シーンに最新レースを表示
+      save();
+      renderAll();
+    }
+  }
+
+  function applyAutoToForm(key) {
+    var r = autoResults[key];
+    if (!r) return;
+    $("res-order").value = r.order.join("-");
+    for (var i = 0; i < 3; i++) $("res-name-" + (i + 1)).value = (r.names && r.names[i]) || "";
+    $("res-kim-1").value = (r.kimarite && r.kimarite[0]) || "";
+    $("res-kim-2").value = (r.kimarite && r.kimarite[1]) || "";
+    payoutRows = (r.payouts || []).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
+    syncPayoutPresets(); // 標準行の補完＋的中プレビュー再計算
+  }
+
+  function renderResultHint() {
+    var el = $("auto-result-hint");
+    if (!el) return;
+    var key = currentKey();
+    var r = key ? autoResults[key] : null;
+    if (!r || (state.results && state.results[key])) {
+      el.classList.add("hidden");
+      el.innerHTML = "";
+      return;
+    }
+    var p3 = (r.payouts || []).filter(function (p) { return p.type === "3連単"; })[0];
+    el.classList.remove("hidden");
+    el.innerHTML = "⚡ 結果を自動取得済み：着順 " + r.order.join("-") +
+      (p3 ? "（3連単 " + p3.amount.toLocaleString("ja-JP") + "円）" : "") +
+      '　<button class="btn small" id="btn-auto-fill">フォームに反映</button>';
+    var btn = $("btn-auto-fill");
+    if (btn) btn.addEventListener("click", function () { applyAutoToForm(key); });
+  }
+
+  setInterval(pollResults, 60000);
+
   /* ---------- 診断 ---------- */
   function renderDiag() {
     $("diag-info").textContent =
@@ -723,6 +811,7 @@
     }
     setSync("ok", "接続OK（rev " + (state.rev || 0) + "）");
     renderAll();
+    pollResults();
   }).catch(function (e) {
     setSync("err", "GAS接続失敗: " + e.message);
     state = window.Derive.defaultState(todayStr());
@@ -732,6 +821,7 @@
   window.Sync.fetchTimetable(0).then(function (t) {
     timetable = t;
     renderAll();
+    pollResults();
   }).catch(function () { /* 診断から再取得可能 */ });
 
   setInterval(tickStatus, 1000);
