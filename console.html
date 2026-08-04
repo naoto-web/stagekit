@@ -47,6 +47,7 @@
 <!-- ══════════ 結果入力 ══════════ -->
 <section class="card">
   <h2>結果入力 <span class="h-sub" id="result-target"></span></h2>
+  <div class="hint hidden" id="auto-result-hint"></div>
 
   <label class="lbl">着順（例：1-9-2）</label>
   <input type="text" id="res-order" class="inp big" placeholder="1-9-2" inputmode="numeric">
@@ -114,6 +115,7 @@
   <div class="row gap">
     <label class="lbl inline">公式締切 発走−<input type="number" id="cfg-close" class="inp tiny">分</label>
     <label class="lbl inline">民間締切 発走−<input type="number" id="cfg-netclose" class="inp tiny">分</label>
+    <label class="lbl inline"><input type="checkbox" id="cfg-autoresults"> 結果の自動確定（取得したら人の確認なしで即反映）</label>
   </div>
   <button class="btn" id="btn-save-settings">設定を保存</button>
 </details>
