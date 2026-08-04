@@ -349,13 +349,23 @@
     el.innerHTML = state.racers.map(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
       var s = window.Keirin.settle(rp.parsed, 0, order, payouts);
-      if (!rp.points) return "<div>" + esc(rc.name) + "：予想なし</div>";
-      if (!s.hits.length) return "<div>" + esc(rc.name) + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）</div>";
+      var oreHtml = "";
+      if (rp.entry.oreTachi) {
+        var op = window.Keirin.parsePrediction(rp.entry.oreTachi, "3連単", (state.preds[key] || {}).cars || 9);
+        var oh = window.Keirin.settle(op, 0, order, payouts).hits;
+        if (oh.length) {
+          oreHtml = oh[0].amount
+            ? ' <span class="hit">🎯 俺たち目 ' + oh[0].comboLabel + " " + oh[0].mult + "倍</span>"
+            : ' <span class="manche">🎯 俺たち目 ' + oh[0].comboLabel + " 払戻未入力</span>";
+        }
+      }
+      if (!rp.points && !oreHtml) return "<div>" + esc(rc.name) + "：予想なし</div>";
+      if (!s.hits.length) return "<div>" + esc(rc.name) + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）" + oreHtml + "</div>";
       var refund = refundInputs[rc.id];
       return "<div>" + esc(rc.name) + "：" + s.hits.map(function (h) {
         if (!h.amount) return '<span class="manche">🎯 ' + h.type + " " + h.comboLabel + " 払戻未入力</span>";
         return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + h.mult + "倍</span>";
-      }).join(" ") +
+      }).join(" ") + oreHtml +
         '　回収 <input type="number" class="inp sp-refund" data-racer="' + esc(rc.id) + '" value="' + (refund > 0 ? refund : "") + '" placeholder="実額">円</div>';
     }).join("");
     el.querySelectorAll(".sp-refund").forEach(function (inp) {
@@ -381,6 +391,14 @@
         var label = h.type + " " + h.comboLabel;
         if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
       });
+      // 俺たち目の的中も払戻必須（0倍でティッカーに載る事故防止）
+      if (rp.entry.oreTachi) {
+        var op = window.Keirin.parsePrediction(rp.entry.oreTachi, "3連単", (state.preds[key] || {}).cars || 9);
+        window.Keirin.settle(op, 0, order, validPayouts).hits.forEach(function (h) {
+          var label = h.type + " " + h.comboLabel + "（俺たち目）";
+          if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
+        });
+      }
       // 投資額が入っている予想が的中したのに回収額未入力→確定不可（回収¥0が画面に載る事故防止）
       if (s.hits.length && rp.invest > 0 && !(refundInputs[rc.id] > 0)) missingRefund.push(rc.name);
     });
