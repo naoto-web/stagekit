@@ -36,8 +36,8 @@
 </section>
 
 <!-- ══════════ 予想入力 ══════════ -->
-<section class="card">
-  <h2>予想入力 <span class="h-sub" id="pred-target"></span></h2>
+<details class="card" open>
+  <summary><h2>予想入力</h2> <span class="h-sub" id="pred-target"></span></summary>
   <div id="pred-forms"></div>
   <details class="exp">
     <summary>並びを手で直す（自動取得が間違っている時だけ）</summary>
@@ -46,14 +46,14 @@
       <button class="btn small" id="btn-narabi-save">並びを保存</button>
     </div>
   </details>
-</section>
+</details>
 
 </div>
 <div class="col">
 
 <!-- ══════════ 結果入力 ══════════ -->
-<section class="card">
-  <h2>結果入力 <span class="h-sub" id="result-target"></span></h2>
+<details class="card" open>
+  <summary><h2>結果入力</h2> <span class="h-sub" id="result-target"></span></summary>
   <div class="hint hidden" id="auto-result-hint"></div>
 
   <label class="lbl">着順（例：1-9-2）</label>
@@ -89,7 +89,7 @@
 
   <div class="settle-preview" id="settle-preview"></div>
   <button class="btn primary" id="btn-settle">結果を確定（的中・回収を自動更新）</button>
-</section>
+</details>
 
 <!-- ══════════ 的中速報 ══════════ -->
 <details class="card">
