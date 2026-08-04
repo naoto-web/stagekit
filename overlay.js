@@ -352,7 +352,8 @@
     scoreVals.sort(function (a, b) { return b - a; });
     var top1 = scoreVals[0], top2 = scoreVals[1];
     el.innerHTML = race.racers.map(function (p) {
-      var sub = [p.pref, p.term ? p.term + "期" : ""].filter(Boolean).join("・");
+      // keirin.jp経路は期別の代わりに脚質（逃/追/両）が来る
+      var sub = [p.pref, p.term ? p.term + "期" : (p.kyaku || "")].filter(Boolean).join("・");
       var sc = scores[String(p.no)] || "";
       var sv = parseFloat(sc);
       var scls = "sl-score" + (sv === top1 ? " top1" : sv === top2 ? " top2" : "");
@@ -390,12 +391,27 @@
     if (!nb) return;
     var key = v && rNo ? window.Derive.raceKey(v.name, rNo) : null;
     var manual = key ? ((state.narabi || {})[key] || "") : "";
+    // keirin.jp経路では時刻表に並び・戦型（三分戦等）が同梱されている
+    var ttNarabi = "";
+    var lineType = "";
+    if (v && rNo && timetable) {
+      (timetable.venues || []).forEach(function (tv) {
+        if (tv.name !== v.name) return;
+        (tv.races || []).forEach(function (r) {
+          if (r.no !== +rNo) return;
+          if (r.narabi) ttNarabi = r.narabi;
+          if (r.lineType) lineType = r.lineType;
+        });
+      });
+    }
     var auto = key && narabiAuto[key] ? narabiAuto[key].val : "";
-    if (key && !narabiAuto[key]) ensureNarabi(v, rNo, key); // 得点も要るため手入力の有無に関わらず取得
-    var groups = window.Keirin.normalize(manual || auto).split(/[^0-9]+/).filter(Boolean);
+    if (key && !narabiAuto[key]) ensureNarabi(v, rNo, key); // 得点＋並びの保険はエンドポイントから
+    var groups = window.Keirin.normalize(manual || ttNarabi || auto).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
-    nb.innerHTML = '<span class="nb-label">ライン</span><span class="nb-arrow">←</span>' +
+    nb.innerHTML = '<span class="nb-label">ライン</span>' +
+      (lineType ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
+      '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {
           return '<i class="car c' + n + '">' + n + "</i>";
