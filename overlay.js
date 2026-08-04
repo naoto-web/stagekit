@@ -654,7 +654,9 @@
       renderTimers();
       renderBrb();
       renderStartList();
-    }).catch(function () { /* 次回again */ });
+    }).catch(function () {
+      setTimeout(loadTimetable, 15000); // 起動直後の取得失敗で10分空白にならないよう即リトライ
+    });
   }
   loadTimetable();
   setInterval(loadTimetable, (window.APP_CONFIG.TT_POLL_MS || 600000));
