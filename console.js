@@ -745,13 +745,37 @@
     return jo;
   }
 
+  /* 未発走レースに付いた自動確定の結果を除去する自己修復（8/6）。
+     日付境界（深夜〜朝）はkeirin.jpの「本日の結果」がまだ前日の内容を返すため、混入が起きうる。
+     手入力の結果は対象外。日跨ぎ運用（state.dateが前日のまま）は誤爆防止のためスキップ */
+  function purgeGhostResults() {
+    if (!state || !timetable || state.date !== todayStr()) return;
+    var changed = false;
+    Object.keys(state.results || {}).forEach(function (key) {
+      var r = state.results[key];
+      if (!r || !r.auto) return;
+      var parts = key.split("|");
+      var races = venueRaces(parts[0]).filter(function (x) { return x.no === +parts[1]; });
+      var s = races.length ? timeToSec(races[0].start) : null;
+      if (s !== null && nowSec() < s + 120) { delete state.results[key]; changed = true; }
+    });
+    if (changed) { save(); renderAll(); }
+  }
+
   function pollResults(force) {
     if (!state || !timetable || !state.venues.length) return Promise.resolve();
+    purgeGhostResults();
     return Promise.all(state.venues.map(function (v) {
       var jo = joCodeOfName(v.name);
       if (!jo) return null;
       return window.Sync.fetchResults(jo, force).then(function (list) {
         (list || []).forEach(function (r) {
+          // 発走前のレースに「結果」が来たら捨てる（前日データの混入・8/6）。日跨ぎ運用時は従来通り
+          if (state.date === todayStr()) {
+            var races = venueRaces(v.name).filter(function (x) { return x.no === r.no; });
+            var s = races.length ? timeToSec(races[0].start) : null;
+            if (s !== null && nowSec() < s + 120) return;
+          }
           autoResults[window.Derive.raceKey(v.name, r.no)] = r;
         });
         applyAutoResults();
