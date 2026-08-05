@@ -62,7 +62,6 @@ body[data-theme="w"] .vt-card { border-width: 3px; }
 body[data-theme="w"] .gbar { background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.35)); }
 body[data-theme="w"] .brand-mark { text-shadow: none; }
 body[data-theme="w"] .vtab { background: rgba(0,0,0,.05); }
-body[data-theme="w"] .sp-logo { background: rgba(0,0,0,.03); }
 body[data-theme="w"] .vt-head { background: rgba(0,0,0,.06); }
 body[data-theme="w"] .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.18); }
 body[data-theme="w"] .slist-row { border-bottom-color: rgba(0,0,0,.08); }
@@ -114,12 +113,12 @@ body.scene-ad     #scene-ad     { display: block; }
 .vtab.active { background: var(--acc); color: var(--acc-text); }
 .vtab small { font-size: 15px; margin-left: 4px; }
 
+/* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示） */
 .sp-logo {
-  width: 170px; height: 62px; border: 1px dashed var(--panel-line); border-radius: 8px;
+  width: 170px; height: 62px;
   display: flex; align-items: center; justify-content: center;
-  color: var(--sub); font-weight: 900; letter-spacing: .1em; font-size: 13px;
-  text-align: center; line-height: 1.5; background: rgba(0,0,0,.3);
 }
+.sp-logo img { max-width: 100%; max-height: 100%; display: block; }
 
 .panel {
   position: relative;
@@ -384,9 +383,9 @@ body.debug .video-ph { display: flex; }
 /* ---------- ⑤広告 ---------- */
 .ad-panel { position: absolute; left: 8px; top: 96px; width: 1344px; bottom: 70px; padding: 36px 44px;
   display: flex; flex-direction: column; gap: 28px; }
-.ad-logo { width: 320px; height: 110px; border: 1px dashed var(--panel-line); border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--sub); font-weight: 900; letter-spacing: .12em; background: rgba(0,0,0,.3); }
+.ad-logo { width: 320px; height: 110px;
+  display: flex; align-items: center; justify-content: center; }
+.ad-logo img { max-width: 100%; max-height: 100%; display: block; }
 .ad-title { font-size: 52px; font-weight: 900; color: var(--acc); }
 .ad-list { list-style: none; font-size: 24px; font-weight: 700; line-height: 2.1; color: var(--txt); }
 .ad-list li::before { content: "◆ "; color: var(--acc); }
