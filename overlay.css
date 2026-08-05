@@ -341,6 +341,16 @@ body.debug .video-ph { display: flex; }
   display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start;
   align-items: flex-start; gap: 8px 46px; padding: 12px 18px; overflow: hidden; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
+
+/* ①トーク：2レース表示（メイン｜サブ・中央仕切り・8/6）。チップはsmall版で枠内に収める */
+.talk-band .buy-line > .race-split { flex: 1 1 auto; width: 100%; }
+.race-split { display: flex; min-height: 0; }
+.race-col { flex: 1 1 0; min-width: 0; overflow: hidden; padding: 0 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.race-col + .race-col { border-left: 2px solid var(--panel-line); }
+.race-col-head {
+  font-size: 19px; font-weight: 900; color: var(--txt);
+  background: rgba(0,0,0,.08); border-radius: 6px; padding: 2px 12px;
+}
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
 /* ②レース観戦の帯だけ細身チップ（列詰め用）。①トークは出走表と同じ正方形（8/5 FB） */
 .race-band .buy-line .car { width: 18px; border-radius: 4px; }
