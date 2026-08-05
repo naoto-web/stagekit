@@ -278,8 +278,37 @@
     return m;
   }
 
+  function keyLabel(k) { return k ? String(k).replace("|", " ") + "R" : ""; }
+
+  /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ */
+  function raceBuyHtml(rc, k, small) {
+    var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
+    var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
+    var memos = rp ? rp.parsed.memos : [];
+    var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";
+    return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small) + "</div>" : "") +
+      okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.disp || l.raw, small) + "</div>"; }).join("") +
+      (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
+      (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点" +
+        (rp.invest > 0 ? "　投資 " + fmtYen(rp.invest) : "") + "</div>" : "");
+  }
+
+  /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥） */
+  function raceColHead(rc, k) {
+    var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
+    return '<div class="race-col-head">' + esc(keyLabel(k)) + (p && p.entry.isNote ? " 🔥" : "") + "</div>";
+  }
+
   function renderPreds() {
     var key = currentKey();
+    // サブレース（①トークの2レース表示・8/6）：メインと同じ場は無効・場のレース未設定も無効
+    var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
+    var subKey = null;
+    if (state.subVenue && state.subVenue !== mainName) {
+      var subOk = state.venues.some(function (v) { return v.name === state.subVenue; });
+      var subR = state.currentRace[state.subVenue];
+      if (subOk && subR) subKey = window.Derive.raceKey(state.subVenue, subR);
+    }
     // 空席の畳み込み：カメラ穴は塞ぎ・予想帯は全幅化（CSSのbody.seat-*-off）。1人配信はどちらの席でも可
     var seats = seatMap();
     document.body.classList.toggle("seat-a-off", !seats.a);
@@ -303,10 +332,7 @@
         if (cam) cam.style.borderColor = color;
       });
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
-      var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
-      var memos = rp ? rp.parsed.memos : [];
-      var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";      // 俺たち目（無料公開1点・表示専用）
-      var isNote = !!(rp && rp.entry.isNote);                          // note予想（勝負レース）
+      var isNote = !!(rp && rp.entry.isNote);  // note予想（勝負レース）＝ヘッダーバッジはメインレース基準
 
       // 予想帯＝①トーク（tband-）と②レース観戦（band-）で同一様式：
       // メンバーカラーのヘッダー（〇〇予想＋noteバッジ＋投資/回収の日次累計）＋俺たち目＋買い目チップ
@@ -327,12 +353,17 @@
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = color;
         }
         var band = $(bp + "pred-" + slot);
-        if (band) band.innerHTML =
-          (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore) + "</div>" : "") +
-          okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.disp || l.raw) + "</div>"; }).join("") +
-          (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
-          (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点" +
-            (rp.invest > 0 ? "　投資 " + fmtYen(rp.invest) : "") + "</div>" : "");
+        if (!band) return;
+        // ①トークでサブレース指定あり＝メイン｜サブを中央の仕切りで左右2分割（8/6）。②は従来どおりメインのみ
+        if (bp === "tband-" && subKey) {
+          band.innerHTML =
+            '<div class="race-split">' +
+            '<div class="race-col">' + raceColHead(rc, key) + raceBuyHtml(rc, key, true) + "</div>" +
+            '<div class="race-col">' + raceColHead(rc, subKey) + raceBuyHtml(rc, subKey, true) + "</div>" +
+            "</div>";
+        } else {
+          band.innerHTML = raceBuyHtml(rc, key, false);
+        }
       });
     });
   }
