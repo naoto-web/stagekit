@@ -110,13 +110,13 @@ body.scene-ad     #scene-ad     { display: block; }
 .brand.big .brand-mark { font-size: 96px; }
 .brand.big .brand-sub { font-size: 30px; }
 
-/* 時計＝不透明ボックスで囲い、背後の透かしが文字に被らないようにする（8/5 FB） */
+/* 時計＝白塗りボックス・黒字・中央揃え（8/5 FB2）。不透明なので透かしは入り込まない */
 .clock-box {
-  margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15;
-  background: #14204a; border: 1.5px solid rgba(255,255,255,.5); border-radius: 10px; padding: 6px 16px;
+  margin-left: auto; display: flex; flex-direction: column; align-items: center; line-height: 1.15;
+  background: #ffffff; border-radius: 10px; padding: 6px 18px;
 }
-.clock-date { font-size: 16px; color: rgba(255,255,255,.8); font-weight: 700; }
-.clock-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; color: #fff; }
+.clock-date { font-size: 16px; color: #2a2f3a; font-weight: 700; }
+.clock-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; color: #0b0e14; }
 
 /* 場タブ＝不透明（透かしが透けない）。表示中の場は白反転でひと目で分かるように（8/5 FB） */
 .venue-tabs { display: flex; gap: 10px; }
