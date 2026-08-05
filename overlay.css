@@ -168,6 +168,15 @@ body.scene-ad     #scene-ad     { display: block; }
 .c8 { background: #e77fae; color: #16181c; }
 .c9 { background: #7d4fc9; color: #fff; }
 
+/* 全角テキスト表示用の車番色（文字色版）。白1・黄5が沈まないよう全数字に薄い縁取り */
+.zk-car {
+  font-style: normal;
+  text-shadow: -1px 0 rgba(0,0,0,.45), 1px 0 rgba(0,0,0,.45), 0 -1px rgba(0,0,0,.45), 0 1px rgba(0,0,0,.45);
+}
+.zkc1 { color: #ffffff; } .zkc2 { color: #17181c; } .zkc3 { color: #d63b3b; }
+.zkc4 { color: #2f66d0; } .zkc5 { color: #e8c22e; } .zkc6 { color: #2e9e4f; }
+.zkc7 { color: #ef7f1a; } .zkc8 { color: #e77fae; } .zkc9 { color: #7d4fc9; }
+
 /* ---------- カメラ枠＝透過穴（枠線とネームプレートだけ描く） ---------- */
 .cam { position: relative; border-radius: 0; overflow: hidden;
   background: transparent; border: 1.5px solid var(--panel-line); }
