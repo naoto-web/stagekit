@@ -83,11 +83,17 @@
     },
     saveState: function (key, state) {
       var self = this;
+      // 楽観送信（8/6）：GAS保存の完了を待たずBroadcastChannelへ先に流す
+      // ＝BCが通る環境（同一ブラウザ/OBS内）ではレース切替などが即時反映される
+      // revを外して送る＝受信側の「同一revはスキップ」ガードを通過させるため
+      var optimistic = Object.assign({}, state);
+      delete optimistic.rev;
+      this.broadcast({ type: "state", state: optimistic });
       return this.post({ key: key, action: "setState", state: state }).then(function (j) {
         if (!j.ok) throw new Error(j.error || "save failed");
         state.rev = j.rev;
         self.lastRev = j.rev;
-        self.broadcast({ type: "state", state: state }); // 高速経路（通れば即時反映）
+        self.broadcast({ type: "state", state: state }); // rev確定版も送る
         return j.rev;
       });
     },
