@@ -252,6 +252,13 @@
     return yiq >= 150 ? "#16181c" : "#fff";
   }
 
+  /* 半角の買い目文字列を全角表示に変換（8/5 FB・①トークの予想とライン用） */
+  function zenkaku(s) {
+    return String(s)
+      .replace(/[0-9A-Za-z]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 0xfee0); })
+      .replace(/-/g, "−").replace(/=/g, "＝").replace(/ /g, "　");
+  }
+
   /** 買い目1行を車番色チップの並びとして描画する */
   function lineChips(raw, small) {
     return window.Keirin.displayTokens(raw).map(function (tk) {
@@ -325,12 +332,21 @@
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = color;
         }
         var band = $(bp + "pred-" + slot);
-        if (band) band.innerHTML =
-          (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore) + "</div>" : "") +
-          okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.disp || l.raw) + "</div>"; }).join("") +
-          (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
-          (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点" +
-            (rp.invest > 0 ? "　投資 " + fmtYen(rp.invest) : "") + "</div>" : "");
+        if (band) {
+          var isTalk = bp === "tband-"; // ①トーク＝全角テキスト表示（8/5 FB）／②レース観戦＝色チップのまま
+          band.innerHTML =
+            (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' +
+              (isTalk ? '<span class="pred-line">' + esc(zenkaku(window.Keirin.normalize(ore))) + "</span>" : lineChips(ore)) +
+              "</div>" : "") +
+            okLines.map(function (l) {
+              return isTalk
+                ? '<div class="pred-line">' + esc(zenkaku(l.disp || window.Keirin.normalize(l.raw))) + "</div>"
+                : '<div class="pred-line chips">' + lineChips(l.disp || l.raw) + "</div>";
+            }).join("") +
+            (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
+            (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点" +
+              (rp.invest > 0 ? "　投資 " + fmtYen(rp.invest) : "") + "</div>" : "");
+        }
       });
     });
   }
@@ -426,11 +442,7 @@
     nb.innerHTML = '<span class="nb-label">ライン</span>' +
       (lineType ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
       '<span class="nb-arrow">←</span>' +
-      groups.map(function (g) {
-        return '<span class="nb-group">' + g.split("").map(function (n) {
-          return '<i class="car c' + n + '">' + n + "</i>";
-        }).join("") + "</span>";
-      }).join('<span class="nb-dot">・</span>');
+      '<span class="nb-zk">' + groups.map(function (g) { return esc(zenkaku(g)); }).join("・") + "</span>";
   }
 
   /* ②レース観戦：場名/Rバーは廃止（7/29 FB4＝映像は別ウィンドウのキャプチャで
