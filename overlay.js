@@ -268,6 +268,8 @@
 
   function renderPreds() {
     var key = currentKey();
+    // 一人配信：配信者が1名ならスロットbを畳む（カメラ穴は塞ぎ・予想帯は全幅化＝CSSのbody.solo）
+    document.body.classList.toggle("solo", (state.racers || []).length < 2);
     ["a", "b"].forEach(function (slot, idx) {
       var rc = state.racers[idx];
       var name = rc ? rc.name : "";
