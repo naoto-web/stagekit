@@ -286,17 +286,24 @@
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
     var memos = rp ? rp.parsed.memos : [];
     var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";
+    // 合計・投資の行：買い目が無くても投資額が入っていれば表示する（メモだけの運用対応・8/6）
+    var metaLine = "";
+    if (rp && (rp.points || rp.invest > 0)) {
+      metaLine = '<div class="buy-meta">' +
+        (rp.points ? "合計 " + rp.points + "点" : "") +
+        (rp.invest > 0 ? (rp.points ? "　" : "") + "投資 " + fmtYen(rp.invest) : "") +
+        "</div>";
+    }
     return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small) + "</div>" : "") +
       okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.disp || l.raw, small) + "</div>"; }).join("") +
       (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
-      (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点" +
-        (rp.invest > 0 ? "　投資 " + fmtYen(rp.invest) : "") + "</div>" : "");
+      metaLine;
   }
 
-  /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥） */
+  /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想） */
   function raceColHead(rc, k) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
-    return '<div class="race-col-head">' + esc(keyLabel(k)) + (p && p.entry.isNote ? " 🔥" : "") + "</div>";
+    return '<div class="race-col-head">' + esc(keyLabel(k)) + (p && p.entry.isNote ? " 🔥note予想" : "") + "</div>";
   }
 
   function renderPreds() {
