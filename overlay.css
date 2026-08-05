@@ -112,11 +112,11 @@ body.scene-ad     #scene-ad     { display: block; }
 
 /* 時計＝白塗りボックス・黒字・中央揃え（8/5 FB2）。不透明なので透かしは入り込まない */
 .clock-box {
-  margin-left: auto; display: flex; flex-direction: column; align-items: center; line-height: 1.15;
-  background: #ffffff; border-radius: 10px; padding: 6px 18px;
+  margin-left: auto; display: flex; flex-direction: column; align-items: center; line-height: 1.1;
+  background: #ffffff; border-radius: 10px; padding: 5px 24px; height: 80px; justify-content: center;
 }
-.clock-date { font-size: 16px; color: #2a2f3a; font-weight: 700; }
-.clock-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; color: #0b0e14; }
+.clock-date { font-size: 19px; color: #2a2f3a; font-weight: 700; }
+.clock-time { font-size: 46px; font-weight: 900; font-variant-numeric: tabular-nums; color: #0b0e14; }
 
 /* 場タブ＝不透明（透かしが透けない）。表示中の場は白反転でひと目で分かるように（8/5 FB） */
 .venue-tabs { display: flex; gap: 10px; }
@@ -134,7 +134,7 @@ body.scene-ad     #scene-ad     { display: block; }
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */
 .sp-logo {
-  width: 170px; height: 62px; background: #fff; border-radius: 8px; padding: 4px 6px;
+  width: 256px; height: 80px; background: #fff; border-radius: 8px; padding: 6px 10px;
   display: flex; align-items: center; justify-content: center;
 }
 .sp-logo img { max-width: 100%; max-height: 100%; display: block; }
@@ -300,6 +300,8 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .nb-dot { font-size: 13px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
 .nb-group { display: flex; gap: 2px; flex: 0 0 auto; }
 .narabi-row .car { width: 14px; height: 26px; font-size: 14px; border-radius: 3px; }
+/* ライン＝全角テキスト1行表示（8/5 FB） */
+.nb-zk { font-size: 20px; font-weight: 900; color: var(--txt); letter-spacing: .02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }
