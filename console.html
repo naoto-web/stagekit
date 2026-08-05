@@ -115,10 +115,11 @@
   <div id="grade-inputs"></div>
   <div class="hint">グレード表示＝②レース観戦の映像枠に出る小バッジ。**場を選ぶと自動で入ります**（オッズパークから取得・手で書き換えOK・空欄なら非表示）</div>
 
-  <label class="lbl">配信者（1〜2名。2人目を「なし」にすると1人配信モード＝2つ目のカメラ枠・予想帯が自動で畳まれる）</label>
+  <label class="lbl">配信者：席1＝左カメラ／席2＝右カメラ。座らない席は「なし」（1人配信はどちらの席でもOK・空席側の枠と予想帯は自動で畳まれる）</label>
   <div class="row gap">
-    <select id="racer-1" class="inp"></select>
-    <select id="racer-2" class="inp"></select>
+    <select id="racer-1" class="inp slim"></select>
+    <button class="btn small" id="btn-seat-swap" title="席1と席2を入れ替えて即保存">⇄ 席替え</button>
+    <select id="racer-2" class="inp slim"></select>
   </div>
   <label class="lbl">配信者の名簿（1行に1人：名前 チームカラー。色＝青/緑/オレンジ/赤/ピンク/黄色 か #RRGGBB。カメラ枠・ネームプレートに反映）</label>
   <textarea id="roster" class="inp" rows="6"></textarea>
