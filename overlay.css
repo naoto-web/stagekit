@@ -168,15 +168,6 @@ body.scene-ad     #scene-ad     { display: block; }
 .c8 { background: #e77fae; color: #16181c; }
 .c9 { background: #7d4fc9; color: #fff; }
 
-/* 全角テキスト表示用の車番色（文字色版）。白1・黄5が沈まないよう全数字に薄い縁取り */
-.zk-car {
-  font-style: normal;
-  text-shadow: -1px 0 rgba(0,0,0,.45), 1px 0 rgba(0,0,0,.45), 0 -1px rgba(0,0,0,.45), 0 1px rgba(0,0,0,.45);
-}
-.zkc1 { color: #ffffff; } .zkc2 { color: #17181c; } .zkc3 { color: #d63b3b; }
-.zkc4 { color: #2f66d0; } .zkc5 { color: #e8c22e; } .zkc6 { color: #2e9e4f; }
-.zkc7 { color: #ef7f1a; } .zkc8 { color: #e77fae; } .zkc9 { color: #7d4fc9; }
-
 /* ---------- カメラ枠＝透過穴（枠線とネームプレートだけ描く） ---------- */
 .cam { position: relative; border-radius: 0; overflow: hidden;
   background: transparent; border: 1.5px solid var(--panel-line); }
@@ -308,9 +299,8 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .nb-arrow { font-size: 20px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
 .nb-dot { font-size: 13px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
 .nb-group { display: flex; gap: 2px; flex: 0 0 auto; }
-.narabi-row .car { width: 14px; height: 26px; font-size: 14px; border-radius: 3px; }
-/* ライン＝全角テキスト1行表示（8/5 FB） */
-.nb-zk { font-size: 20px; font-weight: 900; color: var(--txt); letter-spacing: .02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* ライン＝出走表と同じ正方形チップ（8/5 FB・1行に収まるサイズ） */
+.narabi-row .car { width: 22px; height: 22px; font-size: 14px; border-radius: 5px; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }
@@ -350,7 +340,8 @@ body.debug .video-ph { display: flex; }
   align-items: flex-start; gap: 8px 46px; padding: 12px 18px; overflow: hidden; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
-.buy-line .car { width: 18px; border-radius: 4px; }
+/* ②レース観戦の帯だけ細身チップ（列詰め用）。①トークは出走表と同じ正方形（8/5 FB） */
+.race-band .buy-line .car { width: 18px; border-radius: 4px; }
 .buy-line .pl-all { width: 26px; font-size: 15px; }
 /* 俺たち目（無料公開1点）＝金枠で強調 */
 .ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
