@@ -104,18 +104,23 @@
     return rNo ? window.Derive.raceKey(name, rNo) : null;
   }
 
-  /* サブは常に埋める（8/6 FB）：メインと重なった・無効になった時はメイン以外の先頭場へ自動振替。
-     場が1つしかない日はサブなし（1レース表示） */
+  /* サブは配信者ごとに選べる（8/6 FB2・state.subVenueBy = {配信者id: 場名}）。
+     常に埋める：メインと重なった・無効になった時はメイン以外の先頭場へ自動振替。
+     場が1つしかない日はサブなし（1レース表示）。旧グローバル設定subVenueは初期値として引き継ぐ */
   function ensureSubVenue() {
     if (!state) return;
-    if ((state.venues || []).length < 2) { state.subVenue = ""; return; }
+    if (!state.subVenueBy || typeof state.subVenueBy !== "object") state.subVenueBy = {};
+    if ((state.venues || []).length < 2) { state.subVenueBy = {}; return; }
     var main = activeVenueName();
-    var valid = state.subVenue && state.subVenue !== main &&
-      state.venues.some(function (v) { return v.name === state.subVenue; });
-    if (!valid) {
-      var alt = state.venues.filter(function (v) { return v.name !== main; })[0];
-      state.subVenue = alt ? alt.name : "";
-    }
+    (state.racers || []).forEach(function (rc) {
+      var cur = state.subVenueBy[rc.id] || state.subVenue;
+      var valid = cur && cur !== main && state.venues.some(function (v) { return v.name === cur; });
+      if (!valid) {
+        var alt = state.venues.filter(function (v) { return v.name !== main; })[0];
+        cur = alt ? alt.name : "";
+      }
+      state.subVenueBy[rc.id] = cur;
+    });
   }
 
   function renderVenueRow() {
@@ -148,24 +153,29 @@
       });
     });
 
-    // トーク2レース表示のサブ選択（8/6）：常にメイン以外のどれかが選ばれている（「なし」廃止）
+    // トーク2レース表示のサブ選択（8/6 FB2）：配信者ごとにメイン以外の場を選ぶ（常にどれかが選択済み）
     var sr = $("sub-row");
     if (sr) {
       ensureSubVenue();
-      if (state.venues.length < 2) {
+      if (state.venues.length < 2 || !state.racers.length) {
         sr.innerHTML = "";
       } else {
         var main = activeVenueName();
-        sr.innerHTML = '<span class="lbl inline">トークのサブ表示</span>' +
-          state.venues.map(function (v) {
-            if (v.name === main) return "";
-            var rNo = state.currentRace[v.name];
-            return '<button class="vp' + (state.subVenue === v.name ? " sel" : "") + '" data-sub="' + esc(v.name) + '">' +
-              esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
-          }).join("");
+        sr.innerHTML = state.racers.map(function (rc) {
+          return '<div class="row gap">' +
+            '<span class="lbl inline">' + esc(rc.name) + ' のサブ</span>' +
+            state.venues.map(function (v) {
+              if (v.name === main) return "";
+              var rNo = state.currentRace[v.name];
+              return '<button class="vp' + (state.subVenueBy[rc.id] === v.name ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-sub="' + esc(v.name) + '">' +
+                esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
+            }).join("") +
+            "</div>";
+        }).join("");
         sr.querySelectorAll(".vp").forEach(function (b) {
           b.addEventListener("click", function () {
-            state.subVenue = b.getAttribute("data-sub");
+            if (!state.subVenueBy) state.subVenueBy = {};
+            state.subVenueBy[b.getAttribute("data-rid")] = b.getAttribute("data-sub");
             save();
             renderAll();
           });
