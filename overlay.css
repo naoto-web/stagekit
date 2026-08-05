@@ -369,7 +369,7 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line .pl-all { width: 22px; font-size: 13px; }
 .race-band .ore-row { padding: 3px 8px; border-width: 1.5px; }
 .race-band .ore-label { font-size: 13px; }
-.race-band .buy-meta { font-size: 12px; }
+.race-band .buy-meta { font-size: 17px; font-weight: 900; color: var(--txt); }
 .buy-line .pl-all { width: 26px; font-size: 15px; }
 /* 俺たち目（無料公開1点）＝金枠で強調 */
 .ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
