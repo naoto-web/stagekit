@@ -3,7 +3,7 @@
      ?scene=talk|race|result|brb|ad … このソースが描画するシーン（OBSのシーンごとに1ソース）
      ?theme=a|b|c                  … 配色
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
-     ?wm=1                         … ヘッダー帯のCTC透かしを表示（既定OFF＝CTC承認待ち・8/5）
+     ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
    データ: GAS状態（5秒ポーリング＋BroadcastChannel即時反映）＋タイムテーブル（10分毎） */
 
 (function () {
@@ -13,7 +13,7 @@
   var DEBUG = params.get("debug") === "1";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
-    (params.get("wm") === "1" ? " wm-on" : ""); // CTC透かし＝承認が出たら&wm=1で点灯
+    (params.get("wm") === "0" ? "" : " wm-on"); // CTC透かし＝既定ON（8/6）・&wm=0で非表示
   // テーマ：①トーク・②レース観戦は白（w）が既定（7/30 FB10）。
   // URLの &theme=a|b|c|w が最優先＝OBS側だけで即時に戻せる保険
   var THEMES = ["a", "b", "c", "w"];
