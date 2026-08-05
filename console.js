@@ -104,6 +104,20 @@
     return rNo ? window.Derive.raceKey(name, rNo) : null;
   }
 
+  /* サブは常に埋める（8/6 FB）：メインと重なった・無効になった時はメイン以外の先頭場へ自動振替。
+     場が1つしかない日はサブなし（1レース表示） */
+  function ensureSubVenue() {
+    if (!state) return;
+    if ((state.venues || []).length < 2) { state.subVenue = ""; return; }
+    var main = activeVenueName();
+    var valid = state.subVenue && state.subVenue !== main &&
+      state.venues.some(function (v) { return v.name === state.subVenue; });
+    if (!valid) {
+      var alt = state.venues.filter(function (v) { return v.name !== main; })[0];
+      state.subVenue = alt ? alt.name : "";
+    }
+  }
+
   function renderVenueRow() {
     // 表示中データの日付（8/6追加）。今日以外のデータなら赤字で警告
     var dateEl = $("race-date");
@@ -128,20 +142,21 @@
     el.querySelectorAll(".vbtn").forEach(function (b) {
       b.addEventListener("click", function () {
         state.activeVenue = +b.getAttribute("data-i");
+        ensureSubVenue(); // メインとサブが重なったら自動振替
         save();
         renderAll();
       });
     });
 
-    // トーク2レース表示のサブ選択（8/6）：メイン以外の場をサブに指定→①トークの買い目が左右2分割になる
+    // トーク2レース表示のサブ選択（8/6）：常にメイン以外のどれかが選ばれている（「なし」廃止）
     var sr = $("sub-row");
     if (sr) {
+      ensureSubVenue();
       if (state.venues.length < 2) {
         sr.innerHTML = "";
       } else {
         var main = activeVenueName();
-        sr.innerHTML = '<span class="lbl inline">トークの2レース表示（サブ）</span>' +
-          '<button class="vp' + (!state.subVenue ? " sel" : "") + '" data-sub="">なし</button>' +
+        sr.innerHTML = '<span class="lbl inline">トークのサブ表示</span>' +
           state.venues.map(function (v) {
             if (v.name === main) return "";
             var rNo = state.currentRace[v.name];
@@ -150,7 +165,7 @@
           }).join("");
         sr.querySelectorAll(".vp").forEach(function (b) {
           b.addEventListener("click", function () {
-            state.subVenue = b.getAttribute("data-sub") || "";
+            state.subVenue = b.getAttribute("data-sub");
             save();
             renderAll();
           });
@@ -643,6 +658,7 @@
     state.cfg.closeMin = +$("cfg-close").value || 3;
     state.cfg.netCloseMin = +$("cfg-netclose").value || 5;
     state.cfg.autoResults = $("cfg-autoresults").checked;
+    ensureSubVenue(); // 場の構成が変わってもサブは常に埋める
     save();
     renderAll();
   }
