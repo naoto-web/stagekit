@@ -562,10 +562,16 @@
     }).join("");
 
     var opts = state.roster.map(function (r) { return "<option>" + esc(r.name) + "</option>"; }).join("");
-    $("racer-1").innerHTML = opts;
-    $("racer-2").innerHTML = '<option value="">（なし・1人配信）</option>' + opts;
-    if (state.racers[0]) $("racer-1").value = state.racers[0].name;
-    $("racer-2").value = state.racers[1] ? state.racers[1].name : "";
+    var noneOpt = '<option value="">（なし・空席）</option>';
+    $("racer-1").innerHTML = noneOpt + opts;
+    $("racer-2").innerHTML = noneOpt + opts;
+    var bySeat = { a: "", b: "" };
+    (state.racers || []).forEach(function (r, i) {
+      var s = (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b");
+      if (!bySeat[s]) bySeat[s] = r.name;
+    });
+    $("racer-1").value = bySeat.a;
+    $("racer-2").value = bySeat.b;
     $("roster").value = state.roster.map(function (r) {
       return r.name + (r.color ? " " + r.color : "");
     }).join("\n");
@@ -574,7 +580,7 @@
     $("cfg-autoresults").checked = !!state.cfg.autoResults;
   }
 
-  $("btn-save-settings").addEventListener("click", function () {
+  function saveSettings() {
     state.roster = $("roster").value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean)
       .map(function (line) {
         var parts = line.split(/\s+/);
@@ -584,11 +590,15 @@
       var m = state.roster.filter(function (r) { return r.name === name; })[0];
       return m ? m.color : "";
     };
-    // IDは人ベース（＝名前）：シフト交代で名前を入れ替えても前半の実績が付け替わらない
-    var rname1 = $("racer-1").value || "配信者1";
-    var rname2 = $("racer-2").value; // 空＝1人配信（同名の重複選択も1人扱い）
-    state.racers = [{ id: rname1, name: rname1, color: colorFor(rname1) }];
-    if (rname2 && rname2 !== rname1) state.racers.push({ id: rname2, name: rname2, color: colorFor(rname2) });
+    // 席1(a)＝左カメラ／席2(b)＝右カメラ。空＝空席（1人配信はどちらの席でも可）。
+    // IDは人ベース（＝名前）：席替え・シフト交代しても実績が付け替わらない。同名の重複選択は席1優先
+    var picks = [{ name: $("racer-1").value, seat: "a" }, { name: $("racer-2").value, seat: "b" }];
+    state.racers = [];
+    picks.forEach(function (p) {
+      if (!p.name) return;
+      if (state.racers.some(function (r) { return r.name === p.name; })) return;
+      state.racers.push({ id: p.name, name: p.name, color: colorFor(p.name), seat: p.seat });
+    });
     document.querySelectorAll(".grade-inp").forEach(function (inp) {
       state.grade[inp.getAttribute("data-n")] = inp.value.trim();
     });
@@ -597,6 +607,14 @@
     state.cfg.autoResults = $("cfg-autoresults").checked;
     save();
     renderAll();
+  }
+  $("btn-save-settings").addEventListener("click", saveSettings);
+  // 席替え：席1⇄席2を入れ替えて即保存（座り位置の変更に1タップで追従）
+  $("btn-seat-swap").addEventListener("click", function () {
+    var a = $("racer-1").value;
+    $("racer-1").value = $("racer-2").value;
+    $("racer-2").value = a;
+    saveSettings();
   });
 
   /* ---------- 広告・待機 ---------- */
