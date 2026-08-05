@@ -93,7 +93,7 @@
     var now = new Date();
     var days = ["日", "月", "火", "水", "木", "金", "土"];
     var d = now.getFullYear() + "/" + (now.getMonth() + 1) + "/" + now.getDate() + "（" + days[now.getDay()] + "）";
-    var t = pad2(now.getHours()) + ":" + pad2(now.getMinutes()) + ":" + pad2(now.getSeconds());
+    var t = pad2(now.getHours()) + ":" + pad2(now.getMinutes()); // 秒は出さない（8/5 FB）
     document.querySelectorAll("[data-clock-date]").forEach(function (el) { el.textContent = d; });
     document.querySelectorAll("[data-clock-time]").forEach(function (el) { el.textContent = t; });
   }
