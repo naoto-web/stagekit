@@ -528,10 +528,12 @@
 
   function renderTicker() {
     var items = derived.hits.slice().reverse().map(function (h) { // 古い順に流す
+      // 式別ラベルは3連単運用のため省略（俺たち目・例外買いのワイド等だけ残す・8/6 FB）
+      var typeLabel = h.type && h.type !== "3連単" ? " " + esc(h.type) : "";
       if (h.manche && h.amount) {
-        return '<span class="tick-manche">💥 万車速報：' + esc(h.place) + " " + esc(h.type) + " " + fmtYen(h.amount) + "</span>";
+        return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + typeLabel + " " + fmtYen(h.amount) + "</span>";
       }
-      return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + " " + esc(h.type) + " " + h.mult + "倍 的中</span>";
+      return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + typeLabel + " " + h.mult + "倍 的中</span>";
     }).join("");
     var copy = '<div class="tick-copy">' + items + "</div>";
     // ③結果と①トークの両方のティッカーに同じ内容を流す（的中ゼロでもバーは常時表示）
