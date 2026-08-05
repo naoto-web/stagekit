@@ -300,6 +300,24 @@
       metaLine;
   }
 
+  /** 予想帯ヘッダーのはみ出し防止（8/6 FB）：投資/回収の金額とnoteバッジを段階的に縮小して1行に収める */
+  function fitBandHead(headEl) {
+    var inv = headEl.querySelector(".band-inv");
+    var badge = headEl.querySelector(".note-badge");
+    [inv, badge].forEach(function (el) { if (el) el.style.fontSize = ""; });
+    var guard = 0;
+    while (headEl.scrollWidth > headEl.clientWidth + 1 && guard < 8) {
+      var shrunk = false;
+      [inv, badge].forEach(function (el) {
+        if (!el) return;
+        var cur = parseFloat(getComputedStyle(el).fontSize);
+        if (cur > 11) { el.style.fontSize = (cur - 2) + "px"; shrunk = true; }
+      });
+      if (!shrunk) break;
+      guard++;
+    }
+  }
+
   /** 買い目行のはみ出し自動縮小（8/6）：折り返す代わりに、枠幅に収まる倍率へスケールする */
   function fitPredLines(scope) {
     if (!scope) return;
@@ -388,6 +406,7 @@
           bandHead.style.color = textOn(color);
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = color;
         }
+        fitBandHead(bandHead); // 名前＋バッジ＋投資/回収が1行に収まるよう自動縮小
         var band = $(bp + "pred-" + slot);
         if (!band) return;
         // ①トーク＝配信者ごとの表示レース1〜3場（8/6 FB3）。1場＝全面／2場＝左右分割／3場＝T字（上段1場目・下段2場）。
