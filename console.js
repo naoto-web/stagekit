@@ -667,6 +667,10 @@
     var keep = { racers: state.racers, roster: state.roster, cfg: state.cfg, ad: state.ad, brbMsg: state.brbMsg };
     state = window.Derive.defaultState(todayStr());
     Object.assign(state, keep);
+    // 前日の自動取得キャッシュを破棄（残すと自動確定が前日の結果を新しい日に書き戻す・8/6修正）
+    autoResults = {};
+    payoutRows = [];
+    refundInputs = {};
     newdayArmed = false;
     $("btn-newday").textContent = "新しい日を開始";
     $("btn-newday").classList.remove("confirm");
