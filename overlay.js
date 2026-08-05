@@ -266,12 +266,24 @@
     }).join("");
   }
 
+  /* 席割り：racers[].seat（"a"=席1左／"b"=席2右）優先・seatの無い旧データはインデックス順 */
+  function seatMap() {
+    var m = { a: null, b: null };
+    (state.racers || []).forEach(function (rc, i) {
+      var s = (rc.seat === "a" || rc.seat === "b") ? rc.seat : (i === 0 ? "a" : "b");
+      if (!m[s]) m[s] = rc;
+    });
+    return m;
+  }
+
   function renderPreds() {
     var key = currentKey();
-    // 一人配信：配信者が1名ならスロットbを畳む（カメラ穴は塞ぎ・予想帯は全幅化＝CSSのbody.solo）
-    document.body.classList.toggle("solo", (state.racers || []).length < 2);
-    ["a", "b"].forEach(function (slot, idx) {
-      var rc = state.racers[idx];
+    // 空席の畳み込み：カメラ穴は塞ぎ・予想帯は全幅化（CSSのbody.seat-*-off）。1人配信はどちらの席でも可
+    var seats = seatMap();
+    document.body.classList.toggle("seat-a-off", !seats.a);
+    document.body.classList.toggle("seat-b-off", !seats.b);
+    ["a", "b"].forEach(function (slot) {
+      var rc = seats[slot];
       var name = rc ? rc.name : "";
       var color = rc ? window.Derive.colorOf(rc.color) : "";
       ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
@@ -549,8 +561,9 @@
     Object.keys(ids).forEach(function (id) {
       if (seenHits[id]) return;
       var h = ids[id];
-      state.racers.forEach(function (rc, idx) {
-        if (rc.name === h.racerName) fireHitFx(idx === 0 ? "a" : "b", h);
+      var seats = seatMap();
+      ["a", "b"].forEach(function (slot) {
+        if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h);
       });
     });
     seenHits = ids;
