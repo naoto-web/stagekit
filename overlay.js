@@ -301,7 +301,7 @@
         if (cam) cam.style.borderColor = color;
       });
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
-      var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok; }) : [];
+      var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
       var memos = rp ? rp.parsed.memos : [];
       var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";      // 俺たち目（無料公開1点・表示専用）
       var isNote = !!(rp && rp.entry.isNote);                          // note予想（勝負レース）
@@ -327,7 +327,7 @@
         var band = $(bp + "pred-" + slot);
         if (band) band.innerHTML =
           (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore) + "</div>" : "") +
-          okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.raw) + "</div>"; }).join("") +
+          okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.disp || l.raw) + "</div>"; }).join("") +
           (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
           (rp && rp.points ? '<div class="buy-meta">合計 ' + rp.points + "点" +
             (rp.invest > 0 ? "　投資 " + fmtYen(rp.invest) : "") + "</div>" : "");
