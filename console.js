@@ -907,6 +907,37 @@
         : "BC応答なし → GASポーリング経路で動作（反映まで最大5〜7秒・問題なし）";
     }, 1200);
   });
+  // 本日のデータをリセット（8/6）：日付はそのまま、予想・結果・的中だけ全消去。
+  // 「新しい日を開始」は日付が変わった時しか出ないため、当日中のテストデータ掃除用に常設
+  var dayResetArmed = false;
+  $("btn-day-reset").addEventListener("click", function () {
+    if (!dayResetArmed) {
+      dayResetArmed = true;
+      $("btn-day-reset").textContent = "本当にリセット（予想・結果・的中を全消去）";
+      $("btn-day-reset").classList.add("confirm");
+      setTimeout(function () { // 10秒で解除（誤爆防止）
+        dayResetArmed = false;
+        $("btn-day-reset").textContent = "本日のデータをリセット";
+        $("btn-day-reset").classList.remove("confirm");
+      }, 10000);
+      return;
+    }
+    state.preds = {};
+    state.results = {};
+    state.hitsManual = [];
+    state.hitsHidden = [];
+    state.resultView = null;
+    state.narabi = {};
+    autoResults = {};
+    payoutRows = [];
+    refundInputs = {};
+    dayResetArmed = false;
+    $("btn-day-reset").textContent = "本日のデータをリセット";
+    $("btn-day-reset").classList.remove("confirm");
+    save();
+    renderAll();
+  });
+
   $("btn-tt-refresh").addEventListener("click", function () {
     $("diag-result").textContent = "タイムテーブル取得中…";
     window.Sync.fetchTimetable(0, true).then(function (t) {
