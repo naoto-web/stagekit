@@ -355,8 +355,14 @@ body.debug .video-ph { display: flex; }
   background: rgba(0,0,0,.08); border-radius: 6px; padding: 2px 12px;
 }
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
-/* ②レース観戦の帯だけ細身チップ（列詰め用）。①トークは出走表と同じ正方形（8/5 FB） */
-.race-band .buy-line .car { width: 18px; border-radius: 4px; }
+/* ②レース観戦の帯＝俺たち目＋買い目3行が1列に収まるサイズ（8/6 FB）。①トークは出走表と同じ正方形 */
+.race-band .buy-line { gap: 5px 40px; padding: 8px 16px; }
+.race-band .buy-line .car { width: 15px; height: 26px; font-size: 14px; border-radius: 3px; }
+.race-band .pred-line { font-size: 22px; }
+.race-band .buy-line .pl-all { width: 22px; font-size: 13px; }
+.race-band .ore-row { padding: 3px 8px; border-width: 1.5px; }
+.race-band .ore-label { font-size: 13px; }
+.race-band .buy-meta { font-size: 12px; }
 .buy-line .pl-all { width: 26px; font-size: 15px; }
 /* 俺たち目（無料公開1点）＝金枠で強調 */
 .ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
