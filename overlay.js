@@ -325,13 +325,15 @@
 
   function renderPreds() {
     var key = currentKey();
-    // サブレース（①トークの2レース表示・8/6）：メインと同じ場は無効・場のレース未設定も無効
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
-    var subKey = null;
-    if (state.subVenue && state.subVenue !== mainName) {
-      var subOk = state.venues.some(function (v) { return v.name === state.subVenue; });
-      var subR = state.currentRace[state.subVenue];
-      if (subOk && subR) subKey = window.Derive.raceKey(state.subVenue, subR);
+    // サブレースは配信者ごと（8/6 FB2・state.subVenueBy）。旧グローバル設定subVenueはフォールバック
+    function subKeyOf(rc) {
+      if (!rc) return null;
+      var subName = (state.subVenueBy || {})[rc.id] || state.subVenue;
+      if (!subName || subName === mainName) return null;
+      if (!state.venues.some(function (v) { return v.name === subName; })) return null;
+      var r = state.currentRace[subName];
+      return r ? window.Derive.raceKey(subName, r) : null;
     }
     // 空席の畳み込み：カメラ穴は塞ぎ・予想帯は全幅化（CSSのbody.seat-*-off）。1人配信はどちらの席でも可
     var seats = seatMap();
@@ -357,6 +359,7 @@
       });
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
       var isNote = !!(rp && rp.entry.isNote);  // note予想（勝負レース）＝ヘッダーバッジはメインレース基準
+      var subKey = subKeyOf(rc);               // この配信者のサブレース
 
       // 予想帯＝①トーク（tband-）と②レース観戦（band-）で同一様式：
       // メンバーカラーのヘッダー（〇〇予想＋noteバッジ＋投資/回収の日次累計）＋俺たち目＋買い目チップ
