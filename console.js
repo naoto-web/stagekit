@@ -104,22 +104,17 @@
     return rNo ? window.Derive.raceKey(name, rNo) : null;
   }
 
-  /* サブは配信者ごとに選べる（8/6 FB2・state.subVenueBy = {配信者id: 場名}）。
-     常に埋める：メインと重なった・無効になった時はメイン以外の先頭場へ自動振替。
-     場が1つしかない日はサブなし（1レース表示）。旧グローバル設定subVenueは初期値として引き継ぐ */
-  function ensureSubVenue() {
+  /* トークの表示場リスト（8/6 FB3・state.talkRaces = {配信者id: [場名,…]} 最大3場・並び順＝表示順）。
+     コンソールの操作用の場切替（activeVenue）とは独立＝入力のために場を替えても配信画面は変わらない。
+     場構成が変わったら無効な場を除去し、空なら先頭2場を既定にする */
+  function ensureTalkRaces() {
     if (!state) return;
-    if (!state.subVenueBy || typeof state.subVenueBy !== "object") state.subVenueBy = {};
-    if ((state.venues || []).length < 2) { state.subVenueBy = {}; return; }
-    var main = activeVenueName();
+    if (!state.talkRaces || typeof state.talkRaces !== "object") state.talkRaces = {};
+    var names = (state.venues || []).map(function (v) { return v.name; });
     (state.racers || []).forEach(function (rc) {
-      var cur = state.subVenueBy[rc.id] || state.subVenue;
-      var valid = cur && cur !== main && state.venues.some(function (v) { return v.name === cur; });
-      if (!valid) {
-        var alt = state.venues.filter(function (v) { return v.name !== main; })[0];
-        cur = alt ? alt.name : "";
-      }
-      state.subVenueBy[rc.id] = cur;
+      var list = (state.talkRaces[rc.id] || []).filter(function (n) { return names.indexOf(n) >= 0; });
+      if (!list.length) list = names.slice(0, 2);
+      state.talkRaces[rc.id] = list.slice(0, 3);
     });
   }
 
@@ -147,35 +142,44 @@
     el.querySelectorAll(".vbtn").forEach(function (b) {
       b.addEventListener("click", function () {
         state.activeVenue = +b.getAttribute("data-i");
-        ensureSubVenue(); // メインとサブが重なったら自動振替
         save();
         renderAll();
       });
     });
 
-    // トーク2レース表示のサブ選択（8/6 FB2）：配信者ごとにメイン以外の場を選ぶ（常にどれかが選択済み）
+    // トークの表示場（8/6 FB3）：配信者ごとに最大3場をトグル選択（押した順＝表示順・1番目が上段）。
+    // 操作用の場切替とは独立＝どの場に切り替えて入力しても配信画面の買い目は変わらない
     var sr = $("sub-row");
     if (sr) {
-      ensureSubVenue();
-      if (state.venues.length < 2 || !state.racers.length) {
+      ensureTalkRaces();
+      if (!state.venues.length || !state.racers.length) {
         sr.innerHTML = "";
       } else {
-        var main = activeVenueName();
         sr.innerHTML = state.racers.map(function (rc) {
+          var list = state.talkRaces[rc.id] || [];
           return '<div class="row gap">' +
-            '<span class="lbl inline">' + esc(rc.name) + ' のサブ</span>' +
+            '<span class="lbl inline">' + esc(rc.name) + ' の表示（最大3場）</span>' +
             state.venues.map(function (v) {
-              if (v.name === main) return "";
+              var idx = list.indexOf(v.name);
               var rNo = state.currentRace[v.name];
-              return '<button class="vp' + (state.subVenueBy[rc.id] === v.name ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-sub="' + esc(v.name) + '">' +
-                esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
+              return '<button class="vp' + (idx >= 0 ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
+                (idx >= 0 ? (idx + 1) + "." : "") + esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
             }).join("") +
             "</div>";
         }).join("");
         sr.querySelectorAll(".vp").forEach(function (b) {
           b.addEventListener("click", function () {
-            if (!state.subVenueBy) state.subVenueBy = {};
-            state.subVenueBy[b.getAttribute("data-rid")] = b.getAttribute("data-sub");
+            var rid = b.getAttribute("data-rid");
+            var vn = b.getAttribute("data-v");
+            var list = (state.talkRaces[rid] || []).slice();
+            var i = list.indexOf(vn);
+            if (i >= 0) {
+              if (list.length > 1) list.splice(i, 1); // 最低1場は残す
+            } else {
+              if (list.length >= 3) list.shift(); // 4つ目は一番古いのを外す
+              list.push(vn);
+            }
+            state.talkRaces[rid] = list;
             save();
             renderAll();
           });
@@ -668,7 +672,7 @@
     state.cfg.closeMin = +$("cfg-close").value || 3;
     state.cfg.netCloseMin = +$("cfg-netclose").value || 5;
     state.cfg.autoResults = $("cfg-autoresults").checked;
-    ensureSubVenue(); // 場の構成が変わってもサブは常に埋める
+    ensureTalkRaces(); // 場の構成が変わったら表示場リストを整える
     save();
     renderAll();
   }
