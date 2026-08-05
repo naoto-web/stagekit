@@ -101,13 +101,13 @@
     // BOXキーワード or 全セグメント"=" つなぎ（1=2=3）→ ボックス
     if (box || (segs.length >= 2 && swaps.slice(1).every(Boolean))) {
       var pool = uniq(flatten(segs));
-      return finish(out, ex.type || defaultType || "3連単", boxCombos(pool, ex.type || defaultType || "3連単"));
+      return finish(out, ex.type || defaultType || "3連単", boxCombos(pool, ex.type || defaultType || "3連単"), pool);
     }
 
     // セグメント1つだけ（"123" 等）→ ボックス扱い
     if (segs.length === 1) {
       if (segs[0].length < 2) return fail(out, ex.type);
-      return finish(out, ex.type || defaultType || "3連単", boxCombos(segs[0], ex.type || defaultType || "3連単"));
+      return finish(out, ex.type || defaultType || "3連単", boxCombos(segs[0], ex.type || defaultType || "3連単"), segs[0]);
     }
 
     // 型決定：明示 > セグメント数（3つ→3連単系 / 2つ→2車単系のdefault側）
@@ -138,7 +138,21 @@
     if (type) out.type = type;
     return out;
   }
-  function finish(out, type, combos) {
+  /* 表示用の正規化：組合せ集合から列ごとの車番集合を作り直す
+     （例）1-2-321 → 1-2-3（来ようのない数字を落とす）／12-21-3 → 12-12-3（列内は昇順） */
+  function dispOf(combos) {
+    if (!combos.length) return "";
+    var sets = [];
+    for (var i = 0; i < combos[0].length; i++) {
+      var s = [];
+      combos.forEach(function (c) { if (s.indexOf(c[i]) < 0) s.push(c[i]); });
+      s.sort();
+      sets.push(s.join(""));
+    }
+    return sets.join("-");
+  }
+
+  function finish(out, type, combos, boxPool) {
     // 順不同型は組合せをソート・重複排除
     if (!ORDERED[type]) {
       var seen = {};
@@ -162,6 +176,7 @@
     out.type = type;
     out.combos = combos;
     out.points = combos.length;
+    out.disp = boxPool ? uniq(boxPool).slice().sort().join("") + " BOX" : dispOf(combos);
     return out;
   }
 
@@ -235,9 +250,25 @@
   function parsePrediction(text, defaultType, carCount) {
     var lines = String(text || "").split(/\r?\n/);
     var out = { lines: [], memos: [], points: 0 };
+    var seen = {}; // 行またぎの「かぶり目」除外（先に書いた行が優先・点数/的中/表示すべてから除外）
     lines.forEach(function (raw) {
       if (!raw.trim()) return;
       var p = parseLine(raw, defaultType, carCount);
+      if (p.ok) {
+        var kept = p.combos.filter(function (c) {
+          var k = p.type + "|" + normalizedComboKey(p.type, c);
+          if (seen[k]) return false;
+          seen[k] = true;
+          return true;
+        });
+        p.dupCount = p.combos.length - kept.length;
+        if (p.dupCount) {
+          p.combos = kept;
+          p.points = kept.length;
+          if (kept.length) p.disp = dispOf(kept); // かぶった目を表示からも消す
+          else { p.allDup = true; p.disp = ""; }  // 行ごと全部かぶり→画面に出さない
+        }
+      }
       out.lines.push(p);
       if (p.ok) out.points += p.points;
       else out.memos.push(p.memo);
