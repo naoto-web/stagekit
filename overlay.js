@@ -300,6 +300,23 @@
       metaLine;
   }
 
+  /** 買い目行のはみ出し自動縮小（8/6）：折り返す代わりに、枠幅に収まる倍率へスケールする */
+  function fitPredLines(scope) {
+    if (!scope) return;
+    scope.querySelectorAll(".pred-line.chips").forEach(function (el) {
+      el.style.transform = "";
+      var parent = el.parentElement;
+      if (!parent) return;
+      var cs = getComputedStyle(parent);
+      var avail = parent.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      var w = el.scrollWidth;
+      if (w > avail && avail > 0) {
+        el.style.transform = "scale(" + Math.max(0.4, avail / w) + ")";
+        el.style.transformOrigin = "left center";
+      }
+    });
+  }
+
   /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想） */
   function raceColHead(rc, k) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
@@ -371,6 +388,7 @@
         } else {
           band.innerHTML = raceBuyHtml(rc, key, false);
         }
+        if (bp === "tband-") fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
       });
     });
   }
