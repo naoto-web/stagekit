@@ -518,7 +518,8 @@
       if (best) {
         badge.classList.remove("hidden");
         $("hit-main").textContent = "🎯 予想的中！";
-        $("hit-sub").textContent = best.racerName + " " + best.type + " " + best.mult + "倍（無料公開）";
+        $("hit-sub").textContent = best.racerName +
+          (best.type && best.type !== "3連単" ? " " + best.type : "") + " " + best.mult + "倍（無料公開）";
       } else {
         badge.classList.add("hidden");
       }
@@ -531,7 +532,7 @@
       // 式別ラベルは3連単運用のため省略（俺たち目・例外買いのワイド等だけ残す・8/6 FB）
       var typeLabel = h.type && h.type !== "3連単" ? " " + esc(h.type) : "";
       if (h.manche && h.amount) {
-        return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + typeLabel + " " + fmtYen(h.amount) + "</span>";
+        return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + typeLabel + " " + h.mult + "倍</span>";
       }
       return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + typeLabel + " " + h.mult + "倍 的中</span>";
     }).join("");
@@ -622,7 +623,7 @@
       badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "");
       badge.textContent = hit.manche
         ? "💥 万車的中！" + (hit.mult ? " " + hit.mult + "倍" : "")
-        : "🎯 的中！" + (hit.type ? " " + hit.type : "") + (hit.mult ? " " + hit.mult + "倍" : "");
+        : "🎯 的中！" + (hit.type && hit.type !== "3連単" ? " " + hit.type : "") + (hit.mult ? " " + hit.mult + "倍" : "");
       cam.appendChild(badge);
       cam.classList.add("hit-fx");
       setTimeout(function () {
