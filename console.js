@@ -563,9 +563,9 @@
 
     var opts = state.roster.map(function (r) { return "<option>" + esc(r.name) + "</option>"; }).join("");
     $("racer-1").innerHTML = opts;
-    $("racer-2").innerHTML = opts;
+    $("racer-2").innerHTML = '<option value="">（なし・1人配信）</option>' + opts;
     if (state.racers[0]) $("racer-1").value = state.racers[0].name;
-    if (state.racers[1]) $("racer-2").value = state.racers[1].name;
+    $("racer-2").value = state.racers[1] ? state.racers[1].name : "";
     $("roster").value = state.roster.map(function (r) {
       return r.name + (r.color ? " " + r.color : "");
     }).join("\n");
@@ -586,11 +586,9 @@
     };
     // IDは人ベース（＝名前）：シフト交代で名前を入れ替えても前半の実績が付け替わらない
     var rname1 = $("racer-1").value || "配信者1";
-    var rname2 = $("racer-2").value || "配信者2";
-    state.racers = [
-      { id: rname1, name: rname1, color: colorFor(rname1) },
-      { id: rname2, name: rname2, color: colorFor(rname2) },
-    ];
+    var rname2 = $("racer-2").value; // 空＝1人配信（同名の重複選択も1人扱い）
+    state.racers = [{ id: rname1, name: rname1, color: colorFor(rname1) }];
+    if (rname2 && rname2 !== rname1) state.racers.push({ id: rname2, name: rname2, color: colorFor(rname2) });
     document.querySelectorAll(".grade-inp").forEach(function (inp) {
       state.grade[inp.getAttribute("data-n")] = inp.value.trim();
     });
