@@ -155,6 +155,13 @@ body.scene-ad     #scene-ad     { display: block; }
   background: transparent; border: 1.5px solid var(--panel-line); }
 .cam-ph { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; font-size: 110px; opacity: .28; }
 body.debug .cam-ph { display: flex; }
+/* ---------- 一人配信（body.solo）：スロットbの畳み方 ----------
+   カメラ＝透過穴なので外形・位置は変えず不透明背景で塞ぐ（display:noneはOBSの穴座標が動くため禁止）
+   予想帯＝不透明パネルなのでdisplay:noneで消し、flex:1の相方が全幅に自動拡張 */
+body.solo .cam.slot-b { background: linear-gradient(180deg, var(--bg1), var(--bg2)); border-color: transparent; }
+body.solo .cam.slot-b .nameplate, body.solo .cam.slot-b .cam-ph { display: none !important; }
+body.solo .panel.slot-b { display: none; }
+
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
   font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 8px;
