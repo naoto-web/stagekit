@@ -59,10 +59,8 @@ body[data-theme="w"] .panel,
 body[data-theme="w"] .cam,
 body[data-theme="w"] .video-frame,
 body[data-theme="w"] .vt-card { border-width: 3px; }
-body[data-theme="w"] .gbar { background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.35)); }
-body[data-theme="w"] .gbar::before { background-image: url("sponsor_wm_light.png"); }
+/* ヘッダーはテーマによらずCTC紺固定（8/5 FB）＝白テーマ用の上書きは廃止 */
 body[data-theme="w"] .brand-mark { text-shadow: none; }
-body[data-theme="w"] .vtab { background: rgba(0,0,0,.05); }
 body[data-theme="w"] .vt-head { background: rgba(0,0,0,.06); }
 body[data-theme="w"] .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.18); }
 body[data-theme="w"] .slist-row { border-bottom-color: rgba(0,0,0,.08); }
@@ -84,7 +82,7 @@ body.scene-ad     #scene-ad     { display: block; }
 .gbar {
   position: absolute; top: 0; left: 0; right: 0; height: 96px; z-index: 10;
   display: flex; align-items: center; gap: 22px; padding: 0 16px;
-  background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.12));
+  background: linear-gradient(180deg, #1f3274, #192a63); /* CTC紺（#1f3274）ベース・8/5 FB */
   overflow: hidden;
 }
 /* ヘッダー帯のスポンサー透かし（CTCロゴのオールオーバーパターン・8/5 Naoto案）
@@ -92,7 +90,7 @@ body.scene-ad     #scene-ad     { display: block; }
    NGなら background-image をチャンネル名SVG版に戻す（gitに履歴あり） */
 .gbar::before {
   content: ""; position: absolute; left: -5%; top: -70%; width: 112%; height: 240%;
-  transform: rotate(-7deg); pointer-events: none; opacity: .15;
+  transform: rotate(-7deg); pointer-events: none; opacity: .25;
   background-image: url("sponsor_wm_dark.png");
   background-size: 190px 96px;
 }
@@ -112,22 +110,31 @@ body.scene-ad     #scene-ad     { display: block; }
 .brand.big .brand-mark { font-size: 96px; }
 .brand.big .brand-sub { font-size: 30px; }
 
-.clock-box { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
-.clock-date { font-size: 16px; color: var(--sub); font-weight: 700; }
-.clock-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; }
+/* 時計＝不透明ボックスで囲い、背後の透かしが文字に被らないようにする（8/5 FB） */
+.clock-box {
+  margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15;
+  background: #14204a; border: 1.5px solid rgba(255,255,255,.5); border-radius: 10px; padding: 6px 16px;
+}
+.clock-date { font-size: 16px; color: rgba(255,255,255,.8); font-weight: 700; }
+.clock-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; color: #fff; }
 
+/* 場タブ＝不透明（透かしが透けない）。表示中の場は白反転でひと目で分かるように（8/5 FB） */
 .venue-tabs { display: flex; gap: 10px; }
 .vtab {
-  padding: 8px 20px; border-radius: 10px; border: 1.5px solid var(--panel-line);
-  background: rgba(0,0,0,.35); font-weight: 900; font-size: 21px; color: var(--txt);
+  padding: 8px 20px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.35);
+  background: #14204a; font-weight: 900; font-size: 21px; color: rgba(255,255,255,.72);
   font-family: inherit; pointer-events: none;
 }
-.vtab.active { background: var(--acc); color: var(--acc-text); }
+.vtab.active {
+  background: #ffffff; color: #1f3274; border-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0,0,0,.4);
+}
 .vtab small { font-size: 15px; margin-left: 4px; }
 
-/* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示） */
+/* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
+   ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */
 .sp-logo {
-  width: 170px; height: 62px;
+  width: 170px; height: 62px; background: #fff; border-radius: 8px; padding: 4px 6px;
   display: flex; align-items: center; justify-content: center;
 }
 .sp-logo img { max-width: 100%; max-height: 100%; display: block; }
