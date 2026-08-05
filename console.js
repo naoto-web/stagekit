@@ -105,6 +105,16 @@
   }
 
   function renderVenueRow() {
+    // 表示中データの日付（8/6追加）。今日以外のデータなら赤字で警告
+    var dateEl = $("race-date");
+    if (dateEl && state && state.date && state.date.length === 8) {
+      var dy = +state.date.slice(0, 4), dm = +state.date.slice(4, 6), dd = +state.date.slice(6, 8);
+      var dows = ["日", "月", "火", "水", "木", "金", "土"];
+      var isToday = state.date === todayStr();
+      dateEl.textContent = dm + "/" + dd + "（" + dows[new Date(dy, dm - 1, dd).getDay()] + "）のデータ" +
+        (isToday ? "" : "　⚠今日の日付ではありません");
+      dateEl.style.color = isToday ? "" : "#ffb3b3";
+    }
     var el = $("venue-row");
     if (!state.venues.length) {
       el.innerHTML = '<div class="hint">「本日設定」で場を選んでください</div>';
