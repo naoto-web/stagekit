@@ -132,6 +132,31 @@
         renderAll();
       });
     });
+
+    // トーク2レース表示のサブ選択（8/6）：メイン以外の場をサブに指定→①トークの買い目が左右2分割になる
+    var sr = $("sub-row");
+    if (sr) {
+      if (state.venues.length < 2) {
+        sr.innerHTML = "";
+      } else {
+        var main = activeVenueName();
+        sr.innerHTML = '<span class="lbl inline">トークの2レース表示（サブ）</span>' +
+          '<button class="vp' + (!state.subVenue ? " sel" : "") + '" data-sub="">なし</button>' +
+          state.venues.map(function (v) {
+            if (v.name === main) return "";
+            var rNo = state.currentRace[v.name];
+            return '<button class="vp' + (state.subVenue === v.name ? " sel" : "") + '" data-sub="' + esc(v.name) + '">' +
+              esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
+          }).join("");
+        sr.querySelectorAll(".vp").forEach(function (b) {
+          b.addEventListener("click", function () {
+            state.subVenue = b.getAttribute("data-sub") || "";
+            save();
+            renderAll();
+          });
+        });
+      }
+    }
   }
 
   function renderRaceChips() {
