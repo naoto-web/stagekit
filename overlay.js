@@ -326,14 +326,23 @@
   function renderPreds() {
     var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
-    // サブレースは配信者ごと（8/6 FB2・state.subVenueBy）。旧グローバル設定subVenueはフォールバック
-    function subKeyOf(rc) {
-      if (!rc) return null;
+    // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
+    // コンソールの操作用の場切替に引きずられない。旧データ（talkRaces無し）はメイン＋人別サブで互換
+    function talkKeysOf(rc) {
+      if (!rc) return key ? [key] : [];
+      var names = (state.talkRaces || {})[rc.id];
+      if (names && names.length) {
+        return names.filter(function (n) {
+          return state.venues.some(function (v) { return v.name === n; }) && state.currentRace[n];
+        }).slice(0, 3).map(function (n) { return window.Derive.raceKey(n, state.currentRace[n]); });
+      }
+      var ks = key ? [key] : [];
       var subName = (state.subVenueBy || {})[rc.id] || state.subVenue;
-      if (!subName || subName === mainName) return null;
-      if (!state.venues.some(function (v) { return v.name === subName; })) return null;
-      var r = state.currentRace[subName];
-      return r ? window.Derive.raceKey(subName, r) : null;
+      if (subName && subName !== mainName && state.currentRace[subName] &&
+          state.venues.some(function (v) { return v.name === subName; })) {
+        ks.push(window.Derive.raceKey(subName, state.currentRace[subName]));
+      }
+      return ks;
     }
     // 空席の畳み込み：カメラ穴は塞ぎ・予想帯は全幅化（CSSのbody.seat-*-off）。1人配信はどちらの席でも可
     var seats = seatMap();
@@ -359,7 +368,7 @@
       });
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
       var isNote = !!(rp && rp.entry.isNote);  // note予想（勝負レース）＝ヘッダーバッジはメインレース基準
-      var subKey = subKeyOf(rc);               // この配信者のサブレース
+      var talkKeys = talkKeysOf(rc);           // この配信者のトーク表示レース（1〜3）
 
       // 予想帯＝①トーク（tband-）と②レース観戦（band-）で同一様式：
       // メンバーカラーのヘッダー（〇〇予想＋noteバッジ＋投資/回収の日次累計）＋俺たち目＋買い目チップ
@@ -381,17 +390,30 @@
         }
         var band = $(bp + "pred-" + slot);
         if (!band) return;
-        // ①トークでサブレース指定あり＝メイン｜サブを中央の仕切りで左右2分割（8/6）。②は従来どおりメインのみ
-        if (bp === "tband-" && subKey) {
-          band.innerHTML =
-            '<div class="race-split">' +
-            '<div class="race-col">' + raceColHead(rc, key) + raceBuyHtml(rc, key, true) + "</div>" +
-            '<div class="race-col">' + raceColHead(rc, subKey) + raceBuyHtml(rc, subKey, true) + "</div>" +
-            "</div>";
+        // ①トーク＝配信者ごとの表示レース1〜3場（8/6 FB3）。1場＝全面／2場＝左右分割／3場＝T字（上段1場目・下段2場）。
+        // ②レース観戦は従来どおり操作中のメインレースのみ
+        if (bp === "tband-") {
+          if (talkKeys.length >= 3) {
+            band.innerHTML =
+              '<div class="race-t">' +
+              '<div class="race-t-top race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true) + "</div>" +
+              '<div class="race-t-bottom">' +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[2]) + raceBuyHtml(rc, talkKeys[2], true) + "</div>" +
+              "</div></div>";
+          } else if (talkKeys.length === 2) {
+            band.innerHTML =
+              '<div class="race-split">' +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true) + "</div>" +
+              "</div>";
+          } else {
+            band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false);
+          }
+          fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
         } else {
           band.innerHTML = raceBuyHtml(rc, key, false);
         }
-        if (bp === "tband-") fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
       });
     });
   }
