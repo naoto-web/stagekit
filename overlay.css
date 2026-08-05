@@ -342,6 +342,9 @@ body.debug .video-ph { display: flex; }
   align-items: flex-start; gap: 8px 46px; padding: 12px 18px; overflow: hidden; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
 
+/* ①トークの買い目行は折り返さない＝長い行はJSが幅に合わせて自動縮小（8/6 FB） */
+.talk-band .pred-line.chips { flex-wrap: nowrap; }
+
 /* ①トーク：2レース表示（メイン｜サブ・中央仕切り・8/6）。チップはsmall版で枠内に収める */
 .talk-band .buy-line > .race-split { flex: 1 1 auto; width: 100%; }
 .race-split { display: flex; min-height: 0; }
