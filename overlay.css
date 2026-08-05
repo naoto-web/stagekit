@@ -93,7 +93,9 @@ body.scene-ad     #scene-ad     { display: block; }
   transform: rotate(-7deg); pointer-events: none; opacity: .25;
   background-image: url("sponsor_wm_dark.png");
   background-size: 190px 96px;
+  display: none; /* CTC承認待ちの間は非表示（8/5）。URLに &wm=1 で表示 */
 }
+body.wm-on .gbar::before { display: block; }
 .gbar > * { position: relative; z-index: 1; }
 
 /* ヘッダー左上＝チャンネルバナー画像（俺たちの競輪ライブ・7/31差し替え） */
