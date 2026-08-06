@@ -656,6 +656,7 @@
         (sc ? '<span class="' + scls + '">' + esc(sc) + "</span>" : "") + "</li>";
     }).join("");
     renderNarabi(v, rNo);
+    fitSlist(); // ライン表示で高さが変わった後に9車の収まりを確認（8/6 FB30）
   }
 
   /** ライン（並び予想）＋競走得点＝Kドリームスから自動取得。並びは手入力があれば優先（修正用） */
@@ -713,6 +714,26 @@
       }).join('<span class="nb-dot">・</span>');
   }
 
+  /** 出走表の縦フィット（8/6 FB30）：ライン・note勝負を下に固定したまま、9車が入り切らない時は
+      出走表リストだけを自動縮小（他の枠に干渉しない）。子要素の実下端で測る（scrollHeight不使用） */
+  function fitSlist() {
+    var el = $("slist-talk");
+    if (!el) return;
+    el.style.transform = "";
+    var er = el.getBoundingClientRect();
+    if (er.height <= 0) return;
+    var maxBottom = er.top;
+    for (var i = 0; i < el.children.length; i++) {
+      var r = el.children[i].getBoundingClientRect();
+      if (r.bottom > maxBottom) maxBottom = r.bottom;
+    }
+    var need = maxBottom - er.top;
+    if (need > er.height + 1) {
+      el.style.transform = "scale(" + Math.max(0.5, er.height / need) + ")";
+      el.style.transformOrigin = "left top";
+    }
+  }
+
   /** 本日のキャンペーン応募人数（バナー・時計の左・8/6 FB21）：空＝非表示 */
   function renderCampaign() {
     var box = $("camp-box");
@@ -733,7 +754,7 @@
     el.classList.toggle("hidden", !lines.length);
     el.classList.toggle("nr-many", lines.length >= 5 && lines.length <= 6);
     el.classList.toggle("nr-max", lines.length >= 7);
-    if (!lines.length) { el.innerHTML = ""; return; }
+    if (!lines.length) { el.innerHTML = ""; fitSlist(); return; }
     el.innerHTML = '<div class="nr-head">🔥 note勝負</div>' +
       lines.map(function (l) { return '<div class="nr-line">' + esc(l) + "</div>"; }).join("");
     el.querySelectorAll(".nr-line").forEach(function (ln) {
@@ -743,6 +764,7 @@
         ln.style.transformOrigin = "left center";
       }
     });
+    fitSlist(); // note勝負の行数で出走表の残り高さが変わるため再フィット（8/6 FB30）
   }
 
   /* ②レース観戦：場名/Rバーは廃止（7/29 FB4＝映像は別ウィンドウのキャプチャで
