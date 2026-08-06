@@ -616,12 +616,14 @@
         var sName = $("sband-name-" + slot);
         if (sName) {
           sName.textContent = name ? name + " 予想（NEXT）" : "";
-          // （NEXT）付きで幅を超える名前は1行のまま縮小（改行させない・8/6 FB18）
+          // 幅にぴったり収まるフォントサイズを自動計算（8/6 FB34：縮小だけでなく拡大もして枠パンパンに・改行なし）
           sName.style.transform = "";
+          sName.style.fontSize = "";
           var sAvail = sHead.clientWidth - 20; // ヘッダー左右padding分
-          if (sAvail > 0 && sName.scrollWidth > sAvail + 1) {
-            sName.style.transform = "scale(" + Math.max(0.5, sAvail / sName.scrollWidth) + ")";
-            sName.style.transformOrigin = "left center";
+          if (sAvail > 0 && sName.scrollWidth > 0) {
+            var sBase = parseFloat(getComputedStyle(sName).fontSize) || 18;
+            var sFs = Math.max(12, Math.min(34, sBase * sAvail / sName.scrollWidth));
+            sName.style.fontSize = sFs.toFixed(1) + "px";
           }
         }
         if (color) {
