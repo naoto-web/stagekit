@@ -439,7 +439,11 @@ body.debug .video-ph { display: flex; }
 }
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
 /* ②レース観戦の帯＝俺たち目＋買い目3行が1列に収まるサイズ（8/6 FB）。①トークは出走表と同じ正方形 */
-.race-band .buy-line { gap: 5px 40px; padding: 8px 16px; }
+.race-band .buy-line { gap: 5px 40px; padding: 8px 16px 48px; } /* 下48px＝合計/投資の固定枠ぶんを予約（8/6 FB57） */
+/* 合計・投資＝右下の固定枠（8/6 FB57・可変レイアウトから分離＝見切れ事故の主犯を隔離） */
+.band-meta { position: absolute; right: 14px; bottom: 8px; font-size: 26px; font-weight: 900;
+  color: var(--txt); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.band-meta.hidden { display: none; }
 /* 数字＝主役・ハイフン＝脇役（8/6 視聴者FB2・スマホ縦で買い目が読めない）。
    高さ26pxは不変＝俺たち目＋買い目3行の縦収まりを維持し、横幅拡大で数字を大きく */
 .race-band .buy-line .car { width: 22px; height: 26px; font-size: 24px; border-radius: 3px; }
