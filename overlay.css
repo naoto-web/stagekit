@@ -232,7 +232,8 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 /* 2場表示（フルサイズカード）＝カード高168pxを行間なしで使い切るサイズ（8/6 FB6で再拡大） */
 .vt-head { display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 5px 6px; font-size: 30px; line-height: 1.1; font-weight: 900; background: rgba(255,255,255,.08); }
-.vt-head .vt-r { color: var(--acc); }
+/* R番号＝場名と同格に：黒字＋数字は漢字より字面が小さいので1.15emで光学的に同サイズ（8/6 FB8） */
+.vt-head .vt-r { color: var(--txt); font-size: 1.15em; }
 .vt-head .vt-start-s { font-size: 20px; font-weight: 900; }
 .vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 2px 14px; }
 .vt-row { display: flex; justify-content: space-between; align-items: baseline;
