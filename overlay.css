@@ -450,7 +450,7 @@ body.debug .video-ph { display: flex; }
   border-right: 1.5px solid var(--panel-line); }
 body.race-sub-on .race-sub { display: flex; }
 .sub-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
-.sub-head { font-size: 18px; padding: 6px 10px; }
+.sub-head { font-size: 18px; padding: 6px 10px; white-space: nowrap; overflow: hidden; } /* 折返し禁止＝JSが幅に合わせて縮小（8/6 FB18） */
 .sub-line { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: flex-start;
   gap: 6px; padding: 8px 10px; overflow: hidden; }
 .sub-line .race-col-head { font-size: 24px; padding: 3px 12px; } /* 8/6 FB16拡大・長い場名はfitSubRowsが縮める */
