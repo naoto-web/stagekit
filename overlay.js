@@ -769,6 +769,28 @@
           return '<i class="car c' + n + '">' + n + "</i>";
         }).join("") + "</span>";
       }).join('<span class="nb-dot">・</span>');
+    fitNarabi(); // 収まらない時は行ごと縮小（8/6 FB44）
+  }
+
+  /** ライン行の幅フィット（8/6 FB44）：「ライン無し」の全バラ表示等で右端チップが切れる→行ごと縮小 */
+  function fitNarabi() {
+    var nb = $("narabi-talk");
+    if (!nb || nb.classList.contains("hidden")) return;
+    nb.style.transform = "";
+    var nr = nb.getBoundingClientRect();
+    if (nr.width <= 0) return;
+    var padR = parseFloat(getComputedStyle(nb).paddingRight) || 0;
+    var maxRight = nr.left;
+    for (var i = 0; i < nb.children.length; i++) {
+      var r = nb.children[i].getBoundingClientRect();
+      if (r.right > maxRight) maxRight = r.right;
+    }
+    var need = maxRight - nr.left;
+    var avail = nr.width - padR;
+    if (need > avail + 1) {
+      nb.style.transform = "scale(" + Math.max(0.5, avail / need).toFixed(3) + ")";
+      nb.style.transformOrigin = "left center";
+    }
   }
 
   /** 出走表の縦フィット（8/6 FB30）：ライン・note勝負を下に固定したまま、9車が入り切らない時は
@@ -1077,7 +1099,7 @@
     tickClock();
     renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
-    if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); } // 毎秒＝①②帯見切れの自己修復（8/6 FB32/37・軽量かつ冪等）
+    if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); fitNarabi(); } // 毎秒＝①②帯・ライン行の自己修復（8/6 FB32/37/44）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
   tickClock();
