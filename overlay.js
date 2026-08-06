@@ -408,12 +408,24 @@
     });
   }
 
-  /** ②予想帯の横あふれ自動縮小（8/6 FB12）：列が枠幅を超えたら帯全体をスケールして見切れを防ぐ */
+  /** ②予想帯の横あふれ自動縮小（8/6 FB12・FB27で検知方式変更）：列が枠幅を超えたら帯全体をスケール。
+      ⚠️column-wrapのflexはscrollWidthがあふれ列を報告しないことがある（3列切れの実バグ）→
+      子要素の実右端座標で必要幅を測る方式に変更 */
   function fitRaceBand(band) {
     if (!band) return;
     band.style.transform = "";
-    if (band.clientWidth > 0 && band.scrollWidth > band.clientWidth + 1) {
-      band.style.transform = "scale(" + Math.max(0.5, band.clientWidth / band.scrollWidth) + ")";
+    if (band.clientWidth <= 0) return;
+    var br = band.getBoundingClientRect();
+    var padR = parseFloat(getComputedStyle(band).paddingRight) || 0;
+    var maxRight = br.left;
+    for (var i = 0; i < band.children.length; i++) {
+      var r = band.children[i].getBoundingClientRect();
+      if (r.right > maxRight) maxRight = r.right;
+    }
+    var need = maxRight - br.left;
+    var avail = br.width - padR;
+    if (need > avail + 1) {
+      band.style.transform = "scale(" + Math.max(0.35, avail / need) + ")";
       band.style.transformOrigin = "left top";
     }
   }
