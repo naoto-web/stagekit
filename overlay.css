@@ -229,22 +229,22 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .timer-cards { list-style: none; display: flex; gap: 0; flex: 0 0 168px; }
 .vt-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
   background: var(--panel); border: 1.5px solid var(--panel-line); overflow: hidden; }
-/* 2場表示（フルサイズカード）＝カード高168pxに入る上限サイズ（8/6 FB5で拡大） */
+/* 2場表示（フルサイズカード）＝カード高168pxを行間なしで使い切るサイズ（8/6 FB6で再拡大） */
 .vt-head { display: flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 6px 6px; font-size: 28px; font-weight: 900; background: rgba(255,255,255,.08); }
+  padding: 5px 6px; font-size: 30px; line-height: 1.1; font-weight: 900; background: rgba(255,255,255,.08); }
 .vt-head .vt-r { color: var(--acc); }
-.vt-head .vt-start-s { font-size: 18px; font-weight: 900; }
-.vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 4px 16px; }
+.vt-head .vt-start-s { font-size: 20px; font-weight: 900; }
+.vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 2px 14px; }
 .vt-row { display: flex; justify-content: space-between; align-items: baseline;
-  font-size: 26px; font-weight: 900; color: var(--txt); }
-.vt-rows .vt-row:first-child { border-bottom: 1px solid rgba(255,255,255,.28); padding-bottom: 4px; }
-.vt-row b { font-size: 30px; font-weight: 900; font-variant-numeric: tabular-nums; }
-.vt-row b.closed { font-size: 24px; }
-.vt-done { text-align: center; color: var(--sub); font-weight: 900; font-size: 20px; }
+  font-size: 30px; line-height: 1.15; font-weight: 900; color: var(--txt); }
+.vt-rows .vt-row:first-child { border-bottom: 1px solid rgba(255,255,255,.28); padding-bottom: 3px; }
+.vt-row b { font-size: 38px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
+.vt-row b.closed { font-size: 30px; }
+.vt-done { text-align: center; color: var(--sub); font-weight: 900; font-size: 24px; }
 /* 公式締切後＝「締切ました」CTAカード */
 .vt-cta { align-items: center; text-align: center; }
-.vt-cta-main { font-size: 24px; font-weight: 900; color: var(--txt); }
-.vt-cta-line { font-size: 20px; font-weight: 900; color: var(--txt); }
+.vt-cta-main { font-size: 28px; font-weight: 900; color: var(--txt); }
+.vt-cta-line { font-size: 22px; font-weight: 900; color: var(--txt); }
 /* 民間締切の信号機色（残5分＝緑→残3分＝黄→残1分＝赤・民間締切後も公式締切までは赤）
    ヘッダーも中身も同色に塗る。黄のみ黒文字。 */
 .vt-card.zone-green .vt-head, .vt-card.zone-green .vt-rows { background: #2e9e4f; }
@@ -263,9 +263,9 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .timer-cards.vt-n3 .vt-head { font-size: 21px; gap: 6px; }
 .timer-cards.vt-n3 .vt-head .vt-start-s { font-size: 14px; }
 .timer-cards.vt-n3 .vt-rows { padding: 4px 10px; }
-.timer-cards.vt-n3 .vt-row { font-size: 19px; }
-.timer-cards.vt-n3 .vt-row b { font-size: 24px; }
-.timer-cards.vt-n3 .vt-row b.closed { font-size: 19px; }
+.timer-cards.vt-n3 .vt-row { font-size: 20px; }
+.timer-cards.vt-n3 .vt-row b { font-size: 26px; }
+.timer-cards.vt-n3 .vt-row b.closed { font-size: 20px; }
 .timer-cards.vt-n4 .vt-head { font-size: 19px; gap: 5px; }
 .timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 13px; }
 .timer-cards.vt-n4 .vt-rows { padding: 3px 6px; }
@@ -279,14 +279,14 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 #scene-talk .timer-cards { flex-flow: column nowrap; flex: 0 0 336px; }
 #scene-talk .timer-cards.vt-n3, #scene-talk .timer-cards.vt-n4 { flex-flow: row wrap; }
 #scene-talk .timer-cards.vt-n3 .vt-card, #scene-talk .timer-cards.vt-n4 .vt-card { flex: 1 1 40%; min-width: 0; }
-/* ①トークの3〜4場＝2列グリッドでカード幅が広い（約196px）ため②よりさらに大きく（8/6 FB4） */
-#scene-talk .timer-cards.vt-n3 .vt-head, #scene-talk .timer-cards.vt-n4 .vt-head { font-size: 22px; }
-#scene-talk .timer-cards.vt-n3 .vt-head .vt-start-s, #scene-talk .timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 13px; }
-#scene-talk .timer-cards.vt-n3 .vt-row, #scene-talk .timer-cards.vt-n4 .vt-row { font-size: 20px; }
-#scene-talk .timer-cards.vt-n3 .vt-row b, #scene-talk .timer-cards.vt-n4 .vt-row b { font-size: 26px; }
-#scene-talk .timer-cards.vt-n3 .vt-row b.closed, #scene-talk .timer-cards.vt-n4 .vt-row b.closed { font-size: 20px; }
-#scene-talk .timer-cards.vt-n3 .vt-cta-main, #scene-talk .timer-cards.vt-n4 .vt-cta-main { font-size: 20px; }
-#scene-talk .timer-cards.vt-n3 .vt-cta-line, #scene-talk .timer-cards.vt-n4 .vt-cta-line { font-size: 16px; }
+/* ①トークの3〜4場＝2列グリッドでカード幅が広い（約196px）ため②よりさらに大きく（8/6 FB4・FB6再拡大） */
+#scene-talk .timer-cards.vt-n3 .vt-head, #scene-talk .timer-cards.vt-n4 .vt-head { font-size: 24px; }
+#scene-talk .timer-cards.vt-n3 .vt-head .vt-start-s, #scene-talk .timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 14px; }
+#scene-talk .timer-cards.vt-n3 .vt-row, #scene-talk .timer-cards.vt-n4 .vt-row { font-size: 22px; }
+#scene-talk .timer-cards.vt-n3 .vt-row b, #scene-talk .timer-cards.vt-n4 .vt-row b { font-size: 30px; }
+#scene-talk .timer-cards.vt-n3 .vt-row b.closed, #scene-talk .timer-cards.vt-n4 .vt-row b.closed { font-size: 24px; }
+#scene-talk .timer-cards.vt-n3 .vt-cta-main, #scene-talk .timer-cards.vt-n4 .vt-cta-main { font-size: 22px; }
+#scene-talk .timer-cards.vt-n3 .vt-cta-line, #scene-talk .timer-cards.vt-n4 .vt-cta-line { font-size: 17px; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
