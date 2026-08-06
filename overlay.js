@@ -364,6 +364,18 @@
     });
   }
 
+  /** トーク帯の縦はみ出し自動縮小（8/6 FB9）：列の中身が列の高さを超えたら列ごとスケールして見切れを防ぐ */
+  function fitRaceCols(scope) {
+    if (!scope) return;
+    scope.querySelectorAll(".race-col").forEach(function (col) {
+      col.style.transform = "";
+      if (col.clientHeight > 0 && col.scrollHeight > col.clientHeight + 1) {
+        col.style.transform = "scale(" + Math.max(0.5, col.clientHeight / col.scrollHeight) + ")";
+        col.style.transformOrigin = "left top";
+      }
+    });
+  }
+
   /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想） */
   function raceColHead(rc, k) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
@@ -459,6 +471,7 @@
             band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false);
           }
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
+          fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
         } else {
           band.innerHTML = raceBuyHtml(rc, key, false);
           fitPredLines(band); // チップ拡大(8/6 FB2)で長い行が枠幅を超えた時だけ自動縮小
