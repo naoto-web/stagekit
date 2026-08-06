@@ -412,6 +412,21 @@ body.debug .video-ph { display: flex; }
 .race-band .ore-row { padding: 3px 8px; border-width: 1.5px; }
 .race-band .ore-label { font-size: 13px; }
 .race-band .buy-meta { font-size: 24px; font-weight: 900; color: var(--txt); } /* 8/6 FB10で拡大 */
+/* ②買い目＝行数が少ない時は段階拡大（8/6 FB12）：〜4行＝特大／5〜6行＝大／7行〜＝標準。
+   行数が増えたらJSのfitRaceBandが全体を縮めて見切れを防ぐ */
+.race-band .buy-line.buy-xl { gap: 6px 46px; }
+.race-band .buy-line.buy-xl .car { width: 30px; height: 36px; font-size: 32px; border-radius: 4px; }
+.race-band .buy-line.buy-xl .pl-sep { font-size: 20px; }
+.race-band .buy-line.buy-xl .pl-all { width: 32px; font-size: 24px; }
+.race-band .buy-line.buy-xl .pred-line { font-size: 30px; }
+.race-band .buy-line.buy-xl .ore-label { font-size: 17px; }
+.race-band .buy-line.buy-xl .buy-meta { font-size: 28px; }
+.race-band .buy-line.buy-lg .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
+.race-band .buy-line.buy-lg .pl-sep { font-size: 18px; }
+.race-band .buy-line.buy-lg .pl-all { width: 28px; font-size: 21px; }
+.race-band .buy-line.buy-lg .pred-line { font-size: 26px; }
+.race-band .buy-line.buy-lg .ore-label { font-size: 15px; }
+.race-band .buy-line.buy-lg .buy-meta { font-size: 26px; }
 .buy-line .pl-all { width: 26px; font-size: 15px; }
 /* 俺たち目（無料公開1点）＝黒枠黒字で強調（8/6 FB4：金枠金字は白テーマで沈む） */
 .ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
