@@ -489,8 +489,79 @@
   function fitRaceBands() {
     ["band-pred-a", "band-pred-b"].forEach(function (id) {
       var band = $(id);
-      if (band && band.clientWidth > 0) fitRaceBandFull(band);
+      if (band && band.clientWidth > 0) fitRbScale(band);
     });
+  }
+
+  /** ②買い目の自前パッキング（8/6 FB51）：flex-wrap任せをやめ、行を最適な列数に自分で分配して
+      縦横の余りが最小になる倍率へ拡大（下限0.35・上限2.0）。今日多発した「折返し位置の誤動作→
+      見切れ/下余白」の根治。renderPredsのたびに再構成する */
+  function packRaceBand(band) {
+    var rows = Array.prototype.slice.call(band.children);
+    if (!rows.length) return;
+    var cs = getComputedStyle(band);
+    var availW = band.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    var availH = band.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+    if (availW <= 0 || availH <= 0) return;
+    var hs = rows.map(function (el) { return el.offsetHeight; });
+    var ws = rows.map(function (el) { return el.offsetWidth; });
+    var ROWGAP = 5, COLGAP = 40;
+    var best = null;
+    for (var n = 1; n <= 4 && n <= rows.length; n++) {
+      var total = 0;
+      hs.forEach(function (h) { total += h + ROWGAP; });
+      var target = total / n;
+      var cols = [[]], acc = 0;
+      rows.forEach(function (el, i) {
+        var h = hs[i] + ROWGAP;
+        if (acc + h > target * 1.02 && cols[cols.length - 1].length && cols.length < n) { cols.push([]); acc = 0; }
+        cols[cols.length - 1].push(i);
+        acc += h;
+      });
+      var needW = (cols.length - 1) * COLGAP, needH = 0;
+      cols.forEach(function (c) {
+        var w = 0, hsum = 0;
+        c.forEach(function (i) { if (ws[i] > w) w = ws[i]; hsum += hs[i] + ROWGAP; });
+        needW += w;
+        if (hsum - ROWGAP > needH) needH = hsum - ROWGAP;
+      });
+      var k = Math.min(availW / Math.max(1, needW), availH / Math.max(1, needH));
+      if (!best || k > best.k) best = { k: k, cols: cols };
+    }
+    var flow = document.createElement("div");
+    flow.className = "rb-flow";
+    best.cols.forEach(function (c) {
+      var col = document.createElement("div");
+      col.className = "rb-col";
+      c.forEach(function (i) { col.appendChild(rows[i]); });
+      flow.appendChild(col);
+    });
+    band.innerHTML = "";
+    band.appendChild(flow);
+    var k2 = Math.max(0.35, Math.min(2.0, best.k * 0.97)); // 3%マージン
+    if (Math.abs(k2 - 1) > 0.02) {
+      flow.style.transform = "scale(" + k2.toFixed(3) + ")";
+      flow.style.transformOrigin = "left top";
+    }
+    fitRbScale(band); // 実描画ベースの最終検証（はみ出していれば縮める）
+  }
+
+  /** パッキング後の実描画検証（8/6 FB51）：パネルの外にはみ出していれば収まる倍率へ補正。毎秒巡回でも実行 */
+  function fitRbScale(band) {
+    var flow = band.querySelector(".rb-flow");
+    if (!flow || !band.parentElement) return;
+    var host = band.parentElement.getBoundingClientRect();
+    if (host.width <= 0) return;
+    var fr = flow.getBoundingClientRect();
+    var overW = fr.right - (host.right - 8);
+    var overH = fr.bottom - (host.bottom - 4);
+    if (overW <= 1 && overH <= 1) return;
+    var cur = parseFloat((String(flow.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+    var fixW = overW > 1 ? (fr.width - overW) / fr.width : 1;
+    var fixH = overH > 1 ? (fr.height - overH) / fr.height : 1;
+    var k = Math.max(0.35, cur * Math.min(fixW, fixH));
+    flow.style.transform = "scale(" + k.toFixed(3) + ")";
+    flow.style.transformOrigin = "left top";
   }
 
   /** 1列ぶんの箱フィット（8/6 FB9→FB41で双方向化）：はみ出しは縮小（下限0.35）・余白は改行なしの
@@ -649,8 +720,9 @@
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
         } else {
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）
+          band.classList.remove("buy-xl", "buy-lg");
           band.innerHTML = (key ? raceColHead(rc, key) : "") + raceBuyHtml(rc, key, false);
-          fitRaceBandFull(band); // 入る最大サイズを採用→ダメなら縮小（8/6 FB37・毎秒の巡回でも自己修復）
+          packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51・flex-wrap誤動作の根治）
         }
       });
 
