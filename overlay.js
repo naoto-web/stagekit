@@ -969,7 +969,7 @@
   /* ---------- 的中演出（結果入力で的中が出たら当たった配信者のワイプに表示） ----------
      状態更新のたびに的中リストを前回と比較し、増えた的中だけ発火（リロード時は再生しない）。 */
   var seenHits = null; // null＝初回未初期化
-  var HIT_FX_MS = 12000;
+  var HIT_FX_MS = 20000; // 8/6 FB46：12秒→20秒に延長
   function checkNewHits() {
     var ids = {};
     derived.hits.forEach(function (h) { ids[h.id] = h; });
@@ -999,9 +999,10 @@
         : "🎯 的中！" + (hit.type && hit.type !== "3連単" ? " " + hit.type : "") + (hit.mult ? " " + hit.mult + "倍" : "");
       cam.appendChild(badge);
       cam.classList.add("hit-fx");
+      if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝赤の強パルス（8/6 FB46）
       setTimeout(function () {
         if (badge.parentNode) badge.parentNode.removeChild(badge);
-        if (!cam.querySelector(".hit-fx-badge")) cam.classList.remove("hit-fx");
+        if (!cam.querySelector(".hit-fx-badge")) { cam.classList.remove("hit-fx"); cam.classList.remove("hit-fx-manche"); }
       }, HIT_FX_MS);
     });
   }
