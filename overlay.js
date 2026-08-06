@@ -127,14 +127,21 @@
   var SOUND = params.get("sound") === "1" || (params.get("sound") !== "0" && SCENE === "race");
   var audioCtx = null;
   if (SOUND) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // 無音キープアライブ＝出力ストリームを開きっぱなしにする（初音の出力遅延・suspend復帰遅延の対策・8/6 FB6）
+      var kaG = audioCtx.createGain(); kaG.gain.value = 0;
+      var kaO = audioCtx.createOscillator(); kaO.frequency.value = 40;
+      kaO.connect(kaG); kaG.connect(audioCtx.destination); kaO.start();
+      setInterval(function () { if (audioCtx.state === "suspended") audioCtx.resume(); }, 1000);
+    } catch (e) {}
   }
-  function beep() {
+  function beepAt(atTime) {
     if (!SOUND) return;
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
-      var t = audioCtx.currentTime;
+      var t = Math.max(atTime || 0, audioCtx.currentTime);
       [0, 0.18].forEach(function (off) { // 短音2連＝ピピッ
         var o = audioCtx.createOscillator();
         var g = audioCtx.createGain();
@@ -149,6 +156,14 @@
         o.stop(t + off + 0.15);
       });
     } catch (e) { /* 音を出せない環境では無音のまま */ }
+  }
+  /* 色切替と音のズレ対策（8/6 FB6）：境界の実時刻にサンプル精度で事前予約する。
+     キー＝「民間締切の絶対秒|境界秒」＝レースごと・境界ごとに1回だけ（即時フォールバックとの二重鳴り防止） */
+  var beepDone = {};
+  function scheduleBeep(key, delaySec) {
+    if (beepDone[key]) return;
+    beepDone[key] = true;
+    beepAt(audioCtx ? audioCtx.currentTime + Math.max(0, delaySec) : 0);
   }
 
   var zoneRank = { "": 0, green: 1, yellow: 2, red: 3 };
@@ -218,18 +233,29 @@
     var netSec = (state.cfg.netCloseMin || 5) * 60;
     var offSec = (state.cfg.closeMin || 3) * 60;
     document.querySelectorAll("[data-net]").forEach(function (el) {
-      var remain = +el.getAttribute("data-net") - netSec - now;
+      var tgt = +el.getAttribute("data-net") - netSec; // 民間締切の絶対秒
+      var remain = tgt - now;
       setCount(el, remain);
-      // 民間締切ベースの信号機色をカードに反映＋色が上がった瞬間にピピッ
+      // 民間締切ベースの信号機色をカードに反映＋色が上がる瞬間にピピッ。
+      // 色・音とも小数秒で判定（旧＝秒切り捨てで色が最大1秒先行し音が後追いだった・8/6 FB6）
       var card = el.closest(".vt-card");
       if (!card) return;
       var venue = card.getAttribute("data-venue");
-      var z = zoneOf(remain);
+      var remainF = tgt - Date.now() / 1000;
+      var z = zoneOf(remainF);
       card.classList.remove("zone-green", "zone-yellow", "zone-red");
       if (z) card.classList.add("zone-" + z);
+      // 音＝2.5秒以内に来る境界をWeb Audioへ事前予約（tick間隔の量子化ズレなし）
+      [300, 180, 60].forEach(function (b) {
+        var d = remainF - b;
+        if (d > 0 && d <= 2.5) scheduleBeep(tgt + "|" + b, d);
+      });
       var prev = zones[venue];
       zones[venue] = z;
-      if (prev !== undefined && zoneRank[z] > zoneRank[prev]) beep();
+      if (prev !== undefined && zoneRank[z] > zoneRank[prev]) {
+        // 予約が間に合わなかった時だけの即時フォールバック（予約済みならbeepDoneで抑止される）
+        scheduleBeep(tgt + "|" + ({ green: 300, yellow: 180, red: 60 }[z] || 0), 0);
+      }
     });
     document.querySelectorAll("[data-off]").forEach(function (el) {
       setCount(el, +el.getAttribute("data-off") - offSec - now);
