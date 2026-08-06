@@ -490,7 +490,10 @@
   function fitRaceBands() {
     ["band-pred-a", "band-pred-b"].forEach(function (id) {
       var band = $(id);
-      if (band && band.clientWidth > 0) fitRbScale(band);
+      if (!band || band.clientWidth <= 0) return;
+      // 非表示中にrenderPredsされた帯はパック未実施のまま残る（旧48px予約も廃止済み）→表示復帰を検知して自己修復
+      if (band.firstChild && !band.querySelector(".rb-flow")) { packRaceBand(band); return; }
+      fitRbScale(band);
     });
   }
 
@@ -582,10 +585,12 @@
       col.className = "rb-col";
       var cw = colWidth(idx);
       idx.forEach(function (i) {
-        // ラベル・メモ行がチップ行より幅広なら列幅に縮めて格納（列を太らせない）
+        // ラベル・メモ行がチップ行より幅広なら列幅に縮めて格納（列を太らせない）。
+        // ⚠️下限フロア禁止＝比率そのままで縮める（フロアがあると視覚幅が列幅を超えて隣列/合計枠へ
+        // インクが滲出し、transform由来のためどの検査にも映らない＝FB58レビューで実証済み）
         if (!hard[i] && ws[i] > cw + 1) {
           rows[i].style.width = cw + "px";
-          rows[i].style.transform = "scale(" + Math.max(0.4, cw / ws[i]).toFixed(3) + ")";
+          rows[i].style.transform = "scale(" + (cw / ws[i]).toFixed(3) + ")";
           rows[i].style.transformOrigin = "left center";
         }
         col.appendChild(rows[i]);
@@ -611,6 +616,11 @@
     var fr = flow.getBoundingClientRect();
     var overW = fr.right - (host.right - 8);
     var overH = fr.bottom - (host.bottom - 4);
+    var fixW = overW > 1 ? (fr.width - overW) / fr.width : 1;
+    var fixH = overH > 1 ? (fr.height - overH) / fr.height : 1;
+    // 合計/投資への列の重なり：列ごとに「横で手前に収まる」「縦で上に収まる」の緩い方の必要倍率を
+    // 実座標から厳密に出し、一発で解消する倍率へ補正（過小補正の段階縮小が映るのを防ぐ・FB58レビュー反映）
+    var fixM = 1;
     var meta = band.parentElement.querySelector(".band-meta");
     if (meta && !meta.classList.contains("hidden")) {
       var mr = meta.getBoundingClientRect();
@@ -618,16 +628,17 @@
         for (var i = 0; i < flow.children.length; i++) {
           var cr = flow.children[i].getBoundingClientRect();
           if (cr.right > mr.left + 2 && cr.bottom > mr.top + 2) {
-            overH = Math.max(overH, cr.bottom - mr.top);
+            var fh = (mr.left - fr.left) / Math.max(1, cr.right - fr.left);
+            var fv = (mr.top - fr.top) / Math.max(1, cr.bottom - fr.top);
+            var f = Math.max(fh, fv);
+            if (f < fixM) fixM = f;
           }
         }
       }
     }
-    if (overW <= 1 && overH <= 1) return;
+    if (fixW >= 1 && fixH >= 1 && fixM >= 0.999) return;
     var cur = parseFloat((String(flow.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
-    var fixW = overW > 1 ? (fr.width - overW) / fr.width : 1;
-    var fixH = overH > 1 ? (fr.height - overH) / fr.height : 1;
-    var k = Math.max(0.35, cur * Math.min(fixW, fixH));
+    var k = Math.max(0.35, cur * Math.min(fixW, Math.min(fixH, fixM)));
     flow.style.transform = "scale(" + k.toFixed(3) + ")";
     flow.style.transformOrigin = "left top";
   }
