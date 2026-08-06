@@ -70,8 +70,23 @@
 
     <aside class="vrail race-rail">
       <ul class="timer-cards" id="timer-race"></ul>
-      <div class="cam slot-a" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot"></i><span id="np-race-a"></span></div></div>
-      <div class="cam slot-b" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot alt"></i><span id="np-race-b"></span></div></div>
+      <div class="race-sub-wrap">
+        <!-- サブ予想（8/6 FB13）：コンソール「②サブ予想の場」で場を選ぶと表示（なし＝従来レイアウト） -->
+        <div class="race-sub">
+          <div class="panel sub-panel slot-a">
+            <div class="panel-head sub-head" id="sband-head-a"><span id="sband-name-a"></span></div>
+            <div class="buy-line sub-line" id="sband-pred-a"></div>
+          </div>
+          <div class="panel sub-panel slot-b">
+            <div class="panel-head sub-head" id="sband-head-b"><span id="sband-name-b"></span></div>
+            <div class="buy-line sub-line" id="sband-pred-b"></div>
+          </div>
+        </div>
+        <div class="race-wipes">
+          <div class="cam slot-a" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot"></i><span id="np-race-a"></span></div></div>
+          <div class="cam slot-b" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot alt"></i><span id="np-race-b"></span></div></div>
+        </div>
+      </div>
     </aside>
   </section>
 
