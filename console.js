@@ -80,7 +80,8 @@
     if (!race || !race.racers || !race.racers.length) return 9;
     var maxNo = 0;
     race.racers.forEach(function (p) { if (+p.no > maxNo) maxNo = +p.no; });
-    return maxNo >= 8 ? 9 : 7;
+    // 旧実装は7車/9車の二択で6車立てを7車に丸めていた（8/6 FB43＝名古屋5R実バグ）→実車番をそのまま使う
+    return maxNo >= 2 ? maxNo : 9;
   }
 
   function nextRaceOf(name) {
