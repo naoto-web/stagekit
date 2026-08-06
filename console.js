@@ -188,33 +188,49 @@
     }
   }
 
-  /* ②サブ予想の場（8/6 FB13）：レース観戦のワイプ左に出す別場。なし＝OFF＝従来レイアウト。
+  /* ②サブ予想の場（8/6 FB13→FB17で配信者ごとに選択）：レース観戦のワイプ左＝NEXT枠。
+     raceSubBy[配信者id]＝場名。全員「なし」＝OFF＝従来レイアウト。
      ⚠️ONにしたらOBS側でカメラ1/2の移動が必要（セットアップ手順の「②サブ予想モード」参照） */
   function renderRaceSubRow() {
     var el = $("race-sub-row");
     if (!el) return;
-    if (!state.venues.length) { el.innerHTML = ""; return; }
-    if (state.raceSubVenue && !state.venues.some(function (v) { return v.name === state.raceSubVenue; })) {
+    if (!state.raceSubBy || typeof state.raceSubBy !== "object") state.raceSubBy = {};
+    // 旧・共通1場（raceSubVenue）からの移行：全員に同じ場を入れて旧フィールドは空に
+    if (state.raceSubVenue) {
+      (state.racers || []).forEach(function (rc) {
+        if (!state.raceSubBy[rc.id]) state.raceSubBy[rc.id] = state.raceSubVenue;
+      });
       state.raceSubVenue = null;
     }
-    el.innerHTML = '<div class="row gap"><span class="lbl inline">②サブ予想（ワイプ左）</span>' +
-      '<button class="vp' + (!state.raceSubVenue ? " sel" : "") + '" data-v="">なし</button>' +
-      state.venues.map(function (v) {
-        var rNo = state.currentRace[v.name];
-        return '<button class="vp' + (state.raceSubVenue === v.name ? " sel" : "") + '" data-v="' + esc(v.name) + '">' +
-          esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
-      }).join("") +
-      // サブ場のR送り＝メイン（放送）を切り替えずに次レースへ（8/6 FB13）
-      (state.raceSubVenue ? '<button class="vp" data-nextsub="1">▶ サブを次Rへ</button>' : "") +
-      "</div>";
+    if (!state.venues.length || !state.racers.length) { el.innerHTML = ""; return; }
+    var names = state.venues.map(function (v) { return v.name; });
+    el.innerHTML = '<div class="lbl">②サブ予想（ワイプ左のNEXT枠）：配信者ごとに場を選択</div>' +
+      state.racers.map(function (rc) {
+        var cur = state.raceSubBy[rc.id];
+        if (cur && names.indexOf(cur) < 0) cur = null;
+        return '<div class="row gap">' +
+          '<span class="lbl inline">' + esc(rc.name) + '</span>' +
+          '<button class="vp' + (!cur ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="">なし</button>' +
+          state.venues.map(function (v) {
+            var rNo = state.currentRace[v.name];
+            return '<button class="vp' + (cur === v.name ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
+              esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
+          }).join("") +
+          // R送り＝メイン（放送）を切り替えずにその場を次レースへ
+          (cur ? '<button class="vp" data-rid="' + esc(rc.id) + '" data-nextsub="1">▶ 次Rへ</button>' : "") +
+          "</div>";
+      }).join("");
     el.querySelectorAll(".vp").forEach(function (b) {
       b.addEventListener("click", function () {
+        var rid = b.getAttribute("data-rid");
         if (b.getAttribute("data-nextsub")) {
-          var next = nextRaceOf(state.raceSubVenue);
-          if (next) { state.currentRace[state.raceSubVenue] = next.no; save(); renderAll(); }
+          var vn = state.raceSubBy[rid];
+          var next = vn ? nextRaceOf(vn) : null;
+          if (next) { state.currentRace[vn] = next.no; save(); renderAll(); }
           return;
         }
-        state.raceSubVenue = b.getAttribute("data-v") || null;
+        var v = b.getAttribute("data-v") || null;
+        if (v) state.raceSubBy[rid] = v; else delete state.raceSubBy[rid];
         save();
         renderAll();
       });
