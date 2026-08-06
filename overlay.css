@@ -361,8 +361,9 @@ body.debug .video-ph { display: flex; }
 .race-band { position: absolute; left: 8px; top: 864px; width: 1360px; bottom: 8px;
   display: flex; gap: 0; }
 .race-band .panel { flex: 1 1 0; min-width: 0; }
-.band-head { font-size: 28px; padding: 10px 20px; }
-.band-head .band-inv { margin-left: auto; font-size: 24px; font-weight: 900;
+/* 帯ヘッダー＝名前32px・投資/回収28px（8/6 FB16拡大・余白詰めで高さ維持） */
+.band-head { font-size: 32px; padding: 7px 20px; }
+.band-head .band-inv { margin-left: auto; font-size: 28px; font-weight: 900;
   font-variant-numeric: tabular-nums; }
 /* 買い目は縦に並べ、高さが足りなくなったら右の列へ折り返す（列間は広めに離す） */
 .race-band .panel, .talk-band .panel { display: flex; flex-direction: column; }
@@ -452,7 +453,7 @@ body.race-sub-on .race-sub { display: flex; }
 .sub-head { font-size: 18px; padding: 6px 10px; }
 .sub-line { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: flex-start;
   gap: 6px; padding: 8px 10px; overflow: hidden; }
-.sub-line .race-col-head { font-size: 18px; padding: 2px 10px; }
+.sub-line .race-col-head { font-size: 24px; padding: 3px 12px; } /* 8/6 FB16拡大・長い場名はfitSubRowsが縮める */
 .sub-line .car { width: 24px; height: 28px; font-size: 26px; border-radius: 3px; }
 .sub-line .pl-sep { font-size: 16px; padding: 0 1px; }
 .sub-line .pl-all { width: 26px; font-size: 19px; }
