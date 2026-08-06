@@ -361,6 +361,13 @@ body.debug .video-ph { display: flex; }
 .race-band { position: absolute; left: 8px; top: 864px; width: 1360px; bottom: 8px;
   display: flex; gap: 0; }
 .race-band .panel { flex: 1 1 0; min-width: 0; }
+/* 白文字ヘッダーの黒フチ（8/6 FB19）：メンバーカラー上の視認性向上。text-shadowは子（投資/回収等）にも継承。
+   黒文字になる明色チームカラー時はJSが外す */
+.txt-edge { text-shadow: -1.5px -1.5px 0 rgba(0,0,0,.7), 1.5px -1.5px 0 rgba(0,0,0,.7),
+  -1.5px 1.5px 0 rgba(0,0,0,.7), 1.5px 1.5px 0 rgba(0,0,0,.7),
+  0 -1.5px 0 rgba(0,0,0,.7), 0 1.5px 0 rgba(0,0,0,.7),
+  -1.5px 0 0 rgba(0,0,0,.7), 1.5px 0 0 rgba(0,0,0,.7); }
+
 /* 帯ヘッダー＝名前32px・投資/回収28px（8/6 FB16拡大・余白詰めで高さ維持） */
 .band-head { font-size: 32px; padding: 7px 20px; }
 .band-head .band-inv { margin-left: auto; font-size: 28px; font-weight: 900;
