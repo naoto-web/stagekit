@@ -87,6 +87,7 @@
       var s = K.settle(rp.parsed, 0, result.order, result.payouts || []);
       s.invest = rp.invest;
       s.refund = (result.refunds || {})[pid] || 0; // 回収＝手入力の実額
+      s.isNote = !!rp.entry.isNote; // note予想レースの的中表示用（8/6 FB53）
       // 俺たち目（無料公開1点）も的中判定に参加（8/4）。金額計算には入れない＝投資/回収は不変
       s.oreHits = [];
       if (rp.entry.oreTachi) {
@@ -135,13 +136,18 @@
         var res = s.byRacer[pid];
         if (!res) return;
         tOf(pid).refund += res.refund;
+        // 俺たち目と同じ目が買い目でもヒットした場合は俺たち目名義だけ残す（8/6 FB53・かさ増し防止）
+        var oreCombos = {};
+        (res.oreHits || []).forEach(function (h) { oreCombos[h.comboLabel] = true; });
         res.hits.forEach(function (h) {
+          if (h.type === "3連単" && oreCombos[h.comboLabel]) return;
           var id = hitId(key, pid, h);
           if (hidden[id]) return;
           raceHitFlags[key] = true;
           hits.push({
             id: id, auto: true,
             resAuto: !!s.result.auto, // 結果が「自動確定」由来か（8/6 FB47・ワイプ演出の抑止判定用）
+            note: !!res.isNote, // note予想レースの的中（8/6 FB53・ティッカー表記用）
             racerName: pid,
             place: parts[0] + parts[1] + "R",
             type: h.type, comboLabel: h.comboLabel,
@@ -156,6 +162,7 @@
           hits.push({
             id: id, auto: true,
             resAuto: !!s.result.auto, // 同上（8/6 FB47）
+            note: !!res.isNote, // 同上（8/6 FB53）
             racerName: pid,
             place: parts[0] + parts[1] + "R",
             type: "俺たち目", comboLabel: h.comboLabel,
