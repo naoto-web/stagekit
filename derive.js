@@ -38,6 +38,7 @@
       ],
       venues: [],
       activeVenue: 0,
+      raceSubVenue: null, // ②サブ予想の場（8/6 FB13）。null＝OFF＝従来レイアウト（ワイプ全幅）
       currentRace: {},
       grade: {},
       narabi: {},
