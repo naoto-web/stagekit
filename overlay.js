@@ -536,13 +536,26 @@
       }).join('<span class="nb-dot">・</span>');
   }
 
-  /** 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定の入力を表示・8/6） */
+  /** 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定の入力を表示・8/6）
+      1行＝1件・最大8行。5行以上はCSS側で段階縮小、長い行は枠幅に合わせて自動縮小 */
   function renderNoteRaces() {
     var el = $("note-races-talk");
     if (!el) return;
-    var txt = state && state.noteRaces ? String(state.noteRaces).trim() : "";
-    el.classList.toggle("hidden", !txt);
-    if (txt) el.innerHTML = '<span class="nr-label">🔥 note勝負</span><span class="nr-text">' + esc(txt) + "</span>";
+    var lines = (state && state.noteRaces ? String(state.noteRaces) : "")
+      .split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8);
+    el.classList.toggle("hidden", !lines.length);
+    el.classList.toggle("nr-many", lines.length >= 5 && lines.length <= 6);
+    el.classList.toggle("nr-max", lines.length >= 7);
+    if (!lines.length) { el.innerHTML = ""; return; }
+    el.innerHTML = '<div class="nr-head">🔥 note勝負</div>' +
+      lines.map(function (l) { return '<div class="nr-line">' + esc(l) + "</div>"; }).join("");
+    el.querySelectorAll(".nr-line").forEach(function (ln) {
+      ln.style.transform = "";
+      if (ln.clientWidth > 0 && ln.scrollWidth > ln.clientWidth + 1) {
+        ln.style.transform = "scale(" + Math.max(0.55, ln.clientWidth / ln.scrollWidth) + ")";
+        ln.style.transformOrigin = "left center";
+      }
+    });
   }
 
   /* ②レース観戦：場名/Rバーは廃止（7/29 FB4＝映像は別ウィンドウのキャプチャで
