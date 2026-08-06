@@ -497,8 +497,7 @@
         var bandHead = $(bp + "head-" + slot);
         if (!bandHead) return;
         var bandName = $(bp + "name-" + slot);
-        if (bandName) bandName.innerHTML = esc(name) + " 予想" +
-          (isNote ? '<span class="note-badge">🔥 note予想（勝負レース）</span>' : "");
+        if (bandName) bandName.innerHTML = esc(name) + " 予想"; // note予想バッジは廃止（8/6 FB25・レースラベル側の🔥表記のみ残す）
         var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
           var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
