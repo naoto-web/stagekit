@@ -432,6 +432,7 @@
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
         } else {
           band.innerHTML = raceBuyHtml(rc, key, false);
+          fitPredLines(band); // チップ拡大(8/6 FB2)で長い行が枠幅を超えた時だけ自動縮小
         }
       });
     });
