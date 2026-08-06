@@ -188,16 +188,16 @@
       var html = cards.map(function (c) {
         var closed = c.race && now >= c.race.startSec - offSec;
         var head = '<div class="vt-head">' + esc(c.venue) +
-          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") +
-          (closed ? '<span class="vt-start-s">発走' + c.race.start + "</span>" : "") + "</div>";
+          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + "</div>";
         var body;
         if (!c.race) {
           body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
         } else if (closed) {
+          // 発走時刻はヘッダーの小さい表示をやめ、CTA本文に大きく出す（8/6 FB10）
           body = '<div class="vt-rows vt-cta">' +
             '<div class="vt-cta-main">🔔 締切ました</div>' +
-            '<div class="vt-cta-line">チャンネル登録</div>' +
-            '<div class="vt-cta-line">グッドボタン</div>' +
+            '<div class="vt-cta-start">発走 ' + c.race.start + "</div>" +
+            '<div class="vt-cta-line">チャンネル登録・グッドボタン</div>' +
             '<div class="vt-cta-line">お願いします!!</div>' +
             "</div>";
         } else {
