@@ -538,8 +538,8 @@
     });
     band.innerHTML = "";
     band.appendChild(flow);
-    var k2 = Math.max(0.35, Math.min(2.0, best.k * 0.97)); // 3%マージン
-    if (Math.abs(k2 - 1) > 0.02) {
+    var k2 = Math.max(0.35, Math.min(2.0, best.k * 0.95)); // 5%マージン（8/6 FB54・右端の白線＝切れかけ対策）
+    if (k2 < 0.995 || k2 > 1.02) {
       flow.style.transform = "scale(" + k2.toFixed(3) + ")";
       flow.style.transformOrigin = "left top";
     }
