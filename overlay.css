@@ -369,7 +369,8 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;
   display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start;
   align-items: flex-start; gap: 8px 46px; padding: 12px 18px; overflow: hidden; }
-.buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
+.buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0;
+  display: flex; align-items: baseline; gap: 0 18px; } /* 合計/投資のパーツ間隔（旧全角スペース相当） */
 /* ①トークの合計・投資・メモは大きめに（8/6 FB・FB3でさらに拡大） */
 .talk-band .buy-meta { font-size: 27px; font-weight: 900; color: var(--txt); }
 
@@ -460,7 +461,9 @@ body.race-sub-on .race-sub { display: flex; }
 .sub-line .pred-line.chips { flex-wrap: nowrap; }
 .sub-line .ore-row { padding: 2px 6px; border-width: 1.5px; }
 .sub-line .ore-label { font-size: 13px; }
-.sub-line .buy-meta { font-size: 17px; font-weight: 900; color: var(--txt); white-space: nowrap; }
+/* サブの合計/投資＝縦2行にして大きく（8/6 FB15）。長い金額はfitSubRowsが幅に合わせて縮める */
+.sub-line .buy-meta { font-size: 22px; font-weight: 900; color: var(--txt); white-space: nowrap;
+  flex-direction: column; align-items: flex-start; gap: 2px; }
 
 /* ---------- ③結果・的中 ---------- */
 .race-chips { position: absolute; left: 8px; right: 8px; top: 96px; height: 56px;
