@@ -975,8 +975,12 @@
     derived.hits.forEach(function (h) { ids[h.id] = h; });
     if (seenHits === null) { seenHits = ids; return; }
     Object.keys(ids).forEach(function (id) {
-      if (seenHits[id]) return;
       var h = ids[id];
+      var prev = seenHits[id];
+      // 既知の的中は原則スキップ。例外＝自動確定→手動確定への置き換わり（回収入力での上書き）は発火（8/6 FB47）
+      if (prev && !(prev.resAuto && !h.resAuto)) return;
+      // 自動確定由来は演出を出さない（8/6 FB47・手動の「結果を確定」の時だけ演出）＝記録だけ残す
+      if (h.resAuto) return;
       var seats = seatMap();
       ["a", "b"].forEach(function (slot) {
         if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h);
