@@ -237,6 +237,8 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 2px 14px; }
 .vt-row { display: flex; justify-content: space-between; align-items: baseline;
   font-size: 30px; line-height: 1.15; font-weight: 900; color: var(--txt); }
+/* ラベル・数字とも折り返し禁止（幅が足りない時は折れるのではなく収まるサイズに調整する・8/6 FB7） */
+.vt-row span, .vt-row b { white-space: nowrap; }
 .vt-rows .vt-row:first-child { border-bottom: 1px solid rgba(255,255,255,.28); padding-bottom: 3px; }
 .vt-row b { font-size: 38px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
 .vt-row b.closed { font-size: 30px; }
@@ -268,8 +270,8 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .timer-cards.vt-n3 .vt-row b.closed { font-size: 20px; }
 .timer-cards.vt-n4 .vt-head { font-size: 19px; gap: 5px; }
 .timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 13px; }
-.timer-cards.vt-n4 .vt-rows { padding: 3px 6px; }
-.timer-cards.vt-n4 .vt-row { font-size: 16px; }
+.timer-cards.vt-n4 .vt-rows { padding: 3px 5px; }
+.timer-cards.vt-n4 .vt-row { font-size: 14px; } /* ②横4連＝カード幅136pxで「民間締切」が折れない上限（8/6 FB7） */
 .timer-cards.vt-n4 .vt-row b { font-size: 20px; }
 .timer-cards.vt-n4 .vt-row b.closed { font-size: 17px; }
 .timer-cards.vt-n3 .vt-cta-main, .timer-cards.vt-n4 .vt-cta-main { font-size: 18px; }
