@@ -446,6 +446,9 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line.buy-lg .ore-label { font-size: 15px; }
 .race-band .buy-line.buy-lg .buy-meta { font-size: 26px; }
 .buy-line .pl-all { width: 26px; font-size: 15px; }
+/* note予想の公開待ち表示（8/6 FB22）：公式締切まで買い目の代わりに出すプレースホルダ */
+.note-hold { font-size: 22px; font-weight: 900; color: var(--sub); padding: 4px 0; }
+
 /* 俺たち目（無料公開1点）＝黒枠黒字で強調（8/6 FB4：金枠金字は白テーマで沈む） */
 .ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
   border: 2px solid var(--txt); border-radius: 10px; background: transparent; }
