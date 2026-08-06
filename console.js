@@ -203,9 +203,17 @@
         var rNo = state.currentRace[v.name];
         return '<button class="vp' + (state.raceSubVenue === v.name ? " sel" : "") + '" data-v="' + esc(v.name) + '">' +
           esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
-      }).join("") + "</div>";
+      }).join("") +
+      // サブ場のR送り＝メイン（放送）を切り替えずに次レースへ（8/6 FB13）
+      (state.raceSubVenue ? '<button class="vp" data-nextsub="1">▶ サブを次Rへ</button>' : "") +
+      "</div>";
     el.querySelectorAll(".vp").forEach(function (b) {
       b.addEventListener("click", function () {
+        if (b.getAttribute("data-nextsub")) {
+          var next = nextRaceOf(state.raceSubVenue);
+          if (next) { state.currentRace[state.raceSubVenue] = next.no; save(); renderAll(); }
+          return;
+        }
         state.raceSubVenue = b.getAttribute("data-v") || null;
         save();
         renderAll();
