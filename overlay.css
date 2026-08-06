@@ -254,18 +254,19 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .vt-head .vt-start-s { font-size: 20px; font-weight: 900; }
 .vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 2px 14px; }
 .vt-row { display: flex; justify-content: space-between; align-items: baseline;
-  font-size: 30px; line-height: 1.15; font-weight: 900; color: var(--txt); }
+  font-size: 30px; line-height: 1.1; font-weight: 900; color: var(--txt); }
 /* ラベル・数字とも折り返し禁止（幅が足りない時は折れるのではなく収まるサイズに調整する・8/6 FB7） */
 .vt-row span, .vt-row b { white-space: nowrap; }
 .vt-rows .vt-row:first-child { border-bottom: 1px solid rgba(255,255,255,.28); padding-bottom: 3px; }
-.vt-row b { font-size: 38px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
+.vt-row b { font-size: 36px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; } /* 8/6 FB40：38→36＝下線との干渉解消 */
 .vt-row b.closed { font-size: 30px; }
 .vt-done { text-align: center; color: var(--sub); font-weight: 900; font-size: 24px; }
-/* 公式締切後＝「締切ました」CTAカード（発走時刻を主役に・8/6 FB10） */
+/* 公式締切後＝「締切ました」CTAカード（発走時刻を主役に・8/6 FB10）。
+   行間を明示（FB40）：既定1.5倍だと4行がカード高168pxを超えて最終行が切れる */
 .vt-cta { align-items: center; text-align: center; }
-.vt-cta-main { font-size: 26px; font-weight: 900; color: var(--txt); }
-.vt-cta-start { font-size: 32px; font-weight: 900; color: var(--txt); font-variant-numeric: tabular-nums; }
-.vt-cta-line { font-size: 22px; font-weight: 900; color: var(--txt); }
+.vt-cta-main { font-size: 26px; line-height: 1.15; font-weight: 900; color: var(--txt); }
+.vt-cta-start { font-size: 32px; line-height: 1.1; font-weight: 900; color: var(--txt); font-variant-numeric: tabular-nums; }
+.vt-cta-line { font-size: 22px; line-height: 1.2; font-weight: 900; color: var(--txt); }
 .vt-cta-line .vt-nb { white-space: nowrap; display: inline-block; } /* 語の途中で折らない（8/6 FB20・「・」の後でだけ改行） */
 /* 民間締切の信号機色（残5分＝緑→残3分＝黄→残1分＝赤・民間締切後も公式締切までは赤）
    ヘッダーも中身も同色に塗る。黄のみ黒文字。 */
