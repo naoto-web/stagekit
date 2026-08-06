@@ -673,7 +673,8 @@
     state.cfg.closeMin = +$("cfg-close").value || 3;
     state.cfg.netCloseMin = +$("cfg-netclose").value || 5;
     state.cfg.autoResults = $("cfg-autoresults").checked;
-    state.noteRaces = $("note-races").value.trim();
+    state.noteRaces = $("note-races").value.split(/\r?\n/)
+      .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
     ensureTalkRaces(); // 場の構成が変わったら表示場リストを整える
     save();
     renderAll();
