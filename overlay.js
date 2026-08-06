@@ -433,11 +433,13 @@
     var seats = seatMap();
     document.body.classList.toggle("seat-a-off", !seats.a);
     document.body.classList.toggle("seat-b-off", !seats.b);
-    // ②サブ予想（8/6 FB13）：コンソールで選んだ別場をワイプ左に表示。無選択＝従来レイアウト
-    var subVenueOk = state.raceSubVenue && state.venues.some(function (v) { return v.name === state.raceSubVenue; });
-    document.body.classList.toggle("race-sub-on", !!subVenueOk);
-    var subKey = subVenueOk && state.currentRace[state.raceSubVenue]
-      ? window.Derive.raceKey(state.raceSubVenue, state.currentRace[state.raceSubVenue]) : null;
+    // ②サブ予想（8/6 FB13・FB17で配信者ごとに選択）：raceSubBy[配信者id]＝場名。旧raceSubVenueは互換読み
+    var subVenueOf = function (rc) {
+      if (!rc) return null;
+      var vn = (state.raceSubBy || {})[rc.id] || state.raceSubVenue;
+      return vn && state.venues.some(function (v) { return v.name === vn; }) ? vn : null;
+    };
+    document.body.classList.toggle("race-sub-on", !!(subVenueOf(seats.a) || subVenueOf(seats.b)));
     ["a", "b"].forEach(function (slot) {
       var rc = seats[slot];
       var name = rc ? rc.name : "";
@@ -516,19 +518,23 @@
         }
       });
 
-      // ②サブ予想帯（8/6 FB13）：メンバーカラーヘッダー＋場Rラベル＋買い目（ワイプ左の縦パネル）
+      // ②サブ予想帯（8/6 FB13・FB17）：配信者ごとの場＝raceSubBy。サブ未選択の配信者の枠は畳む
       var sHead = $("sband-head-" + slot);
       if (sHead) {
+        var svn = subVenueOf(rc);
+        var sPanel = sHead.parentElement;
+        if (sPanel) sPanel.style.display = (rc && svn) ? "" : "none";
         var sName = $("sband-name-" + slot);
-        if (sName) sName.textContent = name ? name + " 予想" : "";
+        if (sName) sName.textContent = name ? name + " 予想（NEXT）" : "";
         if (color) {
           sHead.style.background = color;
           sHead.style.color = textOn(color);
-          if (sHead.parentElement) sHead.parentElement.style.borderColor = color;
+          if (sPanel) sPanel.style.borderColor = color;
         }
         var sBand = $("sband-pred-" + slot);
         if (sBand) {
-          sBand.innerHTML = subKey ? raceColHead(rc, subKey) + raceBuyHtml(rc, subKey, false) : "";
+          var sKey = svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
+          sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false) : "";
           fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
         }
       }
