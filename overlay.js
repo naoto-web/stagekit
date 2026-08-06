@@ -408,13 +408,9 @@
     });
   }
 
-  /** ②予想帯の横あふれ自動縮小（8/6 FB12・FB27で検知方式変更）：列が枠幅を超えたら帯全体をスケール。
-      ⚠️column-wrapのflexはscrollWidthがあふれ列を報告しないことがある（3列切れの実バグ）→
-      子要素の実右端座標で必要幅を測る方式に変更 */
-  function fitRaceBand(band) {
-    if (!band) return;
-    band.style.transform = "";
-    if (band.clientWidth <= 0) return;
+  /** ②予想帯の必要幅測定（8/6 FB27）：⚠️column-wrapのflexはscrollWidthがあふれ列を報告しない
+      ことがある（3列切れの実バグ）→子要素の実右端座標で測る */
+  function bandNeed(band) {
     var br = band.getBoundingClientRect();
     var padR = parseFloat(getComputedStyle(band).paddingRight) || 0;
     var maxRight = br.left;
@@ -422,10 +418,17 @@
       var r = band.children[i].getBoundingClientRect();
       if (r.right > maxRight) maxRight = r.right;
     }
-    var need = maxRight - br.left;
-    var avail = br.width - padR;
-    if (need > avail + 1) {
-      band.style.transform = "scale(" + Math.max(0.35, avail / need) + ")";
+    return { need: maxRight - br.left, avail: br.width - padR };
+  }
+
+  /** ②予想帯の横あふれ自動縮小（8/6 FB12）：サイズ段階を落としても収まらない時の最終手段 */
+  function fitRaceBand(band) {
+    if (!band) return;
+    band.style.transform = "";
+    if (band.clientWidth <= 0) return;
+    var m = bandNeed(band);
+    if (m.need > m.avail + 1) {
+      band.style.transform = "scale(" + Math.max(0.35, m.avail / m.need) + ")";
       band.style.transformOrigin = "left top";
     }
   }
@@ -552,13 +555,20 @@
         } else {
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）
           band.innerHTML = (key ? raceColHead(rc, key) : "") + raceBuyHtml(rc, key, false);
-          // 行数（俺たち目＋買い目＋メモ＋合計）に応じてサイズを段階切替（少ない時は特大・8/6 FB12）
+          // サイズ段階フィット（8/6 FB27）：特大→大→標準の順に試し、横に収まった時点で確定
+          // ＝縮小スケールより先に行を低くして詰め直す（縦の余白を使い切る）。行数で開始段階を決める
           var rows = band.querySelectorAll(".ore-row, .pred-line, .buy-meta").length;
-          band.classList.remove("buy-xl", "buy-lg");
-          if (rows > 0 && rows <= 4) band.classList.add("buy-xl");
-          else if (rows > 0 && rows <= 6) band.classList.add("buy-lg");
-          fitPredLines(band); // 長い行の横縮小
-          fitRaceBand(band);  // 列あふれ時の全体縮小（見切れ防止）
+          var sizes = rows > 0 && rows <= 4 ? ["buy-xl", "buy-lg", ""] :
+                      rows > 0 && rows <= 6 ? ["buy-lg", ""] : [""];
+          for (var si = 0; si < sizes.length; si++) {
+            band.classList.remove("buy-xl", "buy-lg");
+            if (sizes[si]) band.classList.add(sizes[si]);
+            fitPredLines(band); // 長い行の横縮小（サイズ変更のたびに再計算）
+            band.style.transform = "";
+            var bm = bandNeed(band);
+            if (bm.need <= bm.avail + 1) break;
+          }
+          fitRaceBand(band); // 標準サイズでもあふれる時だけ最終手段の全体縮小
         }
       });
 
