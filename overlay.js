@@ -424,7 +424,8 @@
     scope.querySelectorAll(".race-col").forEach(function (col) {
       col.style.transform = "";
       if (col.clientHeight > 0 && col.scrollHeight > col.clientHeight + 1) {
-        col.style.transform = "scale(" + Math.max(0.5, col.clientHeight / col.scrollHeight) + ")";
+        // 下限0.35＝「切れるくらいなら小さくする」（8/6 FB26・旧0.5では多行時に切れ残りが出た）
+        col.style.transform = "scale(" + Math.max(0.35, col.clientHeight / col.scrollHeight) + ")";
         col.style.transformOrigin = "left top";
       }
     });
@@ -517,10 +518,11 @@
         // ②レース観戦は従来どおり操作中のメインレースのみ
         if (bp === "tband-") {
           if (talkKeys.length >= 3) {
+            // 左＝1場目フル高／右＝2・3場目を上下2段（8/6 FB26・Naotoスケッチ準拠）
             band.innerHTML =
               '<div class="race-t">' +
-              '<div class="race-t-top race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true) + "</div>" +
-              '<div class="race-t-bottom">' +
+              '<div class="race-t-main race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true) + "</div>" +
+              '<div class="race-t-side">' +
               '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true) + "</div>" +
               '<div class="race-col">' + raceColHead(rc, talkKeys[2]) + raceBuyHtml(rc, talkKeys[2], true) + "</div>" +
               "</div></div>";
