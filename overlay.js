@@ -464,6 +464,21 @@
     });
   }
 
+  /** 予想ブロックの表示行数（3場の自動配置用・8/6 FB33）＝俺たち目＋有効買い目＋メモ＋合計。
+      note伏せ中はプレースホルダ＋投資行の2行扱い（伏せ中に大枠を占領しない） */
+  function predRowCount(rc, k) {
+    var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
+    if (!rp) return 0;
+    if (rp.entry.isNote && !rp.entry.noteOpen) {
+      var ss = raceStartSecOf(k);
+      var rv = ss !== null ? ss - (state.cfg.closeMin || 3) * 60 : null;
+      if (rv === null || nowSec() < rv) return 2;
+    }
+    var lines = rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }).length;
+    return (rp.entry.oreTachi ? 1 : 0) + lines + (rp.parsed.memos.length ? 1 : 0) +
+      ((rp.points || rp.invest > 0) ? 1 : 0);
+  }
+
   /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想） */
   function raceColHead(rc, k) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
@@ -551,13 +566,15 @@
         // ②レース観戦は従来どおり操作中のメインレースのみ
         if (bp === "tband-") {
           if (talkKeys.length >= 3) {
-            // 左＝1場目フル高／右＝2・3場目を上下2段（8/6 FB26・Naotoスケッチ準拠）
+            // 左＝フル高の大枠／右＝上下2段（8/6 FB26・Naotoスケッチ準拠）。
+            // 大枠には行数最多のレースを自動配置（FB33・同数ならタップ順維持＝安定ソート）
+            var tk = talkKeys.slice().sort(function (a, b) { return predRowCount(rc, b) - predRowCount(rc, a); });
             band.innerHTML =
               '<div class="race-t">' +
-              '<div class="race-t-main race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true) + "</div>" +
+              '<div class="race-t-main race-col">' + raceColHead(rc, tk[0]) + raceBuyHtml(rc, tk[0], true) + "</div>" +
               '<div class="race-t-side">' +
-              '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true) + "</div>" +
-              '<div class="race-col">' + raceColHead(rc, talkKeys[2]) + raceBuyHtml(rc, talkKeys[2], true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, tk[1]) + raceBuyHtml(rc, tk[1], true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, tk[2]) + raceBuyHtml(rc, tk[2], true) + "</div>" +
               "</div></div>";
           } else if (talkKeys.length === 2) {
             band.innerHTML =
