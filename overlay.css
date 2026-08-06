@@ -571,22 +571,49 @@ body.race-sub-on .race-sub { display: flex; }
   padding: 8px 18px; border: 1px dashed var(--panel-line); border-radius: 8px;
   background: rgba(0,0,0,.3); }
 
-/* ---------- 的中演出（当たった配信者のワイプに12秒表示） ---------- */
-.cam.hit-fx { animation: hitPulse 1s ease-in-out infinite; }
+/* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
+.cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }
 @keyframes hitPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 79, 0), inset 0 0 0 3px rgba(255, 213, 79, .25); }
-  50% { box-shadow: 0 0 44px 10px rgba(255, 213, 79, .8), inset 0 0 0 3px rgba(255, 213, 79, .9); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 79, 0), inset 0 0 0 5px rgba(255, 213, 79, .35); }
+  50% { box-shadow: 0 0 64px 18px rgba(255, 213, 79, .95), inset 0 0 0 5px rgba(255, 213, 79, 1); }
+}
+/* 万車＝赤の強パルス */
+.cam.hit-fx.hit-fx-manche { animation: hitPulseManche .6s ease-in-out infinite; }
+@keyframes hitPulseManche {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0), inset 0 0 0 6px rgba(255, 77, 77, .4); }
+  50% { box-shadow: 0 0 72px 22px rgba(255, 77, 77, 1), inset 0 0 0 6px rgba(255, 77, 77, 1); }
 }
 .hit-fx-badge {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%) rotate(-3deg);
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%) rotate(-3deg);
   background: #ffd54f; color: #1c1608;
-  font-size: 26px; font-weight: 900; padding: 8px 22px; border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.5); white-space: nowrap; z-index: 5;
-  animation: hitPop .45s cubic-bezier(.2, 1.6, .4, 1);
+  font-size: 40px; font-weight: 900; padding: 10px 28px; border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.55); white-space: nowrap; z-index: 5;
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite;
 }
-.hit-fx-badge.manche { background: #d63b3b; color: #fff; }
+.hit-fx-badge.manche { background: #d63b3b; color: #fff;
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitShake .55s linear .5s infinite; }
+/* バッジ左右の✨（CSSだけで常時きらめく） */
+.hit-fx-badge::before, .hit-fx-badge::after {
+  content: "✨"; position: absolute; font-size: 32px;
+  animation: hitSpark 1.1s ease-in-out infinite;
+}
+.hit-fx-badge::before { left: -40px; top: -16px; }
+.hit-fx-badge::after { right: -40px; bottom: -16px; animation-delay: .55s; }
 @keyframes hitPop {
   from { transform: translateX(-50%) scale(.2) rotate(-3deg); opacity: 0; }
+}
+@keyframes hitBounce {
+  0%, 100% { transform: translateX(-50%) rotate(-3deg) scale(1); }
+  50% { transform: translateX(-50%) rotate(-3deg) scale(1.1); }
+}
+@keyframes hitShake {
+  0%, 100% { transform: translateX(-50%) rotate(-4deg) scale(1.06); }
+  25% { transform: translateX(-52%) rotate(2deg) scale(1.1); }
+  75% { transform: translateX(-48%) rotate(-2deg) scale(1.1); }
+}
+@keyframes hitSpark {
+  0%, 100% { opacity: .2; transform: scale(.7) rotate(-15deg); }
+  50% { opacity: 1; transform: scale(1.3) rotate(12deg); }
 }
 
 /* ---------- ティッカー ---------- */
