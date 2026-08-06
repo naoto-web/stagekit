@@ -319,8 +319,8 @@
     return '<span class="grade-badge ' + cls + '">' + { gp: "GP", g1: "GⅠ", g2: "GⅡ", g3: "GⅢ" }[cls] + "</span>";
   }
 
-  /** note予想の公開待ち管理（8/6 FB22）：公式締切まで買い目を伏せ、締切時刻が来たら自動で再描画して公開 */
-  var noteRevealAt = null; // 次に公開すべき公式締切（0時起点の秒）。renderPreds冒頭でリセット→伏せ中の最短を収集
+  /** レースキー→発走秒（0時起点）。※note予想の締切連動公開（FB22〜24）は不具合のためFB39で撤去
+      ＝note予想も保存即表示。ラベルの🔥note予想表記は存続 */
   function raceStartSecOf(key) {
     if (!key || !timetable) return null;
     var parts = String(key).split("|");
@@ -337,19 +337,6 @@
   /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ */
   function raceBuyHtml(rc, k, small) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
-    // note予想（勝負レース）＝公式締切まで配信画面では伏せる（8/6 FB22）。
-    // 有料コンテンツなのでフェイルクローズ：発走時刻が取れない時も伏せたまま（FB23）。
-    // entry.noteOpen＝コンソールの手動公開ボタン＝時刻に関係なく最優先で公開/再封印できる
-    if (rp && rp.entry.isNote && !rp.entry.noteOpen) {
-      var ss = raceStartSecOf(k);
-      var reveal = ss !== null ? ss - (state.cfg.closeMin || 3) * 60 : null;
-      if (reveal === null || nowSec() < reveal) {
-        if (reveal !== null && (noteRevealAt === null || reveal < noteRevealAt)) noteRevealAt = reveal;
-        // 投資額だけは伏せ期間中も先出しする（FB24）。買い目・俺たち目・合計点数は締切まで非公開
-        return '<div class="note-hold">🔥 note予想は公式締切後に公開</div>' +
-          (rp.invest > 0 ? '<div class="buy-meta"><span class="bm-part">投資 ' + fmtYen(rp.invest) + "</span></div>" : "");
-      }
-    }
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
     var memos = rp ? rp.parsed.memos : [];
     var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";
@@ -507,16 +494,10 @@
     });
   }
 
-  /** 予想ブロックの表示行数（3場の自動配置用・8/6 FB33）＝俺たち目＋有効買い目＋メモ＋合計。
-      note伏せ中はプレースホルダ＋投資行の2行扱い（伏せ中に大枠を占領しない） */
+  /** 予想ブロックの表示行数（3場の自動配置用・8/6 FB33）＝俺たち目＋有効買い目＋メモ＋合計 */
   function predRowCount(rc, k) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     if (!rp) return 0;
-    if (rp.entry.isNote && !rp.entry.noteOpen) {
-      var ss = raceStartSecOf(k);
-      var rv = ss !== null ? ss - (state.cfg.closeMin || 3) * 60 : null;
-      if (rv === null || nowSec() < rv) return 2;
-    }
     var lines = rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }).length;
     return (rp.entry.oreTachi ? 1 : 0) + lines + (rp.parsed.memos.length ? 1 : 0) +
       ((rp.points || rp.invest > 0) ? 1 : 0);
@@ -531,7 +512,6 @@
   }
 
   function renderPreds() {
-    noteRevealAt = null; // 伏せ中note予想の公開時刻を再収集（8/6 FB22）
     var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
     // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
@@ -1083,8 +1063,6 @@
     tickClock();
     renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
-    // 伏せ中のnote予想が公式締切を迎えたら自動公開（8/6 FB22）
-    if (noteRevealAt !== null && nowSec() >= noteRevealAt) { noteRevealAt = null; renderPreds(); }
     if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); } // 毎秒＝①②帯見切れの自己修復（8/6 FB32/37・軽量かつ冪等）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
