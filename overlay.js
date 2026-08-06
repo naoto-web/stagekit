@@ -433,14 +433,23 @@
     }
   }
 
-  /** トーク帯の縦はみ出し自動縮小（8/6 FB9）：列の中身が列の高さを超えたら列ごとスケールして見切れを防ぐ */
+  /** トーク帯の縦はみ出し自動縮小（8/6 FB9）：列の中身が列の高さを超えたら列ごとスケールして見切れを防ぐ。
+      ⚠️scrollHeightはflexレイアウトであふれを報告しないことがある（FB28実バグ・横のFB27と同族）→
+      子要素の実下端座標で必要高さを測る。下限0.35＝「切れるくらいなら小さくする」（FB26） */
   function fitRaceCols(scope) {
     if (!scope) return;
     scope.querySelectorAll(".race-col").forEach(function (col) {
       col.style.transform = "";
-      if (col.clientHeight > 0 && col.scrollHeight > col.clientHeight + 1) {
-        // 下限0.35＝「切れるくらいなら小さくする」（8/6 FB26・旧0.5では多行時に切れ残りが出た）
-        col.style.transform = "scale(" + Math.max(0.35, col.clientHeight / col.scrollHeight) + ")";
+      var cr = col.getBoundingClientRect();
+      if (cr.height <= 0) return;
+      var maxBottom = cr.top;
+      for (var i = 0; i < col.children.length; i++) {
+        var r = col.children[i].getBoundingClientRect();
+        if (r.bottom > maxBottom) maxBottom = r.bottom;
+      }
+      var need = maxBottom - cr.top;
+      if (need > cr.height + 1) {
+        col.style.transform = "scale(" + Math.max(0.35, cr.height / need) + ")";
         col.style.transformOrigin = "left top";
       }
     });
