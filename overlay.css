@@ -306,10 +306,12 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
 .slist { list-style: none; padding: 2px 0; }
-.slist-row { display: flex; align-items: center; gap: 12px; padding: 6px 12px;
+/* 行スリム化（8/6 FB30）：9車＋ライン＋note勝負が共存できる行高に（チップ26px角・行間圧縮） */
+.slist-row { display: flex; align-items: center; gap: 12px; padding: 5px 12px;
   border-bottom: 1px solid rgba(255,255,255,.07); }
 .slist-row:last-child { border-bottom: none; }
-.sl-name { font-size: 21px; font-weight: 900; }
+.slist-row .car { width: 26px; height: 26px; font-size: 24px; border-radius: 5px; }
+.sl-name { font-size: 21px; font-weight: 900; line-height: 1.25; }
 .sl-sub { margin-left: auto; font-size: 13px; color: var(--sub); font-weight: 700;
   text-align: right; font-variant-numeric: tabular-nums; }
 .sl-score { flex: 0 0 62px; text-align: right; font-size: 17px; font-weight: 900;
