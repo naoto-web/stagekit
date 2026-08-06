@@ -241,7 +241,10 @@
       var card = el.closest(".vt-card");
       if (!card) return;
       var venue = card.getAttribute("data-venue");
-      var remainF = tgt - Date.now() / 1000;
+      // ⚠️時刻基準はnowSec()と同じ「0時からの経過秒」（エポック秒を使うと全カード赤の事故＝8/6実発生）
+      var dd = new Date();
+      var nowF = dd.getHours() * 3600 + dd.getMinutes() * 60 + dd.getSeconds() + dd.getMilliseconds() / 1000;
+      var remainF = tgt - nowF;
       var z = zoneOf(remainF);
       card.classList.remove("zone-green", "zone-yellow", "zone-red");
       if (z) card.classList.add("zone-" + z);
