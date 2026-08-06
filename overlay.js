@@ -197,7 +197,7 @@
           body = '<div class="vt-rows vt-cta">' +
             '<div class="vt-cta-main">🔔 締切ました</div>' +
             '<div class="vt-cta-start">発走 ' + c.race.start + "</div>" +
-            '<div class="vt-cta-line">チャンネル登録・グッドボタン</div>' +
+            '<div class="vt-cta-line"><span class="vt-nb">チャンネル登録</span>・<span class="vt-nb">グッドボタン</span></div>' +
             '<div class="vt-cta-line">お願いします!!</div>' +
             "</div>";
         } else {
