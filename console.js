@@ -354,9 +354,7 @@
         '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
         '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(p.oreTachi || "") + '" placeholder="無料公開の1点（例 1-2-3）"></label>' +
-        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (p.isNote ? " checked" : "") + '> note予想（勝負レース）＝公式締切まで配信画面に伏せる</label>' +
-        // 手動公開（FB23）：時刻が取れない場合の逃げ道＋締切前の意図的公開。押し直しで再封印
-        (p.isNote ? '<button class="btn small pf-noteopen">' + (p.noteOpen ? "🔒 配信画面で再び伏せる" : "📢 配信画面で今すぐ公開") + "</button>" : "") +
+        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (p.isNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
         "</div>" +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
@@ -373,13 +371,6 @@
       var update = function () { updatePredInfo(form, key); };
       ["pf-text", "pf-invest"].forEach(function (cls) {
         form.querySelector("." + cls).addEventListener("input", update);
-      });
-      var noBtn = form.querySelector(".pf-noteopen");
-      if (noBtn) noBtn.addEventListener("click", function () {
-        var entry = ensurePredEntry(key, racerId);
-        entry.noteOpen = !entry.noteOpen; // 手動公開⇄再封印（FB23）
-        save();
-        renderPredForms();
       });
       form.querySelector(".pf-save").addEventListener("click", function () {
         var entry = ensurePredEntry(key, racerId);
