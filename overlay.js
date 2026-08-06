@@ -87,7 +87,7 @@
     el.innerHTML = state.venues.map(function (v, i) {
       var rNo = state.currentRace[v.name];
       return '<button class="vtab' + (i === state.activeVenue ? " active" : "") + '">' +
-        esc(v.name) + (rNo ? "<small>" + rNo + "R</small>" : "") + "</button>";
+        esc(v.name) + (rNo ? "<small>" + rNo + "R</small>" : "") + gradeBadge(v.name) + "</button>";
     }).join("");
   }
 
@@ -309,6 +309,16 @@
 
   function keyLabel(k) { return k ? String(k).replace("|", " ") + "R" : ""; }
 
+  /** グレードバッジ（8/6 FB36）：場のグレード文字列からGP/GⅠ〜GⅢを検出（F級は非表示）。
+      GP=金・GⅠ=赤・GⅡ=青・GⅢ=緑。サイズは.72em＝置き場所の文字サイズに追従 */
+  function gradeBadge(venueName) {
+    var g = String((state.grade || {})[venueName] || "")
+      .replace(/Ⅰ/g, "1").replace(/Ⅱ/g, "2").replace(/Ⅲ/g, "3").toUpperCase();
+    var cls = /GP|グランプリ/.test(g) ? "gp" : /G\s*1/.test(g) ? "g1" : /G\s*2/.test(g) ? "g2" : /G\s*3/.test(g) ? "g3" : null;
+    if (!cls) return "";
+    return '<span class="grade-badge ' + cls + '">' + { gp: "GP", g1: "GⅠ", g2: "GⅡ", g3: "GⅢ" }[cls] + "</span>";
+  }
+
   /** note予想の公開待ち管理（8/6 FB22）：公式締切まで買い目を伏せ、締切時刻が来たら自動で再描画して公開 */
   var noteRevealAt = null; // 次に公開すべき公式締切（0時起点の秒）。renderPreds冒頭でリセット→伏せ中の最短を収集
   function raceStartSecOf(key) {
@@ -482,7 +492,9 @@
   /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想） */
   function raceColHead(rc, k) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
-    return '<div class="race-col-head">' + esc(keyLabel(k)) + (p && p.entry.isNote ? " 🔥note予想" : "") + "</div>";
+    return '<div class="race-col-head">' + esc(keyLabel(k)) +
+      (k ? gradeBadge(String(k).split("|")[0]) : "") +
+      (p && p.entry.isNote ? " 🔥note予想" : "") + "</div>";
   }
 
   function renderPreds() {
