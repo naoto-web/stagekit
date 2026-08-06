@@ -393,6 +393,15 @@
     });
   }
 
+  /** トーク帯の再フィット一括（8/6 FB32）：描画直後は高さ確定前に測って縮小が発動しないことがある
+      （見切れ残り事故2件の恒久対策）→renderPreds直後のrAF/300ms再測定＋毎秒の巡回で自己修復する */
+  function fitTalkBands() {
+    ["tband-pred-a", "tband-pred-b"].forEach(function (id) {
+      var band = $(id);
+      if (band) { fitPredLines(band); fitRaceCols(band); }
+    });
+  }
+
   /** ②サブ予想の行フィット（8/6 FB14）：買い目・俺たち目・合計行を折り返さず幅ぴったりに縮める */
   function fitSubRows(scope) {
     if (!scope) return;
@@ -613,6 +622,9 @@
         }
       }
     });
+    // 描画直後の測定は不確実なことがある→次フレーム＋300ms後に再フィット（8/6 FB32）
+    requestAnimationFrame(fitTalkBands);
+    setTimeout(fitTalkBands, 300);
   }
 
   /* ---------- 出走表（①トーク右下・現在の場/レースに連動） ---------- */
@@ -1015,12 +1027,14 @@
   loadTimetable();
   setInterval(loadTimetable, (window.APP_CONFIG.TT_POLL_MS || 600000));
 
+  var fitTick = 0;
   setInterval(function () {
     tickClock();
     renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
     // 伏せ中のnote予想が公式締切を迎えたら自動公開（8/6 FB22）
     if (noteRevealAt !== null && nowSec() >= noteRevealAt) { noteRevealAt = null; renderPreds(); }
+    if (++fitTick % 4 === 0) fitTalkBands(); // 毎秒＝トーク帯見切れの自己修復（8/6 FB32・処理は軽量かつ冪等）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
   tickClock();
