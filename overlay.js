@@ -452,6 +452,27 @@
     }
   }
 
+  /** ②予想帯のサイズ段階フィット一式（8/6 FB37）：常に特大→大→標準の順で試し「入る最大サイズ」を採用
+      （行数からの決め打ちを廃止＝縦横を使い切る）。標準でもあふれる時だけ全体縮小。冪等＝毎秒巡回可 */
+  function fitRaceBandFull(band) {
+    var sizes = ["buy-xl", "buy-lg", ""];
+    for (var si = 0; si < sizes.length; si++) {
+      band.classList.remove("buy-xl", "buy-lg");
+      if (sizes[si]) band.classList.add(sizes[si]);
+      fitPredLines(band);
+      band.style.transform = "";
+      var bm = bandNeed(band);
+      if (bm.need <= bm.avail + 1) break;
+    }
+    fitRaceBand(band);
+  }
+  function fitRaceBands() {
+    ["band-pred-a", "band-pred-b"].forEach(function (id) {
+      var band = $(id);
+      if (band && band.clientWidth > 0) fitRaceBandFull(band);
+    });
+  }
+
   /** トーク帯の縦はみ出し自動縮小（8/6 FB9）：列の中身が列の高さを超えたら列ごとスケールして見切れを防ぐ。
       ⚠️scrollHeightはflexレイアウトであふれを報告しないことがある（FB28実バグ・横のFB27と同族）→
       子要素の実下端座標で必要高さを測る。下限0.35＝「切れるくらいなら小さくする」（FB26） */
@@ -602,20 +623,7 @@
         } else {
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）
           band.innerHTML = (key ? raceColHead(rc, key) : "") + raceBuyHtml(rc, key, false);
-          // サイズ段階フィット（8/6 FB27）：特大→大→標準の順に試し、横に収まった時点で確定
-          // ＝縮小スケールより先に行を低くして詰め直す（縦の余白を使い切る）。行数で開始段階を決める
-          var rows = band.querySelectorAll(".ore-row, .pred-line, .buy-meta").length;
-          var sizes = rows > 0 && rows <= 4 ? ["buy-xl", "buy-lg", ""] :
-                      rows > 0 && rows <= 6 ? ["buy-lg", ""] : [""];
-          for (var si = 0; si < sizes.length; si++) {
-            band.classList.remove("buy-xl", "buy-lg");
-            if (sizes[si]) band.classList.add(sizes[si]);
-            fitPredLines(band); // 長い行の横縮小（サイズ変更のたびに再計算）
-            band.style.transform = "";
-            var bm = bandNeed(band);
-            if (bm.need <= bm.avail + 1) break;
-          }
-          fitRaceBand(band); // 標準サイズでもあふれる時だけ最終手段の全体縮小
+          fitRaceBandFull(band); // 入る最大サイズを採用→ダメなら縮小（8/6 FB37・毎秒の巡回でも自己修復）
         }
       });
 
@@ -1065,7 +1073,7 @@
     tickBrb();
     // 伏せ中のnote予想が公式締切を迎えたら自動公開（8/6 FB22）
     if (noteRevealAt !== null && nowSec() >= noteRevealAt) { noteRevealAt = null; renderPreds(); }
-    if (++fitTick % 4 === 0) fitTalkBands(); // 毎秒＝トーク帯見切れの自己修復（8/6 FB32・処理は軽量かつ冪等）
+    if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); } // 毎秒＝①②帯見切れの自己修復（8/6 FB32/37・軽量かつ冪等）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
   tickClock();
