@@ -328,15 +328,14 @@
   function raceBuyHtml(rc, k, small) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     // note予想（勝負レース）＝公式締切まで配信画面では伏せる（8/6 FB22）。
-    // 発走時刻が取れない時は従来どおり表示（伏せっぱなし事故の防止＝フェイルオープン）
-    if (rp && rp.entry.isNote) {
+    // 有料コンテンツなのでフェイルクローズ：発走時刻が取れない時も伏せたまま（FB23）。
+    // entry.noteOpen＝コンソールの手動公開ボタン＝時刻に関係なく最優先で公開/再封印できる
+    if (rp && rp.entry.isNote && !rp.entry.noteOpen) {
       var ss = raceStartSecOf(k);
-      if (ss !== null) {
-        var reveal = ss - (state.cfg.closeMin || 3) * 60;
-        if (nowSec() < reveal) {
-          if (noteRevealAt === null || reveal < noteRevealAt) noteRevealAt = reveal;
-          return '<div class="note-hold">🔥 note予想は公式締切後に公開</div>';
-        }
+      var reveal = ss !== null ? ss - (state.cfg.closeMin || 3) * 60 : null;
+      if (reveal === null || nowSec() < reveal) {
+        if (reveal !== null && (noteRevealAt === null || reveal < noteRevealAt)) noteRevealAt = reveal;
+        return '<div class="note-hold">🔥 note予想は公式締切後に公開</div>';
       }
     }
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
