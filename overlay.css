@@ -331,8 +331,10 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .sl-score.top2 { color: #2f66d0; }  /* 2位＝青 */
 .slist-empty { padding: 14px; color: var(--sub); font-weight: 700; font-size: 15px; list-style: none; }
 /* ライン（並び予想）＝出走表の下に1行で車番チップをグループ表示（折返しなし） */
+/* ⚠️overflow:hiddenだと自身を縮小してもクリップ窓ごと縮んで見切れが直らない（8/6 FB52真犯人）
+   →クリップ解除＝縮小フィットで収める（外側パネルのoverflow:hiddenが最終防波堤） */
 .narabi-row { display: flex; align-items: center; gap: 7px; padding: 8px 10px;
-  border-top: 1.5px solid var(--panel-line); flex-wrap: nowrap; overflow: hidden;
+  border-top: 1.5px solid var(--panel-line); flex-wrap: nowrap; overflow: visible;
   background: rgba(0,0,0,.25); }
 .nb-label { font-size: 12px; font-weight: 900; color: var(--sub); letter-spacing: .08em; flex: 0 0 auto; }
 .nb-type { font-size: 13px; font-weight: 900; color: var(--acc); flex: 0 0 auto; }
@@ -428,7 +430,8 @@ body.debug .video-ph { display: flex; }
 .race-t-side > .race-col { flex: 1 1 0; min-height: 0; }
 .race-t-side > .race-col + .race-col { border-left: none; border-top: 2px solid var(--panel-line); padding-top: 4px; }
 .race-split { display: flex; min-height: 0; }
-.race-col { flex: 1 1 0; min-width: 0; overflow: hidden; padding: 0 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+/* overflow:visible＝自身を縮小フィットで収める方式（8/6 FB52・hiddenだとクリップ窓ごと縮んで直らない） */
+.race-col { flex: 1 1 0; min-width: 0; overflow: visible; padding: 0 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .race-col + .race-col { border-left: 2px solid var(--panel-line); }
 .race-col-head {
   font-size: 26px; font-weight: 900; color: var(--txt); /* 8/6 FB3で拡大 */
