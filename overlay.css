@@ -322,10 +322,11 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .slist-row:last-child { border-bottom: none; }
 .slist-row .car { width: 26px; height: 26px; font-size: 24px; border-radius: 5px; }
 .sl-name { font-size: 21px; font-weight: 900; line-height: 1.25; }
-.sl-sub { margin-left: auto; font-size: 13px; color: var(--sub); font-weight: 700;
-  text-align: right; font-variant-numeric: tabular-nums; }
-.sl-score { flex: 0 0 62px; text-align: right; font-size: 17px; font-weight: 900;
-  color: var(--txt); font-variant-numeric: tabular-nums; }
+/* 所属・得点を名前に近いサイズへ（8/6 FB49・最長「神奈川・追」＋6桁得点でも1行に収まる幅計算済み） */
+.sl-sub { margin-left: auto; font-size: 19px; color: var(--sub); font-weight: 700;
+  text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sl-score { flex: 0 0 72px; text-align: right; font-size: 20px; font-weight: 900;
+  color: var(--txt); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sl-score.top1 { color: #d63b3b; }  /* 競走得点1位＝赤 */
 .sl-score.top2 { color: #2f66d0; }  /* 2位＝青 */
 .slist-empty { padding: 14px; color: var(--sub); font-weight: 700; font-size: 15px; list-style: none; }
