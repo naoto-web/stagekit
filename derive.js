@@ -90,7 +90,7 @@
       // 俺たち目（無料公開1点）も的中判定に参加（8/4）。金額計算には入れない＝投資/回収は不変
       s.oreHits = [];
       if (rp.entry.oreTachi) {
-        var op = K.parsePrediction(rp.entry.oreTachi, "3連単", (state.preds[key] || {}).cars || 9);
+        var op = K.parsePrediction(K.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
         s.oreHits = K.settle(op, 0, result.order, result.payouts || []).hits;
       }
       byRacer[pid] = s;
