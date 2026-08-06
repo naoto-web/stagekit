@@ -457,13 +457,34 @@
       var bm = bandNeed(band);
       if (bm.need <= bm.avail + 1) { fitted = true; break; }
     }
-    if (!fitted) { fitRaceBand(band); return; }
-    var m = bandNeed(band);
-    var up = Math.min(m.avail / Math.max(1, m.need), m.availH / Math.max(1, m.needH));
-    if (up > 1.02) {
-      band.style.transform = "scale(" + Math.min(1.6, up).toFixed(3) + ")";
-      band.style.transformOrigin = "left top";
+    if (!fitted) { fitRaceBand(band); }
+    else {
+      var m = bandNeed(band);
+      var up = Math.min(m.avail / Math.max(1, m.need), m.availH / Math.max(1, m.needH));
+      if (up > 1.02) {
+        band.style.transform = "scale(" + Math.min(1.6, up).toFixed(3) + ")";
+        band.style.transformOrigin = "left top";
+      }
     }
+    // 最終検証（8/6 FB50）：拡大縮小の適用後、実際の描画位置がパネル外に出ていないかを直接確認し、
+    // はみ出しが消えるまで段階的に縮める＝測定と実描画の食い違いがどんな原因でも結果を保証する
+    var cur = parseFloat((String(band.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+    for (var guard = 0; guard < 8 && bandSticksOut(band); guard++) {
+      cur = Math.max(0.35, cur * 0.9);
+      band.style.transform = "scale(" + cur.toFixed(3) + ")";
+      band.style.transformOrigin = "left top";
+      if (cur <= 0.35) break;
+    }
+  }
+  /** 帯の子要素が親パネルの外に描画されていないか（transform込みの実座標で判定・8/6 FB50） */
+  function bandSticksOut(band) {
+    var host = band.parentElement ? band.parentElement.getBoundingClientRect() : null;
+    if (!host || host.width <= 0) return false;
+    for (var i = 0; i < band.children.length; i++) {
+      var r = band.children[i].getBoundingClientRect();
+      if (r.right > host.right + 1 || r.bottom > host.bottom + 1) return true;
+    }
+    return false;
   }
   function fitRaceBands() {
     ["band-pred-a", "band-pred-b"].forEach(function (id) {
