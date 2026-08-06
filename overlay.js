@@ -364,6 +364,21 @@
     });
   }
 
+  /** ②サブ予想の行フィット（8/6 FB14）：買い目・俺たち目・合計行を折り返さず幅ぴったりに縮める */
+  function fitSubRows(scope) {
+    if (!scope) return;
+    var cs = getComputedStyle(scope);
+    var avail = scope.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    scope.querySelectorAll(".pred-line, .ore-row, .buy-meta").forEach(function (el) {
+      el.style.transform = "";
+      var w = el.scrollWidth;
+      if (avail > 0 && w > avail + 1) {
+        el.style.transform = "scale(" + Math.max(0.4, avail / w) + ")";
+        el.style.transformOrigin = "left center";
+      }
+    });
+  }
+
   /** ②予想帯の横あふれ自動縮小（8/6 FB12）：列が枠幅を超えたら帯全体をスケールして見切れを防ぐ */
   function fitRaceBand(band) {
     if (!band) return;
@@ -513,7 +528,7 @@
         var sBand = $("sband-pred-" + slot);
         if (sBand) {
           sBand.innerHTML = subKey ? raceColHead(rc, subKey) + raceBuyHtml(rc, subKey, false) : "";
-          fitPredLines(sBand); // 幅182pxに合わせて長い行を自動縮小
+          fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
         }
       }
     });
