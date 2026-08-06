@@ -739,6 +739,7 @@
     $("cfg-netclose").value = state.cfg.netCloseMin;
     $("cfg-autoresults").checked = !!state.cfg.autoResults;
     $("note-races").value = state.noteRaces || "";
+    $("campaign-count").value = (state.campaignCount === null || state.campaignCount === undefined) ? "" : state.campaignCount;
   }
 
   function saveSettings() {
@@ -768,6 +769,7 @@
     state.cfg.autoResults = $("cfg-autoresults").checked;
     state.noteRaces = $("note-races").value.split(/\r?\n/)
       .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
+    state.campaignCount = $("campaign-count").value === "" ? null : +$("campaign-count").value;
     ensureTalkRaces(); // 場の構成が変わったら表示場リストを整える
     save();
     renderAll();
