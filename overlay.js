@@ -334,15 +334,16 @@
     return sec;
   }
 
-  /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ */
-  function raceBuyHtml(rc, k, small) {
+  /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ。
+      noMeta=true＝合計/投資行を出さない（②は右下の固定枠band-metaに分離・8/6 FB57） */
+  function raceBuyHtml(rc, k, small, noMeta) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
     var memos = rp ? rp.parsed.memos : [];
     var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";
     // 合計・投資の行：買い目が無くても投資額が入っていれば表示する（メモだけの運用対応・8/6）
     var metaLine = "";
-    if (rp && (rp.points || rp.invest > 0)) {
+    if (!noMeta && rp && (rp.points || rp.invest > 0)) {
       // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
       metaLine = '<div class="buy-meta">' +
         (rp.points ? '<span class="bm-part">合計 ' + rp.points + "点</span>" : "") +
@@ -719,10 +720,21 @@
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
         } else {
-          // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）
+          // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）。
+          // 合計/投資は右下の固定枠へ分離（8/6 FB57＝幅広行を可変レイアウトから隔離）
           band.classList.remove("buy-xl", "buy-lg");
-          band.innerHTML = (key ? raceColHead(rc, key) : "") + raceBuyHtml(rc, key, false);
+          band.innerHTML = (key ? raceColHead(rc, key) : "") + raceBuyHtml(rc, key, false, true);
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51・flex-wrap誤動作の根治）
+          var bMeta = $("band-meta-" + slot);
+          if (bMeta) {
+            var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
+            var mt = rpm && (rpm.points || rpm.invest > 0)
+              ? (rpm.points ? "合計 " + rpm.points + "点" : "") +
+                (rpm.invest > 0 ? (rpm.points ? "　" : "") + "投資 " + fmtYen(rpm.invest) : "")
+              : "";
+            bMeta.textContent = mt;
+            bMeta.classList.toggle("hidden", !mt);
+          }
         }
       });
 
