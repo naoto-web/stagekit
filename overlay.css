@@ -249,6 +249,7 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .vt-cta-main { font-size: 26px; font-weight: 900; color: var(--txt); }
 .vt-cta-start { font-size: 32px; font-weight: 900; color: var(--txt); font-variant-numeric: tabular-nums; }
 .vt-cta-line { font-size: 22px; font-weight: 900; color: var(--txt); }
+.vt-cta-line .vt-nb { white-space: nowrap; display: inline-block; } /* 語の途中で折らない（8/6 FB20・「・」の後でだけ改行） */
 /* 民間締切の信号機色（残5分＝緑→残3分＝黄→残1分＝赤・民間締切後も公式締切までは赤）
    ヘッダーも中身も同色に塗る。黄のみ黒文字。 */
 .vt-card.zone-green .vt-head, .vt-card.zone-green .vt-rows { background: #2e9e4f; }
