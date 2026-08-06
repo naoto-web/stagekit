@@ -595,11 +595,22 @@ body.race-sub-on .race-sub { display: flex; }
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 79, 0), inset 0 0 0 5px rgba(255, 213, 79, .35); }
   50% { box-shadow: 0 0 64px 18px rgba(255, 213, 79, .95), inset 0 0 0 5px rgba(255, 213, 79, 1); }
 }
-/* 万車＝赤の強パルス */
-.cam.hit-fx.hit-fx-manche { animation: hitPulseManche .6s ease-in-out infinite; }
-@keyframes hitPulseManche {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0), inset 0 0 0 6px rgba(255, 77, 77, .4); }
-  50% { box-shadow: 0 0 72px 22px rgba(255, 77, 77, 1), inset 0 0 0 6px rgba(255, 77, 77, 1); }
+/* note的中＝黄金の強パルス（8/7 FB59・神々しい系） */
+.cam.hit-fx.hit-fx-note { animation: hitPulseNote 1.2s ease-in-out infinite; }
+@keyframes hitPulseNote {
+  0%, 100% { box-shadow: 0 0 18px 4px rgba(255, 226, 110, .5), inset 0 0 0 6px rgba(255, 226, 110, .55); }
+  50% { box-shadow: 0 0 90px 30px rgba(255, 236, 150, 1), inset 0 0 26px 8px rgba(255, 236, 150, .95); }
+}
+/* 万車＝レインボーパルス（8/7 FB59・旧赤から変更）。noteと重なった時はこちらが勝つ（後勝ち） */
+.cam.hit-fx.hit-fx-manche { animation: hitPulseRainbow 2.4s linear infinite; }
+@keyframes hitPulseRainbow {
+  0%   { box-shadow: 0 0 64px 20px rgba(255, 82, 82, .95),  inset 0 0 0 6px rgba(255, 82, 82, .9); }
+  17%  { box-shadow: 0 0 64px 20px rgba(255, 179, 0, .95),  inset 0 0 0 6px rgba(255, 179, 0, .9); }
+  33%  { box-shadow: 0 0 64px 20px rgba(90, 214, 117, .95), inset 0 0 0 6px rgba(90, 214, 117, .9); }
+  50%  { box-shadow: 0 0 64px 20px rgba(53, 196, 232, .95), inset 0 0 0 6px rgba(53, 196, 232, .9); }
+  67%  { box-shadow: 0 0 64px 20px rgba(90, 123, 255, .95), inset 0 0 0 6px rgba(90, 123, 255, .9); }
+  83%  { box-shadow: 0 0 64px 20px rgba(196, 107, 255, .95),inset 0 0 0 6px rgba(196, 107, 255, .9); }
+  100% { box-shadow: 0 0 64px 20px rgba(255, 82, 82, .95),  inset 0 0 0 6px rgba(255, 82, 82, .9); }
 }
 .hit-fx-badge {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%) rotate(-3deg);
@@ -608,8 +619,32 @@ body.race-sub-on .race-sub { display: flex; }
   box-shadow: 0 10px 30px rgba(0,0,0,.55); white-space: nowrap; z-index: 5;
   animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite;
 }
-.hit-fx-badge.manche { background: #d63b3b; color: #fff;
-  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitShake .55s linear .5s infinite; }
+/* note的中バッジ＝黄金シマー＋光輪（8/7 FB59）。スパークは👑と✨ */
+.hit-fx-badge.note {
+  background: linear-gradient(120deg, #fff6c8, #ffd54f 30%, #ffb300 50%, #ffd54f 70%, #fff6c8);
+  background-size: 250% 100%; color: #241a00; border: 2px solid #fff;
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite,
+    noteShimmer 1.8s linear .5s infinite, noteGlow 1.6s ease-in-out .5s infinite;
+}
+@keyframes noteShimmer { from { background-position: 0% 0; } to { background-position: 250% 0; } }
+@keyframes noteGlow {
+  0%, 100% { box-shadow: 0 0 22px 6px rgba(255, 223, 100, .75), 0 10px 30px rgba(0,0,0,.55); }
+  50% { box-shadow: 0 0 60px 20px rgba(255, 235, 140, 1), 0 10px 30px rgba(0,0,0,.55); }
+}
+.hit-fx-badge.note::before { content: "👑"; }
+.hit-fx-badge.note::after { content: "✨"; }
+/* 万車バッジ＝流れるレインボー（8/7 FB59・旧赤から変更）。note併発時も虹背景が勝つ（後勝ち） */
+.hit-fx-badge.manche {
+  /* スペクトラム2周分×size200%＝どの瞬間も虹全色が見えたまま流れる */
+  background: linear-gradient(90deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff,
+    #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff, #ff5252);
+  background-size: 200% 100%; color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.9);
+  border: 2px solid #fff;
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitShake .55s linear .5s infinite,
+    rainbowSweep 1.6s linear .5s infinite;
+}
+@keyframes rainbowSweep { from { background-position: 0% 0; } to { background-position: 200% 0; } }
 /* バッジ左右の✨（CSSだけで常時きらめく） */
 .hit-fx-badge::before, .hit-fx-badge::after {
   content: "✨"; position: absolute; font-size: 32px;
@@ -633,12 +668,12 @@ body.race-sub-on .race-sub { display: flex; }
   0%, 100% { opacity: .2; transform: scale(.7) rotate(-15deg); }
   50% { opacity: 1; transform: scale(1.3) rotate(12deg); }
 }
-/* ②レース観戦のワイプは幅が狭い（サブON時362px）ためバッジを縮小（8/6 FB55・①トークは40pxのまま）。
-   万車最長表記「💥万車的中！999.9倍」が362px幅に収まるサイズ */
-#scene-race .hit-fx-badge { font-size: 22px; padding: 6px 14px; border-radius: 10px; }
-#scene-race .hit-fx-badge::before, #scene-race .hit-fx-badge::after { font-size: 20px; }
-#scene-race .hit-fx-badge::before { left: -26px; top: -10px; }
-#scene-race .hit-fx-badge::after { right: -26px; bottom: -10px; }
+/* ②レース観戦のワイプも基本サイズは①と同じ大きさに（8/7 FB59・旧22px決め打ちを廃止）。
+   実テキストが幅に収まらない時だけJS(fitHitBadge)がfont-sizeを段階縮小＝短い表記ほど大きく出る */
+#scene-race .hit-fx-badge { font-size: 38px; padding: 8px 22px; border-radius: 12px; }
+#scene-race .hit-fx-badge::before, #scene-race .hit-fx-badge::after { font-size: 26px; }
+#scene-race .hit-fx-badge::before { left: -32px; top: -12px; }
+#scene-race .hit-fx-badge::after { right: -32px; bottom: -12px; }
 
 /* ---------- ティッカー ---------- */
 .ticker {
