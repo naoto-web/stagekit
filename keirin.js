@@ -390,9 +390,18 @@
     return tokens;
   }
 
+  /** 俺たち目の記法補正（8/6 FB48）：素の数字列「126」は書いた順のストレート（1-2-6）として扱う。
+      通常の買い目パーサーは単一グループをBOX扱いするため（仕様）、俺たち目だけこの前処理を通す。
+      区切り入り（1-2-6等）や記法付きはそのまま */
+  function oreNormalize(raw) {
+    var s = normalize(raw).replace(/\s+/g, "");
+    return /^[1-9]{2,3}$/.test(s) ? s.split("").join("-") : String(raw || "");
+  }
+
   return {
     TYPES: TYPES,
     normalize: normalize,
+    oreNormalize: oreNormalize,
     parseLine: parseLine,
     parsePrediction: parsePrediction,
     hitCombos: hitCombos,
