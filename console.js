@@ -645,6 +645,7 @@
     $("cfg-close").value = state.cfg.closeMin;
     $("cfg-netclose").value = state.cfg.netCloseMin;
     $("cfg-autoresults").checked = !!state.cfg.autoResults;
+    $("note-races").value = state.noteRaces || "";
   }
 
   function saveSettings() {
@@ -672,6 +673,7 @@
     state.cfg.closeMin = +$("cfg-close").value || 3;
     state.cfg.netCloseMin = +$("cfg-netclose").value || 5;
     state.cfg.autoResults = $("cfg-autoresults").checked;
+    state.noteRaces = $("note-races").value.trim();
     ensureTalkRaces(); // 場の構成が変わったら表示場リストを整える
     save();
     renderAll();
