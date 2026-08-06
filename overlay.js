@@ -1182,18 +1182,39 @@
       var old = cam.querySelector(".hit-fx-badge");
       if (old) old.parentNode.removeChild(old);
       var badge = document.createElement("div");
-      badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "");
+      badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "");
+      var typeLabel = hit.type && hit.type !== "3連単" ? " " + hit.type : "";
+      var multLabel = hit.mult ? " " + hit.mult + "倍" : "";
+      // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
       badge.textContent = hit.manche
-        ? "💥 万車的中！" + (hit.mult ? " " + hit.mult + "倍" : "")
-        : "🎯 的中！" + (hit.type && hit.type !== "3連単" ? " " + hit.type : "") + (hit.mult ? " " + hit.mult + "倍" : "");
+        ? "🌈 万車的中！" + (hit.note ? " note" : "") + multLabel
+        : (hit.note ? "🔥 note的中！" : "🎯 的中！") + typeLabel + multLabel;
       cam.appendChild(badge);
+      fitHitBadge(badge, cam); // ワイプ幅いっぱいの最大サイズ（はみ出す時だけ段階縮小・8/7 FB59）
       cam.classList.add("hit-fx");
-      if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝赤の強パルス（8/6 FB46）
+      if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
+      if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
       setTimeout(function () {
         if (badge.parentNode) badge.parentNode.removeChild(badge);
-        if (!cam.querySelector(".hit-fx-badge")) { cam.classList.remove("hit-fx"); cam.classList.remove("hit-fx-manche"); }
+        if (!cam.querySelector(".hit-fx-badge")) {
+          cam.classList.remove("hit-fx"); cam.classList.remove("hit-fx-manche"); cam.classList.remove("hit-fx-note");
+        }
       }, HIT_FX_MS);
     });
+  }
+
+  /** 的中バッジの自動フィット（8/7 FB59）：基本サイズ＝ワイプ幅いっぱい・実テキストが収まらない時だけ
+      font-sizeを段階縮小（transformはバウンスのアニメが専有しているためサイズはフォントで合わせる） */
+  function fitHitBadge(badge, cam) {
+    var avail = cam.clientWidth - 20;
+    if (avail <= 0) return;
+    var fs = parseFloat(getComputedStyle(badge).fontSize) || 40;
+    var guard = 0;
+    while (badge.scrollWidth > avail && fs > 16 && guard < 14) {
+      fs -= 2;
+      badge.style.fontSize = fs + "px";
+      guard++;
+    }
   }
 
   /* ---------- 背景（透過穴つき） ---------- */
