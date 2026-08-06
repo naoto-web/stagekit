@@ -452,7 +452,12 @@ body.debug .video-ph { display: flex; }
 /* ②買い目＝JS自前パッキング（8/6 FB51）：packRaceBandが行を最適な列数に分配し、
    縦横の余りが最小になる倍率へ拡大（flex-wrapの誤動作起因の見切れ・下余白を根治） */
 .rb-flow { display: flex; align-items: flex-start; gap: 0 40px; }
-.rb-col { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+.rb-col { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; flex: 0 0 auto; }
+/* ②の行は全種折返し禁止（8/6 FB56）：幅不足は列圧縮でなく倍率縮小で吸収する（測定と実描画を一致させる） */
+.race-band .buy-line .pred-line.chips { flex-wrap: nowrap; }
+.race-band .buy-line .race-col-head { white-space: nowrap; }
+.race-band .buy-line .buy-meta { white-space: nowrap; flex-wrap: nowrap; }
+.race-band .buy-line .ore-row { white-space: nowrap; flex-wrap: nowrap; }
 
 /* ②買い目＝行数が少ない時は段階拡大（8/6 FB12）：〜4行＝特大／5〜6行＝大／7行〜＝標準。
    行数が増えたらJSのfitRaceBandが全体を縮めて見切れを防ぐ */
