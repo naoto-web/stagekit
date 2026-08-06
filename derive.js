@@ -141,6 +141,7 @@
           raceHitFlags[key] = true;
           hits.push({
             id: id, auto: true,
+            resAuto: !!s.result.auto, // 結果が「自動確定」由来か（8/6 FB47・ワイプ演出の抑止判定用）
             racerName: pid,
             place: parts[0] + parts[1] + "R",
             type: h.type, comboLabel: h.comboLabel,
@@ -154,6 +155,7 @@
           raceHitFlags[key] = true;
           hits.push({
             id: id, auto: true,
+            resAuto: !!s.result.auto, // 同上（8/6 FB47）
             racerName: pid,
             place: parts[0] + parts[1] + "R",
             type: "俺たち目", comboLabel: h.comboLabel,
