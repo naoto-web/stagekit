@@ -809,8 +809,8 @@
       return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + typeLabel + " " + h.mult + "倍 的中</span>";
     }).join("");
     var copy = '<div class="tick-copy">' + items + "</div>";
-    // ③結果と①トークの両方のティッカーに同じ内容を流す（的中ゼロでもバーは常時表示）
-    [["ticker", "ticker-result"], ["ticker-talk-wrap", "ticker-talk"]].forEach(function (pair) {
+    // ③結果・①トーク・②レース観戦の全ティッカーに同じ内容を流す（的中ゼロでもバーは常時表示・8/6 FB29で②追加）
+    [["ticker", "ticker-result"], ["ticker-talk-wrap", "ticker-talk"], ["ticker-race-wrap", "ticker-race-inner"]].forEach(function (pair) {
       var wrap = $(pair[0]);
       var el = $(pair[1]);
       if (!wrap || !el) return;
