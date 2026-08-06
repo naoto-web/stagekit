@@ -217,7 +217,8 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 
 /* 買い目の色チップ表示（車番＝競輪9色・記号は控えめに） */
 .car.sm { width: 26px; height: 26px; font-size: 15px; border-radius: 5px; }
-.pl-sep { font-size: 26px; font-weight: 900; color: var(--sub); padding: 0 3px; }
+.pl-sep { font-size: 26px; font-weight: 900; color: var(--sub); padding: 0 3px;
+  -webkit-text-stroke: 1.3px currentColor; } /* 8/6 FB34：線を太らせて着順の区切りを見やすく（全予想帯共通） */
 .pl-type { font-size: 14px; font-weight: 900; color: var(--acc-text); background: var(--acc);
   padding: 3px 9px; border-radius: 6px; margin-right: 4px; }
 .pl-txt { font-size: 16px; font-weight: 800; color: var(--sub); }
