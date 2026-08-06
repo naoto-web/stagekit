@@ -354,7 +354,7 @@
         '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
         '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(p.oreTachi || "") + '" placeholder="無料公開の1点（例 1-2-3）"></label>' +
-        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (p.isNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
+        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (p.isNote ? " checked" : "") + '> note予想（勝負レース）＝公式締切まで配信画面に伏せる</label>' +
         "</div>" +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
