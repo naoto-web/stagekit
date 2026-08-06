@@ -79,9 +79,19 @@
     var race = venueRaces(parts[0]).filter(function (r) { return r.no === +parts[1]; })[0];
     if (!race || !race.racers || !race.racers.length) return 9;
     var maxNo = 0;
-    race.racers.forEach(function (p) { if (+p.no > maxNo) maxNo = +p.no; });
-    // 旧実装は7車/9車の二択で6車立てを7車に丸めていた（8/6 FB43＝名古屋5R実バグ）→実車番をそのまま使う
+    // 旧実装①7車/9車の二択で6車を7車に丸め（FB43）②keirin.jpは空枠・欠場スロットを返すことがあり
+    // 実車番最大だと9に化ける（FB45＝名古屋6R実バグ）→名前入りスロットのみ数える
+    race.racers.forEach(function (p) {
+      var nm = p && p.name ? String(p.name).replace(/\s+/g, "") : "";
+      if (!nm || /欠/.test(nm)) return;
+      if (+p.no > maxNo) maxNo = +p.no;
+    });
     return maxNo >= 2 ? maxNo : 9;
+  }
+  /** 実効車数＝手動上書き（carsFix）＞自動判定（8/6 FB45） */
+  function effCars(key) {
+    var p = key ? state.preds[key] : null;
+    return (p && p.carsFix) ? p.carsFix : autoCars(key);
   }
 
   function nextRaceOf(name) {
@@ -340,8 +350,9 @@
 
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
-    $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）") +
+    $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + effCars(key) + "車）" : "（場・レース未選択）") +
       (editVenue ? "　📌入力先を固定中" : "");
+    $("pred-cars").value = (key && state.preds[key] && state.preds[key].carsFix) ? String(state.preds[key].carsFix) : "";
     $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }
@@ -382,7 +393,7 @@
         entry.investInput = inv > 0 ? inv : null;
         entry.oreTachi = form.querySelector(".pf-ore").value.trim();
         entry.isNote = form.querySelector(".pf-note").checked;
-        state.preds[key].cars = autoCars(key);
+        state.preds[key].cars = effCars(key);
         save();
         renderSettlePreview();
       });
@@ -391,7 +402,7 @@
   }
 
   function updatePredInfo(form, key) {
-    var cars = autoCars(key);
+    var cars = effCars(key); // 手動上書きがあれば優先（8/6 FB45）
     var type = form.querySelector(".pf-type").value;
     var parsed = window.Keirin.parsePrediction(form.querySelector(".pf-text").value, type, cars);
     form.querySelector(".pf-info").innerHTML = parsed.lines.map(function (l) {
@@ -775,6 +786,17 @@
     save();
     renderAll();
   }
+  // 車数の手動上書き（8/6 FB45）：選んだ瞬間に保存＝「全」の展開・点数が即その車数基準になる
+  $("pred-cars").addEventListener("change", function () {
+    var key = predKey();
+    if (!key) return;
+    if (!state.preds[key]) state.preds[key] = { cars: 9, byRacer: {} };
+    state.preds[key].carsFix = +$("pred-cars").value || null;
+    state.preds[key].cars = effCars(key);
+    save();
+    renderPredForms();
+  });
+
   $("btn-save-settings").addEventListener("click", saveSettings);
   // 席替え：席1⇄席2を入れ替えて即保存（座り位置の変更に1タップで追従）
   $("btn-seat-swap").addEventListener("click", function () {
