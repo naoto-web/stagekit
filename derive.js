@@ -48,6 +48,7 @@
       hitsHidden: [],
       ad: { title: "", lines: [], goalLabel: "応募状況", cur: 0, max: 0, showProgress: false },
       brbMsg: "まもなく再開します",
+      noteRaces: "", // 本日のnote勝負レース（①トーク出走表下に表示・空欄で非表示・8/6追加）
       cfg: { closeMin: 3, netCloseMin: 5, timerCount: 3 }, // 公式＝発走−3分・民間＝発走−5分（7/29 Naoto指定）
     };
   }
