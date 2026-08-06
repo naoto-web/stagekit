@@ -188,6 +188,31 @@
     }
   }
 
+  /* ②サブ予想の場（8/6 FB13）：レース観戦のワイプ左に出す別場。なし＝OFF＝従来レイアウト。
+     ⚠️ONにしたらOBS側でカメラ1/2の移動が必要（セットアップ手順の「②サブ予想モード」参照） */
+  function renderRaceSubRow() {
+    var el = $("race-sub-row");
+    if (!el) return;
+    if (!state.venues.length) { el.innerHTML = ""; return; }
+    if (state.raceSubVenue && !state.venues.some(function (v) { return v.name === state.raceSubVenue; })) {
+      state.raceSubVenue = null;
+    }
+    el.innerHTML = '<div class="row gap"><span class="lbl inline">②サブ予想（ワイプ左）</span>' +
+      '<button class="vp' + (!state.raceSubVenue ? " sel" : "") + '" data-v="">なし</button>' +
+      state.venues.map(function (v) {
+        var rNo = state.currentRace[v.name];
+        return '<button class="vp' + (state.raceSubVenue === v.name ? " sel" : "") + '" data-v="' + esc(v.name) + '">' +
+          esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
+      }).join("") + "</div>";
+    el.querySelectorAll(".vp").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.raceSubVenue = b.getAttribute("data-v") || null;
+        save();
+        renderAll();
+      });
+    });
+  }
+
   function renderRaceChips() {
     var el = $("race-chips");
     var name = activeVenueName();
@@ -1044,6 +1069,7 @@
   function renderAll() {
     renderVenueRow();
     renderRaceChips();
+    renderRaceSubRow();
     renderPredTarget();
     renderPredForms();
     renderResultForm();
