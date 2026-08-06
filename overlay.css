@@ -257,26 +257,35 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .vt-card.zone-yellow .vt-head, .vt-card.zone-yellow .vt-head .vt-r { color: #16181c; }
 .vt-card.zone-yellow .vt-row, .vt-card.zone-yellow .vt-row b { color: #16181c; }
 .vt-card.zone-yellow .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.32); }
-/* 3〜4場同時表示（モーニング→昼の並走帯）＝カードを段階的にコンパクト化 */
-.timer-cards.vt-n3 .vt-head { font-size: 19px; gap: 6px; }
-.timer-cards.vt-n3 .vt-head .vt-start-s { font-size: 12px; }
+/* 3〜4場同時表示（モーニング→昼の並走帯）＝カードを段階的にコンパクト化
+   （8/6 FB4：枠に対して文字が小さい→各レイアウトで入る上限まで拡大。②横並びは幅が狭いのが上限） */
+.timer-cards.vt-n3 .vt-head { font-size: 21px; gap: 6px; }
+.timer-cards.vt-n3 .vt-head .vt-start-s { font-size: 14px; }
 .timer-cards.vt-n3 .vt-rows { padding: 4px 10px; }
-.timer-cards.vt-n3 .vt-row { font-size: 17px; }
-.timer-cards.vt-n3 .vt-row b { font-size: 19px; }
-.timer-cards.vt-n3 .vt-row b.closed { font-size: 16px; }
-.timer-cards.vt-n4 .vt-head { font-size: 16px; gap: 5px; }
-.timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 10px; }
-.timer-cards.vt-n4 .vt-rows { padding: 3px 8px; }
-.timer-cards.vt-n4 .vt-row { font-size: 13px; }
-.timer-cards.vt-n4 .vt-row b { font-size: 16px; }
-.timer-cards.vt-n4 .vt-row b.closed { font-size: 14px; }
-.timer-cards.vt-n3 .vt-cta-main, .timer-cards.vt-n4 .vt-cta-main { font-size: 15px; }
-.timer-cards.vt-n3 .vt-cta-line, .timer-cards.vt-n4 .vt-cta-line { font-size: 12px; }
+.timer-cards.vt-n3 .vt-row { font-size: 19px; }
+.timer-cards.vt-n3 .vt-row b { font-size: 24px; }
+.timer-cards.vt-n3 .vt-row b.closed { font-size: 19px; }
+.timer-cards.vt-n4 .vt-head { font-size: 19px; gap: 5px; }
+.timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 13px; }
+.timer-cards.vt-n4 .vt-rows { padding: 3px 6px; }
+.timer-cards.vt-n4 .vt-row { font-size: 16px; }
+.timer-cards.vt-n4 .vt-row b { font-size: 20px; }
+.timer-cards.vt-n4 .vt-row b.closed { font-size: 17px; }
+.timer-cards.vt-n3 .vt-cta-main, .timer-cards.vt-n4 .vt-cta-main { font-size: 18px; }
+.timer-cards.vt-n3 .vt-cta-line, .timer-cards.vt-n4 .vt-cta-line { font-size: 14px; }
 
 /* ①トーク右レール（400px幅）＝2場は②と同じフルサイズカード縦積み・3〜4場は2列グリッド（高さ336px固定） */
 #scene-talk .timer-cards { flex-flow: column nowrap; flex: 0 0 336px; }
 #scene-talk .timer-cards.vt-n3, #scene-talk .timer-cards.vt-n4 { flex-flow: row wrap; }
 #scene-talk .timer-cards.vt-n3 .vt-card, #scene-talk .timer-cards.vt-n4 .vt-card { flex: 1 1 40%; min-width: 0; }
+/* ①トークの3〜4場＝2列グリッドでカード幅が広い（約196px）ため②よりさらに大きく（8/6 FB4） */
+#scene-talk .timer-cards.vt-n3 .vt-head, #scene-talk .timer-cards.vt-n4 .vt-head { font-size: 22px; }
+#scene-talk .timer-cards.vt-n3 .vt-head .vt-start-s, #scene-talk .timer-cards.vt-n4 .vt-head .vt-start-s { font-size: 13px; }
+#scene-talk .timer-cards.vt-n3 .vt-row, #scene-talk .timer-cards.vt-n4 .vt-row { font-size: 20px; }
+#scene-talk .timer-cards.vt-n3 .vt-row b, #scene-talk .timer-cards.vt-n4 .vt-row b { font-size: 26px; }
+#scene-talk .timer-cards.vt-n3 .vt-row b.closed, #scene-talk .timer-cards.vt-n4 .vt-row b.closed { font-size: 20px; }
+#scene-talk .timer-cards.vt-n3 .vt-cta-main, #scene-talk .timer-cards.vt-n4 .vt-cta-main { font-size: 20px; }
+#scene-talk .timer-cards.vt-n3 .vt-cta-line, #scene-talk .timer-cards.vt-n4 .vt-cta-line { font-size: 16px; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
@@ -390,10 +399,10 @@ body.debug .video-ph { display: flex; }
 .race-band .ore-label { font-size: 13px; }
 .race-band .buy-meta { font-size: 17px; font-weight: 900; color: var(--txt); }
 .buy-line .pl-all { width: 26px; font-size: 15px; }
-/* 俺たち目（無料公開1点）＝金枠で強調 */
+/* 俺たち目（無料公開1点）＝黒枠黒字で強調（8/6 FB4：金枠金字は白テーマで沈む） */
 .ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
-  border: 2px solid var(--acc); border-radius: 10px; background: rgba(0,0,0,.35); }
-.ore-label { font-size: 15px; font-weight: 900; color: var(--acc); margin-right: 5px; }
+  border: 2px solid var(--txt); border-radius: 10px; background: transparent; }
+.ore-label { font-size: 15px; font-weight: 900; color: var(--txt); margin-right: 5px; }
 /* note予想（勝負レース）バッジ＝帯ヘッダー内 */
 .note-badge { display: inline-block; margin-left: 14px; padding: 3px 14px; border-radius: 8px;
   background: rgba(0,0,0,.62); color: #ffd54f; font-size: 17px; font-weight: 900;
