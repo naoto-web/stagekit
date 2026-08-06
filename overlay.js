@@ -652,6 +652,16 @@
       }).join('<span class="nb-dot">・</span>');
   }
 
+  /** 本日のキャンペーン応募人数（バナー・時計の左・8/6 FB21）：空＝非表示 */
+  function renderCampaign() {
+    var box = $("camp-box");
+    if (!box) return;
+    var n = state ? state.campaignCount : null;
+    var show = n !== null && n !== undefined && n !== "" && !isNaN(+n);
+    box.classList.toggle("hidden", !show);
+    if (show) $("camp-num").textContent = (+n).toLocaleString() + "人";
+  }
+
   /** 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定の入力を表示・8/6）
       1行＝1件・最大8行。5行以上はCSS側で段階縮小、長い行は枠幅に合わせて自動縮小 */
   function renderNoteRaces() {
@@ -882,6 +892,7 @@
     renderPreds();
     renderStartList();
     renderNoteRaces();
+    renderCampaign();
     renderResultScene();
     renderBrb();
     renderAd();
