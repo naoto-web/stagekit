@@ -527,7 +527,7 @@
       var s = window.Keirin.settle(rp.parsed, 0, order, payouts);
       var oreHtml = "";
       if (rp.entry.oreTachi) {
-        var op = window.Keirin.parsePrediction(rp.entry.oreTachi, "3連単", (state.preds[key] || {}).cars || 9);
+        var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
         var oh = window.Keirin.settle(op, 0, order, payouts).hits;
         if (oh.length) {
           oreHtml = oh[0].amount
@@ -569,7 +569,7 @@
       });
       // 俺たち目の的中も払戻必須（0倍でティッカーに載る事故防止）
       if (rp.entry.oreTachi) {
-        var op = window.Keirin.parsePrediction(rp.entry.oreTachi, "3連単", (state.preds[key] || {}).cars || 9);
+        var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
         window.Keirin.settle(op, 0, order, validPayouts).hits.forEach(function (h) {
           var label = h.type + " " + h.comboLabel + "（俺たち目）";
           if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
