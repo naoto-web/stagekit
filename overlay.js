@@ -335,7 +335,9 @@
       var reveal = ss !== null ? ss - (state.cfg.closeMin || 3) * 60 : null;
       if (reveal === null || nowSec() < reveal) {
         if (reveal !== null && (noteRevealAt === null || reveal < noteRevealAt)) noteRevealAt = reveal;
-        return '<div class="note-hold">🔥 note予想は公式締切後に公開</div>';
+        // 投資額だけは伏せ期間中も先出しする（FB24）。買い目・俺たち目・合計点数は締切まで非公開
+        return '<div class="note-hold">🔥 note予想は公式締切後に公開</div>' +
+          (rp.invest > 0 ? '<div class="buy-meta"><span class="bm-part">投資 ' + fmtYen(rp.invest) + "</span></div>" : "");
       }
     }
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
