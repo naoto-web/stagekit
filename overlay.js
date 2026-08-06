@@ -472,26 +472,40 @@
     });
   }
 
-  /** トーク帯の縦はみ出し自動縮小（8/6 FB9）：列の中身が列の高さを超えたら列ごとスケールして見切れを防ぐ。
-      ⚠️scrollHeightはflexレイアウトであふれを報告しないことがある（FB28実バグ・横のFB27と同族）→
-      子要素の実下端座標で必要高さを測る。下限0.35＝「切れるくらいなら小さくする」（FB26） */
+  /** 1列ぶんの箱フィット（8/6 FB9→FB41で双方向化）：はみ出しは縮小（下限0.35）・余白は改行なしの
+      まま拡大（上限1.6倍・レースラベルだけの空列は拡大しない）。子要素の実座標で測る
+      （⚠️scrollWidth/Heightはflexであふれを報告しないことがある＝FB27/28実バグ） */
+  function fitColBox(col) {
+    col.style.transform = "";
+    var cr = col.getBoundingClientRect();
+    if (cr.height <= 0) return;
+    var cs = getComputedStyle(col);
+    var padR = parseFloat(cs.paddingRight) || 0;
+    var padB = parseFloat(cs.paddingBottom) || 0;
+    var maxRight = cr.left, maxBottom = cr.top;
+    for (var i = 0; i < col.children.length; i++) {
+      var r = col.children[i].getBoundingClientRect();
+      if (r.right > maxRight) maxRight = r.right;
+      if (r.bottom > maxBottom) maxBottom = r.bottom;
+    }
+    var needW = maxRight - cr.left, needH = maxBottom - cr.top;
+    if (needW <= 0 || needH <= 0) return;
+    var k = Math.min((cr.width - padR) / needW, (cr.height - padB) / needH);
+    if (k < 1) {
+      col.style.transform = "scale(" + Math.max(0.35, k).toFixed(3) + ")";
+    } else if (k > 1.02 && col.children.length > 1) {
+      col.style.transform = "scale(" + Math.min(1.6, k).toFixed(3) + ")";
+    }
+    if (col.style.transform) col.style.transformOrigin = "left top";
+  }
   function fitRaceCols(scope) {
     if (!scope) return;
-    scope.querySelectorAll(".race-col").forEach(function (col) {
-      col.style.transform = "";
-      var cr = col.getBoundingClientRect();
-      if (cr.height <= 0) return;
-      var maxBottom = cr.top;
-      for (var i = 0; i < col.children.length; i++) {
-        var r = col.children[i].getBoundingClientRect();
-        if (r.bottom > maxBottom) maxBottom = r.bottom;
-      }
-      var need = maxBottom - cr.top;
-      if (need > cr.height + 1) {
-        col.style.transform = "scale(" + Math.max(0.35, cr.height / need) + ")";
-        col.style.transformOrigin = "left top";
-      }
-    });
+    var cols = scope.querySelectorAll(".race-col");
+    if (cols.length) {
+      for (var i = 0; i < cols.length; i++) fitColBox(cols[i]);
+    } else {
+      fitColBox(scope); // 1場表示＝帯そのものを1つの箱として扱う
+    }
   }
 
   /** 予想ブロックの表示行数（3場の自動配置用・8/6 FB33）＝俺たち目＋有効買い目＋メモ＋合計 */
