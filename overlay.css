@@ -244,9 +244,10 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .vt-row b { font-size: 38px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
 .vt-row b.closed { font-size: 30px; }
 .vt-done { text-align: center; color: var(--sub); font-weight: 900; font-size: 24px; }
-/* 公式締切後＝「締切ました」CTAカード */
+/* 公式締切後＝「締切ました」CTAカード（発走時刻を主役に・8/6 FB10） */
 .vt-cta { align-items: center; text-align: center; }
-.vt-cta-main { font-size: 28px; font-weight: 900; color: var(--txt); }
+.vt-cta-main { font-size: 26px; font-weight: 900; color: var(--txt); }
+.vt-cta-start { font-size: 32px; font-weight: 900; color: var(--txt); font-variant-numeric: tabular-nums; }
 .vt-cta-line { font-size: 22px; font-weight: 900; color: var(--txt); }
 /* 民間締切の信号機色（残5分＝緑→残3分＝黄→残1分＝赤・民間締切後も公式締切までは赤）
    ヘッダーも中身も同色に塗る。黄のみ黒文字。 */
@@ -276,6 +277,7 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .timer-cards.vt-n4 .vt-row b { font-size: 20px; }
 .timer-cards.vt-n4 .vt-row b.closed { font-size: 17px; }
 .timer-cards.vt-n3 .vt-cta-main, .timer-cards.vt-n4 .vt-cta-main { font-size: 18px; }
+.timer-cards.vt-n3 .vt-cta-start, .timer-cards.vt-n4 .vt-cta-start { font-size: 22px; }
 .timer-cards.vt-n3 .vt-cta-line, .timer-cards.vt-n4 .vt-cta-line { font-size: 14px; }
 
 /* ①トーク右レール（400px幅）＝2場は②と同じフルサイズカード縦積み・3〜4場は2列グリッド（高さ336px固定） */
@@ -289,6 +291,7 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 #scene-talk .timer-cards.vt-n3 .vt-row b, #scene-talk .timer-cards.vt-n4 .vt-row b { font-size: 30px; }
 #scene-talk .timer-cards.vt-n3 .vt-row b.closed, #scene-talk .timer-cards.vt-n4 .vt-row b.closed { font-size: 24px; }
 #scene-talk .timer-cards.vt-n3 .vt-cta-main, #scene-talk .timer-cards.vt-n4 .vt-cta-main { font-size: 22px; }
+#scene-talk .timer-cards.vt-n3 .vt-cta-start, #scene-talk .timer-cards.vt-n4 .vt-cta-start { font-size: 28px; }
 #scene-talk .timer-cards.vt-n3 .vt-cta-line, #scene-talk .timer-cards.vt-n4 .vt-cta-line { font-size: 17px; }
 
 /* 出走表パネル（①トーク右下） */
@@ -373,6 +376,12 @@ body.debug .video-ph { display: flex; }
 /* ①トークの買い目行は折り返さない＝長い行はJSが幅に合わせて自動縮小（8/6 FB） */
 .talk-band .pred-line.chips { flex-wrap: nowrap; }
 
+/* トークの車番チップも②と同じ「数字を枠いっぱい・記号は脇役」スタイル（8/6 FB10）。チップ外形は不変 */
+.talk-band .buy-line .car { font-size: 32px; }
+.talk-band .buy-line .car.sm { font-size: 24px; }
+.talk-band .buy-line .pl-sep { font-size: 18px; padding: 0 2px; }
+.talk-band .buy-line .pl-all { font-size: 20px; }
+
 /* 予想帯ヘッダーは2行にしない：入り切らない時はJSが金額・バッジを段階縮小（8/6 FB） */
 .panel-head.band-head { flex-wrap: nowrap; white-space: nowrap; }
 
@@ -402,7 +411,7 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line .pl-all { width: 24px; font-size: 18px; }
 .race-band .ore-row { padding: 3px 8px; border-width: 1.5px; }
 .race-band .ore-label { font-size: 13px; }
-.race-band .buy-meta { font-size: 17px; font-weight: 900; color: var(--txt); }
+.race-band .buy-meta { font-size: 24px; font-weight: 900; color: var(--txt); } /* 8/6 FB10で拡大 */
 .buy-line .pl-all { width: 26px; font-size: 15px; }
 /* 俺たち目（無料公開1点）＝黒枠黒字で強調（8/6 FB4：金枠金字は白テーマで沈む） */
 .ore-row { display: flex; align-items: center; gap: 5px; padding: 5px 12px;
