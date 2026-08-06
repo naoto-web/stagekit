@@ -217,7 +217,7 @@
   }
 
   $("btn-narabi-save").addEventListener("click", function () {
-    var key = currentKey();
+    var key = predKey(); // 並びの手修正も入力先に追従（8/6 FB11）
     if (!key) return;
     if (!state.narabi) state.narabi = {};
     state.narabi[key] = $("narabi-input").value.trim();
@@ -236,6 +236,49 @@
     }
   });
 
+  /* ---------- 予想の入力先（8/6 FB11：放送用の場・レース切替と分離） ----------
+     editVenue=null＝放送に追従（従来どおり）。場を選ぶと入力先だけ固定＝上部の場・レースを
+     切り替えても（＝②レース観戦の表示が変わっても）予想フォームの対象は動かない。
+     コンソール内だけのローカル状態＝GASにも配信画面にも影響しない */
+  var editVenue = null, editRace = null;
+  function predKey() {
+    if (editVenue && !state.venues.some(function (v) { return v.name === editVenue; })) { editVenue = null; editRace = null; }
+    if (!editVenue) return currentKey();
+    var rNo = editRace || state.currentRace[editVenue];
+    return rNo ? window.Derive.raceKey(editVenue, rNo) : null;
+  }
+  function renderPredTarget() {
+    var vr = $("pred-venue-row"), rg = $("pred-race-chips");
+    if (!vr || !rg) return;
+    if (!state.venues.length) { vr.innerHTML = ""; rg.innerHTML = ""; return; }
+    vr.innerHTML = '<button class="vbtn' + (!editVenue ? " active" : "") + '" data-v="">放送に追従</button>' +
+      state.venues.map(function (v) {
+        var rNo = (editVenue === v.name && editRace) ? editRace : state.currentRace[v.name];
+        return '<button class="vbtn' + (editVenue === v.name ? " active" : "") + '" data-v="' + esc(v.name) + '">' +
+          esc(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "</small></button>";
+      }).join("");
+    vr.querySelectorAll(".vbtn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        editVenue = b.getAttribute("data-v") || null;
+        editRace = null;
+        renderPredTarget();
+        renderPredForms();
+      });
+    });
+    if (!editVenue) { rg.innerHTML = ""; return; }
+    var curNo = editRace || state.currentRace[editVenue];
+    rg.innerHTML = venueRaces(editVenue).map(function (r) {
+      return '<button class="rc' + (curNo === r.no ? " cur" : "") + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small></button>";
+    }).join("");
+    rg.querySelectorAll(".rc").forEach(function (b) {
+      b.addEventListener("click", function () {
+        editRace = +b.getAttribute("data-no");
+        renderPredTarget();
+        renderPredForms();
+      });
+    });
+  }
+
   /* ---------- 予想入力 ---------- */
   function ensurePredEntry(key, racerId) {
     if (!state.preds[key]) state.preds[key] = { cars: 9, byRacer: {} };
@@ -246,8 +289,9 @@
   }
 
   function renderPredForms() {
-    var key = currentKey();
-    $("pred-target").textContent = key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）";
+    var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
+    $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）") +
+      (editVenue ? "　📌入力先を固定中" : "");
     $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }
@@ -1000,6 +1044,7 @@
   function renderAll() {
     renderVenueRow();
     renderRaceChips();
+    renderPredTarget();
     renderPredForms();
     renderResultForm();
     renderHitAdmin();
