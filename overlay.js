@@ -525,7 +525,16 @@
         var sPanel = sHead.parentElement;
         if (sPanel) sPanel.style.display = (rc && svn) ? "" : "none";
         var sName = $("sband-name-" + slot);
-        if (sName) sName.textContent = name ? name + " 予想（NEXT）" : "";
+        if (sName) {
+          sName.textContent = name ? name + " 予想（NEXT）" : "";
+          // （NEXT）付きで幅を超える名前は1行のまま縮小（改行させない・8/6 FB18）
+          sName.style.transform = "";
+          var sAvail = sHead.clientWidth - 20; // ヘッダー左右padding分
+          if (sAvail > 0 && sName.scrollWidth > sAvail + 1) {
+            sName.style.transform = "scale(" + Math.max(0.5, sAvail / sName.scrollWidth) + ")";
+            sName.style.transformOrigin = "left center";
+          }
+        }
         if (color) {
           sHead.style.background = color;
           sHead.style.color = textOn(color);
