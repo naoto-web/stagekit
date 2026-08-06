@@ -427,17 +427,21 @@
     });
   }
 
-  /** ②予想帯の必要幅測定（8/6 FB27）：⚠️column-wrapのflexはscrollWidthがあふれ列を報告しない
-      ことがある（3列切れの実バグ）→子要素の実右端座標で測る */
+  /** ②予想帯の必要サイズ測定（8/6 FB27）：⚠️column-wrapのflexはscrollWidth/Heightがあふれを報告しない
+      ことがある（3列切れの実バグ）→子要素の実右端・下端座標で測る */
   function bandNeed(band) {
     var br = band.getBoundingClientRect();
-    var padR = parseFloat(getComputedStyle(band).paddingRight) || 0;
-    var maxRight = br.left;
+    var cs = getComputedStyle(band);
+    var padR = parseFloat(cs.paddingRight) || 0;
+    var padB = parseFloat(cs.paddingBottom) || 0;
+    var maxRight = br.left, maxBottom = br.top;
     for (var i = 0; i < band.children.length; i++) {
       var r = band.children[i].getBoundingClientRect();
       if (r.right > maxRight) maxRight = r.right;
+      if (r.bottom > maxBottom) maxBottom = r.bottom;
     }
-    return { need: maxRight - br.left, avail: br.width - padR };
+    return { need: maxRight - br.left, avail: br.width - padR,
+             needH: maxBottom - br.top, availH: br.height - padB };
   }
 
   /** ②予想帯の横あふれ自動縮小（8/6 FB12）：サイズ段階を落としても収まらない時の最終手段 */
@@ -453,18 +457,26 @@
   }
 
   /** ②予想帯のサイズ段階フィット一式（8/6 FB37）：常に特大→大→標準の順で試し「入る最大サイズ」を採用
-      （行数からの決め打ちを廃止＝縦横を使い切る）。標準でもあふれる時だけ全体縮小。冪等＝毎秒巡回可 */
+      （行数からの決め打ちを廃止＝縦横を使い切る）。標準でもあふれる時だけ全体縮小。冪等＝毎秒巡回可。
+      FB38：収まった後の余白は、折返し計算に影響しないtransform拡大で枠いっぱいまで使う（上限1.6倍） */
   function fitRaceBandFull(band) {
     var sizes = ["buy-xl", "buy-lg", ""];
+    var fitted = false;
     for (var si = 0; si < sizes.length; si++) {
       band.classList.remove("buy-xl", "buy-lg");
       if (sizes[si]) band.classList.add(sizes[si]);
       fitPredLines(band);
       band.style.transform = "";
       var bm = bandNeed(band);
-      if (bm.need <= bm.avail + 1) break;
+      if (bm.need <= bm.avail + 1) { fitted = true; break; }
     }
-    fitRaceBand(band);
+    if (!fitted) { fitRaceBand(band); return; }
+    var m = bandNeed(band);
+    var up = Math.min(m.avail / Math.max(1, m.need), m.availH / Math.max(1, m.needH));
+    if (up > 1.02) {
+      band.style.transform = "scale(" + Math.min(1.6, up).toFixed(3) + ")";
+      band.style.transformOrigin = "left top";
+    }
   }
   function fitRaceBands() {
     ["band-pred-a", "band-pred-b"].forEach(function (id) {
