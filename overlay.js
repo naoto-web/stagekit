@@ -417,6 +417,11 @@
     var seats = seatMap();
     document.body.classList.toggle("seat-a-off", !seats.a);
     document.body.classList.toggle("seat-b-off", !seats.b);
+    // ②サブ予想（8/6 FB13）：コンソールで選んだ別場をワイプ左に表示。無選択＝従来レイアウト
+    var subVenueOk = state.raceSubVenue && state.venues.some(function (v) { return v.name === state.raceSubVenue; });
+    document.body.classList.toggle("race-sub-on", !!subVenueOk);
+    var subKey = subVenueOk && state.currentRace[state.raceSubVenue]
+      ? window.Derive.raceKey(state.raceSubVenue, state.currentRace[state.raceSubVenue]) : null;
     ["a", "b"].forEach(function (slot) {
       var rc = seats[slot];
       var name = rc ? rc.name : "";
@@ -483,7 +488,8 @@
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
         } else {
-          band.innerHTML = raceBuyHtml(rc, key, false);
+          // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）
+          band.innerHTML = (key ? raceColHead(rc, key) : "") + raceBuyHtml(rc, key, false);
           // 行数（俺たち目＋買い目＋メモ＋合計）に応じてサイズを段階切替（少ない時は特大・8/6 FB12）
           var rows = band.querySelectorAll(".ore-row, .pred-line, .buy-meta").length;
           band.classList.remove("buy-xl", "buy-lg");
@@ -493,6 +499,23 @@
           fitRaceBand(band);  // 列あふれ時の全体縮小（見切れ防止）
         }
       });
+
+      // ②サブ予想帯（8/6 FB13）：メンバーカラーヘッダー＋場Rラベル＋買い目（ワイプ左の縦パネル）
+      var sHead = $("sband-head-" + slot);
+      if (sHead) {
+        var sName = $("sband-name-" + slot);
+        if (sName) sName.textContent = name ? name + " 予想" : "";
+        if (color) {
+          sHead.style.background = color;
+          sHead.style.color = textOn(color);
+          if (sHead.parentElement) sHead.parentElement.style.borderColor = color;
+        }
+        var sBand = $("sband-pred-" + slot);
+        if (sBand) {
+          sBand.innerHTML = subKey ? raceColHead(rc, subKey) + raceBuyHtml(rc, subKey, false) : "";
+          fitPredLines(sBand); // 幅182pxに合わせて長い行を自動縮小
+        }
+      }
     });
   }
 
