@@ -123,15 +123,15 @@ body.wm-on .gbar::before { display: block; }
 /* 場タブ＝不透明（透かしが透けない）。表示中の場は白反転でひと目で分かるように（8/5 FB） */
 .venue-tabs { display: flex; gap: 10px; }
 .vtab {
-  padding: 8px 20px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.35);
-  background: #14204a; font-weight: 900; font-size: 21px; color: rgba(255,255,255,.72);
-  font-family: inherit; pointer-events: none;
+  padding: 10px 24px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.35);
+  background: #14204a; font-weight: 900; font-size: 30px; color: rgba(255,255,255,.72);
+  font-family: inherit; pointer-events: none; /* 30px＝スマホ縦でも読めるサイズ（8/6 FB3） */
 }
 .vtab.active {
   background: #ffffff; color: #1f3274; border-color: #ffffff;
   box-shadow: 0 2px 10px rgba(0,0,0,.4);
 }
-.vtab small { font-size: 15px; margin-left: 4px; }
+.vtab small { font-size: 24px; margin-left: 6px; }
 
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */
@@ -303,12 +303,19 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .nb-group { display: flex; gap: 2px; flex: 0 0 auto; }
 /* ライン＝出走表と同じ正方形チップ（8/5 FB・1行に収まるサイズ） */
 .narabi-row .car { width: 22px; height: 22px; font-size: 14px; border-radius: 5px; }
-/* 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定から・8/6追加） */
-.note-races-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+/* 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定から・8/6追加）
+   1行＝1件・最大8行。5行以上は段階的に文字を縮小（タイマーvt-n3/n4と同方式） */
+.note-races-row { display: flex; flex-direction: column; gap: 3px; padding: 8px 12px;
   border-top: 1.5px solid var(--panel-line); background: rgba(0,0,0,.25); }
-.nr-label { flex: 0 0 auto; font-size: 15px; font-weight: 900; color: #ffd54f;
+.nr-head { align-self: flex-start; font-size: 15px; font-weight: 900; color: #ffd54f;
   background: rgba(0,0,0,.62); padding: 3px 10px; border-radius: 8px; white-space: nowrap; }
-.nr-text { font-size: 20px; font-weight: 900; color: var(--txt); line-height: 1.25; }
+.nr-line { font-size: 23px; font-weight: 900; color: var(--txt); line-height: 1.25;
+  white-space: nowrap; overflow: hidden; }
+.note-races-row.nr-many .nr-line { font-size: 19px; }
+.note-races-row.nr-max .nr-line { font-size: 16px; }
+/* note勝負行は常に下端優先で表示：出走表は残り高さに収める（あふれた分は下から切れる） */
+.slist-panel { display: flex; flex-direction: column; }
+.slist-panel .slist { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }
@@ -347,8 +354,8 @@ body.debug .video-ph { display: flex; }
   display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start;
   align-items: flex-start; gap: 8px 46px; padding: 12px 18px; overflow: hidden; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0; }
-/* ①トークの合計・投資は大きめに（8/6 FB） */
-.talk-band .buy-meta { font-size: 20px; font-weight: 900; color: var(--txt); }
+/* ①トークの合計・投資・メモは大きめに（8/6 FB・FB3でさらに拡大） */
+.talk-band .buy-meta { font-size: 27px; font-weight: 900; color: var(--txt); }
 
 /* ①トークの買い目行は折り返さない＝長い行はJSが幅に合わせて自動縮小（8/6 FB） */
 .talk-band .pred-line.chips { flex-wrap: nowrap; }
@@ -367,8 +374,8 @@ body.debug .video-ph { display: flex; }
 .race-col { flex: 1 1 0; min-width: 0; overflow: hidden; padding: 0 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .race-col + .race-col { border-left: 2px solid var(--panel-line); }
 .race-col-head {
-  font-size: 19px; font-weight: 900; color: var(--txt);
-  background: rgba(0,0,0,.08); border-radius: 6px; padding: 2px 12px;
+  font-size: 26px; font-weight: 900; color: var(--txt); /* 8/6 FB3で拡大 */
+  background: rgba(0,0,0,.08); border-radius: 6px; padding: 3px 14px;
 }
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
 /* ②レース観戦の帯＝俺たち目＋買い目3行が1列に収まるサイズ（8/6 FB）。①トークは出走表と同じ正方形 */
