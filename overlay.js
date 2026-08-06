@@ -370,7 +370,7 @@
     if (!scope) return;
     var cs = getComputedStyle(scope);
     var avail = scope.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-    scope.querySelectorAll(".pred-line, .ore-row, .buy-meta").forEach(function (el) {
+    scope.querySelectorAll(".pred-line, .ore-row, .buy-meta, .race-col-head").forEach(function (el) {
       el.style.transform = "";
       var w = el.scrollWidth;
       if (avail > 0 && w > avail + 1) {
