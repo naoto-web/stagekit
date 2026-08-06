@@ -318,9 +318,10 @@
     // 合計・投資の行：買い目が無くても投資額が入っていれば表示する（メモだけの運用対応・8/6）
     var metaLine = "";
     if (rp && (rp.points || rp.invest > 0)) {
+      // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
       metaLine = '<div class="buy-meta">' +
-        (rp.points ? "合計 " + rp.points + "点" : "") +
-        (rp.invest > 0 ? (rp.points ? "　" : "") + "投資 " + fmtYen(rp.invest) : "") +
+        (rp.points ? '<span class="bm-part">合計 ' + rp.points + "点</span>" : "") +
+        (rp.invest > 0 ? '<span class="bm-part">投資 ' + fmtYen(rp.invest) + "</span>" : "") +
         "</div>";
     }
     return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small) + "</div>" : "") +
