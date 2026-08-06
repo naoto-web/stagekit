@@ -309,9 +309,36 @@
 
   function keyLabel(k) { return k ? String(k).replace("|", " ") + "R" : ""; }
 
+  /** note予想の公開待ち管理（8/6 FB22）：公式締切まで買い目を伏せ、締切時刻が来たら自動で再描画して公開 */
+  var noteRevealAt = null; // 次に公開すべき公式締切（0時起点の秒）。renderPreds冒頭でリセット→伏せ中の最短を収集
+  function raceStartSecOf(key) {
+    if (!key || !timetable) return null;
+    var parts = String(key).split("|");
+    var sec = null;
+    (timetable.venues || []).forEach(function (tv) {
+      if (tv.name !== parts[0]) return;
+      (tv.races || []).forEach(function (r) {
+        if (r.no === +parts[1]) { var s = timeToSec(r.start); if (s !== null) sec = s; }
+      });
+    });
+    return sec;
+  }
+
   /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ */
   function raceBuyHtml(rc, k, small) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
+    // note予想（勝負レース）＝公式締切まで配信画面では伏せる（8/6 FB22）。
+    // 発走時刻が取れない時は従来どおり表示（伏せっぱなし事故の防止＝フェイルオープン）
+    if (rp && rp.entry.isNote) {
+      var ss = raceStartSecOf(k);
+      if (ss !== null) {
+        var reveal = ss - (state.cfg.closeMin || 3) * 60;
+        if (nowSec() < reveal) {
+          if (noteRevealAt === null || reveal < noteRevealAt) noteRevealAt = reveal;
+          return '<div class="note-hold">🔥 note予想は公式締切後に公開</div>';
+        }
+      }
+    }
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
     var memos = rp ? rp.parsed.memos : [];
     var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";
@@ -409,6 +436,7 @@
   }
 
   function renderPreds() {
+    noteRevealAt = null; // 伏せ中note予想の公開時刻を再収集（8/6 FB22）
     var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
     // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
@@ -936,6 +964,8 @@
     tickClock();
     renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
+    // 伏せ中のnote予想が公式締切を迎えたら自動公開（8/6 FB22）
+    if (noteRevealAt !== null && nowSec() >= noteRevealAt) { noteRevealAt = null; renderPreds(); }
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
   tickClock();
