@@ -38,7 +38,8 @@
       ],
       venues: [],
       activeVenue: 0,
-      raceSubVenue: null, // ②サブ予想の場（8/6 FB13）。null＝OFF＝従来レイアウト（ワイプ全幅）
+      raceSubVenue: null, // 旧・共通サブ場（8/6 FB17でraceSubByへ移行・互換読みのため残置）
+      raceSubBy: {},      // ②サブ予想の場（配信者idごと・8/6 FB17）。空＝OFF＝従来レイアウト
       currentRace: {},
       grade: {},
       narabi: {},
