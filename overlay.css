@@ -438,7 +438,27 @@ body.debug .video-ph { display: flex; }
   vertical-align: middle; white-space: nowrap; }
 
 .race-rail { width: 544px; }
-.race-rail .cam { flex: 1 1 0; }
+.race-sub-wrap { flex: 1 1 0; min-height: 0; display: flex; }
+.race-wipes { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.race-wipes .cam { flex: 1 1 0; }
+/* ②サブ予想（8/6 FB13）：タイマー1枚目の区切り線を下へ延長した位置（左182px）に別場の予想を縦2段。
+   既定OFF＝従来レイアウト（ワイプ544幅のまま）。ONはコンソール「②サブ予想の場」で場選択。
+   ⚠️ON運用はOBS側でカメラ1/2を x1550・バウンディング362×404へ移動（戻す時＝x1368・544×404） */
+.race-sub { display: none; width: 182px; flex: 0 0 182px; flex-direction: column;
+  border-right: 1.5px solid var(--panel-line); }
+body.race-sub-on .race-sub { display: flex; }
+.sub-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.sub-head { font-size: 18px; padding: 6px 10px; }
+.sub-line { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: flex-start;
+  gap: 6px; padding: 8px 10px; overflow: hidden; }
+.sub-line .race-col-head { font-size: 18px; padding: 2px 10px; }
+.sub-line .car { width: 20px; height: 24px; font-size: 22px; border-radius: 3px; }
+.sub-line .pl-sep { font-size: 14px; padding: 0 1px; }
+.sub-line .pl-all { width: 22px; font-size: 16px; }
+.sub-line .pred-line { font-size: 20px; }
+.sub-line .ore-row { padding: 2px 6px; border-width: 1.5px; }
+.sub-line .ore-label { font-size: 12px; }
+.sub-line .buy-meta { font-size: 16px; font-weight: 900; color: var(--txt); }
 
 /* ---------- ③結果・的中 ---------- */
 .race-chips { position: absolute; left: 8px; right: 8px; top: 96px; height: 56px;
