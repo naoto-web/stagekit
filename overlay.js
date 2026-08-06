@@ -477,7 +477,9 @@
         }
         if (color) {
           bandHead.style.background = color;
-          bandHead.style.color = textOn(color);
+          var btc = textOn(color);
+          bandHead.style.color = btc;
+          bandHead.classList.toggle("txt-edge", btc === "#fff"); // 白文字のみ黒フチ（8/6 FB19）
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = color;
         }
         fitBandHead(bandHead); // 名前＋バッジ＋投資/回収が1行に収まるよう自動縮小
@@ -537,7 +539,9 @@
         }
         if (color) {
           sHead.style.background = color;
-          sHead.style.color = textOn(color);
+          var stc = textOn(color);
+          sHead.style.color = stc;
+          sHead.classList.toggle("txt-edge", stc === "#fff"); // 白文字のみ黒フチ（8/6 FB19）
           if (sPanel) sPanel.style.borderColor = color;
         }
         var sBand = $("sband-pred-" + slot);
