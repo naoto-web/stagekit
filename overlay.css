@@ -117,6 +117,14 @@ body.wm-on .gbar::before { display: block; }
   margin-left: auto; display: flex; flex-direction: column; align-items: center; line-height: 1.1;
   background: #ffffff; border-radius: 10px; padding: 5px 24px; height: 80px; justify-content: center;
 }
+/* 本日のキャンペーン応募人数（バナー・時計の左・8/6 FB21）。コンソール本日設定から・空欄＝非表示 */
+.camp-box { margin-left: auto; height: 80px; background: #ffffff; border-radius: 10px;
+  padding: 6px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  line-height: 1.15; }
+.camp-box.hidden { display: none; }
+.camp-box:not(.hidden) ~ .clock-box { margin-left: 0; } /* 表示中は時計との間隔＝通常gapに */
+.camp-label { font-size: 15px; font-weight: 900; color: #2a2f3a; white-space: nowrap; }
+.camp-num { font-size: 34px; font-weight: 900; color: #0b0e14; font-variant-numeric: tabular-nums; }
 .clock-date { font-size: 19px; color: #2a2f3a; font-weight: 700; }
 .clock-time { font-size: 46px; font-weight: 900; font-variant-numeric: tabular-nums; color: #0b0e14; }
 
