@@ -536,6 +536,15 @@
       }).join('<span class="nb-dot">・</span>');
   }
 
+  /** 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定の入力を表示・8/6） */
+  function renderNoteRaces() {
+    var el = $("note-races-talk");
+    if (!el) return;
+    var txt = state && state.noteRaces ? String(state.noteRaces).trim() : "";
+    el.classList.toggle("hidden", !txt);
+    if (txt) el.innerHTML = '<span class="nr-label">🔥 note勝負</span><span class="nr-text">' + esc(txt) + "</span>";
+  }
+
   /* ②レース観戦：場名/Rバーは廃止（7/29 FB4＝映像は別ウィンドウのキャプチャで
      コンソールの場情報と実映像がズレうるため）。シーン固有の描画はタイマーカードと予想帯のみ */
 
@@ -743,6 +752,7 @@
     renderVenueTabs();
     renderPreds();
     renderStartList();
+    renderNoteRaces();
     renderResultScene();
     renderBrb();
     renderAd();
