@@ -121,10 +121,16 @@
   }
 
   /* 警告音：Web Audio合成（素材ファイル不使用＝ライセンス管理外）。
-     OBSでは5シーンのソースが常時動いているため、二重発音を避けて既定は②レースのソースだけが鳴らす。
-     &sound=1でどのシーンでも有効化／&sound=0で無効化。
+     発音担当＝「いま表示されているソース」（8/7 FB60）。旧＝②固定は、①表示中に非表示の②が
+     OBSに裏画面扱い（タイマー間引き＋音声バッファ遅延）され音が実測9秒遅れた。OBSはソースの
+     表示/非表示をPage Visibilityで通知してくるため、タイマーを持つ①②が自分の表示中だけ鳴らせば
+     見ている画面の色切替と同一ソース発音＝ズレゼロ・二重発音もなし。
+     タイマーの無い③⑤等の表示中は無音（8/7 Naoto了承）。
+     &sound=0＝完全無効／&sound=1＝表示状態に関わらず発音（旧挙動・検証用）。
      色切替と音ズレしないよう、コンテキストは起動時に初期化しておく（鳴らす瞬間の初期化遅延をなくす）。 */
-  var SOUND = params.get("sound") === "1" || (params.get("sound") !== "0" && SCENE === "race");
+  var SOUND_FORCE = params.get("sound") === "1";
+  var SOUND = SOUND_FORCE || (params.get("sound") !== "0" && (SCENE === "race" || SCENE === "talk"));
+  function audible() { return SOUND && (SOUND_FORCE || document.visibilityState === "visible"); }
   var audioCtx = null;
   if (SOUND) {
     try {
@@ -137,7 +143,7 @@
     } catch (e) {}
   }
   function beepAt(atTime) {
-    if (!SOUND) return;
+    if (!audible()) return;
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
@@ -161,6 +167,7 @@
      キー＝「民間締切の絶対秒|境界秒」＝レースごと・境界ごとに1回だけ（即時フォールバックとの二重鳴り防止） */
   var beepDone = {};
   function scheduleBeep(key, delaySec) {
+    if (!audible()) return; // 非表示中は「鳴らした扱い」にもしない（表示切替直後の境界はフォールバックが拾える）
     if (beepDone[key]) return;
     beepDone[key] = true;
     beepAt(audioCtx ? audioCtx.currentTime + Math.max(0, delaySec) : 0);
