@@ -437,6 +437,8 @@ body.debug .video-ph { display: flex; }
   font-size: 26px; font-weight: 900; color: var(--txt); /* 8/6 FB3で拡大 */
   background: rgba(0,0,0,.08); border-radius: 6px; padding: 3px 14px;
 }
+/* 🔥note予想はひと塊で扱う＝語中改行禁止・列幅に入らない時は塊ごと2行目へ（8/7 FB63） */
+.race-col-head .note-tag { white-space: nowrap; }
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
 /* ②レース観戦の帯＝俺たち目＋買い目3行が1列に収まるサイズ（8/6 FB）。①トークは出走表と同じ正方形 */
 .race-band .buy-line { gap: 5px 40px; padding: 8px 16px; } /* 旧・下48px一律予約は廃止＝合計/投資はJSが列ごとに衝突回避（8/6 FB58） */

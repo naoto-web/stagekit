@@ -698,12 +698,13 @@
       ((rp.points || rp.invest > 0) ? 1 : 0);
   }
 
-  /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想） */
+  /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想）。
+      🔥note予想はひと塊で改行（語中でちぎれない・入らない時は塊ごと2行目へ＝8/7 FB63） */
   function raceColHead(rc, k) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     return '<div class="race-col-head">' + esc(keyLabel(k)) +
       (k ? gradeBadge(String(k).split("|")[0]) : "") +
-      (p && p.entry.isNote ? " 🔥note予想" : "") + "</div>";
+      (p && p.entry.isNote ? ' <span class="note-tag">🔥note予想</span>' : "") + "</div>";
   }
 
   function renderPreds() {
