@@ -591,6 +591,16 @@ body.race-sub-on .race-sub { display: flex; }
   padding: 8px 18px; border: 1px dashed var(--panel-line); border-radius: 8px;
   background: rgba(0,0,0,.3); }
 
+/* 的中者アイコンの雨（8/7 FB65）＝バッジの前奏約2秒・右上→左下へ流れる。バッジ(z5)より下(z4) */
+.hit-rain { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 4; }
+.hit-rain-ic { position: absolute; top: -150px; will-change: transform;
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
+  animation: hitRainFall var(--dur, 1.2s) cubic-bezier(.3,.1,.7,.9) var(--dly, 0s) both; }
+@keyframes hitRainFall {
+  from { transform: translate(0, 0) rotate(-12deg); }
+  to { transform: translate(var(--dx, -300px), var(--dy, 700px)) rotate(10deg); }
+}
+
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
 .cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }
 @keyframes hitPulse {

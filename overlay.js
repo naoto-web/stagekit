@@ -1183,39 +1183,75 @@
       if (h.resAuto) return;
       var seats = seatMap();
       ["a", "b"].forEach(function (slot) {
-        if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h);
+        if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h, seats[slot]);
       });
     });
     seenHits = ids;
   }
-  function fireHitFx(slot, hit) {
+
+  /* 的中者アイコンの雨（8/7 FB65）：バッジの前にその人のアイコンが右上→左下へ大量に流れる約2秒の前奏。
+     アイコンはメンバーカラー→中立ファイル名で解決（公開リポジトリに人名を出さない・的中者との一致は色キーで構造保証） */
+  var ICON_BY_COLOR = { "青": "ic_blue.png", "緑": "ic_green.png", "オレンジ": "ic_orange.png", "橙": "ic_orange.png",
+    "赤": "ic_red.png", "ピンク": "ic_pink.png", "桃": "ic_pink.png", "黄": "ic_yellow.png", "黄色": "ic_yellow.png" };
+  ["ic_blue", "ic_green", "ic_orange", "ic_red", "ic_pink", "ic_yellow"].forEach(function (n) {
+    var im = new Image(); im.src = n + ".png"; // 先読み＝初回的中でアイコンが欠けない
+  });
+  var RAIN_MS = 2000; // 雨の長さ（この後にバッジ表示）
+  function spawnRain(cam, url) {
+    var old = cam.querySelector(".hit-rain");
+    if (old) old.parentNode.removeChild(old);
+    var box = document.createElement("div");
+    box.className = "hit-rain";
+    var w = cam.clientWidth || 400, h = cam.clientHeight || 400;
+    for (var i = 0; i < 16; i++) {
+      var im = document.createElement("img");
+      im.className = "hit-rain-ic";
+      im.src = url;
+      im.style.height = (56 + Math.round(Math.random() * 60)) + "px";
+      im.style.left = Math.round(w * (0.25 + Math.random() * 1.0)) + "px";
+      im.style.setProperty("--dx", -Math.round(w * (0.55 + Math.random() * 0.55)) + "px");
+      im.style.setProperty("--dy", (h + 280) + "px");
+      im.style.setProperty("--dur", (1.05 + Math.random() * 0.5).toFixed(2) + "s");
+      im.style.setProperty("--dly", (Math.random() * 0.9).toFixed(2) + "s");
+      box.appendChild(im);
+    }
+    cam.appendChild(box);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, RAIN_MS + 900);
+  }
+
+  function fireHitFx(slot, hit, rc) {
+    var icon = rc && ICON_BY_COLOR[rc.color] ? ICON_BY_COLOR[rc.color] : null;
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
       if (!el) return;
       var cam = el.closest(".cam");
       if (!cam) return;
-      var old = cam.querySelector(".hit-fx-badge");
-      if (old) old.parentNode.removeChild(old);
-      var badge = document.createElement("div");
-      badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "");
-      var typeLabel = hit.type && hit.type !== "3連単" ? " " + hit.type : "";
-      var multLabel = hit.mult ? " " + hit.mult + "倍" : "";
-      // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
-      badge.textContent = hit.manche
-        ? "🌈 万車的中！" + (hit.note ? " note" : "") + multLabel
-        : (hit.note ? "🔥 note的中！" : "🎯 的中！") + typeLabel + multLabel;
-      cam.appendChild(badge);
-      fitHitBadge(badge, cam); // ワイプ幅いっぱいの最大サイズ（はみ出す時だけ段階縮小・8/7 FB59）
       cam.classList.add("hit-fx");
       if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
       if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
-      setTimeout(function () {
-        if (badge.parentNode) badge.parentNode.removeChild(badge);
-        if (!cam.querySelector(".hit-fx-badge")) {
-          cam.classList.remove("hit-fx"); cam.classList.remove("hit-fx-manche"); cam.classList.remove("hit-fx-note");
-        }
-      }, HIT_FX_MS);
+      if (icon) spawnRain(cam, icon);                     // 前奏＝アイコンの雨（8/7 FB65）
+      setTimeout(function () { showHitBadge(cam, hit); }, icon ? RAIN_MS : 0);
     });
+  }
+  function showHitBadge(cam, hit) {
+    var old = cam.querySelector(".hit-fx-badge");
+    if (old) old.parentNode.removeChild(old);
+    var badge = document.createElement("div");
+    badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "");
+    var typeLabel = hit.type && hit.type !== "3連単" ? " " + hit.type : "";
+    var multLabel = hit.mult ? " " + hit.mult + "倍" : "";
+    // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
+    badge.textContent = hit.manche
+      ? "🌈 万車的中！" + (hit.note ? " note" : "") + multLabel
+      : (hit.note ? "🔥 note的中！" : "🎯 的中！") + typeLabel + multLabel;
+    cam.appendChild(badge);
+    fitHitBadge(badge, cam); // ワイプ幅いっぱいの最大サイズ（はみ出す時だけ段階縮小・8/7 FB59）
+    setTimeout(function () {
+      if (badge.parentNode) badge.parentNode.removeChild(badge);
+      if (!cam.querySelector(".hit-fx-badge")) {
+        cam.classList.remove("hit-fx"); cam.classList.remove("hit-fx-manche"); cam.classList.remove("hit-fx-note");
+      }
+    }, HIT_FX_MS);
   }
 
   /** 的中バッジの自動フィット（8/7 FB59）：基本サイズ＝ワイプ幅いっぱい・実テキストが収まらない時だけ
