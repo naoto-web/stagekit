@@ -699,12 +699,16 @@
   }
 
   /** 2レース表示の列見出し（場名R＋そのレースがnote予想なら🔥note予想）。
-      🔥note予想はひと塊で改行（語中でちぎれない・入らない時は塊ごと2行目へ＝8/7 FB63） */
-  function raceColHead(rc, k) {
+      🔥note予想はひと塊で改行（語中でちぎれない・入らない時は塊ごと2行目へ＝8/7 FB63）。
+      split=true（②用・8/7 FB64）＝note表記を常に2行目へ＝ラベル幅が半分になり、
+      「ラベルは列幅まで縮小」ルール下でも約2倍の大きさで表示できる（チップの列幅計算には無影響） */
+  function raceColHead(rc, k, split) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
+    var note = p && p.entry.isNote;
     return '<div class="race-col-head">' + esc(keyLabel(k)) +
       (k ? gradeBadge(String(k).split("|")[0]) : "") +
-      (p && p.entry.isNote ? ' <span class="note-tag">🔥note予想</span>' : "") + "</div>";
+      (note ? (split ? '<br><span class="note-tag">🔥note予想</span>' : ' <span class="note-tag">🔥note予想</span>') : "") +
+      "</div>";
   }
 
   function renderPreds() {
@@ -823,7 +827,7 @@
             bMeta.classList.toggle("hidden", !mt);
           }
           band.classList.remove("buy-xl", "buy-lg");
-          band.innerHTML = (key ? raceColHead(rc, key) : "") + raceBuyHtml(rc, key, false, true);
+          band.innerHTML = (key ? raceColHead(rc, key, true) : "") + raceBuyHtml(rc, key, false, true);
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
         }
       });
