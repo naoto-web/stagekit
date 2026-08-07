@@ -680,6 +680,9 @@
     if (!scope) return;
     var cols = scope.querySelectorAll(".race-col");
     if (cols.length) {
+      // ⚠️1場表示は帯そのものにscaleを掛ける（下のelse）＝2〜3場へ切り替えた時に帯の拡大が残留し、
+      // 中身全体が1.6倍で描かれ右列が見切れる実バグ（8/7 FB61・えーすnote＋和歌山で実発生）→必ず解除
+      scope.style.transform = "";
       for (var i = 0; i < cols.length; i++) fitColBox(cols[i]);
     } else {
       fitColBox(scope); // 1場表示＝帯そのものを1つの箱として扱う
