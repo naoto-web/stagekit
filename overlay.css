@@ -591,15 +591,31 @@ body.race-sub-on .race-sub { display: flex; }
   padding: 8px 18px; border: 1px dashed var(--panel-line); border-radius: 8px;
   background: rgba(0,0,0,.3); }
 
-/* 的中者アイコンの雨（8/7 FB65）＝バッジの前奏約2秒・右上→左下へ流れる。バッジ(z5)より下(z4) */
+/* 的中者アイコンの走行（8/7 FB65→FB67で真横化）＝右から左へ駆け抜け＋砂埃。バッジ(z5)より下(z4) */
 .hit-rain { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 4; }
-.hit-rain-ic { position: absolute; top: -230px; will-change: transform;
-  filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
+.hit-runner { position: absolute; will-change: transform;
   /* 速度カーブ＝勢いよく入る→中央ゆっくり→スッと抜ける（8/7 FB66・fast-slow-fastのS字） */
-  animation: hitRainFall var(--dur, 2.6s) cubic-bezier(.15, .6, .85, .4) var(--dly, 0s) both; }
-@keyframes hitRainFall {
-  from { transform: translate(0, 0) rotate(-12deg); }
-  to { transform: translate(var(--dx, -300px), var(--dy, 700px)) rotate(10deg); }
+  animation: hitRainRun var(--dur, 2.6s) cubic-bezier(.15, .6, .85, .4) var(--dly, 0s) both; }
+@keyframes hitRainRun {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--dx, -1200px)); }
+}
+/* 走行中の縦揺れ＝ペダリングのバウンド感 */
+.hit-rain-ic { display: block; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
+  animation: riderBob .34s ease-in-out infinite alternate; }
+@keyframes riderBob {
+  from { transform: translateY(0) rotate(-3deg); }
+  to { transform: translateY(-6px) rotate(-2deg); }
+}
+/* 砂埃＝後輪（右下）から右後方へ舞い上がる連続パフ。大きさはキャラ連動（親のfont-size=em基準） */
+.dust { position: absolute; right: -0.12em; bottom: 0.02em; width: 0.34em; height: 0.34em; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(219, 201, 163, .8), rgba(180, 160, 120, .32) 62%, transparent);
+  filter: blur(1px); opacity: 0;
+  animation: dustPuff .55s linear infinite; animation-delay: inherit; }
+.dust.d2 { right: -0.02em; width: 0.26em; height: 0.26em; animation-delay: .27s; }
+@keyframes dustPuff {
+  0% { transform: translate(0, 0) scale(.35); opacity: .85; }
+  100% { transform: translate(0.3em, -0.26em) scale(1.8); opacity: 0; }
 }
 
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
