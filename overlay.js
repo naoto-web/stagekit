@@ -1196,27 +1196,28 @@
   ["ic_blue", "ic_green", "ic_orange", "ic_red", "ic_pink", "ic_yellow"].forEach(function (n) {
     var im = new Image(); im.src = n + ".png"; // 先読み＝初回的中でアイコンが欠けない
   });
-  var RAIN_MS = 2000; // 雨の長さ（この後にバッジ表示）
+  var RAIN_MS = 4500; // 雨の長さ（この後にバッジ表示・8/7 FB66で2秒→4.5秒に延長）
   function spawnRain(cam, url) {
     var old = cam.querySelector(".hit-rain");
     if (old) old.parentNode.removeChild(old);
     var box = document.createElement("div");
     box.className = "hit-rain";
     var w = cam.clientWidth || 400, h = cam.clientHeight || 400;
-    for (var i = 0; i < 16; i++) {
+    // FB66：数16→80・サイズ90〜180px・1体2.2〜3.2秒・群れ全体で約4.5秒（易きは中央ゆっくりのS字＝CSS側）
+    for (var i = 0; i < 80; i++) {
       var im = document.createElement("img");
       im.className = "hit-rain-ic";
       im.src = url;
-      im.style.height = (56 + Math.round(Math.random() * 60)) + "px";
-      im.style.left = Math.round(w * (0.25 + Math.random() * 1.0)) + "px";
-      im.style.setProperty("--dx", -Math.round(w * (0.55 + Math.random() * 0.55)) + "px");
-      im.style.setProperty("--dy", (h + 280) + "px");
-      im.style.setProperty("--dur", (1.05 + Math.random() * 0.5).toFixed(2) + "s");
-      im.style.setProperty("--dly", (Math.random() * 0.9).toFixed(2) + "s");
+      im.style.height = (90 + Math.round(Math.random() * 90)) + "px";
+      im.style.left = Math.round(w * (0.15 + Math.random() * 1.1)) + "px";
+      im.style.setProperty("--dx", -Math.round(w * (0.6 + Math.random() * 0.6)) + "px");
+      im.style.setProperty("--dy", (h + 340) + "px");
+      im.style.setProperty("--dur", (2.2 + Math.random() * 1.0).toFixed(2) + "s");
+      im.style.setProperty("--dly", (Math.random() * 2.2).toFixed(2) + "s");
       box.appendChild(im);
     }
     cam.appendChild(box);
-    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, RAIN_MS + 900);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, RAIN_MS + 1200);
   }
 
   function fireHitFx(slot, hit, rc) {
