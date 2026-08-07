@@ -1164,7 +1164,7 @@
   /* ---------- 的中演出（結果入力で的中が出たら当たった配信者のワイプに表示） ----------
      状態更新のたびに的中リストを前回と比較し、増えた的中だけ発火（リロード時は再生しない）。 */
   var seenHits = null; // null＝初回未初期化
-  var HIT_FX_MS = 20000; // 8/6 FB46：12秒→20秒に延長
+  var HIT_FX_MS = 27000; // 8/6 FB46：12秒→20秒→8/7 FB62：+7秒＝27秒に延長
   function checkNewHits() {
     var ids = {};
     derived.hits.forEach(function (h) { ids[h.id] = h; });
