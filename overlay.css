@@ -238,15 +238,17 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
      行の高さを変えない（グリフが箱より大きくても行ボックスは太らない＝数字チップと同じ手法）。
    ⚠️サイズは「数字チップの約85%」を目安：数字は字面が小さく漢字は全角いっぱいなので、
      同じpxだと漢字だけ大きく見えるため。
-   色＝車番9色のどれとも被らない中間グレー＋黒文字（8/8 FB80で白→黒。
-   このグレーとの明暗差は黒5.6:1＞白3.8:1なので、黒のほうが読みやすくもある）。
+   色＝車番9色のどれとも被らない淡いグレー＋黒文字。
+   FB80で文字を白→黒にし、FB81でグレーを #7c848d → #cbd1d8 へ明るくした
+   （黒文字とのコントラストが 5.6:1 → 11.8:1 になり格段に読みやすい）。
+   ⚠️これ以上明るくすると車番1の白チップと見分けが付きにくくなるので、この辺りが下限。
    文字色は車番の明色チップ（白/黄/桃）と同じ #16181c を使い回す。
    枠線・角丸は .car と同一値で統一 */
 .pl-all {
   display: inline-flex; align-items: center; justify-content: center;
   width: auto; height: 34px; padding: 0 3px;
   border: 2px solid rgba(0,0,0,.35); border-radius: 6px;
-  background: #7c848d; color: #16181c;
+  background: #cbd1d8; color: #16181c;
   font-weight: 900; font-size: 28px;
 }
 /* 縮小チップ（①トークの2〜3場表示）用＝車番チップ(.car.sm 26x26)と行高を揃える */
