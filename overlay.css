@@ -231,19 +231,24 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .pl-type { font-size: 14px; font-weight: 900; color: var(--acc-text); background: var(--acc);
   padding: 3px 9px; border-radius: 6px; margin-right: 4px; }
 .pl-txt { font-size: 16px; font-weight: 800; color: var(--sub); }
-/* 「全」＝枠なし・文字だけ（8/8 FB78・視聴者から「レインボーは見づらい」FBを受けて
-   FB76の虹バッジを撤回）。枠を外したぶん文字を大きくして視認性を確保する。
-   ⚠️行の高さは height で固定したまま font-size だけ上げる＝グリフが箱より大きくても
-     行ボックスは太らないので、上下の行に干渉しない（数字チップと同じ手法）。
-   ⚠️サイズは「数字チップの約85%」を目安にしている：数字は字面が小さく、漢字は字面が
-     ほぼ全角いっぱいなので、同じpxだと漢字だけ大きく見えるため */
+/* 「全」＝灰色チップ・文字ギリギリの枠（8/8 FB79・配信者要望で枠を復活。
+   経緯＝FB76レインボー→視聴者「見づらい」→FB78で枠なし→FB79で灰色の枠アリに着地）。
+   文字サイズはFB78のまま（配信者が「この大きさで」と指定）＝枠は文字にぴったり付く。
+   ⚠️width:auto＋左右padding最小＝横は文字なり。縦は height を数字チップと同じにして
+     行の高さを変えない（グリフが箱より大きくても行ボックスは太らない＝数字チップと同じ手法）。
+   ⚠️サイズは「数字チップの約85%」を目安：数字は字面が小さく漢字は全角いっぱいなので、
+     同じpxだと漢字だけ大きく見えるため。
+   色＝車番9色のどれとも被らない中間グレー＋白文字（車番1の白チップとの誤読も防ぐ）。
+   枠線・角丸は .car と同一値で統一 */
 .pl-all {
   display: inline-flex; align-items: center; justify-content: center;
-  width: auto; height: 34px; padding: 0 2px;
-  font-weight: 900; font-size: 28px; color: var(--txt);
+  width: auto; height: 34px; padding: 0 3px;
+  border: 2px solid rgba(0,0,0,.35); border-radius: 6px;
+  background: #7c848d; color: #fff;
+  font-weight: 900; font-size: 28px;
 }
 /* 縮小チップ（①トークの2〜3場表示）用＝車番チップ(.car.sm 26x26)と行高を揃える */
-.pl-all.sm { height: 26px; font-size: 21px; }
+.pl-all.sm { height: 26px; padding: 0 2px; border-radius: 5px; font-size: 21px; }
 /* BOX＝「全」と同じ買い目の意味を決める語なので、地の文(.pl-txt 16pxグレー)から
    格上げして同じバッジ様式で出す（8/8 FB69・チップに埋もれて読めなかった） */
 .pl-box {
