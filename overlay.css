@@ -98,6 +98,21 @@ body.scene-ad     #scene-ad     { display: block; }
 }
 body.wm-on .gbar::before { display: block; }
 .gbar > * { position: relative; z-index: 1; }
+/* ヘッダー左端＝自チャンネルのロゴ「俺たちの競輪ライブ」（8/9 FB93・Naoto指示「一番左上に」）。
+   これが入ったぶん、CTCロゴ・場タブ・時計はgapぶん右へ自動でずれる（flexなので座標指定は不要）。
+   ⚠️あえてマークアップを触らずCSSだけで足している：同じヘッダー構造が overlay.html のほか
+      検証ハーネス4枚にも写しであり、要素を足すと5か所を同期させることになるため。
+      ::before は透かし柄が使用中なので ::after を使い、order:-1 で左端へ回している。
+   ⚠️.gbar > * のz-index指定は疑似要素に当たらないので、ここで自前に position/z-index を持たせる */
+.gbar::after {
+  content: ""; order: -1; flex: 0 0 auto; position: relative; z-index: 1;
+  /* 実寸比 2.081:1。8/9 FB94で 80→92px に拡大（Naoto指示「もう少し大きく」）。
+     ⚠️ヘッダーは96px高＋overflow:hiddenなので、上下の余白を残すとこの辺りが実質の上限。
+        これ以上大きくしたいときはヘッダー自体の高さを上げる改修になる */
+  width: 191px; height: 92px;
+  background: url("brand_logo.png") left center / contain no-repeat;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
+}
 
 /* ヘッダー左上＝チャンネルバナー画像（俺たちの競輪ライブ・7/31差し替え） */
 .brand-img { height: 64px; width: auto; display: block; border-radius: 8px;
