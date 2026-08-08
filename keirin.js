@@ -374,8 +374,11 @@
     var tokens = [];
     if (ex.type) tokens.push({ t: "label", v: ex.type });
     var buf = "";
+    // BOXは買い目の意味そのものを決める語なので、地の文（txt）ではなく専用トークンに分離して
+    // チップと同格のバッジで描く（8/8 FB69・16pxグレーでチップに埋もれていた）
     var flush = function () {
-      if (buf.trim()) tokens.push({ t: "txt", v: buf.trim() });
+      var v = buf.trim();
+      if (v) tokens.push(/^(BOX|ボックス|ﾎﾞｯｸｽ)$/i.test(v) ? { t: "box" } : { t: "txt", v: v });
       buf = "";
     };
     ex.rest.split("").forEach(function (c) {

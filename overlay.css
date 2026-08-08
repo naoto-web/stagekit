@@ -66,7 +66,7 @@ body[data-theme="w"] .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.18
 body[data-theme="w"] .slist-row { border-bottom-color: rgba(0,0,0,.08); }
 body[data-theme="w"] .narabi-row { background: rgba(0,0,0,.05); }
 body[data-theme="w"] .ore-row { background: rgba(0,0,0,.04); }
-body[data-theme="w"] .pl-all { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.3); }
+body[data-theme="w"] .pl-all, body[data-theme="w"] .pl-box { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.3); }
 body[data-theme="w"] .ticker { background: rgba(255,255,255,.88); }
 body[data-theme="w"] .tick-manche { color: #d32f2f; }
 
@@ -235,6 +235,15 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
   width: 34px; height: 34px; border-radius: 6px; font-weight: 900; font-size: 17px;
   background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.3); color: var(--txt);
 }
+/* BOX＝「全」と同じ買い目の意味を決める語なので、地の文(.pl-txt 16pxグレー)から
+   格上げして同じバッジ様式で出す（8/8 FB69・チップに埋もれて読めなかった） */
+.pl-box {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 34px; padding: 0 10px; border-radius: 6px;
+  font-weight: 900; font-size: 19px; line-height: 1; letter-spacing: .06em;
+  background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.3); color: var(--txt);
+}
+.pl-box.sm { height: 26px; padding: 0 7px; font-size: 15px; border-radius: 5px; }
 .pl-gap { width: 12px; }
 
 .vrail { position: absolute; right: 8px; top: 96px; width: 400px; bottom: 8px;
@@ -414,6 +423,7 @@ body.debug .video-ph { display: flex; }
 .talk-band .buy-line .car.sm { font-size: 24px; }
 .talk-band .buy-line .pl-sep { font-size: 18px; padding: 0 2px; }
 .talk-band .buy-line .pl-all { font-size: 20px; }
+.talk-band .buy-line .pl-box { font-size: 24px; }
 
 /* 予想帯ヘッダーは2行にしない：入り切らない時はJSが金額・バッジを段階縮小（8/6 FB） */
 .panel-head.band-head { flex-wrap: nowrap; white-space: nowrap; }
@@ -452,6 +462,7 @@ body.debug .video-ph { display: flex; }
 .race-band .pred-line { font-size: 22px; }
 .race-band .buy-line .pl-sep { font-size: 16px; padding: 0 1px; }
 .race-band .buy-line .pl-all { width: 24px; font-size: 18px; }
+.race-band .buy-line .pl-box { height: 26px; padding: 0 7px; font-size: 18px; border-radius: 4px; }
 .race-band .ore-row { padding: 3px 8px; border-width: 1.5px; }
 .race-band .ore-label { font-size: 13px; }
 .race-band .buy-meta { font-size: 24px; font-weight: 900; color: var(--txt); } /* 8/6 FB10で拡大 */
@@ -471,12 +482,14 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line.buy-xl .car { width: 30px; height: 36px; font-size: 32px; border-radius: 4px; }
 .race-band .buy-line.buy-xl .pl-sep { font-size: 20px; }
 .race-band .buy-line.buy-xl .pl-all { width: 32px; font-size: 24px; }
+.race-band .buy-line.buy-xl .pl-box { height: 36px; padding: 0 9px; font-size: 24px; }
 .race-band .buy-line.buy-xl .pred-line { font-size: 30px; }
 .race-band .buy-line.buy-xl .ore-label { font-size: 17px; }
 .race-band .buy-line.buy-xl .buy-meta { font-size: 28px; }
 .race-band .buy-line.buy-lg .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
 .race-band .buy-line.buy-lg .pl-sep { font-size: 18px; }
 .race-band .buy-line.buy-lg .pl-all { width: 28px; font-size: 21px; }
+.race-band .buy-line.buy-lg .pl-box { height: 31px; padding: 0 8px; font-size: 21px; }
 .race-band .buy-line.buy-lg .pred-line { font-size: 26px; }
 .race-band .buy-line.buy-lg .ore-label { font-size: 15px; }
 .race-band .buy-line.buy-lg .buy-meta { font-size: 26px; }
@@ -511,6 +524,7 @@ body.race-sub-on .race-sub { display: flex; }
 .sub-line .car { width: 24px; height: 28px; font-size: 26px; border-radius: 3px; }
 .sub-line .pl-sep { font-size: 16px; padding: 0 1px; }
 .sub-line .pl-all { width: 26px; font-size: 19px; }
+.sub-line .pl-box { height: 28px; padding: 0 7px; font-size: 19px; border-radius: 4px; }
 .sub-line .pred-line { font-size: 22px; }
 /* 折り返し禁止＝JS(fitSubRows)が幅ぴったりの倍率に縮める（8/6 FB14・買い目の改行対策） */
 .sub-line .pred-line.chips { flex-wrap: nowrap; }

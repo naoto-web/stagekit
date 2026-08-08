@@ -108,9 +108,13 @@
       表示側は totals[現在の配信者id] を参照するので、シフト交代直後は自然に0スタートになる */
   function day(state) {
     var totals = {};
-    state.racers.forEach(function (rc) { totals[rc.id] = { invest: 0, refund: 0 }; });
+    // pending＝「的中しているのに回収額が未入力」のレースを抱えている状態（8/8）。
+    // 回収は手入力なので、入力までの間このフラグが立つ。表示側は回収額の代わりに
+    // 「集計中」を出す＝ティッカーが的中を流しているのに回収¥0、という矛盾を防ぐ。
+    // 判定条件はコンソールの警告バー（checkRefundGaps）と同一に揃えてある
+    state.racers.forEach(function (rc) { totals[rc.id] = { invest: 0, refund: 0, pending: false }; });
     function tOf(pid) {
-      if (!totals[pid]) totals[pid] = { invest: 0, refund: 0 };
+      if (!totals[pid]) totals[pid] = { invest: 0, refund: 0, pending: false };
       return totals[pid];
     }
 
@@ -136,6 +140,9 @@
         var res = s.byRacer[pid];
         if (!res) return;
         tOf(pid).refund += res.refund;
+        // 買い目（有料分）の的中がある＋投資済み＋回収未入力＝集計待ち。
+        // 俺たち目だけの的中は金額計算の対象外なので回収入力も不要＝pendingにしない
+        if (res.hits.length && res.invest > 0 && !res.refund) tOf(pid).pending = true;
         // 俺たち目と同じ目が買い目でもヒットした場合は俺たち目名義だけ残す（8/6 FB53・かさ増し防止）
         var oreCombos = {};
         (res.oreHits || []).forEach(function (h) { oreCombos[h.comboLabel] = true; });

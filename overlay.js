@@ -298,6 +298,7 @@
         case "sep": return '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
         case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
         case "all": return '<span class="pl-all">全</span>';
+        case "box": return '<span class="pl-box' + (small ? " sm" : "") + '">BOX</span>';
         case "gap": return '<span class="pl-gap"></span>';
         default: return '<span class="pl-txt">' + esc(tk.v) + "</span>";
       }
@@ -775,7 +776,11 @@
         var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
           var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
-          bandInv.textContent = bt ? "投資 " + fmtYen(bt.invest) + "　回収 " + fmtYen(bt.refund) : "";
+          // 回収未入力の的中を抱えている間は金額でなく「集計中」（8/8）＝
+          // ティッカーが的中を流しているのに回収¥0、という食い違いを見せない
+          bandInv.textContent = bt
+            ? "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund))
+            : "";
         }
         if (color) {
           bandHead.style.background = color;
