@@ -66,7 +66,8 @@ body[data-theme="w"] .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.18
 body[data-theme="w"] .slist-row { border-bottom-color: rgba(0,0,0,.08); }
 body[data-theme="w"] .narabi-row { background: rgba(0,0,0,.05); }
 body[data-theme="w"] .ore-row { background: rgba(0,0,0,.04); }
-body[data-theme="w"] .pl-all, body[data-theme="w"] .pl-box { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.3); }
+/* .pl-all（全）はテーマによらずレインボー固定なので、白テーマの淡色上書きからは外してある（8/8 FB76） */
+body[data-theme="w"] .pl-box { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.3); }
 body[data-theme="w"] .ticker { background: rgba(255,255,255,.88); }
 body[data-theme="w"] .tick-manche { color: #d32f2f; }
 
@@ -230,11 +231,23 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .pl-type { font-size: 14px; font-weight: 900; color: var(--acc-text); background: var(--acc);
   padding: 3px 9px; border-radius: 6px; margin-right: 4px; }
 .pl-txt { font-size: 16px; font-weight: 800; color: var(--sub); }
+/* 「全」＝レインボーバッジ（8/8 FB76・Naoto指定）。
+   ⚠️万車バッジ方式（スペクトラム2周×background-size:200%）をそのまま持ってくると、
+     幅24〜34pxのこのバッジでは1色あたり3px程度になり「虹」に見えず色ノイズになる（実測で確認）。
+     → こちらは「1本のスペクトラムがバッジ幅にちょうど収まる」サイズ指定にして、
+        動きは背景位置の掃引ではなく hue-rotate（色相そのものが巡る）で出す。
+   文字は白＋黒の8方向フチ＝虹のどの色帯（黄も含む）に重なっても沈まない。
+   hue-rotateは白（文字・枠）と黒（フチ）には効かないので、背景だけが巡る */
 .pl-all {
   display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; border-radius: 6px; font-weight: 900; font-size: 17px;
-  background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.3); color: var(--txt);
+  background: linear-gradient(120deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff);
+  border: 2px solid #fff; color: #fff;
+  text-shadow: -1.2px -1.2px 0 #000, 1.2px -1.2px 0 #000, -1.2px 1.2px 0 #000, 1.2px 1.2px 0 #000,
+    0 -1.2px 0 #000, 0 1.2px 0 #000, -1.2px 0 0 #000, 1.2px 0 0 #000;
+  animation: allHue 5s linear infinite;
 }
+@keyframes allHue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
 /* BOX＝「全」と同じ買い目の意味を決める語なので、地の文(.pl-txt 16pxグレー)から
    格上げして同じバッジ様式で出す（8/8 FB69・チップに埋もれて読めなかった） */
 .pl-box {
