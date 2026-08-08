@@ -30,7 +30,11 @@
 
 <!-- ══════════ 場・レース ══════════ -->
 <section class="card">
-  <h2>場・レース <span class="h-sub" id="race-date"></span></h2>
+  <div class="card-head">
+    <h2>場・レース <span class="h-sub" id="race-date"></span></h2>
+    <!-- 席替えは配信中に使う操作＝本日設定の中だけでなく常時見える位置にも置く（8/8 FB74・押すと即確定） -->
+    <button class="btn seat-swap" id="btn-seat-swap-quick" title="席1と席2を入れ替えて即保存（もう一度押すと元に戻る）">⇄ 席替え</button>
+  </div>
   <div class="venue-row" id="venue-row"></div>
   <div class="race-chip-grid" id="race-chips"></div>
   <div id="race-sub-row"></div>

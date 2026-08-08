@@ -805,6 +805,26 @@
     $("racer-2").value = a;
     saveSettings();
   });
+  /* 席替えのクイックボタン（8/8 FB74）：本日設定を開かずに1タップで入替＋確定。
+     本日設定のフォームは読まない＝編集途中の未保存項目を巻き込んで保存しないため。
+     席は a(左カメラ)⇄b(右カメラ) の入替のみ＝もう一度押せば元に戻る（1人配信は席の移動になる） */
+  $("btn-seat-swap-quick").addEventListener("click", function () {
+    var btn = this;
+    if (!(state.racers || []).length) { // 誰も選ばれていない＝入れ替える席がない
+      btn.textContent = "本日設定で配信者を選択";
+      setTimeout(function () { btn.textContent = "⇄ 席替え"; }, 2000);
+      return;
+    }
+    (state.racers || []).forEach(function (r, i) {
+      var s = (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b");
+      r.seat = (s === "a") ? "b" : "a";
+    });
+    save();
+    renderAll();
+    btn.classList.add("done");
+    btn.textContent = "⇄ 入替えました";
+    setTimeout(function () { btn.classList.remove("done"); btn.textContent = "⇄ 席替え"; }, 2000);
+  });
 
   /* ---------- 広告・待機 ---------- */
   function renderAssets() {

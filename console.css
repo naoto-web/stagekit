@@ -38,6 +38,12 @@ body {
   background: #24272e; border: 1px solid #363a43;
 }
 .card h2 { font-size: 15px; color: #d9a441; margin-bottom: 10px; display: inline-block; }
+/* 見出し行に常設ボタンを置く（8/8 FB74・席替えのクイックボタン） */
+/* 幅が足りないドックではボタンを次の行へ落とす（右端で見切れさせない） */
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.card-head h2 { margin-bottom: 10px; }
+.btn.seat-swap { flex: none; white-space: nowrap; }
+.btn.seat-swap.done { background: #2f5d3a; border-color: #4c8b5e; color: #d8f5e0; }
 .h-sub { font-size: 12px; color: #9aa0ab; font-weight: 700; margin-left: 6px; }
 details.card summary { cursor: pointer; list-style: none; }
 details.card summary h2 { margin-bottom: 0; }
