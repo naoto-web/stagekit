@@ -1203,39 +1203,66 @@
     seenHits = ids;
   }
 
-  /* 的中者アイコンの雨（8/7 FB65）：バッジの前にその人のアイコンが右上→左下へ大量に流れる約2秒の前奏。
-     アイコンはメンバーカラー→中立ファイル名で解決（公開リポジトリに人名を出さない・的中者との一致は色キーで構造保証） */
-  var ICON_BY_COLOR = { "青": "ic_blue.png", "緑": "ic_green.png", "オレンジ": "ic_orange.png", "橙": "ic_orange.png",
-    "赤": "ic_red.png", "ピンク": "ic_pink.png", "桃": "ic_pink.png", "黄": "ic_yellow.png", "黄色": "ic_yellow.png" };
-  ["ic_blue", "ic_green", "ic_orange", "ic_red", "ic_pink", "ic_yellow"].forEach(function (n) {
-    var im = new Image(); im.src = n + ".png"; // 先読み＝初回的中でアイコンが欠けない
+  /* ══════════ 配信者ごとの個人演出（8/8 FB73＝テーブル化） ══════════
+     方針：コードにも公開リポジトリにも人名を出さない（8/7 FB65から継続）。すべて「色キー」で表現する。
+     しくみ：的中演出の3つの面に必ず m-<色キー> が付く
+             ・アイコン走行の箱 → .hit-rain.m-orange
+             ・ワイプ枠         → .cam.hit-fx.m-orange
+             ・的中バッジ       → .hit-fx-badge.m-orange
+       → 見た目だけの個人演出は overlay.css にセレクタを足すだけで足りる（JS変更不要）。
+     MEMBER_FXは「JSでしか変えられない量」と「名前を付けて使い回す効果クラス」を書く場所：
+             fx     …付与するクラス（複数メンバーで使い回せる効果に名前を付ける）
+             count  …走るアイコンの体数（既定80）
+             size   …[最小px, 最大px]（既定[80,180]・奥のレーンほど小さい）
+             dur    …1体の走破秒[最小,最大]（既定[2.2,3.2]）
+             rainMs …走行の長さ＝バッジが出るまでの時間ms（既定4500）
+     追加手順：①下の表に色キーの行を足す ②必要ならoverlay.cssに見た目を書く
+               ③検証ハーネス raintest.html?key=<色キー> で撮って確認 */
+  var COLOR_KEY = { "青": "blue", "緑": "green", "オレンジ": "orange", "橙": "orange",
+    "赤": "red", "ピンク": "pink", "桃": "pink", "黄": "yellow", "黄色": "yellow" };
+  var MEMBER_FX = {
+    orange: { fx: ["dust-xl"] }   // 白いモクモクの砂埃（8/8 FB72）
+    // 例）red: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
+  };
+  var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
+
+  ["blue", "green", "orange", "red", "pink", "yellow"].forEach(function (k) {
+    var im = new Image(); im.src = "ic_" + k + ".png"; // 先読み＝初回的中でアイコンが欠けない
   });
-  var RAIN_MS = 4500; // 雨の長さ（この後にバッジ表示・8/7 FB66で2秒→4.5秒に延長）
-  // 白いモクモクの砂埃は橙メンバーだけの個人演出（8/8 FB72）。他メンバーは小さめの既定パフ
-  var DUST_XL_ICON = "ic_orange.png";
-  function spawnRain(cam, url) {
+  /** メンバーカラー→色キー（未登録の色は個人演出なし＝アイコンも雨も出ない従来動作） */
+  function memberKey(rc) { return rc && COLOR_KEY[rc.color] ? COLOR_KEY[rc.color] : ""; }
+  function fxConf(key) {
+    var c = MEMBER_FX[key] || {};
+    return { fx: c.fx || [], count: c.count || RAIN_DEFAULT.count, size: c.size || RAIN_DEFAULT.size,
+      dur: c.dur || RAIN_DEFAULT.dur, rainMs: c.rainMs || RAIN_DEFAULT.rainMs };
+  }
+
+  /* 的中者アイコンの走行（8/7 FB65→FB67で真横化）：バッジの前にその人のアイコンが右→左へ流れる前奏。
+     アイコンは色キー→中立ファイル名で解決（的中者との一致は色キーで構造保証） */
+  function spawnRain(cam, key) {
     var old = cam.querySelector(".hit-rain");
     if (old) old.parentNode.removeChild(old);
+    var conf = fxConf(key);
     var box = document.createElement("div");
-    box.className = "hit-rain" + (url === DUST_XL_ICON ? " dust-xl" : "");
+    box.className = ["hit-rain", "m-" + key].concat(conf.fx).join(" ");
     var w = cam.clientWidth || 400, h = cam.clientHeight || 400;
-    // FB66：数80・1体2.2〜3.2秒・群れ全体で約4.5秒（中央ゆっくりのS字＝CSS側）
+    // FB66：既定は数80・1体2.2〜3.2秒・群れ全体で約4.5秒（中央ゆっくりのS字＝CSS側）
     // FB67：右→左の真横走行＋砂埃。laneT＝奥行き（下のレーンほど大きく手前・前面に）
-    for (var i = 0; i < 80; i++) {
+    for (var i = 0; i < conf.count; i++) {
       var run = document.createElement("span");
       run.className = "hit-runner";
       var laneT = Math.random();
-      var size = Math.round(80 + laneT * 100); // 80〜180px（手前ほど大きい）
+      var size = Math.round(conf.size[0] + laneT * (conf.size[1] - conf.size[0])); // 手前ほど大きい
       run.style.top = Math.round(h * 0.06 + laneT * h * 0.60) + "px";
       run.style.left = "100%";
       run.style.fontSize = size + "px"; // 砂埃のサイズをキャラに連動させる基準（em）
       run.style.zIndex = String(1 + Math.round(laneT * 5));
       run.style.setProperty("--dx", -(w + 700) + "px");
-      run.style.setProperty("--dur", (2.2 + Math.random() * 1.0).toFixed(2) + "s");
+      run.style.setProperty("--dur", (conf.dur[0] + Math.random() * (conf.dur[1] - conf.dur[0])).toFixed(2) + "s");
       run.style.setProperty("--dly", (Math.random() * 2.2).toFixed(2) + "s");
       var im = document.createElement("img");
       im.className = "hit-rain-ic";
-      im.src = url;
+      im.src = "ic_" + key + ".png";
       im.style.height = size + "px";
       run.appendChild(im);
       var d1 = document.createElement("i"); d1.className = "dust";
@@ -1245,28 +1272,31 @@
       box.appendChild(run);
     }
     cam.appendChild(box);
-    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, RAIN_MS + 1200);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, conf.rainMs + 1200);
   }
 
   function fireHitFx(slot, hit, rc) {
-    var icon = rc && ICON_BY_COLOR[rc.color] ? ICON_BY_COLOR[rc.color] : null;
+    var key = memberKey(rc);
+    var rainMs = key ? fxConf(key).rainMs : 0;
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
       if (!el) return;
       var cam = el.closest(".cam");
       if (!cam) return;
       cam.classList.add("hit-fx");
+      if (key) cam.classList.add("m-" + key);             // 個人演出のフック（8/8 FB73）
       if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
       if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
-      if (icon) spawnRain(cam, icon);                     // 前奏＝アイコンの雨（8/7 FB65）
-      setTimeout(function () { showHitBadge(cam, hit); }, icon ? RAIN_MS : 0);
+      if (key) spawnRain(cam, key);                       // 前奏＝アイコンの走行（8/7 FB65）
+      setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
     });
   }
-  function showHitBadge(cam, hit) {
+  function showHitBadge(cam, hit, key) {
     var old = cam.querySelector(".hit-fx-badge");
     if (old) old.parentNode.removeChild(old);
     var badge = document.createElement("div");
-    badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "");
+    badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "") +
+      (key ? " m-" + key : "");
     var typeLabel = hit.type && hit.type !== "3連単" ? " " + hit.type : "";
     var multLabel = hit.mult ? " " + hit.mult + "倍" : "";
     // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
@@ -1279,6 +1309,7 @@
       if (badge.parentNode) badge.parentNode.removeChild(badge);
       if (!cam.querySelector(".hit-fx-badge")) {
         cam.classList.remove("hit-fx"); cam.classList.remove("hit-fx-manche"); cam.classList.remove("hit-fx-note");
+        if (key) cam.classList.remove("m-" + key); // 個人演出のフックも一緒に外す（8/8 FB73）
       }
     }, HIT_FX_MS);
   }

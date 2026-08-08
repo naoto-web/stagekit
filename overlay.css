@@ -632,6 +632,13 @@ body.race-sub-on .race-sub { display: flex; }
   100% { transform: translate(0.3em, -0.26em) scale(1.8); opacity: 0; }
 }
 
+/* ══════════ 配信者ごとの個人演出（8/8 FB73＝フック整備） ══════════
+   的中演出の3つの面に m-<色キー> が付く（色キー＝blue/green/orange/red/pink/yellow・人名は使わない）
+     .hit-rain.m-red …アイコン走行の箱／.cam.hit-fx.m-red …ワイプ枠／.hit-fx-badge.m-red …的中バッジ
+   見た目だけの個人演出はここにセレクタを足すだけでよい（overlay.jsの変更は不要）。
+   体数・サイズ・尺を変えたい場合だけ overlay.js の MEMBER_FX に書く。
+   下の dust-xl のように「効果に名前を付けたクラス」は複数メンバーで使い回せる */
+
 /* 白いモクモク＝橙メンバー専用の個人演出（8/8 FB72）。
    FB68で全員に入れた大型雲を、この色キーのときだけに限定した（他メンバーは上の既定パフのまま）。
    3つのradial-gradientで凸凹の雲シルエット。blurは廃止（大型化とのGPU負荷トレード） */
