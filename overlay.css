@@ -953,10 +953,11 @@ body.race-sub-on .race-sub { display: flex; }
    ⚠️絵は<img>でなくbackground-imageで持つ（FB86と同じ理由＝ラボから../web/overlay.cssを
       直参照しても404にならない）。尺はJS側の PRAY_BASE で管理 ══════════ */
 .fx-pray { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden;
-  /* 素材内の座標（fx_pray.png に対する%）＝目と顔の中心。絵を差し替えたらここも直す */
-  --eye-lx: 25.61%; --eye-rx: 60.31%; --eye-y: 38.84%; --face-x: 43.01%; --face-y: 38.84%;
+  /* 素材内の座標（fx_pray.png に対する%）＝目と顔の中心。
+     絵を差し替えたら 実装/素材加工/fx_pray_make.py を実行して出力値をここへ写す */
+  --eye-lx: 25.61%; --eye-rx: 60.31%; --eye-y: 38.84%; --face-x: 42.96%; --face-y: 38.84%;
   /* 寄りで顔を枠の中心へ持ってくる量＝(50% - 顔の位置)。translateは自分の実寸に対する% */
-  --tx: 6.99%; --ty: 11.16%; }
+  --tx: 7.04%; --ty: 11.16%; }
 .fx-pray-run { position: absolute; left: 50%; top: 50%; width: var(--pw); height: var(--ph);
   margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
   transform-origin: var(--face-x) var(--face-y); will-change: transform; }
@@ -979,10 +980,20 @@ body.race-sub-on .race-sub { display: flex; }
   75%      { transform: translate(calc(var(--a) * .8), var(--a)) rotate(calc(var(--r) * -.75)); }
 }
 .fx-pray-body.shake { animation: fxPrayTremor var(--sd) linear infinite; }
-.fx-pray-body.s1 { --a: .30%; --r: .14deg; --sd: .17s; }
-.fx-pray-body.s2 { --a: .75%; --r: .36deg; --sd: .125s; }
-.fx-pray-body.s3 { --a: 1.4%; --r: .70deg; --sd: .09s; }
-.fx-pray-body.s4 { --a: 2.3%; --r: 1.15deg; --sd: .062s; }
+/* 8/9 FB89で振幅・角度とも約55%に抑制（「震えすぎ」＝Naoto実見）。速さはほぼ据え置き＝
+   細かく速く小さく揺れる＝「プルプル」。振幅を戻したいのはこの4行だけ */
+.fx-pray-body.s1 { --a: .18%; --r: .08deg; --sd: .19s; }
+.fx-pray-body.s2 { --a: .42%; --r: .20deg; --sd: .14s; }
+.fx-pray-body.s3 { --a: .78%; --r: .38deg; --sd: .105s; }
+.fx-pray-body.s4 { --a: 1.25%; --r: .62deg; --sd: .075s; }
+/* 溜めに入ったら震えを完全に停止（8/9 FB89）。⚠️shakeクラスを外すだけだと
+   揺れた位置から中心へ1フレームで飛ぶ＝90msかけて中心に収める（ピタッと止まって見える）。
+   --a/--r はs4クラスから読むので、bodyのクラスは「s4 still」にする */
+@keyframes fxPrayStill {
+  from { transform: translate(var(--a), calc(var(--a) * -.6)) rotate(var(--r)); }
+  to   { transform: none; }
+}
+.fx-pray-body.still { animation: fxPrayStill .09s ease-out forwards; }
 .fx-pray-pose { position: absolute; inset: 0; will-change: transform; }
 /* 見開く直前の溜め＝ぎゅっと縦に縮む → 開眼で弾ける */
 @keyframes fxPraySqueeze { from { transform: scale(1, 1); } to { transform: scale(1.025, .955); } }
@@ -998,32 +1009,46 @@ body.race-sub-on .race-sub { display: flex; }
   background: url("fx_pray_shut.png") center center / contain no-repeat; }
 @keyframes fxPrayLidOff { to { opacity: 0; } }
 .fx-pray.open .fx-pray-lid { animation: fxPrayLidOff .05s linear forwards; }
-/* 目の閃光＝白い核＋金の輪。left/topは素材内の目の中心 */
+/* 目の閃光＝白い核＋金の輪。left/topは素材内の目の中心。
+   8/9 FB89で増強（「もっと大きく強く」＝Naoto指示）＝広がる輪(.fx-pray-eye)を1.5倍にし、
+   消えずに残る白い核(.core)を別要素で足した＝見開いたあと余韻の間ずっと目が光っている */
 .fx-pray-eye, .fx-pray-beam { position: absolute; opacity: 0; }
-.fx-pray-eye { width: 30%; aspect-ratio: 1; transform: translate(-50%, -50%) scale(.12);
+.fx-pray-eye { width: 46%; aspect-ratio: 1; transform: translate(-50%, -50%) scale(.12);
   border-radius: 50%;
-  background: radial-gradient(closest-side, #fff 0 24%, rgba(255,248,205,.95) 42%,
-    rgba(255,203,58,.55) 66%, rgba(255,183,30,0) 79%); }
+  background: radial-gradient(closest-side, #fff 0 30%, rgba(255,250,220,.98) 46%,
+    rgba(255,214,74,.62) 68%, rgba(255,183,30,0) 82%); }
 .fx-pray-eye.e-l, .fx-pray-beam.e-l { left: var(--eye-lx); top: var(--eye-y); }
 .fx-pray-eye.e-r, .fx-pray-beam.e-r { left: var(--eye-rx); top: var(--eye-y); }
 @keyframes fxPrayEye {
   0%   { opacity: 0; transform: translate(-50%, -50%) scale(.10); }
-  10%  { opacity: 1; transform: translate(-50%, -50%) scale(.62); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
+  8%   { opacity: 1; transform: translate(-50%, -50%) scale(.85); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(3.4); }
 }
-.fx-pray.open .fx-pray-eye { animation: fxPrayEye .66s ease-out forwards; }
+.fx-pray.open .fx-pray-eye { animation: fxPrayEye .78s ease-out forwards; }
+/* 白い核＝レンズの中に居座る光。⚠️セレクタは .fx-pray-eye.core で上の1本より詳しいので勝つ */
+/* ⚠️残り方を強くしすぎると瞳を白く塗り潰して「目の色が消えた顔」になる＝
+   最後は0.32まで落として「瞳の上のハイライト」に留める（撮影で確認） */
+.fx-pray-eye.core { width: 15%;
+  background: radial-gradient(closest-side, #fff 0 52%, rgba(255,252,235,.95) 72%, rgba(255,236,150,0) 100%); }
+@keyframes fxPrayCore {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+  7%   { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  40%  { opacity: 1; transform: translate(-50%, -50%) scale(.92); }
+  100% { opacity: .32; transform: translate(-50%, -50%) scale(1.02); }
+}
+.fx-pray.open .fx-pray-eye.core { animation: fxPrayCore 1.5s ease-out forwards; }
 /* 十字スパーク＝横棒（本体）＋縦棒（::before）。回転は自分の中心なので位置は動かない */
-.fx-pray-beam { width: 86%; height: 3%; transform: translate(-50%, -50%) scaleX(.06);
-  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,240,180,.5) 22%,
-    #fff 50%, rgba(255,240,180,.5) 78%, rgba(255,255,255,0)); }
+.fx-pray-beam { width: 125%; height: 4.2%; transform: translate(-50%, -50%) scaleX(.06);
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,240,180,.6) 20%,
+    #fff 50%, rgba(255,240,180,.6) 80%, rgba(255,255,255,0)); }
 .fx-pray-beam::before { content: ""; position: absolute; inset: 0; background: inherit;
-  transform: rotate(90deg) scaleX(.34); }
+  transform: rotate(90deg) scaleX(.30); }
 @keyframes fxPrayBeam {
   0%  { opacity: 0; transform: translate(-50%, -50%) scaleX(.06); }
-  14% { opacity: 1; transform: translate(-50%, -50%) scaleX(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1.25); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scaleX(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1.3); }
 }
-.fx-pray.open .fx-pray-beam { animation: fxPrayBeam .52s ease-out forwards; }
+.fx-pray.open .fx-pray-beam { animation: fxPrayBeam .62s ease-out forwards; }
 /* 後光＝金の光条が回る（顔の後ろ／maskで外へ向かって消す） */
 .fx-pray-halo { position: absolute; left: var(--face-x); top: var(--face-y);
   width: 210%; aspect-ratio: 1; opacity: 0; transform: translate(-50%, -50%) scale(.35);
@@ -1040,29 +1065,32 @@ body.race-sub-on .race-sub { display: flex; }
 .fx-pray.halo .fx-pray-halo { animation: fxPrayHalo 1.5s ease-out forwards; }
 /* 足元から立ちのぼる金の気。震えが強まるほど濃くする（--aoを段階クラスで差し替え） */
 @keyframes fxPrayAuraRise { to { background-position: 8% -140%, 34% -180%, 62% -150%, 86% -200%; } }
-@keyframes fxPrayAuraIn { to { opacity: var(--ao, .42); } }
+@keyframes fxPrayAuraIn { to { opacity: var(--ao, .55); } }
 @keyframes fxPrayAuraOut { to { opacity: 0; } }
-.fx-pray-aura { position: absolute; left: -18%; right: -18%; bottom: -4%; height: 88%; opacity: 0;
-  background-repeat: repeat-y; background-size: 10% 26%, 8% 31%, 9% 24%, 7% 33%;
+/* ⚠️8/9 FB89で大型化（「湯気をもっと大きく」＝Naoto指示）＝1粒の背景サイズを約2.4倍にし、
+   立ちのぼる幅も左右へ広げた。粒が大きいぶんボケも増やさないと「丸い玉」に見える */
+.fx-pray-aura { position: absolute; left: -34%; right: -34%; bottom: -6%; height: 104%; opacity: 0;
+  background-repeat: repeat-y; background-size: 26% 44%, 21% 50%, 24% 39%, 19% 53%;
   background-position: 8% 0%, 34% 0%, 62% 0%, 86% 0%;
   background-image:
     radial-gradient(closest-side, rgba(255,222,140,.85), rgba(255,222,140,0) 72%),
     radial-gradient(closest-side, rgba(255,203,88,.72), rgba(255,203,88,0) 72%),
     radial-gradient(closest-side, rgba(255,233,163,.8), rgba(255,233,163,0) 72%),
     radial-gradient(closest-side, rgba(255,196,66,.66), rgba(255,196,66,0) 72%);
-  -webkit-mask-image: linear-gradient(to top, #000 4%, rgba(0,0,0,.65) 44%, rgba(0,0,0,0) 92%);
-  mask-image: linear-gradient(to top, #000 4%, rgba(0,0,0,.65) 44%, rgba(0,0,0,0) 92%);
-  filter: blur(1.5px);
+  -webkit-mask-image: linear-gradient(to top, #000 4%, rgba(0,0,0,.65) 46%, rgba(0,0,0,0) 94%);
+  mask-image: linear-gradient(to top, #000 4%, rgba(0,0,0,.65) 46%, rgba(0,0,0,0) 94%);
+  filter: blur(4px);
   animation: fxPrayAuraRise 2.8s linear infinite, fxPrayAuraIn 1.2s ease-out .25s forwards; }
-.fx-pray.s2 { --ao: .6; } .fx-pray.s3 { --ao: .8; } .fx-pray.s4 { --ao: 1; }
+.fx-pray.s2 { --ao: .72; } .fx-pray.s3 { --ao: .88; } .fx-pray.s4 { --ao: 1; }
 .fx-pray.s3 .fx-pray-aura, .fx-pray.s4 .fx-pray-aura {
   animation: fxPrayAuraRise 1.5s linear infinite, fxPrayAuraIn .5s ease-out forwards; }
 .fx-pray.open .fx-pray-aura {
   animation: fxPrayAuraRise 1.5s linear infinite, fxPrayAuraOut .6s ease-out forwards; }
 /* 開眼の白フラッシュ＋枠の揺れ */
 .fx-pray-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
-@keyframes fxPrayFlash { 0% { opacity: .92; } 100% { opacity: 0; } }
-.fx-pray.open .fx-pray-flash { animation: fxPrayFlash .48s ease-out; }
+/* 8/9 FB89で増強。⚠️真っ白のままだと絵が消えるので「一瞬だけ全白→すぐ薄く→尾を引く」の3段 */
+@keyframes fxPrayFlash { 0% { opacity: 1; } 14% { opacity: .62; } 100% { opacity: 0; } }
+.fx-pray.open .fx-pray-flash { animation: fxPrayFlash .6s ease-out; }
 @keyframes fxPrayQuake {
   0%, 100% { transform: translate(0, 0); } 12% { transform: translate(-11px, 6px); }
   28% { transform: translate(9px, -5px); } 44% { transform: translate(-7px, -7px); }
@@ -1071,6 +1099,135 @@ body.race-sub-on .race-sub { display: flex; }
 .fx-pray.open { animation: fxPrayQuake .44s linear; }
 @keyframes fxPrayOut { to { opacity: 0; } }
 .fx-pray.out { animation: fxPrayOut .45s ease-in forwards; }
+
+/* ══════════ お茶＝橙メンバーの2つ目の個人演出（8/9 FB90・Naoto案）
+   画面の右からてくてく歩いてくる → 真ん中で止まる → お茶をぐいっと掲げる。
+   ⚠️歩行は「足の違う2枚を交互に切り替える」本物のコマ送り（③④＝w1/w2）。
+      4枚（w1/w2/stand/up）は同じ共通枠で切り出してあるので重ねてもズレない
+      ＝背景を透過するとき「絵ごとにトリミング」してはいけない（コマ送りで体が跳ねる）。
+   ⚠️切り替えは opacity を steps(1) で飛ばす＝background-imageの差し替えより確実（ちらつき・再読込なし）。
+   ⚠️transformは2階建て：.fx-tea-run＝右から中央への移動／.fx-tea-body＝歩調の上下と傾き。
+   尺はJS側の TEA_BASE で管理 ══════════ */
+.fx-tea { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.fx-tea-run { position: absolute; left: 50%; bottom: 6%; width: var(--tw); height: var(--th);
+  margin-left: calc(var(--tw) / -2); will-change: transform; }
+@keyframes teaWalkIn { from { transform: translateX(var(--x0)); } to { transform: translateX(0); } }
+.fx-tea.walking .fx-tea-run { animation: teaWalkIn var(--walk, 2.6s) linear forwards; }
+.fx-tea-body { position: absolute; inset: 0; }
+/* 歩調の上下＝1歩ごとに沈んで伸びる（2コマ切替の倍の周期で1往復） */
+@keyframes teaBob {
+  0%, 100% { transform: translateY(0) rotate(-1.6deg); }
+  50%      { transform: translateY(-3%) rotate(1.6deg); }
+}
+.fx-tea.walking .fx-tea-body { animation: teaBob calc(var(--step, .19s) * 2) ease-in-out infinite; }
+.fx-tea-img { position: absolute; inset: 0; opacity: 0;
+  background-position: center bottom; background-repeat: no-repeat; background-size: contain;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); }
+.fx-tea-img.w1 { background-image: url("fx_tea_w1.png"); }
+.fx-tea-img.w2 { background-image: url("fx_tea_w2.png"); }
+.fx-tea-img.stand { background-image: url("fx_tea_stand.png"); }
+.fx-tea-img.up { background-image: url("fx_tea_up.png"); }
+/* 歩行＝2コマを半周期ずつ表示（steps(1)＝ぬるっと混ざらずパッと切り替わる） */
+@keyframes teaStepA { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes teaStepB { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
+.fx-tea.walking .fx-tea-img.w1 { animation: teaStepA var(--step, .19s) steps(1, end) infinite; }
+.fx-tea.walking .fx-tea-img.w2 { animation: teaStepB var(--step, .19s) steps(1, end) infinite; }
+.fx-tea.standing .fx-tea-img.stand,
+.fx-tea.raised .fx-tea-img.up { opacity: 1; }
+/* 足元の砂ぼこり＝1歩ごとにポンと出る（既定の砂色パフと同じ語彙） */
+.fx-tea-dust { position: absolute; bottom: 2%; width: 26%; height: 12%; opacity: 0;
+  background: radial-gradient(closest-side, rgba(226,214,186,.85), rgba(190,172,134,.35) 60%, transparent 76%); }
+.fx-tea-dust.d1 { left: 12%; }
+.fx-tea-dust.d2 { right: 12%; }
+@keyframes teaDust {
+  0%       { opacity: .8; transform: translate(0, 0) scale(.4); }
+  70%,100% { opacity: 0;  transform: translate(8%, -22%) scale(1.5); }
+}
+.fx-tea.walking .fx-tea-dust { animation: teaDust calc(var(--step, .19s) * 2) linear infinite; }
+.fx-tea.walking .fx-tea-dust.d2 { animation-delay: var(--step, .19s); }
+/* 掲げる＝ぐいっと伸び上がって、ふわっと戻る */
+@keyframes teaRaise {
+  0%   { transform: translateY(0) scale(1); }
+  45%  { transform: translateY(-4.5%) scale(1.06); }
+  100% { transform: translateY(0) scale(1.02); }
+}
+.fx-tea.raised .fx-tea-body { animation: teaRaise .42s cubic-bezier(.2, 1.5, .4, 1) forwards; }
+/* 掲げた湯呑みの湯気（3本・上へ揺れながら消える）と✨ */
+.fx-tea-steam { position: absolute; left: 28%; top: 7%; width: 4.5%; height: 9%;
+  border-radius: 50%; background: rgba(255,255,255,.75); opacity: 0; filter: blur(2px); }
+@keyframes teaSteam {
+  0%   { opacity: 0;   transform: translate(0, 0) scale(.5); }
+  25%  { opacity: .85; }
+  100% { opacity: 0;   transform: translate(-30%, -170%) scale(1.7); }
+}
+.fx-tea.raised .fx-tea-steam { animation: teaSteam 1.5s ease-out infinite; }
+.fx-tea.raised .fx-tea-steam.s2 { animation-delay: .5s; left: 33%; }
+.fx-tea.raised .fx-tea-steam.s3 { animation-delay: 1s;  left: 24%; }
+/* 掲げた瞬間のキラッ（8/9 FB91）＝湯呑みの位置で星が弾け、そこから一筋の光が斜めに走る。
+   ⚠️光の筋は .fx-tea（overflow:hidden）で枠外が切られる＝画面の外へ抜けていくように見える */
+.fx-tea-glint { position: absolute; left: 28%; top: 8%;
+  width: calc(var(--th) * .42); height: calc(var(--th) * .42);
+  margin: calc(var(--th) * -.21) 0 0 calc(var(--th) * -.21); opacity: 0;
+  background: radial-gradient(closest-side, rgba(255,255,255,.98), rgba(255,246,200,.4) 34%, transparent 68%); }
+.fx-tea-glint::before, .fx-tea-glint::after { content: ""; position: absolute; left: 50%; top: 50%; }
+.fx-tea-glint::before { width: 118%; height: 7%; transform: translate(-50%, -50%);
+  background: linear-gradient(90deg, transparent, #fff 50%, transparent); }
+.fx-tea-glint::after { width: 7%; height: 118%; transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, transparent, #fff 50%, transparent); }
+@keyframes teaGlint {
+  0%   { opacity: 0; transform: scale(.25) rotate(0deg); }
+  25%  { opacity: 1; transform: scale(1.15) rotate(8deg); }
+  100% { opacity: 0; transform: scale(.7) rotate(18deg); }
+}
+.fx-tea.beam .fx-tea-glint { animation: teaGlint .62s ease-out; }
+/* 光の筋＝湯呑みから左右へ、地面と平行に走る（8/9 FB92でNaoto指示・旧＝斜め1本）。
+   左向きは rotate(180deg)＝支点(左端中央)まわりに反転させるだけ＝同じキーフレームを共用できる */
+.fx-tea-beam { position: absolute; left: 28%; top: 8%;
+  width: calc(var(--th) * 2.6); height: calc(var(--th) * .042);
+  transform-origin: 0 50%; transform: rotate(var(--bd, 0deg)) scaleX(0);
+  opacity: 0; filter: blur(1px);
+  background: linear-gradient(90deg, rgba(255,255,255,.98), rgba(255,246,200,.85) 22%, rgba(255,255,255,0)); }
+.fx-tea-beam.bl { --bd: 180deg; }
+@keyframes teaBeam {   /* 伸びて走り抜ける＝一筋の光 */
+  0%   { opacity: 0; transform: rotate(var(--bd, 0deg)) scaleX(0); }
+  15%  { opacity: 1; }
+  60%  { opacity: .95; transform: rotate(var(--bd, 0deg)) scaleX(1); }
+  100% { opacity: 0; transform: rotate(var(--bd, 0deg)) scaleX(1.06); }
+}
+.fx-tea.beam .fx-tea-beam { animation: teaBeam .58s cubic-bezier(.1, .8, .3, 1); }
+/* 「マテニチャー」＝じわっと浮かび上がる（相撲の「どどん」とは逆＝叩きつけない）。
+   ⚠️ぼかし→くっきりの「じわっと」は親に掛ける：文字(span)のfilterはフチ（drop-shadowの重ねがけ）が
+      占有していて、blurで上書きするとフチが消える（FB86で踏んだのと同じ罠） */
+.fx-tea-cap { position: absolute; left: 50%; top: 72%; transform: translate(-50%, -50%); opacity: 0; }
+@keyframes teaCapIn {
+  0%   { opacity: 0; filter: blur(10px); transform: translate(-50%, -50%) scale(.92); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; filter: blur(0);    transform: translate(-50%, -50%) scale(1); }
+}
+.fx-tea.capin .fx-tea-cap { animation: teaCapIn var(--capin, .8s) ease-out forwards; }
+.fx-tea-cap span { display: block; white-space: nowrap;
+  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900;
+  font-size: var(--cfs, 48px); line-height: 1.05; letter-spacing: .04em;
+  --ce: calc(var(--cfs, 48px) * .05);
+  background: linear-gradient(180deg, #fff6dc 0%, #ffd06a 46%, #f08a1e 64%, #ffe4a8 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter:
+    drop-shadow(var(--ce) 0 0 #14100a) drop-shadow(calc(var(--ce) * -1) 0 0 #14100a)
+    drop-shadow(0 var(--ce) 0 #14100a) drop-shadow(0 calc(var(--ce) * -1) 0 #14100a)
+    drop-shadow(0 calc(var(--ce) * 1.4) calc(var(--ce) * 1.8) rgba(0,0,0,.55)); }
+.fx-tea-spark { position: absolute; font-size: calc(var(--th) * .11); opacity: 0; }
+.fx-tea-spark.p1 { left: 12%; top: 2%; }
+.fx-tea-spark.p2 { left: 40%; top: 0%; }
+.fx-tea-spark.p3 { left: 20%; top: 16%; }
+@keyframes teaSpark {
+  0%, 100% { opacity: 0; transform: scale(.5) rotate(-12deg); }
+  50%      { opacity: 1; transform: scale(1.15) rotate(14deg); }
+}
+.fx-tea.raised .fx-tea-spark { animation: teaSpark .9s ease-in-out infinite; }
+.fx-tea.raised .fx-tea-spark.p2 { animation-delay: .3s; }
+.fx-tea.raised .fx-tea-spark.p3 { animation-delay: .6s; }
+@keyframes teaOut { to { opacity: 0; } }
+.fx-tea.out { animation: teaOut .45s ease-in forwards; }
 
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
 .cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }

@@ -1223,14 +1223,19 @@
              rainMs …走行の長さ＝バッジが出るまでの時間ms（既定4500）
              effect …アイコン走行の代わりに出す専用演出（"yakumono"＝役物合体／"slot"＝スロット
                       ／"sumo"＝相撲／"pray"＝念仏）。
+                      ／"tea"＝お茶）。
                       指定した色キーはアイコン走行を出さない＝二重演出にしない。尺は各演出側が決める
+             effects…専用演出を複数持たせる場合の配列（8/9 FB90）＝**的中のたびに1つ抽選**する。
+                      ""（空文字）を混ぜると「既定のアイコン走行」も抽選対象にできる。
+                      ⚠️抽選は的中1件につき1回（4シーンのワイプで同じ演出になるようにするため）
      追加手順：①下の表に色キーの行を足す ②必要ならoverlay.cssに見た目を書く
                ③検証ハーネス raintest.html?key=<色キー> で撮って確認
                  （effect系は動きを見る演出なので 検証ハーネス/fxlab.html を実ブラウザで開く） */
   var COLOR_KEY = { "青": "blue", "緑": "green", "オレンジ": "orange", "橙": "orange",
     "赤": "red", "ピンク": "pink", "桃": "pink", "黄": "yellow", "黄色": "yellow" };
   var MEMBER_FX = {
-    orange: { fx: ["dust-xl"] },      // 白いモクモクの砂埃（8/8 FB72）
+    // effects＝2つ以上ある人は的中のたびに抽選（8/9 FB90・""＝既定のアイコン走行）
+    orange: { fx: ["dust-xl"], effects: ["", "tea"] }, // 白いモクモクの砂埃（8/8 FB72）／お茶（8/9 FB90）
     blue:   { effect: "yakumono" },   // 役物合体＝コインが四隅から合体（8/8 FB82・アイコン走行は出さない）
     pink:   { effect: "slot" },       // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
     green:  { effect: "sumo" },       // 相撲＝張り手で迫って「ごっちゃんです！！」（8/9 FB86・同上）
@@ -1329,6 +1334,31 @@
     return t;
   }
 
+  /* お茶の尺（8/9 FB90・橙メンバーの2つ目の演出）
+       WALK   …画面右からてくてく歩いて中央に着くまでのms
+       STEP   …歩行2コマの切替間隔ms（小さいほど小刻み＝速足に見える）
+       SETTLE …止まってから湯呑みを掲げるまでの間ms（一拍おく）
+       RAISE  …掲げる動きのms
+       BEAM_LAG…掲げてから湯呑みが光る（キラッ＋一筋の光）までのms（8/9 FB91）
+       CAP_LAG …掲げてから「マテニチャー」が出はじめるまでのms／CAP_IN…じわっと出る時間ms
+       HOLD   …文字を見せる時間ms／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）
+     ⚠️WALKとSTEPは連動させる：歩く速さだけ変えると足の回転が合わず「滑って」見える
+        （8/9 FB91で歩きをゆっくりに＝2.6→3.4秒／コマ切替も190→250msへ同率で延ばした） */
+  var TEA_BASE = { WALK: 3400, STEP: 250, SETTLE: 260, RAISE: 420,
+    BEAM_LAG: 180, CAP_LAG: 700, CAP_IN: 800, HOLD: 2400, FADE: 450 };
+  var TEA_AR = 442 / 800; // fx_tea_*.png の実寸比（横/縦）＝絵を差し替えたらここも直す
+  var TEA_CAP = "マテニチャー";
+  function teaTimes() {
+    var t = { STOP: TEA_BASE.WALK };                 // 中央で止まる
+    t.RAISE = t.STOP + TEA_BASE.SETTLE;              // 掲げ始め
+    t.BEAM  = t.RAISE + TEA_BASE.BEAM_LAG;           // 湯呑みがピカッ＋一筋の光
+    t.CAP   = t.RAISE + TEA_BASE.CAP_LAG;            // 文字がじわっと出はじめる
+    t.END   = t.CAP + TEA_BASE.CAP_IN + TEA_BASE.HOLD; // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE  = t.END + TEA_BASE.FADE;
+    return t;
+  }
+
   /** 的中の組合せ（comboLabel "1-3-5"）→ リールに出す車番配列。
       手動追加の的中はcomboLabelを持たない＝数字を作り話にしないため空配列を返す（呼び出し側で走行に落とす） */
   function slotCombo(hit) {
@@ -1345,6 +1375,9 @@
   });
   (function () { var im = new Image(); im.src = "fx_coin.png"; })(); // 役物のコインも先読み（8/8 FB82）
   (function () { var im = new Image(); im.src = "fx_sumo.png"; })(); // 相撲も先読み（8/9 FB86）
+  ["fx_tea_w1.png", "fx_tea_w2.png", "fx_tea_stand.png", "fx_tea_up.png"].forEach(function (f) {
+    var im = new Image(); im.src = f;   // お茶は4コマ（8/9 FB90）＝歩き出しでコマ落ちしないよう先読み
+  });
   ["fx_pray.png", "fx_pray_shut.png"].forEach(function (f) {         // 念仏は2枚重ね（8/9 FB88）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
   });
@@ -1657,6 +1690,8 @@
           '<i class="fx-pray-art"></i><i class="fx-pray-lid"></i>' +
           '<i class="fx-pray-beam e-l"></i><i class="fx-pray-beam e-r"></i>' +
           '<i class="fx-pray-eye e-l"></i><i class="fx-pray-eye e-r"></i>' +
+          // 白い核＝広がる輪が消えたあとも目に残る光（8/9 FB89）
+          '<i class="fx-pray-eye core e-l"></i><i class="fx-pray-eye core e-r"></i>' +
         '</div></div>' +
       '</div><div class="fx-pray-flash"></div>';
     cam.appendChild(box);
@@ -1673,16 +1708,86 @@
     setTimeout(function () { stage(2); }, T.S2);
     setTimeout(function () { stage(3); }, T.S3);
     setTimeout(function () { stage(4); }, T.S4);
-    setTimeout(function () { box.classList.add("squeeze"); }, T.SQUEEZE);
+    // 溜めに入ったら震えを完全停止（8/9 FB89・Naoto指示「光る瞬間は震えなし」）。
+    // shakeを外し still で90msかけて中心へ収める（--a/--r を読むので s4 は残す）
+    setTimeout(function () {
+      body.className = "fx-pray-body s4 still";
+      box.classList.add("squeeze");
+    }, T.SQUEEZE);
     setTimeout(function () { box.classList.add("open"); }, T.OPEN);
     setTimeout(function () { box.classList.add("halo"); }, T.HALO);
     setTimeout(function () { box.classList.add("out"); }, T.END);
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
   }
 
+  /* お茶（8/9 FB90・橙メンバーの2つ目）：画面右からてくてく歩いてきて、中央で止まり、湯呑みを掲げる。
+     歩行は足違いの2コマ（w1/w2）をsteps(1)で交互に出す本物のコマ送り。
+     ⚠️4コマは共通の枠で切り出してあるので、重ねても体がズレない（素材の作り方が肝＝要件定義 §10 FB89） */
+  function spawnTea(cam, key) {
+    var old = cam.querySelector(".fx-tea");
+    if (old) old.parentNode.removeChild(old);
+    var T = teaTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var th = Math.round(ch * 0.78), tw = Math.round(th * TEA_AR);
+    var box = document.createElement("div");
+    box.className = ["fx-tea", "m-" + key].join(" ");
+    box.style.setProperty("--tw", tw + "px");
+    box.style.setProperty("--th", th + "px");
+    box.style.setProperty("--walk", (TEA_BASE.WALK / 1000) + "s");
+    box.style.setProperty("--step", (TEA_BASE.STEP / 1000) + "s");
+    box.style.setProperty("--capin", (TEA_BASE.CAP_IN / 1000) + "s");
+    // 出発点＝枠の外（右）。中央までの距離＝枠の半分＋体の半分
+    box.style.setProperty("--x0", Math.round(cw / 2 + tw / 2) + "px");
+    box.innerHTML =
+      '<div class="fx-tea-run">' +
+        '<div class="fx-tea-body">' +
+          '<i class="fx-tea-img w1"></i><i class="fx-tea-img w2"></i>' +
+          '<i class="fx-tea-img stand"></i><i class="fx-tea-img up"></i>' +
+          '<i class="fx-tea-steam s1"></i><i class="fx-tea-steam s2"></i><i class="fx-tea-steam s3"></i>' +
+          '<span class="fx-tea-spark p1">✨</span><span class="fx-tea-spark p2">✨</span>' +
+          '<span class="fx-tea-spark p3">✨</span>' +
+          '<i class="fx-tea-beam bl"></i><i class="fx-tea-beam br"></i><i class="fx-tea-glint"></i>' +
+        "</div>" +
+        '<i class="fx-tea-dust d1"></i><i class="fx-tea-dust d2"></i>' +
+      "</div>" +
+      '<div class="fx-tea-cap"><span></span></div>';
+    box.querySelector(".fx-tea-cap span").textContent = TEA_CAP;
+    cam.appendChild(box);
+    fitTeaCap(box.querySelector(".fx-tea-cap span"), cw);
+
+    box.classList.add("walking");
+    setTimeout(function () { box.classList.remove("walking"); box.classList.add("standing"); }, T.STOP);
+    setTimeout(function () { box.classList.remove("standing"); box.classList.add("raised"); }, T.RAISE);
+    setTimeout(function () { box.classList.add("beam"); }, T.BEAM);
+    setTimeout(function () { box.classList.add("capin"); }, T.CAP);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
+  /** 「マテニチャー」を枠いっぱいに（はみ出す時だけ段階縮小＝的中バッジと同じ手法・8/9 FB91） */
+  function fitTeaCap(span, camW) {
+    var avail = camW * 0.94;
+    if (avail <= 0) return;
+    var fs = Math.round(camW * 0.115);
+    span.style.fontSize = fs + "px";
+    var guard = 0;
+    while (span.scrollWidth > avail && fs > 14 && guard < 40) {
+      fs -= 2; span.style.fontSize = fs + "px"; guard++;
+    }
+    span.parentNode.style.setProperty("--cfs", fs + "px");
+  }
+
+  /** その的中で出す専用演出を決める。effects（配列）があれば抽選＝1人で複数の演出を持てる（8/9 FB90）。
+      ⚠️ここで1回だけ引く＝同じ的中の4シーン分のワイプで演出がバラバラにならない */
+  function pickEffect(key) {
+    var c = MEMBER_FX[key] || {};
+    if (c.effects && c.effects.length) return c.effects[Math.floor(Math.random() * c.effects.length)];
+    return c.effect || "";
+  }
+
   function fireHitFx(slot, hit, rc) {
     var key = memberKey(rc);
-    var eff = key ? ((MEMBER_FX[key] || {}).effect || "") : "";
+    var eff = key ? pickEffect(key) : "";
     // スロットは当たり目の数字そのものを見せる演出。車番が取れない的中（手動追加）では
     // 数字を作り話にせず、既定のアイコン走行に落とす
     var combo = eff === "slot" ? slotCombo(hit) : [];
@@ -1692,6 +1797,7 @@
       : eff === "slot" ? slotTimes(combo.length).END
       : eff === "sumo" ? sumoTimes().END
       : eff === "pray" ? prayTimes().END
+      : eff === "tea" ? teaTimes().END
       : (key ? fxConf(key).rainMs : 0);
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
@@ -1708,6 +1814,7 @@
       else if (eff === "slot") spawnSlot(cam, key, hit, combo);
       else if (eff === "sumo") spawnSumo(cam, key, hit);
       else if (eff === "pray") spawnPray(cam, key);
+      else if (eff === "tea") spawnTea(cam, key);
       else if (key) spawnRain(cam, key);
       setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
     });
