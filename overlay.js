@@ -1211,11 +1211,13 @@
     var im = new Image(); im.src = n + ".png"; // 先読み＝初回的中でアイコンが欠けない
   });
   var RAIN_MS = 4500; // 雨の長さ（この後にバッジ表示・8/7 FB66で2秒→4.5秒に延長）
+  // 白いモクモクの砂埃は橙メンバーだけの個人演出（8/8 FB72）。他メンバーは小さめの既定パフ
+  var DUST_XL_ICON = "ic_orange.png";
   function spawnRain(cam, url) {
     var old = cam.querySelector(".hit-rain");
     if (old) old.parentNode.removeChild(old);
     var box = document.createElement("div");
-    box.className = "hit-rain";
+    box.className = "hit-rain" + (url === DUST_XL_ICON ? " dust-xl" : "");
     var w = cam.clientWidth || 400, h = cam.clientHeight || 400;
     // FB66：数80・1体2.2〜3.2秒・群れ全体で約4.5秒（中央ゆっくりのS字＝CSS側）
     // FB67：右→左の真横走行＋砂埃。laneT＝奥行き（下のレーンほど大きく手前・前面に）

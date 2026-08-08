@@ -614,25 +614,39 @@ body.race-sub-on .race-sub { display: flex; }
   from { transform: translateX(0); }
   to { transform: translateX(var(--dx, -1200px)); }
 }
-/* 走行中の縦揺れ＝ペダリングのバウンド感。z2＝砂埃(z1)より手前 */
-.hit-rain-ic { display: block; position: relative; z-index: 2;
-  filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
+/* 走行中の縦揺れ＝ペダリングのバウンド感 */
+.hit-rain-ic { display: block; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35));
   animation: riderBob .34s ease-in-out infinite alternate; }
 @keyframes riderBob {
   from { transform: translateY(0) rotate(-3deg); }
   to { transform: translateY(-6px) rotate(-2deg); }
 }
-/* 砂埃＝後輪から右後方へ巻き上がる白いモクモク（アニメ調・8/7 FB68で約10倍に大型化＋白色化） */
-/* 3つのradial-gradientで凸凹の雲シルエット。blurは廃止（大型化とのGPU負荷トレード） */
-.dust { position: absolute; right: -0.85em; bottom: -0.12em; width: 1.5em; height: 1.05em; z-index: 1;
+/* 砂埃（既定）＝後輪（右下）から右後方へ舞い上がる連続パフ。大きさはキャラ連動（親のfont-size=em基準） */
+.dust { position: absolute; right: -0.12em; bottom: 0.02em; width: 0.34em; height: 0.34em; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(219, 201, 163, .8), rgba(180, 160, 120, .32) 62%, transparent);
+  filter: blur(1px); opacity: 0;
+  animation: dustPuff .55s linear infinite; animation-delay: inherit; }
+.dust.d2 { right: -0.02em; width: 0.26em; height: 0.26em; animation-delay: .27s; }
+@keyframes dustPuff {
+  0% { transform: translate(0, 0) scale(.35); opacity: .85; }
+  100% { transform: translate(0.3em, -0.26em) scale(1.8); opacity: 0; }
+}
+
+/* 白いモクモク＝橙メンバー専用の個人演出（8/8 FB72）。
+   FB68で全員に入れた大型雲を、この色キーのときだけに限定した（他メンバーは上の既定パフのまま）。
+   3つのradial-gradientで凸凹の雲シルエット。blurは廃止（大型化とのGPU負荷トレード） */
+.hit-rain.dust-xl .hit-rain-ic { position: relative; z-index: 2; }  /* キャラを雲(z1)より手前に固定 */
+.hit-rain.dust-xl .dust {
+  right: -0.85em; bottom: -0.12em; width: 1.5em; height: 1.05em; z-index: 1;
+  border-radius: 0; filter: none;
   background:
     radial-gradient(closest-side at 28% 68%, rgba(255,255,255,.95), rgba(255,255,255,.45) 62%, transparent),
     radial-gradient(closest-side at 58% 40%, rgba(255,255,255,.92), rgba(255,255,255,.4) 64%, transparent),
     radial-gradient(closest-side at 82% 66%, rgba(255,255,255,.88), rgba(255,255,255,.35) 60%, transparent);
-  opacity: 0; transform-origin: 15% 85%; /* 後輪側を支点に右上へ育つ */
-  animation: dustPuff .8s linear infinite; animation-delay: inherit; }
-.dust.d2 { right: -0.45em; width: 1.1em; height: .8em; animation-delay: .4s; }
-@keyframes dustPuff {
+  transform-origin: 15% 85%; /* 後輪側を支点に右上へ育つ */
+  animation: dustPuffXL .8s linear infinite; }
+.hit-rain.dust-xl .dust.d2 { right: -0.45em; width: 1.1em; height: .8em; animation-delay: .4s; }
+@keyframes dustPuffXL {
   0% { transform: translate(0, 0) scale(.3); opacity: .9; }
   100% { transform: translate(.4em, -.4em) scale(2.2); opacity: 0; }
 }
