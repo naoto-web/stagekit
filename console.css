@@ -116,6 +116,10 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 .pred-opts .lbl { margin: 0; }
 .unit-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffb3b3; line-height: 2; }
+/* 未保存の下書きがある予想フォーム（8/8 FB75）＝入力は保持されるが放送には出ていない状態 */
+.draft-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffd88a; line-height: 2; }
+.pred-form.dirty { border-color: #d9a441; }
+.pred-form.dirty .pf-save { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
 
 /* ---------- 払戻・精算 ---------- */
 .payout-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }

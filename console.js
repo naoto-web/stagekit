@@ -348,6 +348,14 @@
     return state.preds[key].byRacer[racerId];
   }
 
+  /* 入力途中の下書き保持（8/8 FB75）
+     #pred-formsはstateから作り直すため、席替え・場切替・設定保存など別の操作をした瞬間に
+     未保存の買い目が消えていた。入力のたびにdraftへ退避し、描画時はdraftを優先して復元する。
+     draftはコンソールのメモリ内だけ＝サーバーには送らない（打ちかけが放送に出ることはない）。
+     「この予想を保存」で破棄＝以後はstateの値が正。 */
+  var predDrafts = {}; // key + " " + racerId → { text, invest, ore, note }
+  function draftKey(key, racerId) { return key + " " + racerId; }
+
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
     $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + effCars(key) + "車）" : "（場・レース未選択）") +
@@ -358,20 +366,37 @@
     if (!key) { wrap.innerHTML = ""; return; }
     var race = state.preds[key] || { cars: 9 };
 
+    // 打っている最中の再描画でカーソルが飛ばないよう、フォーカス位置と選択範囲を退避
+    var ae = document.activeElement;
+    var focus = null;
+    if (ae && wrap.contains(ae)) {
+      var af = ae.closest ? ae.closest(".pred-form") : null;
+      focus = {
+        racer: af ? af.getAttribute("data-racer") : null,
+        cls: (String(ae.className).match(/pf-[a-z]+/) || [])[0],
+        s: ae.selectionStart, e: ae.selectionEnd
+      };
+    }
+
     wrap.innerHTML = state.racers.map(function (rc, idx) {
       var p = (race.byRacer && race.byRacer[rc.id]) || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
+      var d = predDrafts[draftKey(key, rc.id)]; // 未保存の入力があればそれを表示（消さない）
+      var vText = d ? d.text : p.text;
+      var vInvest = d ? d.invest : (p.investInput || "");
+      var vOre = d ? d.ore : (p.oreTachi || "");
+      var vNote = d ? d.note : !!p.isNote;
       return '<div class="pred-form" data-racer="' + rc.id + '">' +
         '<h3><span class="' + (idx === 1 ? "alt" : "") + '">' + esc(rc.name) + "</span> の予想</h3>" +
-        '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(p.text) + "</textarea>" +
+        '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
-        '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(p.oreTachi || "") + '" placeholder="無料公開の1点（例 1-2-3）"></label>' +
-        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (p.isNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
+        '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '" placeholder="無料公開の1点（例 1-2-3）"></label>' +
+        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (vNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
         "</div>" +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
         '<input type="hidden" class="pf-type" value="3連単">' +
-        '<label class="lbl inline">投資額 <input type="number" class="inp slim pf-invest" value="' + (p.investInput || "") + '" placeholder="実際に買った総額">円</label>' +
+        '<label class="lbl inline">投資額 <input type="number" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '" placeholder="実際に買った総額">円</label>' +
         "</div>" +
         '<div class="parse-total pf-total"></div>' +
         '<button class="btn small pf-save">この予想を保存</button>' +
@@ -380,10 +405,19 @@
 
     wrap.querySelectorAll(".pred-form").forEach(function (form) {
       var racerId = form.getAttribute("data-racer");
-      var update = function () { updatePredInfo(form, key); };
-      ["pf-text", "pf-invest"].forEach(function (cls) {
+      var stash = function () { // 1文字打つごとに下書きへ退避＝以後どんな再描画が来ても残る
+        predDrafts[draftKey(key, racerId)] = {
+          text: form.querySelector(".pf-text").value,
+          invest: form.querySelector(".pf-invest").value,
+          ore: form.querySelector(".pf-ore").value,
+          note: form.querySelector(".pf-note").checked
+        };
+      };
+      var update = function () { stash(); updatePredInfo(form, key); };
+      ["pf-text", "pf-invest", "pf-ore"].forEach(function (cls) {
         form.querySelector("." + cls).addEventListener("input", update);
       });
+      form.querySelector(".pf-note").addEventListener("change", update);
       form.querySelector(".pf-save").addEventListener("click", function () {
         var entry = ensurePredEntry(key, racerId);
         entry.text = form.querySelector(".pf-text").value;
@@ -394,11 +428,23 @@
         entry.oreTachi = form.querySelector(".pf-ore").value.trim();
         entry.isNote = form.querySelector(".pf-note").checked;
         state.preds[key].cars = effCars(key);
+        delete predDrafts[draftKey(key, racerId)]; // 保存できたので下書きは破棄
         save();
         renderSettlePreview();
+        updatePredInfo(form, key);                 // 「未保存」表示を消す
       });
       update();
     });
+
+    if (focus && focus.racer && focus.cls) { // カーソルを元の欄・元の位置へ戻す
+      var back = wrap.querySelector('.pred-form[data-racer="' + focus.racer + '"] .' + focus.cls);
+      if (back) {
+        back.focus();
+        if (focus.s !== null && focus.s !== undefined && back.setSelectionRange) {
+          try { back.setSelectionRange(focus.s, focus.e); } catch (e) {}
+        }
+      }
+    }
   }
 
   function updatePredInfo(form, key) {
@@ -418,7 +464,18 @@
     if (parsed.points > 0 && !investInput) {
       html += '<div class="unit-warn">⚠ 投資額が未入力（画面の投資・回収の累計に乗りません）</div>';
     }
+    // 保存済みの値と違う＝まだ放送に出ていない（8/8 FB75・打ったのに出ていない事故防止）
+    var racerId = form.getAttribute("data-racer");
+    var saved = ((state.preds[key] || {}).byRacer || {})[racerId] || {};
+    var dirty = form.querySelector(".pf-text").value !== (saved.text || "") ||
+      (form.querySelector(".pf-invest").value || "") !== (saved.investInput ? String(saved.investInput) : "") ||
+      form.querySelector(".pf-ore").value.trim() !== (saved.oreTachi || "") ||
+      form.querySelector(".pf-note").checked !== !!saved.isNote;
+    if (dirty) {
+      html += '<div class="draft-warn">✏️ 未保存（「この予想を保存」を押すまで画面に出ません・入力は消えません）</div>';
+    }
     form.querySelector(".pf-total").innerHTML = html;
+    form.classList.toggle("dirty", dirty);
   }
 
   /* ---------- 結果入力 ---------- */
@@ -432,9 +489,23 @@
     return order.length >= 2 ? order : null;
   }
 
+  /* 結果入力も買い目と同じ事故が起きる（8/8 FB75）：着順・払戻を打っている途中に別操作で
+     renderAllが走ると、下のstate反映でフォームが上書きされて消える。
+     同じレースを表示したままで未確定の手入力があるときは、上書きをしない。 */
+  var resDirty = false;
+  var resKeyShown = null;
+  function markResDirty() { resDirty = true; }
+
   function renderResultForm() {
     var key = currentKey();
     $("result-target").textContent = key ? key.replace("|", " ") + "R" : "（場・レース未選択）";
+    if (key !== resKeyShown) { resDirty = false; resKeyShown = key; } // レースが変わったら仕切り直し
+    else if (resDirty) {                                             // 入力途中＝触らずに帰る
+      renderPayoutRows();
+      renderSettlePreview();
+      renderResultHint();
+      return;
+    }
     var existing = key ? state.results[key] : null;
     if (existing) {
       $("res-order").value = (existing.order || []).join("-");
@@ -492,6 +563,7 @@
     el.querySelectorAll(".pr-amount").forEach(function (inp) {
       inp.addEventListener("input", function () {
         payoutRows[+inp.getAttribute("data-i")].amount = +inp.value || 0;
+        markResDirty();
         renderSettlePreview();
       });
     });
@@ -504,7 +576,12 @@
     });
   }
 
-  $("res-order").addEventListener("input", syncPayoutPresets);
+  // 着順・選手名・決まり手の手入力も「入力途中」として保護する（8/8 FB75）
+  $("res-order").addEventListener("input", function () { markResDirty(); syncPayoutPresets(); });
+  ["res-name-1", "res-name-2", "res-name-3", "res-kim-1", "res-kim-2"].forEach(function (id) {
+    var el = $(id);
+    if (el) el.addEventListener("input", markResDirty);
+  });
 
   $("btn-payout-add").addEventListener("click", function () {
     var type = $("payout-add-type").value;
@@ -547,6 +624,7 @@
     el.querySelectorAll(".sp-refund").forEach(function (inp) {
       inp.addEventListener("input", function () {
         refundInputs[inp.getAttribute("data-racer")] = +inp.value || 0;
+        markResDirty();
       });
     });
   }
@@ -603,6 +681,7 @@
       settledAt: new Date().toISOString(),
     };
     state.resultView = key; // ③結果シーンに即反映
+    resDirty = false;       // 確定できた＝以後はstateの値が正（8/8 FB75）
     save();
     renderHitAdmin();
     renderSettlePreview();
@@ -641,6 +720,7 @@
       filled.push("着順 " + order.filter(Boolean).join("-"));
       syncPayoutPresets();
     }
+    if (filled.length) markResDirty(); // 貼り付けで入った値も確定前＝再描画で消させない（8/8 FB75）
     renderPayoutRows();
     renderSettlePreview();
     $("paste-hint").textContent = filled.length
@@ -877,6 +957,9 @@
     autoResults = {};
     payoutRows = [];
     refundInputs = {};
+    predDrafts = {};   // 前日の書きかけを持ち越さない（8/8 FB75）
+    resDirty = false;
+    resKeyShown = null;
     newdayArmed = false;
     $("btn-newday").textContent = "新しい日を開始";
     $("btn-newday").classList.remove("confirm");
@@ -1022,6 +1105,7 @@
     $("res-kim-1").value = (r.kimarite && r.kimarite[0]) || "";
     $("res-kim-2").value = (r.kimarite && r.kimarite[1]) || "";
     payoutRows = keepPayouts(r.payouts).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
+    markResDirty();      // プリフィルも「確定前の入力」＝再描画で消させない（8/8 FB75）
     syncPayoutPresets(); // 標準行の補完＋的中プレビュー再計算
   }
 
