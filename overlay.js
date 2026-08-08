@@ -1221,7 +1221,8 @@
              size   …[最小px, 最大px]（既定[80,180]・奥のレーンほど小さい）
              dur    …1体の走破秒[最小,最大]（既定[2.2,3.2]）
              rainMs …走行の長さ＝バッジが出るまでの時間ms（既定4500）
-             effect …アイコン走行の代わりに出す専用演出（"yakumono"＝役物合体／"slot"＝スロット）。
+             effect …アイコン走行の代わりに出す専用演出（"yakumono"＝役物合体／"slot"＝スロット
+                      ／"sumo"＝相撲／"pray"＝念仏）。
                       指定した色キーはアイコン走行を出さない＝二重演出にしない。尺は各演出側が決める
      追加手順：①下の表に色キーの行を足す ②必要ならoverlay.cssに見た目を書く
                ③検証ハーネス raintest.html?key=<色キー> で撮って確認
@@ -1231,7 +1232,9 @@
   var MEMBER_FX = {
     orange: { fx: ["dust-xl"] },      // 白いモクモクの砂埃（8/8 FB72）
     blue:   { effect: "yakumono" },   // 役物合体＝コインが四隅から合体（8/8 FB82・アイコン走行は出さない）
-    pink:   { effect: "slot" }        // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
+    pink:   { effect: "slot" },       // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
+    green:  { effect: "sumo" },       // 相撲＝張り手で迫って「ごっちゃんです！！」（8/9 FB86・同上）
+    yellow: { effect: "pray" }        // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
     // 例）red: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
   };
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
@@ -1279,6 +1282,53 @@
     t.GONE = t.END + SLOT_BASE.FADE;
     return t;
   }
+  /* 相撲の尺（8/9 FB86・8/9 FB87で15体化。緑メンバー専用）
+       COUNT     …何体で来るか（8/9 FB87でNaoto指定＝15体）
+       STAGGER   …1体ずつずらす間隔ms（先頭から最後尾まで STAGGER×(COUNT-1)）
+       CHARGE    …1体が奥から出て通り過ぎ切るまでのms（74%地点が「手前まで来た」瞬間）
+       DODON_LAG …最後の1体が抜けてから文字が出るまでの間ms
+       DODON2    …「どどん」の2発目までのms
+       HOLD      …文字を見せる時間ms／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う） */
+  var SUMO_BASE = { COUNT: 15, STAGGER: 70, CHARGE: 3200,
+    DODON_LAG: 220, DODON2: 300, HOLD: 3600, FADE: 450 };
+  var SUMO_AR = 681 / 1000; // fx_sumo.png の実寸比（横/縦）＝絵を差し替えたらここも直す
+  function sumoTimes() {
+    var t = {};
+    t.LAST   = SUMO_BASE.STAGGER * (SUMO_BASE.COUNT - 1) + SUMO_BASE.CHARGE; // 最後の1体が抜け切る
+    t.BOOM   = t.LAST - 140;                                // 白フラッシュ＋揺れ＝群れが抜ける直前
+    t.DODON  = t.LAST + SUMO_BASE.DODON_LAG;
+    t.DODON2 = t.DODON + SUMO_BASE.DODON2;
+    t.END    = t.DODON2 + SUMO_BASE.HOLD;                   // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE   = t.END + SUMO_BASE.FADE;
+    return t;
+  }
+
+  /* 念仏の尺（8/9 FB88・黄メンバー専用）
+       IN     …ふわっと出るまでのms（この間は合掌したまま）
+       CALM   …静かに祈っている時間ms（呼吸でわずかに上下）
+       SHAKE  …プルプルが4段階で増していく時間ms＝同時に顔へ寄る時間でもある
+       SQUEEZE…見開く直前に「ぎゅっ」と溜める時間ms（この分だけOPENより手前で始まる）
+       HALO   …見開いてから後光が回り出すまでの間ms
+       HOLD   …見開いたあとの余韻ms／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝伸ばすと演出全体が長くなる */
+  var PRAY_BASE = { IN: 60, CALM: 2200, SHAKE: 2300, SQUEEZE: 200, HALO: 120, HOLD: 1300, FADE: 450 };
+  var PRAY_AR = 661 / 1000; // fx_pray.png の実寸比（横/縦）＝絵を差し替えたらここも直す
+  var PRAY_ZOOM = 2.4;      // 見開く瞬間の寄り倍率（顔が枠いっぱいになる）
+  function prayTimes() {
+    var t = { IN: PRAY_BASE.IN };
+    t.SHAKE = t.IN + PRAY_BASE.CALM;                              // 震え始め＝寄り始め
+    t.S2 = t.SHAKE + Math.round(PRAY_BASE.SHAKE * 0.28);
+    t.S3 = t.SHAKE + Math.round(PRAY_BASE.SHAKE * 0.54);
+    t.S4 = t.SHAKE + Math.round(PRAY_BASE.SHAKE * 0.78);
+    t.OPEN = t.SHAKE + PRAY_BASE.SHAKE;                           // カッ！＝見開く＋目がピカッ
+    t.SQUEEZE = t.OPEN - PRAY_BASE.SQUEEZE;
+    t.HALO = t.OPEN + PRAY_BASE.HALO;
+    t.END  = t.OPEN + PRAY_BASE.HOLD;                             // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE = t.END + PRAY_BASE.FADE;
+    return t;
+  }
+
   /** 的中の組合せ（comboLabel "1-3-5"）→ リールに出す車番配列。
       手動追加の的中はcomboLabelを持たない＝数字を作り話にしないため空配列を返す（呼び出し側で走行に落とす） */
   function slotCombo(hit) {
@@ -1294,6 +1344,10 @@
     var im = new Image(); im.src = "ic_" + k + ".png"; // 先読み＝初回的中でアイコンが欠けない
   });
   (function () { var im = new Image(); im.src = "fx_coin.png"; })(); // 役物のコインも先読み（8/8 FB82）
+  (function () { var im = new Image(); im.src = "fx_sumo.png"; })(); // 相撲も先読み（8/9 FB86）
+  ["fx_pray.png", "fx_pray_shut.png"].forEach(function (f) {         // 念仏は2枚重ね（8/9 FB88）
+    var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
+  });
   /** メンバーカラー→色キー（未登録の色は個人演出なし＝アイコンも雨も出ない従来動作） */
   function memberKey(rc) { return rc && COLOR_KEY[rc.color] ? COLOR_KEY[rc.color] : ""; }
   function fxConf(key) {
@@ -1512,6 +1566,120 @@
     requestAnimationFrame(frame);
   }
 
+  /* 相撲（8/9 FB86・緑メンバー専用）：奥から張り手で迫る→カメラを通り過ぎる→「ごっちゃんです！！」がどどん！
+     このメンバーはアイコン走行を出さない（fireHitFx側で分岐）＝二重演出にしない */
+  function spawnSumo(cam, key, hit) {
+    var old = cam.querySelector(".fx-sumo");
+    if (old) old.parentNode.removeChild(old);
+    var T = sumoTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    // 手前まで来たとき（scale 1）＝枠の縦を少しはみ出す大きさ＝「デカい」印象を作る
+    var sh = Math.round(ch * 1.12), sw = Math.round(sh * SUMO_AR);
+    var box = document.createElement("div");
+    box.className = ["fx-sumo", "m-" + key].join(" ");
+    box.style.setProperty("--sw", sw + "px");
+    box.style.setProperty("--sh", sh + "px");
+    box.style.setProperty("--burst", Math.round(Math.max(cw, ch) * 1.6) + "px");
+    /* 群れ（8/9 FB87）：先頭は中央・ど真ん中を通す。以降は左右交互に振り分けて
+       だんだん外側＆小さめ（＝奥のレーン）にする。横位置はscaleの内側で効くので
+       奥では中央の一点に集まり、近づくにつれて扇状に広がる */
+    for (var i = 0; i < SUMO_BASE.COUNT; i++) {
+      var run = document.createElement("div");
+      run.className = "fx-sumo-run" + (i === 0 ? " lead charge" : " charge");
+      var lane = Math.ceil(i / 2);                                   // 0,1,1,2,2,3,3…＝中央からの遠さ
+      var side = (i % 2) ? 1 : -1;
+      var s = i === 0 ? 1.06 : Math.max(0.5, 1.02 - lane * 0.075 + (Math.random() - .5) * .08);
+      var dx = side * (lane * cw * 0.30 + (Math.random() - .5) * cw * 0.10) / s; // 手前での実距離をsで割り戻す
+      var dy = (Math.random() - .5) * ch * 0.22 / s;
+      run.style.setProperty("--s", s.toFixed(3));
+      run.style.setProperty("--dx", Math.round(dx) + "px");
+      run.style.setProperty("--dy", Math.round(dy) + "px");
+      run.style.setProperty("--t", (SUMO_BASE.CHARGE / 1000) + "s");
+      run.style.setProperty("--d", (i * SUMO_BASE.STAGGER / 1000) + "s");
+      run.style.setProperty("--slap", (0.38 + Math.random() * 0.12).toFixed(2) + "s"); // 張り手の速さを個体差に
+      run.style.zIndex = String(1 + Math.round(s * 10));             // 大きい＝手前
+      // 張り手の白い衝撃は手前の数体だけ（15体ぶん光らせるとチカチカしすぎ＆重い）
+      run.innerHTML = '<i class="fx-sumo-img"></i>' +
+        (s >= 0.9 ? '<i class="fx-slap s-l"></i><i class="fx-slap s-r"></i>' : "");
+      box.appendChild(run);
+    }
+    var flash = document.createElement("div"); flash.className = "fx-sumo-flash";
+    var burst = document.createElement("div"); burst.className = "fx-gotchan-burst";
+    var text = document.createElement("div"); text.className = "fx-gotchan";
+    text.innerHTML = "<span>ごっちゃんです！！</span>";
+    box.appendChild(flash); box.appendChild(burst); box.appendChild(text);
+    cam.appendChild(box);
+    fitGotchan(text.firstChild, cw);
+
+    setTimeout(function () { box.classList.add("boom"); }, T.BOOM);
+    // 揺れは最後まで見せてから外す（途中で外すと揺れが切れて跳ねる）。文字とは別要素なので重なってよい
+    setTimeout(function () { box.classList.remove("boom"); }, T.BOOM + 420);
+    setTimeout(function () { box.classList.add("dodon"); }, T.DODON);
+    setTimeout(function () { box.classList.add("dodon2"); }, T.DODON2);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+  /** 「ごっちゃんです！！」の字を枠いっぱいに（はみ出す時だけ段階縮小＝的中バッジと同じ手法）。
+      ⚠️2発目で1.22倍まで膨らむので、その分を見込んだ幅で判定する */
+  function fitGotchan(span, camW) {
+    var avail = camW * 0.94 / 1.24;
+    if (avail <= 0) return;
+    var fs = Math.round(camW * 0.115);
+    span.style.fontSize = fs + "px";
+    var guard = 0;
+    while (span.scrollWidth > avail && fs > 14 && guard < 40) {
+      fs -= 2; span.style.fontSize = fs + "px"; guard++;
+    }
+    span.parentNode.style.setProperty("--gfs", fs + "px");
+  }
+
+  /* 念仏（8/9 FB88・黄メンバー専用）：合掌して祈る→プルプル震えが増していく（同時に顔へ寄る）→
+     カッと見開いて目がピカッ＋金の後光。このメンバーはアイコン走行を出さない（fireHitFx側で分岐）。
+     ⚠️見開きは「閉じ目レイヤー(fx_pray_shut.png)を消す」だけ＝元絵の開き目がそのまま出る。
+        絵を差し替えているわけではないので、2枚がズレる余地が構造的にない */
+  function spawnPray(cam, key) {
+    var old = cam.querySelector(".fx-pray");
+    if (old) old.parentNode.removeChild(old);
+    var T = prayTimes();
+    var ch = cam.clientHeight || 300;
+    // 全身が枠に収まる大きさで登場し、寄りで顔が枠いっぱいになる
+    var ph = Math.round(ch * 0.92), pw = Math.round(ph * PRAY_AR);
+    var box = document.createElement("div");
+    box.className = ["fx-pray", "m-" + key].join(" ");
+    box.style.setProperty("--pw", pw + "px");
+    box.style.setProperty("--ph", ph + "px");
+    box.style.setProperty("--z", String(PRAY_ZOOM));
+    box.style.setProperty("--zdur", (PRAY_BASE.SHAKE / 1000) + "s"); // 震えている間ずっと寄り続ける
+    box.innerHTML =
+      '<div class="fx-pray-run in">' +
+        '<i class="fx-pray-halo"></i><i class="fx-pray-aura"></i>' +
+        '<div class="fx-pray-body pray"><div class="fx-pray-pose">' +
+          '<i class="fx-pray-art"></i><i class="fx-pray-lid"></i>' +
+          '<i class="fx-pray-beam e-l"></i><i class="fx-pray-beam e-r"></i>' +
+          '<i class="fx-pray-eye e-l"></i><i class="fx-pray-eye e-r"></i>' +
+        '</div></div>' +
+      '</div><div class="fx-pray-flash"></div>';
+    cam.appendChild(box);
+    var run = box.querySelector(".fx-pray-run");
+    var body = box.querySelector(".fx-pray-body");
+    // 震えの段階＝bodyのクラスを差し替えるだけ（キーフレームは1本・変数だけ読み直される）。
+    // 箱にも同じ段階を付ける＝気（オーラ）の濃さがCSS側で連動する
+    function stage(n) {
+      body.className = "fx-pray-body shake s" + n;
+      box.classList.remove("s1", "s2", "s3", "s4");
+      box.classList.add("s" + n);
+    }
+    setTimeout(function () { stage(1); run.classList.add("zoom"); }, T.SHAKE);
+    setTimeout(function () { stage(2); }, T.S2);
+    setTimeout(function () { stage(3); }, T.S3);
+    setTimeout(function () { stage(4); }, T.S4);
+    setTimeout(function () { box.classList.add("squeeze"); }, T.SQUEEZE);
+    setTimeout(function () { box.classList.add("open"); }, T.OPEN);
+    setTimeout(function () { box.classList.add("halo"); }, T.HALO);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
   function fireHitFx(slot, hit, rc) {
     var key = memberKey(rc);
     var eff = key ? ((MEMBER_FX[key] || {}).effect || "") : "";
@@ -1522,6 +1690,8 @@
     // バッジまでの待ち時間＝その人の前奏の長さ。専用演出は退場開始と同時に出す（消えきるのを待たない）
     var rainMs = eff === "yakumono" ? yakTimes().END
       : eff === "slot" ? slotTimes(combo.length).END
+      : eff === "sumo" ? sumoTimes().END
+      : eff === "pray" ? prayTimes().END
       : (key ? fxConf(key).rainMs : 0);
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
@@ -1532,9 +1702,12 @@
       if (key) cam.classList.add("m-" + key);             // 個人演出のフック（8/8 FB73）
       if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
       if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
-      // 前奏＝アイコンの走行（8/7 FB65）／専用演出のメンバーは走行を出さない（役物8/8 FB82・スロットFB83）
+      // 前奏＝アイコンの走行（8/7 FB65）／専用演出のメンバーは走行を出さない
+      // （役物FB82・スロットFB83・相撲FB86・念仏FB88）
       if (eff === "yakumono") spawnYakumono(cam, key);
       else if (eff === "slot") spawnSlot(cam, key, hit, combo);
+      else if (eff === "sumo") spawnSumo(cam, key, hit);
+      else if (eff === "pray") spawnPray(cam, key);
       else if (key) spawnRain(cam, key);
       setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
     });

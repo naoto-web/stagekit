@@ -834,6 +834,244 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes fxSlotOut { to { opacity: 0; transform: translate(-50%, -50%) scale(.86); } }
 .fx-slot.out { animation: fxSlotOut .45s ease-in forwards; }
 
+/* ══════════ 相撲＝緑メンバー専用の個人演出（8/9 FB86・Naoto案）
+   画面の奥から張り手をしながら手前へ迫る → カメラを通り過ぎる（ドン！と画面が白く弾ける）→
+   「ごっちゃんです！！」がどどん！と2発で決まる、の順。
+   ⚠️遠近感＝箱(.fx-sumo-run)のscaleが「距離」、中の絵(.fx-sumo-img)のrotate/translateが「張り手」。
+      2階建てにしているのは、寄りながら張り手を続けるため（1つのtransformだと両立できない）。
+   ⚠️張り手のインパクト(.fx-slap)は絵と同じ箱の中に置く＝寄るほど手と一緒に大きくなる。
+   尺はJS側の SUMO_BASE で管理 ══════════ */
+.fx-sumo { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.fx-sumo-run { position: absolute; left: 50%; top: 56%; width: var(--sw); height: var(--sh);
+  margin: calc(var(--sh) / -2) 0 0 calc(var(--sw) / -2); opacity: 0; will-change: transform; }
+/* 奥から手前へ→そのまま通り過ぎるまでを1本のアニメで（8/9 FB87で15体化・体ごとに遅延と位置が違う）。
+   ⚠️横位置(--dx)はscaleの内側に置く＝奥では中央の一点に集まり、近づくほど左右に広がる＝遠近感そのもの。
+   ⚠️通り過ぎる倍率を上げすぎるとGPUのラスタ面積が跳ねる（15体ぶん）ので2.6倍で止める */
+@keyframes fxSumoCharge {
+  0%   { transform: scale(calc(var(--s) * .08)) translate(var(--dx), var(--dy)); opacity: 0; }
+  8%   { opacity: 1; }
+  74%  { transform: scale(var(--s)) translate(var(--dx), var(--dy)); opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: scale(calc(var(--s) * 2.6)) translate(var(--dx), var(--dy)); opacity: 0; }
+}
+.fx-sumo-run.charge {
+  animation: fxSumoCharge var(--t, 3.2s) cubic-bezier(.42, 0, .78, .52) var(--d, 0s) both; }
+/* 絵は<img>でなくbackground-imageで持つ＝CSSからの相対パスで解決されるので
+   ラボ（検証ハーネス/）から本番web/を直参照しても画像が404にならない。
+   ⚠️影(drop-shadow)は先頭の1体だけ＝15体ぶん掛けるとフィルタのパスが毎フレーム15回走る */
+.fx-sumo-img { position: absolute; inset: 0;
+  background: url("fx_sumo.png") center center / contain no-repeat; }
+.fx-sumo-run.lead .fx-sumo-img { filter: drop-shadow(0 10px 20px rgba(0,0,0,.5)); }
+/* 張り手＝左右に振りながら踏み込む（半周で1発） */
+@keyframes fxSumoSlap {
+  0%   { transform: rotate(-4.5deg) translateX(-2.2%) scale(1); }
+  50%  { transform: rotate(4.5deg)  translateX(2.2%)  scale(1.03); }
+  100% { transform: rotate(-4.5deg) translateX(-2.2%) scale(1); }
+}
+.fx-sumo-run.charge .fx-sumo-img { animation: fxSumoSlap var(--slap, .42s) ease-in-out infinite; }
+/* 張り手が当たった白い衝撃（左右交互）。手のあたりに置く */
+.fx-slap { position: absolute; width: 34%; height: 26%; border-radius: 50%; opacity: 0;
+  background: radial-gradient(closest-side, rgba(255,255,255,.98), rgba(255,246,200,.45) 52%, transparent 74%); }
+/* 位置は絵の手のひらに合わせる（差し替えたら実測して直す。現在の絵＝掌の中心が横27%/70%・縦50%） */
+.fx-slap.s-l { left: 10%;  top: 37%; }
+.fx-slap.s-r { right: 13%; top: 37%; }
+@keyframes fxSlapPop {
+  0%       { opacity: .95; transform: scale(.45); }
+  55%,100% { opacity: 0;   transform: scale(1.6); }
+}
+.fx-sumo-run.charge .fx-slap { animation: fxSlapPop var(--slap, .42s) linear infinite; }
+.fx-sumo-run.charge .fx-slap.s-r { animation-delay: calc(var(--slap, .42s) / 2); }
+/* ③ すれ違いの衝撃＝白フラッシュ＋枠の揺れ */
+.fx-sumo .fx-sumo-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+@keyframes fxSumoFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+.fx-sumo.boom .fx-sumo-flash { animation: fxSumoFlash .4s ease-out; }
+@keyframes fxSumoQuake {
+  0%,100% { transform: translate(0,0); } 15% { transform: translate(-12px, 7px); }
+  30% { transform: translate(11px, -8px); } 45% { transform: translate(-8px, -6px); }
+  60% { transform: translate(7px, 7px); } 80% { transform: translate(-4px, 3px); }
+}
+.fx-sumo.boom { animation: fxSumoQuake .4s linear; }
+/* ④ 「ごっちゃんです！！」＝どどん！（2発）。集中線→文字の順で重ねる */
+.fx-gotchan { position: absolute; left: 50%; top: 50%; opacity: 0;
+  transform: translate(-50%, -50%) rotate(-4deg); }
+.fx-gotchan-burst { position: absolute; left: 50%; top: 50%; width: var(--burst); height: var(--burst);
+  transform: translate(-50%, -50%); opacity: 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.75) 0 1.6deg, transparent 1.6deg 7deg);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 26%, #000 48%, transparent 82%);
+          mask-image: radial-gradient(closest-side, transparent 26%, #000 48%, transparent 82%); }
+@keyframes fxBurst { 0% { opacity: .95; transform: translate(-50%,-50%) scale(.45) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.25) rotate(26deg); } }
+.fx-sumo.dodon .fx-gotchan-burst { animation: fxBurst .75s ease-out; }
+.fx-gotchan span { display: block; white-space: nowrap;
+  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900;
+  font-size: var(--gfs, 48px); line-height: 1.05; letter-spacing: .01em;
+  --ge: calc(var(--gfs, 48px) * .05); /* フチの太さ＝字の5% */
+  background: linear-gradient(180deg, #fff8d6 0%, #ffd54f 46%, #ffab12 62%, #ffe9a3 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  /* ⚠️background-clip:text の文字に text-shadow でフチを付けると、影のほうが後に描かれて
+     文字が真っ黒に潰れる（＝グラデが影に覆われる。実際に踏んだ）。
+     フチは drop-shadow の重ねがけで作る＝要素の描画結果そのものの後ろに乗るので潰れない。
+     4方向を数珠つなぎにすると角も埋まって1本の縁取りになる（最後の1つは落ち影） */
+  filter:
+    drop-shadow(var(--ge) 0 0 #14100a) drop-shadow(calc(var(--ge) * -1) 0 0 #14100a)
+    drop-shadow(0 var(--ge) 0 #14100a) drop-shadow(0 calc(var(--ge) * -1) 0 #14100a)
+    drop-shadow(0 calc(var(--ge) * 1.4) calc(var(--ge) * 1.8) rgba(0,0,0,.55)); }
+@keyframes fxDodon1 { /* 1発目＝奥から叩きつける */
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(2.7) rotate(-9deg); }
+  60%  { opacity: 1; transform: translate(-50%, -50%) scale(.94) rotate(-4deg); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-4deg); }
+}
+/* ⚠️2発目にもopacityを書くこと。1発目のforwardsで保っていた「見えている状態」は
+   アニメがこちらに差し替わった瞬間に効かなくなり、素の opacity:0 に落ちて
+   文字が一瞬で消える（Naoto報告「今一瞬で消えてる」の真因） */
+@keyframes fxDodon2 { /* 2発目＝もう一段デカくなって止まる（ど・どん！） */
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-4deg); }
+  35%  { opacity: 1; transform: translate(-50%, -50%) scale(1.22) rotate(-2deg); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(-4deg); }
+}
+.fx-sumo.dodon .fx-gotchan { animation: fxDodon1 .42s cubic-bezier(.3, 1.5, .4, 1) forwards; }
+/* 決まったあとの余韻＝金の明滅。
+   ⚠️明滅は「文字（span）」でなく「親」に掛ける：spanのfilterはフチ（drop-shadowの重ねがけ）が
+      占有していて、brightnessで上書きするとフチが消える（実際に踏んだ）。親に掛ければ子ごと明るくなる */
+@keyframes fxGotchanGlow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.28); } }
+.fx-sumo.dodon2 .fx-gotchan {
+  animation: fxDodon2 .3s cubic-bezier(.25, 1.7, .45, 1) forwards,
+             fxGotchanGlow 1.2s ease-in-out .3s infinite; }
+@keyframes fxSumoOut { to { opacity: 0; } }
+.fx-sumo.out { animation: fxSumoOut .45s ease-in forwards; }
+
+/* ══════════ 念仏＝黄メンバー専用の個人演出（8/9 FB88・Naoto案）
+   合掌して静かに祈る → プルプル震えが4段階で増していく（同時にじわっと顔へ寄る）→
+   カッと見開いて目がピカッ！＋金の後光、の順。
+   ⚠️元絵は目が開いている。閉じ目は fx_pray_shut.png（レンズ内側だけを描き直した差分レイヤー）を
+      重ねて作る＝見開きは「それを消す」だけで1フレームで決まる（絵の差し替えではない）。
+      2枚は同じキャンバス寸法・同じ箱に contain で置くので位置は構造的に一致する。
+   ⚠️transformの階層は4階建て。1つのtransformでは「寄りながら震えて最後に弾む」が両立できない：
+      .fx-pray-run＝寄り（距離）／.fx-pray-body＝震え／.fx-pray-pose＝溜めと開眼の弾み。
+   ⚠️震えの増大は「振幅を変数(--a/--r/--sd)に逃がして段階クラスで差し替え」＝キーフレームは1本。
+      キーフレーム内の var() はクラス変更で読み直される（アニメを組み直す必要がない）。
+   ⚠️絵は<img>でなくbackground-imageで持つ（FB86と同じ理由＝ラボから../web/overlay.cssを
+      直参照しても404にならない）。尺はJS側の PRAY_BASE で管理 ══════════ */
+.fx-pray { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden;
+  /* 素材内の座標（fx_pray.png に対する%）＝目と顔の中心。絵を差し替えたらここも直す */
+  --eye-lx: 25.61%; --eye-rx: 60.31%; --eye-y: 38.84%; --face-x: 43.01%; --face-y: 38.84%;
+  /* 寄りで顔を枠の中心へ持ってくる量＝(50% - 顔の位置)。translateは自分の実寸に対する% */
+  --tx: 6.99%; --ty: 11.16%; }
+.fx-pray-run { position: absolute; left: 50%; top: 50%; width: var(--pw); height: var(--ph);
+  margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
+  transform-origin: var(--face-x) var(--face-y); will-change: transform; }
+@keyframes fxPrayIn { from { opacity: 0; } to { opacity: 1; } }
+.fx-pray-run.in { animation: fxPrayIn .42s ease-out both; }
+/* 寄り＝顔中心を軸にscale（顔が動かない）→ そのあとtranslateで顔を枠の中心へ寄せる。
+   ⚠️順序は translate ... scale（右から適用）＝translate量が倍率の影響を受けない */
+@keyframes fxPrayZoom { from { transform: none; }
+  to { transform: translate(var(--tx), var(--ty)) scale(var(--z)); } }
+.fx-pray-run.zoom { animation: fxPrayZoom var(--zdur) cubic-bezier(.5, 0, .74, .42) forwards; }
+.fx-pray-body { position: absolute; inset: 0; will-change: transform; }
+@keyframes fxPrayBreath { 0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-.7%) scale(1.005); } }
+.fx-pray-body.pray { animation: fxPrayBreath 2.6s ease-in-out infinite; }
+/* プルプル＝1本のキーフレームを変数で強弱する（s1→s4で振幅・角度・速さが上がる） */
+@keyframes fxPrayTremor {
+  0%, 100% { transform: translate(calc(var(--a) * -1), calc(var(--a) * .45)) rotate(calc(var(--r) * -1)); }
+  25%      { transform: translate(var(--a), calc(var(--a) * -.6)) rotate(var(--r)); }
+  50%      { transform: translate(calc(var(--a) * -.65), calc(var(--a) * -.9)) rotate(calc(var(--r) * .55)); }
+  75%      { transform: translate(calc(var(--a) * .8), var(--a)) rotate(calc(var(--r) * -.75)); }
+}
+.fx-pray-body.shake { animation: fxPrayTremor var(--sd) linear infinite; }
+.fx-pray-body.s1 { --a: .30%; --r: .14deg; --sd: .17s; }
+.fx-pray-body.s2 { --a: .75%; --r: .36deg; --sd: .125s; }
+.fx-pray-body.s3 { --a: 1.4%; --r: .70deg; --sd: .09s; }
+.fx-pray-body.s4 { --a: 2.3%; --r: 1.15deg; --sd: .062s; }
+.fx-pray-pose { position: absolute; inset: 0; will-change: transform; }
+/* 見開く直前の溜め＝ぎゅっと縦に縮む → 開眼で弾ける */
+@keyframes fxPraySqueeze { from { transform: scale(1, 1); } to { transform: scale(1.025, .955); } }
+.fx-pray.squeeze .fx-pray-pose { animation: fxPraySqueeze .2s ease-in forwards; }
+@keyframes fxPrayKick { 0% { transform: scale(1.025, .955); }
+  32% { transform: scale(1.10, 1.11); } 100% { transform: scale(1, 1); } }
+.fx-pray.open .fx-pray-pose { animation: fxPrayKick .46s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+/* 絵＝開き目（元絵）と閉じ目（差分）の2枚重ね。箱の縦横比＝素材の縦横比なのでcontainで完全一致する */
+.fx-pray-art { position: absolute; inset: 0;
+  background: url("fx_pray.png") center center / contain no-repeat;
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.45)); }
+.fx-pray-lid { position: absolute; inset: 0;
+  background: url("fx_pray_shut.png") center center / contain no-repeat; }
+@keyframes fxPrayLidOff { to { opacity: 0; } }
+.fx-pray.open .fx-pray-lid { animation: fxPrayLidOff .05s linear forwards; }
+/* 目の閃光＝白い核＋金の輪。left/topは素材内の目の中心 */
+.fx-pray-eye, .fx-pray-beam { position: absolute; opacity: 0; }
+.fx-pray-eye { width: 30%; aspect-ratio: 1; transform: translate(-50%, -50%) scale(.12);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #fff 0 24%, rgba(255,248,205,.95) 42%,
+    rgba(255,203,58,.55) 66%, rgba(255,183,30,0) 79%); }
+.fx-pray-eye.e-l, .fx-pray-beam.e-l { left: var(--eye-lx); top: var(--eye-y); }
+.fx-pray-eye.e-r, .fx-pray-beam.e-r { left: var(--eye-rx); top: var(--eye-y); }
+@keyframes fxPrayEye {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.10); }
+  10%  { opacity: 1; transform: translate(-50%, -50%) scale(.62); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
+}
+.fx-pray.open .fx-pray-eye { animation: fxPrayEye .66s ease-out forwards; }
+/* 十字スパーク＝横棒（本体）＋縦棒（::before）。回転は自分の中心なので位置は動かない */
+.fx-pray-beam { width: 86%; height: 3%; transform: translate(-50%, -50%) scaleX(.06);
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,240,180,.5) 22%,
+    #fff 50%, rgba(255,240,180,.5) 78%, rgba(255,255,255,0)); }
+.fx-pray-beam::before { content: ""; position: absolute; inset: 0; background: inherit;
+  transform: rotate(90deg) scaleX(.34); }
+@keyframes fxPrayBeam {
+  0%  { opacity: 0; transform: translate(-50%, -50%) scaleX(.06); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scaleX(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1.25); }
+}
+.fx-pray.open .fx-pray-beam { animation: fxPrayBeam .52s ease-out forwards; }
+/* 後光＝金の光条が回る（顔の後ろ／maskで外へ向かって消す） */
+.fx-pray-halo { position: absolute; left: var(--face-x); top: var(--face-y);
+  width: 210%; aspect-ratio: 1; opacity: 0; transform: translate(-50%, -50%) scale(.35);
+  background: repeating-conic-gradient(from 0deg, rgba(255,214,92,.9) 0 2deg, rgba(255,214,92,0) 2deg 8.5deg);
+  -webkit-mask-image: radial-gradient(closest-side, rgba(0,0,0,.2) 16%, #000 40%, rgba(0,0,0,0) 74%);
+  mask-image: radial-gradient(closest-side, rgba(0,0,0,.2) 16%, #000 40%, rgba(0,0,0,0) 74%); }
+.fx-pray-halo::after { content: ""; position: absolute; inset: 30%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255,243,200,.85), rgba(255,201,70,.32) 56%, rgba(255,201,70,0) 78%); }
+@keyframes fxPrayHalo {
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(.35) rotate(0deg); }
+  16%  { opacity: .95; }
+  100% { opacity: .5;  transform: translate(-50%, -50%) scale(1) rotate(34deg); }
+}
+.fx-pray.halo .fx-pray-halo { animation: fxPrayHalo 1.5s ease-out forwards; }
+/* 足元から立ちのぼる金の気。震えが強まるほど濃くする（--aoを段階クラスで差し替え） */
+@keyframes fxPrayAuraRise { to { background-position: 8% -140%, 34% -180%, 62% -150%, 86% -200%; } }
+@keyframes fxPrayAuraIn { to { opacity: var(--ao, .42); } }
+@keyframes fxPrayAuraOut { to { opacity: 0; } }
+.fx-pray-aura { position: absolute; left: -18%; right: -18%; bottom: -4%; height: 88%; opacity: 0;
+  background-repeat: repeat-y; background-size: 10% 26%, 8% 31%, 9% 24%, 7% 33%;
+  background-position: 8% 0%, 34% 0%, 62% 0%, 86% 0%;
+  background-image:
+    radial-gradient(closest-side, rgba(255,222,140,.85), rgba(255,222,140,0) 72%),
+    radial-gradient(closest-side, rgba(255,203,88,.72), rgba(255,203,88,0) 72%),
+    radial-gradient(closest-side, rgba(255,233,163,.8), rgba(255,233,163,0) 72%),
+    radial-gradient(closest-side, rgba(255,196,66,.66), rgba(255,196,66,0) 72%);
+  -webkit-mask-image: linear-gradient(to top, #000 4%, rgba(0,0,0,.65) 44%, rgba(0,0,0,0) 92%);
+  mask-image: linear-gradient(to top, #000 4%, rgba(0,0,0,.65) 44%, rgba(0,0,0,0) 92%);
+  filter: blur(1.5px);
+  animation: fxPrayAuraRise 2.8s linear infinite, fxPrayAuraIn 1.2s ease-out .25s forwards; }
+.fx-pray.s2 { --ao: .6; } .fx-pray.s3 { --ao: .8; } .fx-pray.s4 { --ao: 1; }
+.fx-pray.s3 .fx-pray-aura, .fx-pray.s4 .fx-pray-aura {
+  animation: fxPrayAuraRise 1.5s linear infinite, fxPrayAuraIn .5s ease-out forwards; }
+.fx-pray.open .fx-pray-aura {
+  animation: fxPrayAuraRise 1.5s linear infinite, fxPrayAuraOut .6s ease-out forwards; }
+/* 開眼の白フラッシュ＋枠の揺れ */
+.fx-pray-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+@keyframes fxPrayFlash { 0% { opacity: .92; } 100% { opacity: 0; } }
+.fx-pray.open .fx-pray-flash { animation: fxPrayFlash .48s ease-out; }
+@keyframes fxPrayQuake {
+  0%, 100% { transform: translate(0, 0); } 12% { transform: translate(-11px, 6px); }
+  28% { transform: translate(9px, -5px); } 44% { transform: translate(-7px, -7px); }
+  62% { transform: translate(6px, 6px); }  80% { transform: translate(-3px, 2px); }
+}
+.fx-pray.open { animation: fxPrayQuake .44s linear; }
+@keyframes fxPrayOut { to { opacity: 0; } }
+.fx-pray.out { animation: fxPrayOut .45s ease-in forwards; }
+
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
 .cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }
 @keyframes hitPulse {
