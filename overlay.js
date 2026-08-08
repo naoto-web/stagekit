@@ -344,9 +344,11 @@
 
   /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ。
       noMeta=true＝合計/投資行を出さない（②は右下の固定枠band-metaに分離・8/6 FB57）
-      keepAll=true＝「全」を展開せず元の記法のまま描く（②サブ予想NEXT枠専用・8/8 FB70）。
+      keepAll=true＝「全」を展開せず元の記法のまま描く（②レース観戦のメイン帯とNEXT枠・8/8 FB70→FB74）。
         通常は展開後の実車番（dispOf＝来ようのない番号を落とした正確な集合）を出すが、
-        幅182pxのNEXT枠では「24-1-全」が11チップに膨らんで判読不能まで自動縮小される。
+        「24-1-全」が11チップに膨らんで幅を食い、自動縮小で小さくなってしまう
+        （NEXT枠は幅182pxで判読不能・メイン帯も帯全体の倍率を引き下げる）。
+        ①トークは横に広く展開表示でも読めるため従来どおり（keepAllを渡さない）。
         ⚠️かぶり目が削られた行（dupCount>0）は元記法と実際の点数がズレるので対象外＝展開表示のまま */
   function raceBuyHtml(rc, k, small, noMeta, keepAll) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
@@ -839,7 +841,8 @@
             bMeta.classList.toggle("hidden", !mt);
           }
           band.classList.remove("buy-xl", "buy-lg");
-          band.innerHTML = (key ? raceColHead(rc, key, true) : "") + raceBuyHtml(rc, key, false, true);
+          // 第5引数keepAll=true＝②メイン帯も「全」を展開せず元記法で描く（8/8 FB74）
+          band.innerHTML = (key ? raceColHead(rc, key, true) : "") + raceBuyHtml(rc, key, false, true, true);
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
         }
       });
