@@ -66,7 +66,7 @@ body[data-theme="w"] .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.18
 body[data-theme="w"] .slist-row { border-bottom-color: rgba(0,0,0,.08); }
 body[data-theme="w"] .narabi-row { background: rgba(0,0,0,.05); }
 body[data-theme="w"] .ore-row { background: rgba(0,0,0,.04); }
-/* .pl-all（全）はテーマによらずレインボー固定なので、白テーマの淡色上書きからは外してある（8/8 FB76） */
+/* .pl-all（全）は枠なし・文字だけ＝色はvar(--txt)でテーマ追従するので上書き不要（8/8 FB78） */
 body[data-theme="w"] .pl-box { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.3); }
 body[data-theme="w"] .ticker { background: rgba(255,255,255,.88); }
 body[data-theme="w"] .tick-manche { color: #d32f2f; }
@@ -231,26 +231,19 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .pl-type { font-size: 14px; font-weight: 900; color: var(--acc-text); background: var(--acc);
   padding: 3px 9px; border-radius: 6px; margin-right: 4px; }
 .pl-txt { font-size: 16px; font-weight: 800; color: var(--sub); }
-/* 「全」＝レインボーバッジ（8/8 FB76・Naoto指定）。
-   ⚠️万車バッジ方式（スペクトラム2周×background-size:200%）をそのまま持ってくると、
-     幅24〜34pxのこのバッジでは1色あたり3px程度になり「虹」に見えず色ノイズになる（実測で確認）。
-     → こちらは「1本のスペクトラムがバッジ幅にちょうど収まる」サイズ指定にして、
-        動きは背景位置の掃引ではなく hue-rotate（色相そのものが巡る）で出す。
-   文字は白＋黒の8方向フチ＝虹のどの色帯（黄も含む）に重なっても沈まない。
-   hue-rotateは白（文字・枠）と黒（フチ）には効かないので、背景だけが巡る */
+/* 「全」＝枠なし・文字だけ（8/8 FB78・視聴者から「レインボーは見づらい」FBを受けて
+   FB76の虹バッジを撤回）。枠を外したぶん文字を大きくして視認性を確保する。
+   ⚠️行の高さは height で固定したまま font-size だけ上げる＝グリフが箱より大きくても
+     行ボックスは太らないので、上下の行に干渉しない（数字チップと同じ手法）。
+   ⚠️サイズは「数字チップの約85%」を目安にしている：数字は字面が小さく、漢字は字面が
+     ほぼ全角いっぱいなので、同じpxだと漢字だけ大きく見えるため */
 .pl-all {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 6px; font-weight: 900; font-size: 17px;
-  background: linear-gradient(120deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff);
-  border: 2px solid #fff; color: #fff;
-  text-shadow: -1.2px -1.2px 0 #000, 1.2px -1.2px 0 #000, -1.2px 1.2px 0 #000, 1.2px 1.2px 0 #000,
-    0 -1.2px 0 #000, 0 1.2px 0 #000, -1.2px 0 0 #000, 1.2px 0 0 #000;
-  animation: allHue 5s linear infinite;
+  width: auto; height: 34px; padding: 0 2px;
+  font-weight: 900; font-size: 28px; color: var(--txt);
 }
-@keyframes allHue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
-/* 縮小チップ（①トークの2〜3場表示）用＝車番チップ(.car.sm 26x26)と外形を揃える。
-   これが無いと高さ34pxのまま残り、26pxのチップ列から「全」だけ縦に飛び出す（8/8 FB77） */
-.pl-all.sm { width: 26px; height: 26px; border-radius: 5px; font-size: 15px; }
+/* 縮小チップ（①トークの2〜3場表示）用＝車番チップ(.car.sm 26x26)と行高を揃える */
+.pl-all.sm { height: 26px; font-size: 21px; }
 /* BOX＝「全」と同じ買い目の意味を決める語なので、地の文(.pl-txt 16pxグレー)から
    格上げして同じバッジ様式で出す（8/8 FB69・チップに埋もれて読めなかった） */
 .pl-box {
@@ -438,10 +431,9 @@ body.debug .video-ph { display: flex; }
 .talk-band .buy-line .car { font-size: 32px; }
 .talk-band .buy-line .car.sm { font-size: 24px; }
 .talk-band .buy-line .pl-sep { font-size: 18px; padding: 0 2px; }
-/* 「全」は数字チップに対して②と同じ比率（約75%）に揃える（8/8 FB77）。
-   ①の数字は32px/34px枠と枠いっぱいなので、20pxのままだと「全」だけ痩せて見えた */
-.talk-band .buy-line .pl-all { width: 30px; font-size: 24px; }
-.talk-band .buy-line .pl-all.sm { font-size: 18px; } /* 縮小チップ（24px）に対する75% */
+/* 「全」＝枠なしなので数字チップの約85%まで上げる（8/8 FB78・①の数字は32px／縮小時24px） */
+.talk-band .buy-line .pl-all { width: auto; font-size: 28px; }
+.talk-band .buy-line .pl-all.sm { font-size: 21px; }
 .talk-band .buy-line .pl-box { font-size: 24px; }
 
 /* 予想帯ヘッダーは2行にしない：入り切らない時はJSが金額・バッジを段階縮小（8/6 FB） */
@@ -480,7 +472,7 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line .car { width: 22px; height: 26px; font-size: 24px; border-radius: 3px; }
 .race-band .pred-line { font-size: 22px; }
 .race-band .buy-line .pl-sep { font-size: 16px; padding: 0 1px; }
-.race-band .buy-line .pl-all { width: 24px; font-size: 18px; }
+.race-band .buy-line .pl-all { width: auto; height: 26px; font-size: 21px; } /* 数字24pxの約85%（FB78） */
 .race-band .buy-line .pl-box { height: 26px; padding: 0 7px; font-size: 18px; border-radius: 4px; }
 .race-band .ore-row { padding: 3px 8px; border-width: 1.5px; }
 .race-band .ore-label { font-size: 13px; }
@@ -500,19 +492,19 @@ body.debug .video-ph { display: flex; }
 .race-band .buy-line.buy-xl { gap: 6px 46px; }
 .race-band .buy-line.buy-xl .car { width: 30px; height: 36px; font-size: 32px; border-radius: 4px; }
 .race-band .buy-line.buy-xl .pl-sep { font-size: 20px; }
-.race-band .buy-line.buy-xl .pl-all { width: 32px; font-size: 24px; }
+.race-band .buy-line.buy-xl .pl-all { width: auto; height: 36px; font-size: 28px; }
 .race-band .buy-line.buy-xl .pl-box { height: 36px; padding: 0 9px; font-size: 24px; }
 .race-band .buy-line.buy-xl .pred-line { font-size: 30px; }
 .race-band .buy-line.buy-xl .ore-label { font-size: 17px; }
 .race-band .buy-line.buy-xl .buy-meta { font-size: 28px; }
 .race-band .buy-line.buy-lg .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
 .race-band .buy-line.buy-lg .pl-sep { font-size: 18px; }
-.race-band .buy-line.buy-lg .pl-all { width: 28px; font-size: 21px; }
+.race-band .buy-line.buy-lg .pl-all { width: auto; height: 31px; font-size: 24px; }
 .race-band .buy-line.buy-lg .pl-box { height: 31px; padding: 0 8px; font-size: 21px; }
 .race-band .buy-line.buy-lg .pred-line { font-size: 26px; }
 .race-band .buy-line.buy-lg .ore-label { font-size: 15px; }
 .race-band .buy-line.buy-lg .buy-meta { font-size: 26px; }
-.buy-line .pl-all { width: 26px; font-size: 15px; }
+.buy-line .pl-all { width: auto; } /* 枠なし化に伴い幅は文字なり（FB78）。文字サイズは各文脈側で指定 */
 /* note予想の公開待ち表示（8/6 FB22）：公式締切まで買い目の代わりに出すプレースホルダ */
 .note-hold { font-size: 22px; font-weight: 900; color: var(--sub); padding: 4px 0; }
 
@@ -542,7 +534,7 @@ body.race-sub-on .race-sub { display: flex; }
 .sub-line .race-col-head { font-size: 24px; padding: 3px 12px; } /* 8/6 FB16拡大・長い場名はfitSubRowsが縮める */
 .sub-line .car { width: 24px; height: 28px; font-size: 26px; border-radius: 3px; }
 .sub-line .pl-sep { font-size: 16px; padding: 0 1px; }
-.sub-line .pl-all { width: 26px; font-size: 19px; }
+.sub-line .pl-all { width: auto; height: 28px; font-size: 22px; } /* 数字26pxの約85%（FB78） */
 .sub-line .pl-box { height: 28px; padding: 0 7px; font-size: 19px; border-radius: 4px; }
 .sub-line .pred-line { font-size: 22px; }
 /* 折り返し禁止＝JS(fitSubRows)が幅ぴったりの倍率に縮める（8/6 FB14・買い目の改行対策） */
