@@ -928,8 +928,9 @@
     fitSlist(); // ライン表示で高さが変わった後に9車の収まりを確認（8/6 FB30）
   }
 
-  /** ライン（並び予想）＋競走得点＝Kドリームスから自動取得。並びは手入力があれば優先（修正用） */
-  var narabiAuto = {}; // raceKey → { val, scores, pending }
+  /** ライン（並び予想）＋競走得点＝GAS経由でkeirin.jpから自動取得。並びは手入力があれば優先（修正用） */
+  var narabiAuto = {}; // raceKey → { val, scores, pending, at }
+  var narabiDate = ""; // narabiAutoに入っている値の取得日（yyyyMMdd）＝日跨ぎ検知用
   function joCodeOf(venueName) {
     var jo = null;
     if (timetable) {
@@ -946,7 +947,7 @@
     if (!jo) return; // 時刻表の取得待ち
     narabiAuto[key] = { val: "", scores: {}, pending: true };
     window.Sync.fetchNarabi(jo, rNo).then(function (info) {
-      narabiAuto[key] = { val: info.narabi, scores: info.scores };
+      narabiAuto[key] = { val: info.narabi, scores: info.scores, at: Date.now() };
       if (hasRaceInfo(narabiAuto[key])) renderStartList();
     }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
   }
@@ -1368,9 +1369,19 @@
     window.Sync.fetchTimetable(0).then(function (t) {
       timetable = t;
       timerRowKeys = ""; // 行再構築
-      // 未発表で空だったライン/得点は10分ごとに再試行（GAS側にも10分のネガティブキャッシュあり）
+      // 日跨ぎで得点・ラインを全破棄。raceKeyは「場|R」で日付を持たないため、OBSソースを
+      // 開きっぱなしにすると前日の同じ場・同じRの値が残り続ける（8/8・視聴者指摘で発覚）
+      if (t && t.date && t.date !== narabiDate) {
+        narabiAuto = {};
+        narabiDate = t.date;
+      }
+      var now = Date.now();
       Object.keys(narabiAuto).forEach(function (k) {
-        if (!narabiAuto[k].pending && !hasRaceInfo(narabiAuto[k])) delete narabiAuto[k];
+        var e = narabiAuto[k];
+        if (e.pending) return;
+        // 未発表で空だったものは10分ごとに再試行（GAS側にも10分のネガティブキャッシュあり）／
+        // 取得済みも60分で捨てて取り直す（欠場・補充で出走表が入れ替わるため）
+        if (!hasRaceInfo(e) || (e.at && now - e.at > 3600000)) delete narabiAuto[k];
       });
       renderTimers();
       renderBrb();
