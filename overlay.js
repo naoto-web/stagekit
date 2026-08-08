@@ -297,7 +297,7 @@
         case "car": return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + '">' + tk.v + "</i>";
         case "sep": return '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
         case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
-        case "all": return '<span class="pl-all">全</span>';
+        case "all": return '<span class="pl-all' + (small ? " sm" : "") + '">全</span>';
         case "box": return '<span class="pl-box' + (small ? " sm" : "") + '">BOX</span>';
         case "gap": return '<span class="pl-gap"></span>';
         default: return '<span class="pl-txt">' + esc(tk.v) + "</span>";
@@ -344,11 +344,11 @@
 
   /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ。
       noMeta=true＝合計/投資行を出さない（②は右下の固定枠band-metaに分離・8/6 FB57）
-      keepAll=true＝「全」を展開せず元の記法のまま描く（②レース観戦のメイン帯とNEXT枠・8/8 FB70→FB74）。
+      keepAll=true＝「全」を展開せず元の記法のまま描く（8/8 FB70→FB74→FB77で①②の全帯に適用）。
         通常は展開後の実車番（dispOf＝来ようのない番号を落とした正確な集合）を出すが、
         「24-1-全」が11チップに膨らんで幅を食い、自動縮小で小さくなってしまう
         （NEXT枠は幅182pxで判読不能・メイン帯も帯全体の倍率を引き下げる）。
-        ①トークは横に広く展開表示でも読めるため従来どおり（keepAllを渡さない）。
+        FB77で①トークにも展開＝同じ買い目が①と②で違う見た目になるのを解消した。
         ⚠️かぶり目が削られた行（dupCount>0）は元記法と実際の点数がズレるので対象外＝展開表示のまま */
   function raceBuyHtml(rc, k, small, noMeta, keepAll) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
@@ -804,25 +804,27 @@
         // ①トーク＝配信者ごとの表示レース1〜3場（8/6 FB3）。1場＝全面／2場＝左右分割／3場＝T字（上段1場目・下段2場）。
         // ②レース観戦は従来どおり操作中のメインレースのみ
         if (bp === "tband-") {
+          // 第5引数keepAll=true＝①トークも「全」を展開せず元記法で描く（8/8 FB77で②に合わせた）。
+          // 第4引数noMetaはfalse固定＝①は合計/投資を帯の中にインラインで出す仕様のまま
           if (talkKeys.length >= 3) {
             // 左＝フル高の大枠／右＝上下2段（8/6 FB26・Naotoスケッチ準拠）。
             // 大枠には行数最多のレースを自動配置（FB33・同数ならタップ順維持＝安定ソート）
             var tk = talkKeys.slice().sort(function (a, b) { return predRowCount(rc, b) - predRowCount(rc, a); });
             band.innerHTML =
               '<div class="race-t">' +
-              '<div class="race-t-main race-col">' + raceColHead(rc, tk[0]) + raceBuyHtml(rc, tk[0], true) + "</div>" +
+              '<div class="race-t-main race-col">' + raceColHead(rc, tk[0]) + raceBuyHtml(rc, tk[0], true, false, true) + "</div>" +
               '<div class="race-t-side">' +
-              '<div class="race-col">' + raceColHead(rc, tk[1]) + raceBuyHtml(rc, tk[1], true) + "</div>" +
-              '<div class="race-col">' + raceColHead(rc, tk[2]) + raceBuyHtml(rc, tk[2], true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, tk[1]) + raceBuyHtml(rc, tk[1], true, false, true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, tk[2]) + raceBuyHtml(rc, tk[2], true, false, true) + "</div>" +
               "</div></div>";
           } else if (talkKeys.length === 2) {
             band.innerHTML =
               '<div class="race-split">' +
-              '<div class="race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true) + "</div>" +
-              '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true, false, true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true, false, true) + "</div>" +
               "</div>";
           } else {
-            band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false);
+            band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false, false, true);
           }
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）

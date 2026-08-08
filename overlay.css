@@ -248,6 +248,9 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
   animation: allHue 5s linear infinite;
 }
 @keyframes allHue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+/* 縮小チップ（①トークの2〜3場表示）用＝車番チップ(.car.sm 26x26)と外形を揃える。
+   これが無いと高さ34pxのまま残り、26pxのチップ列から「全」だけ縦に飛び出す（8/8 FB77） */
+.pl-all.sm { width: 26px; height: 26px; border-radius: 5px; font-size: 15px; }
 /* BOX＝「全」と同じ買い目の意味を決める語なので、地の文(.pl-txt 16pxグレー)から
    格上げして同じバッジ様式で出す（8/8 FB69・チップに埋もれて読めなかった） */
 .pl-box {
@@ -435,7 +438,10 @@ body.debug .video-ph { display: flex; }
 .talk-band .buy-line .car { font-size: 32px; }
 .talk-band .buy-line .car.sm { font-size: 24px; }
 .talk-band .buy-line .pl-sep { font-size: 18px; padding: 0 2px; }
-.talk-band .buy-line .pl-all { font-size: 20px; }
+/* 「全」は数字チップに対して②と同じ比率（約75%）に揃える（8/8 FB77）。
+   ①の数字は32px/34px枠と枠いっぱいなので、20pxのままだと「全」だけ痩せて見えた */
+.talk-band .buy-line .pl-all { width: 30px; font-size: 24px; }
+.talk-band .buy-line .pl-all.sm { font-size: 18px; } /* 縮小チップ（24px）に対する75% */
 .talk-band .buy-line .pl-box { font-size: 24px; }
 
 /* 予想帯ヘッダーは2行にしない：入り切らない時はJSが金額・バッジを段階縮小（8/6 FB） */
