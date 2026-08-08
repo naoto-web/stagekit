@@ -742,6 +742,98 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes fxYakOut { to { opacity: 0; transform: scale(1.12); } }
 .fx-yak.out { animation: fxYakOut .45s ease-in forwards; }
 
+/* ══════════ スロット＝ピンクメンバー専用の個人演出（8/8 FB83・Naoto案／ラボfxlabで詰めて本番化）
+   当たり目の車番を並べたリールが「クルクル」回り、左から順に減速して「ドン」と停まる →
+   全部揃ったら「ピカピカ」→ 本番の的中バッジへバトンを渡す。
+   ⚠️このメンバーはアイコン走行を出さない（overlay.js側でspawnRainを呼ばない）＝二重演出の防止。
+   ⚠️箱・リールの寸法はJSがpxで固定する（幅autoのflex縮みに任せない）。
+      ラボ試作では✨がflexの子のまま並んでいて、「ピカピカ」で絶対配置に変わった瞬間に
+      リール幅が変わっていた＝Naotoが指摘した「揃った瞬間に短くなる」違和感の正体。
+      → ✨は最初から絶対配置（見えないだけ）にして、レイアウトを最初から最後まで動かさない。
+   尺はJS側の SLOT_BASE で管理（既定＝2.0s/3.9s/6.3sで停止→ピカピカ→8.0sでバッジ） ══════════ */
+.fx-slot { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; gap: var(--gap, 12px); padding: var(--pad, 16px); box-sizing: border-box;
+  border-radius: 16px; background: rgba(12, 16, 24, .82);
+  box-shadow: 0 12px 40px rgba(0,0,0,.55), inset 0 0 0 3px rgba(255,255,255,.28); }
+/* 万車＝枠がレインボーに流れる（既存の万車バッジと同じ語彙・rainbowSweepを共用） */
+.fx-slot.manche { box-shadow: 0 12px 40px rgba(0,0,0,.55), inset 0 0 0 4px rgba(255,255,255,.9); }
+.fx-slot.manche::before {
+  content: ""; position: absolute; inset: -4px; border-radius: 20px; z-index: -1;
+  background: linear-gradient(90deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff,
+    #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff, #ff5252);
+  background-size: 200% 100%; animation: rainbowSweep 1.6s linear infinite; }
+
+/* リール＝縦に流れる窓。窓＝1コマぶんの正方形（幅も高さも --cell 固定＝チップが欠けない） */
+.fx-reel { position: relative; flex: 0 0 auto; width: var(--cell); height: var(--cell); overflow: hidden;
+  border-radius: 10px; background: #0b0e14; box-shadow: inset 0 0 0 3px rgba(255,255,255,.22); }
+.fx-strip { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; }
+.fx-cell { width: var(--cell); height: var(--cell); display: flex; align-items: center; justify-content: center; }
+/* コマの中身＝本番と同じ車番チップ（.car .c1〜.c9）をそのまま拡大して使う */
+.fx-cell .car { width: 78%; height: 78%; font-size: calc(var(--cell) * .52); border-radius: 12px; border-width: 3px; }
+/* 上下のグラデ＝回転中の残像感 */
+.fx-reel::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,.55), transparent 26%, transparent 74%, rgba(0,0,0,.55)); }
+
+/* 「ドン」＝停止の瞬間だけ跳ねる＋白フラッシュ */
+@keyframes fxDon {
+  0%   { transform: scale(1.28); }
+  45%  { transform: scale(.94); }
+  75%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.fx-reel.don { animation: fxDon .34s cubic-bezier(.2,1.6,.4,1); }
+.fx-flash { position: absolute; inset: 0; border-radius: 10px; background: #fff; opacity: 0; pointer-events: none; }
+@keyframes fxFlash { 0% { opacity: .95; } 100% { opacity: 0; } }
+.fx-reel.don .fx-flash { animation: fxFlash .36s ease-out; }
+
+/* 「ピカピカ」＝全部揃った後の全体きらめき */
+@keyframes fxPika {
+  0%, 100% { filter: brightness(1); box-shadow: 0 12px 40px rgba(0,0,0,.55), inset 0 0 0 4px rgba(255,255,255,.9); }
+  50%      { filter: brightness(1.45); box-shadow: 0 0 70px 22px rgba(255,255,255,.9), inset 0 0 0 4px #fff; }
+}
+.fx-slot.pika { animation: fxPika .42s ease-in-out infinite; }
+/* ✨＝最初から絶対配置（レイアウトに参加させない）。見えるのは .pika が付いてから */
+.fx-slot .fx-spark { position: absolute; opacity: 0; pointer-events: none;
+  font-size: calc(var(--cell) * .5); }
+.fx-slot .fx-spark.s1 { left: -6%;  top: -22%; }
+.fx-slot .fx-spark.s2 { right: -6%; top: -18%; }
+.fx-slot .fx-spark.s3 { left: 12%;  bottom: -26%; }
+.fx-slot .fx-spark.s4 { right: 14%; bottom: -24%; }
+@keyframes fxSpark { 0%,100% { opacity: 0; transform: scale(.6) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(18deg); } }
+.fx-slot.pika .fx-spark { animation: fxSpark .7s ease-in-out infinite; }
+.fx-slot.pika .fx-spark.s2 { animation-delay: .18s; }
+.fx-slot.pika .fx-spark.s3 { animation-delay: .36s; }
+.fx-slot.pika .fx-spark.s4 { animation-delay: .52s; }
+/* レバー（8/9 FB84・Naoto案「右にレバー→引いてから回り出す」）＝筐体の右側面に生やす。
+   支点＝根元（transform-origin: 50% 100%）。`left`に支点のx座標を置き、transformの
+   translateX(-50%)で自分の中心を支点に合わせる（＝回転の中心が支点になる）。
+   ⚠️箱のレイアウトには参加させない（絶対配置）＝「回転中と停止後で寸法が動かない」原則を守る。
+   ⚠️引き下ろした瞬間に玉が右へ大きく振れる＝JS側で振り抜き分の幅を確保してから大きさを決めている */
+.fx-lever { position: absolute; left: calc(100% + var(--cell) * .15); bottom: 46%;
+  width: calc(var(--cell) * .10); height: calc(var(--cell) * .75);
+  transform-origin: 50% 100%; transform: translateX(-50%) rotate(-10deg);
+  transition: transform var(--lvms, .34s) cubic-bezier(.55, 0, .9, .45); }
+.fx-lever.pull { transform: translateX(-50%) rotate(58deg); }         /* ガコン、と引き下ろす */
+.fx-lever.back { transform: translateX(-50%) rotate(-10deg);          /* バネで戻る（少し行き過ぎる） */
+  transition: transform .52s cubic-bezier(.2, 1.7, .45, 1); }
+.fx-lever .fx-rod { position: absolute; inset: 0; border-radius: 999px;
+  background: linear-gradient(90deg, #5c646e, #e8eef5 38%, #aeb8c4 62%, #5c646e);
+  box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.fx-lever .fx-knob { position: absolute; left: 50%; top: 0;
+  width: calc(var(--cell) * .30); height: calc(var(--cell) * .30); border-radius: 50%;
+  transform: translate(-50%, -62%);
+  background: radial-gradient(circle at 34% 30%, #ff9d9d, #e23c3c 46%, #8d1414 78%, #5e0d0d);
+  box-shadow: 0 4px 10px rgba(0,0,0,.55), inset 0 -5px 9px rgba(0,0,0,.35); }
+/* 支点の台座＝回らない側（筐体に固定） */
+.fx-lever-base { position: absolute; left: calc(100% + var(--cell) * .15); bottom: 46%;
+  width: calc(var(--cell) * .28); height: calc(var(--cell) * .18);
+  transform: translate(-50%, 50%); border-radius: calc(var(--cell) * .05);
+  background: linear-gradient(180deg, #9aa4b0, #454c56);
+  box-shadow: 0 3px 8px rgba(0,0,0,.5); }
+/* 退場 */
+@keyframes fxSlotOut { to { opacity: 0; transform: translate(-50%, -50%) scale(.86); } }
+.fx-slot.out { animation: fxSlotOut .45s ease-in forwards; }
+
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
 .cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }
 @keyframes hitPulse {

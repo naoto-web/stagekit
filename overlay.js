@@ -1221,13 +1221,17 @@
              size   …[最小px, 最大px]（既定[80,180]・奥のレーンほど小さい）
              dur    …1体の走破秒[最小,最大]（既定[2.2,3.2]）
              rainMs …走行の長さ＝バッジが出るまでの時間ms（既定4500）
+             effect …アイコン走行の代わりに出す専用演出（"yakumono"＝役物合体／"slot"＝スロット）。
+                      指定した色キーはアイコン走行を出さない＝二重演出にしない。尺は各演出側が決める
      追加手順：①下の表に色キーの行を足す ②必要ならoverlay.cssに見た目を書く
-               ③検証ハーネス raintest.html?key=<色キー> で撮って確認 */
+               ③検証ハーネス raintest.html?key=<色キー> で撮って確認
+                 （effect系は動きを見る演出なので 検証ハーネス/fxlab.html を実ブラウザで開く） */
   var COLOR_KEY = { "青": "blue", "緑": "green", "オレンジ": "orange", "橙": "orange",
     "赤": "red", "ピンク": "pink", "桃": "pink", "黄": "yellow", "黄色": "yellow" };
   var MEMBER_FX = {
     orange: { fx: ["dust-xl"] },      // 白いモクモクの砂埃（8/8 FB72）
-    blue:   { effect: "yakumono" }    // 役物合体＝コインが四隅から合体（8/8 FB82・アイコン走行は出さない）
+    blue:   { effect: "yakumono" },   // 役物合体＝コインが四隅から合体（8/8 FB82・アイコン走行は出さない）
+    pink:   { effect: "slot" }        // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
     // 例）red: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
   };
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
@@ -1246,6 +1250,44 @@
     t.END   = t.GLOW + YAK_BASE.HOLD;       // 退場開始＝ここでバッジにバトンを渡す
     t.GONE  = t.END + YAK_BASE.FADE;
     return t;
+  }
+
+  /* スロットの尺（8/8 FB83・8/9 FB84でレバー追加。ピンクメンバー専用）。
+     流れ＝①筐体が出る（止まったまま）②レバーを引く③引き切った瞬間に回り出す④左から順に停まる⑤ピカピカ
+       WAIT   …筐体が出てからレバーを引き始めるまでの間ms（見せる間）
+       LEVER  …レバーを引き下ろすのにかかるms（引き切った瞬間＝回転開始）
+       SPIN1  …回り出してから1つ目のリールが停まるまでのms
+       GAP    …2つ目までの間隔ms／GROW…3つ目はその何倍焦らすか（試作の700ms刻みは
+                「2つ目・3つ目が早すぎる」＝Naoto指摘。溜めを作るのはこの2つの数字）
+       DECEL  …各リールが減速に使う時間ms（この間だけ速度が落ちる＝クルクル→スーッ→ドン）
+       CELL_MS…等速で回っているときの1コマあたりms（小さいほど速く回る）
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）。伸ばすと演出全体が長くなる
+        （バッジの表示時間 HIT_FX_MS=27秒 は別枠でその後ろに乗る） */
+  var SLOT_BASE = { WAIT: 380, LEVER: 340, SPIN1: 2000, GAP: 1900, GROW: 1.28, DECEL: 1400,
+    PIKA_LAG: 140, HOLD: 2500, FADE: 500, CELL_MS: 60 }; // HOLD＝揃ってキラキラを見せる時間（8/9 FB85で+1秒）
+  var SLOT_LOOP = 9; // 1周＝車番1〜9の9コマ（当たり目は1周に必ず1回だけ出る）
+  function slotTimes(n) {
+    n = n || 3;
+    var t = { PULL: SLOT_BASE.WAIT };                 // レバーを引き始める
+    t.SPIN = t.PULL + SLOT_BASE.LEVER;                // 引き切った＝回転開始（レバーはバネで戻る）
+    t.STOPS = [t.SPIN + SLOT_BASE.SPIN1];
+    for (var i = 1; i < n; i++) {
+      t.STOPS.push(Math.round(t.STOPS[i - 1] + SLOT_BASE.GAP * Math.pow(SLOT_BASE.GROW, i - 1)));
+    }
+    t.PIKA = t.STOPS[n - 1] + SLOT_BASE.PIKA_LAG; // 全部揃ってから光り出す
+    t.END  = t.PIKA + SLOT_BASE.HOLD;             // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE = t.END + SLOT_BASE.FADE;
+    return t;
+  }
+  /** 的中の組合せ（comboLabel "1-3-5"）→ リールに出す車番配列。
+      手動追加の的中はcomboLabelを持たない＝数字を作り話にしないため空配列を返す（呼び出し側で走行に落とす） */
+  function slotCombo(hit) {
+    var out = [];
+    String((hit && hit.comboLabel) || "").split("-").forEach(function (tk) {
+      var n = parseInt(tk, 10);
+      if (n >= 1 && n <= 9) out.push(n);
+    });
+    return (out.length >= 2 && out.length <= 3) ? out : [];
   }
 
   ["blue", "green", "orange", "red", "pink", "yellow"].forEach(function (k) {
@@ -1351,11 +1393,136 @@
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
   }
 
+  /* スロット（8/8 FB83・ピンクメンバー専用）：当たり目の車番を1つずつリールに割り当て、
+     左から順に「クルクル→減速→ドン」で停める。全部揃ったら箱ごとピカピカ光ってバッジへ。
+     このメンバーはアイコン走行を出さない（fireHitFx側で分岐）＝二重演出にしない。
+     ⚠️寸法はここでpx計算して固定する＝回っている間と停まった後で見た目が変わらない
+       （幅autoのflex縮みに任せると、✨の出入りやコマ数でリール幅が動く。試作版の違和感の正体） */
+  function spawnSlot(cam, key, hit, combo) {
+    var old = cam.querySelector(".fx-slot");
+    if (old) old.parentNode.removeChild(old);
+    var n = combo.length;
+    var T = slotTimes(n);
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    // 箱幅＝cell*n ＋ すき間(cell*.14)*(n-1) ＋ 内余白(cell*.18)*2
+    var wUnit = n + 0.14 * (n - 1) + 0.36;
+    // レバーの取り分＝支点(.15)＋振り抜いた玉の最遠点(sin58°×0.75＋玉の半径.15)。
+    // ⚠️引き下ろすと玉が右へ大きく振れる＝この幅を先に確保しないと枠から見切れる
+    var lvUnit = 0.95;
+    var cell = Math.floor(Math.min((cw * 0.78) / (wUnit + lvUnit), (ch * 0.66) / 1.36));
+    if (cell < 24) cell = 24;
+    var gap = Math.round(cell * 0.14), pad = Math.round(cell * 0.18);
+    var box = document.createElement("div");
+    box.className = ["fx-slot", "m-" + key].join(" ") + (hit && hit.manche ? " manche" : "");
+    box.style.setProperty("--cell", cell + "px");
+    box.style.setProperty("--gap", gap + "px");
+    box.style.setProperty("--pad", pad + "px");
+    box.style.setProperty("--lvms", (SLOT_BASE.LEVER / 1000) + "s");
+    box.style.width = (cell * n + gap * (n - 1) + pad * 2) + "px";
+    // 待機中のレバーぶんだけ筐体を左へ寄せる＝「筐体＋レバー」で見た目の中心を取る
+    box.style.marginLeft = "-" + Math.round(cell * 0.16) + "px";
+    ["s1", "s2", "s3", "s4"].forEach(function (c) { // ✨は絶対配置＝レイアウトに参加しない
+      var sp = document.createElement("span");
+      sp.className = "fx-spark " + c; sp.textContent = "✨";
+      box.appendChild(sp);
+    });
+    var base = document.createElement("div"); base.className = "fx-lever-base";
+    var lever = document.createElement("div"); lever.className = "fx-lever";
+    lever.innerHTML = '<i class="fx-rod"></i><i class="fx-knob"></i>';
+    box.appendChild(base); box.appendChild(lever);
+    var reels = combo.map(function (num) { return buildSlotReel(box, num, cell); });
+    cam.appendChild(box);
+    runSlotReels(reels, T, cell);
+    setTimeout(function () { lever.classList.add("pull"); }, T.PULL);
+    setTimeout(function () { lever.classList.remove("pull"); lever.classList.add("back"); }, T.SPIN);
+    setTimeout(function () { box.classList.add("pika"); }, T.PIKA);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+  /** リール1本＝1〜9をシャッフルした9コマを2周ぶん並べたもの（2周ぶん描くと継ぎ目なくループできる） */
+  function buildSlotReel(box, target, cell) {
+    var el = document.createElement("div"); el.className = "fx-reel";
+    var strip = document.createElement("div"); strip.className = "fx-strip";
+    var seq = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    for (var i = seq.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1)), tmp = seq[i]; seq[i] = seq[j]; seq[j] = tmp;
+    }
+    for (var k = 0; k < seq.length * 2; k++) {
+      var num = seq[k % seq.length];
+      var c = document.createElement("div"); c.className = "fx-cell";
+      c.innerHTML = '<i class="car c' + num + '">' + num + "</i>";
+      strip.appendChild(c);
+    }
+    el.appendChild(strip);
+    var fl = document.createElement("div"); fl.className = "fx-flash"; el.appendChild(fl);
+    box.appendChild(el);
+    return { el: el, strip: strip, target: seq.indexOf(target) * cell };
+  }
+  /** 回転の駆動（requestAnimationFrame 1本で3リールぶん）。
+      前半＝等速（クルクル）／後半DECEL＝easeOutQuadで減速し、当たり目にピタリで着地。
+      位置は「1周ぶんで折り返す」剰余で持つので、何秒回してもコマは尽きない。
+      ⚠️減速の距離distは「1周ぶんの端数＋必要なら1周」＝等速の速さと減速開始の速さが極端にズレない値を選ぶ
+        （でないと減速の頭で急に速くなったり失速したりして見える）
+      ⚠️位置は「経過時刻から毎回計算し直す」＝コマ送りの積み上げにしない。
+         OBSの裏に回ったソースやヘッドレスではrAFが1枚も来ないことがあり（実測で確認）、
+         積み上げ方式だと回転が途中で凍って当たり目に着かない。
+         同じ理由で「ドン」と最終位置の固定はsetTimeout側で必ず打つ＝rAFはあくまで滑らかさの担当 */
+  function runSlotReels(reels, T, cell) {
+    var loopH = SLOT_LOOP * cell;
+    var v = cell / SLOT_BASE.CELL_MS;          // 等速の速さ（px/ms）
+    var ideal = v * SLOT_BASE.DECEL / 2;       // easeOutQuadで速度が繋がる理想の減速距離
+    var nowMs = function () {
+      return (window.performance && performance.now) ? performance.now() : Date.now();
+    };
+    reels.forEach(function (r, i) {
+      r.stopAt = T.STOPS[i] - T.SPIN;  // 「回り出してから」の相対ms（レバーを引く間は止まっている）
+      r.decelAt = Math.max(0, r.stopAt - SLOT_BASE.DECEL);
+      r.decelLen = r.stopAt - r.decelAt;
+      r.base = v * r.decelAt;
+      var need = ((r.target - r.base) % loopH + loopH) % loopH; // 当たり目まであと何px
+      r.dist = need + loopH * Math.max(0, Math.round((ideal - need) / loopH));
+      r.done = false;
+    });
+    var last = reels[reels.length - 1].stopAt;
+    var t0 = nowMs() + T.SPIN;         // 回転開始の時刻
+    function place(r, t) {
+      var off;
+      if (t < r.decelAt) off = v * t;
+      else if (t < r.stopAt) {
+        var p = (t - r.decelAt) / r.decelLen;
+        off = r.base + r.dist * (1 - (1 - p) * (1 - p)); // easeOutQuad
+      } else {
+        off = r.base + r.dist;                           // ＝当たり目（剰余で一致する）
+      }
+      r.strip.style.transform = "translateY(-" + (off % loopH).toFixed(1) + "px)";
+    }
+    reels.forEach(function (r) {
+      place(r, 0); // レバーを引き終わるまでは止まったまま見せる
+      setTimeout(function () { // ドン！＝停止の跳ね＋白フラッシュ。位置もここで確実に当たり目へ
+        r.done = true;
+        place(r, r.stopAt);
+        r.el.classList.add("don");
+      }, T.SPIN + r.stopAt);
+    });
+    function frame() {
+      var t = nowMs() - t0;
+      if (t >= 0) reels.forEach(function (r) { if (!r.done) place(r, t); });
+      if (t < last + 40 && document.body.contains(reels[0].el)) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
   function fireHitFx(slot, hit, rc) {
     var key = memberKey(rc);
-    var yak = key && (MEMBER_FX[key] || {}).effect === "yakumono";
-    // バッジまでの待ち時間＝その人の前奏の長さ。役物は退場開始と同時に出す（消えきるのを待たない）
-    var rainMs = yak ? yakTimes().END : (key ? fxConf(key).rainMs : 0);
+    var eff = key ? ((MEMBER_FX[key] || {}).effect || "") : "";
+    // スロットは当たり目の数字そのものを見せる演出。車番が取れない的中（手動追加）では
+    // 数字を作り話にせず、既定のアイコン走行に落とす
+    var combo = eff === "slot" ? slotCombo(hit) : [];
+    if (eff === "slot" && !combo.length) eff = "";
+    // バッジまでの待ち時間＝その人の前奏の長さ。専用演出は退場開始と同時に出す（消えきるのを待たない）
+    var rainMs = eff === "yakumono" ? yakTimes().END
+      : eff === "slot" ? slotTimes(combo.length).END
+      : (key ? fxConf(key).rainMs : 0);
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
       if (!el) return;
@@ -1365,8 +1532,9 @@
       if (key) cam.classList.add("m-" + key);             // 個人演出のフック（8/8 FB73）
       if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
       if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
-      // 前奏＝アイコンの走行（8/7 FB65）／役物のメンバーは走行を出さず役物だけ（8/8 FB82）
-      if (yak) spawnYakumono(cam, key);
+      // 前奏＝アイコンの走行（8/7 FB65）／専用演出のメンバーは走行を出さない（役物8/8 FB82・スロットFB83）
+      if (eff === "yakumono") spawnYakumono(cam, key);
+      else if (eff === "slot") spawnSlot(cam, key, hit, combo);
       else if (key) spawnRain(cam, key);
       setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
     });
