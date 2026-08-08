@@ -343,8 +343,12 @@
   }
 
   /** 1配信者×1レースの買い目ブロック（俺たち目・買い目行・メモ・合計）。small=2レース表示用の縮小チップ。
-      noMeta=true＝合計/投資行を出さない（②は右下の固定枠band-metaに分離・8/6 FB57） */
-  function raceBuyHtml(rc, k, small, noMeta) {
+      noMeta=true＝合計/投資行を出さない（②は右下の固定枠band-metaに分離・8/6 FB57）
+      keepAll=true＝「全」を展開せず元の記法のまま描く（②サブ予想NEXT枠専用・8/8 FB70）。
+        通常は展開後の実車番（dispOf＝来ようのない番号を落とした正確な集合）を出すが、
+        幅182pxのNEXT枠では「24-1-全」が11チップに膨らんで判読不能まで自動縮小される。
+        ⚠️かぶり目が削られた行（dupCount>0）は元記法と実際の点数がズレるので対象外＝展開表示のまま */
+  function raceBuyHtml(rc, k, small, noMeta, keepAll) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
     var memos = rp ? rp.parsed.memos : [];
@@ -359,7 +363,10 @@
         "</div>";
     }
     return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small) + "</div>" : "") +
-      okLines.map(function (l) { return '<div class="pred-line chips">' + lineChips(l.disp || l.raw, small) + "</div>"; }).join("") +
+      okLines.map(function (l) {
+        var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
+        return '<div class="pred-line chips">' + lineChips(src, small) + "</div>";
+      }).join("") +
       (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
       metaLine;
   }
@@ -866,7 +873,8 @@
         var sBand = $("sband-pred-" + slot);
         if (sBand) {
           var sKey = svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
-          sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false) : "";
+          // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
+          sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true) : "";
           fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
         }
       }
