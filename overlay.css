@@ -678,6 +678,70 @@ body.race-sub-on .race-sub { display: flex; }
   100% { transform: translate(.4em, -.4em) scale(2.2); opacity: 0; }
 }
 
+/* ══════════ 役物合体＝青メンバー専用の個人演出（8/8 FB82・Naoto案／ラボfxlabで詰めて本番化）
+   コインのロゴを4分割し、四隅から寄る→震える→ガシャーン合体→後光、の順に見せる（パチンコの役物）。
+   ⚠️このメンバーはアイコン走行を出さない（overlay.js側でspawnRainを呼ばない）＝二重演出の防止。
+   画像は fx_coin.png 1枚を background-size:200% 200% の4象限に割って使う
+   （切り分けたファイルを作らない＝差し替えは画像1枚だけで済む）。
+   ⚠️コインは撮影角度で真円でなく横長の楕円（448x404）＝カケラも実物の縦横比に合わせる。
+   尺はJS側の YAK で管理（既定＝寄る4.2s・震え2.1s・合体6.35s・バッジ7.63s） ══════════ */
+.fx-yak { position: absolute; z-index: 4; inset: 0; pointer-events: none; overflow: hidden; }
+.fx-piece { position: absolute; left: 50%; top: 50%; width: var(--pw); height: var(--ph);
+  background-image: url("fx_coin.png"); background-repeat: no-repeat;
+  background-size: calc(var(--pw) * 2) calc(var(--ph) * 2);
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,.6));
+  /* --fx/--fy＝合体後の定位置（中心からのずれ）／--ox/--oy＝出発点（枠外の四隅） */
+  transform: translate(calc(-50% + var(--ox)), calc(-50% + var(--oy))) scale(1.35) rotate(var(--rot));
+  opacity: 0; }
+.fx-piece.tl { --fx: calc(var(--pw) / -2); --fy: calc(var(--ph) / -2); background-position: 0 0; }
+.fx-piece.tr { --fx: calc(var(--pw) /  2); --fy: calc(var(--ph) / -2); background-position: 100% 0; }
+.fx-piece.bl { --fx: calc(var(--pw) / -2); --fy: calc(var(--ph) /  2); background-position: 0 100%; }
+.fx-piece.br { --fx: calc(var(--pw) /  2); --fy: calc(var(--ph) /  2); background-position: 100% 100%; }
+/* ① ゆっくり寄る（合体位置から少し離れた所で待機）。長さは --fly で可変 */
+.fx-piece.in { opacity: 1;
+  transform: translate(calc(-50% + var(--fx) + var(--gx)), calc(-50% + var(--fy) + var(--gy))) scale(1) rotate(0deg);
+  transition: transform var(--fly, 4.2s) cubic-bezier(.16,.84,.30,1), opacity .5s ease-out; }
+/* ② ブルブル震える（合体直前のタメ）。振動の速さは尺を伸ばしても変えない */
+@keyframes fxShake {
+  0%,100% { margin: 0 0 0 0; } 20% { margin: -3px 0 0 3px; } 40% { margin: 2px 0 0 -3px; }
+  60% { margin: -2px 0 0 -2px; } 80% { margin: 3px 0 0 2px; }
+}
+.fx-piece.shake { animation: fxShake .09s linear infinite; }
+/* ③ ガシャーン！＝定位置へ一気に吸着。
+   ⚠️この0.13秒は尺の倍率を掛けない（伸ばすと叩きつけでなくスーッと寄るだけになり迫力が消える）。
+   ⚠️合体後はカケラごとの影を消す＝影が残ると4枚の継ぎ目が線になって「1枚のコイン」に見えない */
+.fx-piece.lock { animation: none; filter: none;
+  transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(1) rotate(0deg);
+  transition: transform .13s cubic-bezier(.7,0,.9,.4); }
+/* 合体の衝撃：白フラッシュ＋衝撃波リング2本＋枠の揺れ */
+@keyframes fxHitFlash { 0% { opacity: .92; } 100% { opacity: 0; } }
+.fx-yak .fx-boom { position: absolute; inset: 0; background: #fff; opacity: 0; }
+.fx-yak.boom .fx-boom { animation: fxHitFlash .42s ease-out; }
+@keyframes fxRing { 0% { transform: translate(-50%,-50%) scale(.15); opacity: .95; border-width: 18px; }
+  100% { transform: translate(-50%,-50%) scale(2.6); opacity: 0; border-width: 2px; } }
+.fx-yak .fx-ring { position: absolute; left: 50%; top: 50%; width: var(--pw); height: var(--pw);
+  border: 18px solid #fff; border-radius: 50%; opacity: 0;
+  transform: translate(-50%,-50%) scale(.15); }
+.fx-yak.boom .fx-ring { animation: fxRing .55s cubic-bezier(.1,.7,.3,1); }
+.fx-yak .fx-ring.r2 { border-color: #ffd54f; }
+.fx-yak.boom .fx-ring.r2 { animation: fxRing .7s cubic-bezier(.1,.7,.3,1) .08s; }
+@keyframes fxQuake {
+  0%,100% { transform: translate(0,0); } 15% { transform: translate(-10px, 6px); }
+  30% { transform: translate(9px, -7px); } 45% { transform: translate(-7px, -5px); }
+  60% { transform: translate(6px, 6px); } 80% { transform: translate(-3px, 2px); }
+}
+.fx-yak.boom { animation: fxQuake .38s linear; }
+/* ④ 合体後の余韻＝明るさだけを揺らす（影は使わない＝継ぎ目対策・後光は .fx-halo が担当） */
+@keyframes fxYakGlow { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.22); } }
+.fx-yak.glow .fx-piece { animation: fxYakGlow 1.1s ease-in-out infinite; }
+.fx-yak .fx-halo { position: absolute; left: 50%; top: 50%; width: calc(var(--pw) * 2.9); height: calc(var(--ph) * 2.9);
+  transform: translate(-50%, -50%); border-radius: 50%; opacity: 0;
+  background: radial-gradient(closest-side, rgba(255,255,255,.55), rgba(255,255,255,.16) 55%, transparent 72%); }
+@keyframes fxHalo { 0%,100% { opacity: .25; } 50% { opacity: .85; } }
+.fx-yak.glow .fx-halo { animation: fxHalo 1.1s ease-in-out infinite; }
+@keyframes fxYakOut { to { opacity: 0; transform: scale(1.12); } }
+.fx-yak.out { animation: fxYakOut .45s ease-in forwards; }
+
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
 .cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }
 @keyframes hitPulse {

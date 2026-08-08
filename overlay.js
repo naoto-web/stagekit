@@ -1226,14 +1226,32 @@
   var COLOR_KEY = { "青": "blue", "緑": "green", "オレンジ": "orange", "橙": "orange",
     "赤": "red", "ピンク": "pink", "桃": "pink", "黄": "yellow", "黄色": "yellow" };
   var MEMBER_FX = {
-    orange: { fx: ["dust-xl"] }   // 白いモクモクの砂埃（8/8 FB72）
+    orange: { fx: ["dust-xl"] },      // 白いモクモクの砂埃（8/8 FB72）
+    blue:   { effect: "yakumono" }    // 役物合体＝コインが四隅から合体（8/8 FB82・アイコン走行は出さない）
     // 例）red: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
   };
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
 
+  /* 役物合体の尺（8/8 FB82）。倍率kを掛けるのは「焦らし」の2つ（寄る・震える）だけ。
+     ⚠️合体の一撃(CSS .fx-piece.lock の0.13秒)と、合体後の余韻HOLDには掛けない：
+        前者を伸ばすと叩きつけでなくスーッと寄るだけになり、後者を伸ばすと
+        決着後の見せっぱなしが延びて間延びする（Naoto実見でk=3・HOLD固定に決定） */
+  var YAK_K = 3;
+  var YAK_BASE = { IN: 50, FLY: 1400, SHAKE: 700, GLOW_LAG: 180, HOLD: 1100, FADE: 450 };
+  function yakTimes() {
+    var t = { IN: YAK_BASE.IN, FLY: YAK_BASE.FLY * YAK_K, SHAKE_LEN: YAK_BASE.SHAKE * YAK_K };
+    t.SHAKE = t.IN + t.FLY;                 // 震え始め
+    t.LOCK  = t.SHAKE + t.SHAKE_LEN;        // ガシャーン！
+    t.GLOW  = t.LOCK + YAK_BASE.GLOW_LAG;   // 後光
+    t.END   = t.GLOW + YAK_BASE.HOLD;       // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE  = t.END + YAK_BASE.FADE;
+    return t;
+  }
+
   ["blue", "green", "orange", "red", "pink", "yellow"].forEach(function (k) {
     var im = new Image(); im.src = "ic_" + k + ".png"; // 先読み＝初回的中でアイコンが欠けない
   });
+  (function () { var im = new Image(); im.src = "fx_coin.png"; })(); // 役物のコインも先読み（8/8 FB82）
   /** メンバーカラー→色キー（未登録の色は個人演出なし＝アイコンも雨も出ない従来動作） */
   function memberKey(rc) { return rc && COLOR_KEY[rc.color] ? COLOR_KEY[rc.color] : ""; }
   function fxConf(key) {
@@ -1280,9 +1298,64 @@
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, conf.rainMs + 1200);
   }
 
+  /* 役物合体（8/8 FB82・青メンバー専用）：コイン1枚を4象限に割り、四隅から寄せて合体させる。
+     この演出のメンバーはアイコン走行を出さない（fireHitFx側で分岐）＝二重演出にしない */
+  function spawnYakumono(cam, key) {
+    var old = cam.querySelector(".fx-yak");
+    if (old) old.parentNode.removeChild(old);
+    var T = yakTimes();
+    // コイン全体の大きさ＝枠に収まる範囲で縦横比を保つ（カケラ1枚はその半分）。
+    // ⚠️四隅に散らした状態でも枠内に収まることが上限（合体後の大きさだけで決めると散開時に見切れる）
+    var AR = 448 / 404; // fx_coin.png の実寸比
+    var maxW = cam.clientWidth * .52, maxH = cam.clientHeight * .62;
+    var fullW = Math.min(maxW, maxH * AR);
+    var pw = Math.round(fullW / 2), ph = Math.round(fullW / AR / 2);
+    var box = document.createElement("div");
+    box.className = ["fx-yak", "m-" + key].join(" ");
+    box.style.setProperty("--pw", pw + "px");
+    box.style.setProperty("--ph", ph + "px");
+    box.style.setProperty("--fly", (T.FLY / 1000) + "s");
+
+    var W = cam.clientWidth || 400, H = cam.clientHeight || 400, GAP = .30;
+    var defs = [ // 出発点＝枠外の四隅／待機位置＝合体位置から外へ少し離す
+      { cls: "tl", ox: -W * .75, oy: -H * .85, rot: "-22deg", gx: -pw * GAP, gy: -ph * GAP },
+      { cls: "tr", ox:  W * .75, oy: -H * .85, rot:  "20deg", gx:  pw * GAP, gy: -ph * GAP },
+      { cls: "bl", ox: -W * .75, oy:  H * .85, rot:  "18deg", gx: -pw * GAP, gy:  ph * GAP },
+      { cls: "br", ox:  W * .75, oy:  H * .85, rot: "-24deg", gx:  pw * GAP, gy:  ph * GAP },
+    ];
+    var pieces = defs.map(function (d) {
+      var el = document.createElement("div");
+      el.className = "fx-piece " + d.cls;
+      el.style.setProperty("--ox", Math.round(d.ox) + "px");
+      el.style.setProperty("--oy", Math.round(d.oy) + "px");
+      el.style.setProperty("--rot", d.rot);
+      el.style.setProperty("--gx", Math.round(d.gx) + "px");
+      el.style.setProperty("--gy", Math.round(d.gy) + "px");
+      box.appendChild(el);
+      return el;
+    });
+    ["fx-halo", "fx-boom", "fx-ring", "fx-ring r2"].forEach(function (c) {
+      var e = document.createElement("div"); e.className = c;
+      if (c === "fx-halo") box.insertBefore(e, box.firstChild); else box.appendChild(e);
+    });
+    cam.appendChild(box);
+
+    setTimeout(function () { pieces.forEach(function (p) { p.classList.add("in"); }); }, T.IN);
+    setTimeout(function () { pieces.forEach(function (p) { p.classList.add("shake"); }); }, T.SHAKE);
+    setTimeout(function () {
+      pieces.forEach(function (p) { p.classList.remove("shake"); p.classList.add("lock"); });
+      box.classList.add("boom");
+    }, T.LOCK);
+    setTimeout(function () { box.classList.remove("boom"); box.classList.add("glow"); }, T.GLOW);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
   function fireHitFx(slot, hit, rc) {
     var key = memberKey(rc);
-    var rainMs = key ? fxConf(key).rainMs : 0;
+    var yak = key && (MEMBER_FX[key] || {}).effect === "yakumono";
+    // バッジまでの待ち時間＝その人の前奏の長さ。役物は退場開始と同時に出す（消えきるのを待たない）
+    var rainMs = yak ? yakTimes().END : (key ? fxConf(key).rainMs : 0);
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
       if (!el) return;
@@ -1292,7 +1365,9 @@
       if (key) cam.classList.add("m-" + key);             // 個人演出のフック（8/8 FB73）
       if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
       if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
-      if (key) spawnRain(cam, key);                       // 前奏＝アイコンの走行（8/7 FB65）
+      // 前奏＝アイコンの走行（8/7 FB65）／役物のメンバーは走行を出さず役物だけ（8/8 FB82）
+      if (yak) spawnYakumono(cam, key);
+      else if (key) spawnRain(cam, key);
       setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
     });
   }
