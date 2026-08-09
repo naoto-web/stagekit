@@ -927,6 +927,35 @@
     setTimeout(function () { btn.classList.remove("done"); btn.textContent = "⇄ 席替え"; }, 2000);
   });
 
+  /* キャンペーン応募人数のクイック増減（8/9 FB98）：配信中に応募が入るたび更新する運用のため、
+     本日設定を開かず「場・レース」カード見出しの＋1/−1で1タップ確定（席替えクイックFB74と同じ
+     即時保存・本日設定フォームは読まない）。現在人数も隣に常時表示。
+     バナーの表示ON/OFF（空欄化）は従来どおり本日設定側で行う（−1は0で止まる＝非表示にはならない） */
+  function campCount() {
+    if (!state) return null;
+    var v = state.campaignCount;
+    return (v === null || v === undefined || v === "") ? null : +v;
+  }
+  function renderCampQuick() {
+    var el = $("camp-quick-num");
+    if (!el || !state) return;
+    var n = campCount();
+    el.textContent = "応募 " + (n === null ? "—" : n.toLocaleString("ja-JP") + "人");
+  }
+  function campQuickAdd(d) {
+    if (!state) return;
+    var cur = campCount();
+    if (cur === null) {
+      if (d < 0) return; // バナー非表示中の−1は何もしない（＋1で「1人」から表示開始）
+      cur = 0;
+    }
+    state.campaignCount = Math.max(0, cur + d);
+    save();
+    renderAll();
+  }
+  $("btn-camp-plus").addEventListener("click", function () { campQuickAdd(1); });
+  $("btn-camp-minus").addEventListener("click", function () { campQuickAdd(-1); });
+
   /* ---------- 広告・待機 ---------- */
   function renderAssets() {
     $("ad-title").value = state.ad.title || "";
@@ -1323,6 +1352,7 @@
   /* ---------- 描画一括 ---------- */
   function renderAll() {
     renderVenueRow();
+    renderCampQuick();
     renderRaceChips();
     renderRaceSubRow();
     renderPredTarget();

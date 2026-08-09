@@ -43,6 +43,9 @@ body {
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .card-head h2 { margin-bottom: 10px; }
 .btn.seat-swap { flex: none; white-space: nowrap; }
+/* 応募人数のクイック増減（8/9 FB98）＝見出し行に現在人数＋「＋1/−1」を常設 */
+.camp-quick { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
+.camp-quick-num { font-size: 13px; font-weight: 900; color: #d6d9de; white-space: nowrap; }
 .btn.seat-swap.done { background: #2f5d3a; border-color: #4c8b5e; color: #d8f5e0; }
 .h-sub { font-size: 12px; color: #9aa0ab; font-weight: 700; margin-left: 6px; }
 details.card summary { cursor: pointer; list-style: none; }

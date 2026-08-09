@@ -33,6 +33,13 @@
 <section class="card">
   <div class="card-head">
     <h2>場・レース <span class="h-sub" id="race-date"></span></h2>
+    <!-- キャンペーン応募人数のクイック増減（8/9 FB98）：配信中に応募が入るたび更新する運用のため、
+         現在人数を見せつつ＋1/−1で即保存（席替えクイックと同じ・本日設定フォームは読まない） -->
+    <span class="camp-quick" title="本日のキャンペーン応募人数（押した瞬間に保存・バナー即反映。バナーを非表示に戻すのは本日設定で空欄に）">
+      <span class="camp-quick-num" id="camp-quick-num">応募 —</span>
+      <button class="btn small" id="btn-camp-minus">−1</button>
+      <button class="btn small" id="btn-camp-plus">＋1</button>
+    </span>
     <!-- 席替えは配信中に使う操作＝本日設定の中だけでなく常時見える位置にも置く（8/8 FB74・押すと即確定） -->
     <button class="btn seat-swap" id="btn-seat-swap-quick" title="席1と席2を入れ替えて即保存（もう一度押すと元に戻る）">⇄ 席替え</button>
   </div>
