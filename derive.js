@@ -52,7 +52,9 @@
       brbMsg: "まもなく再開します",
       noteRaces: "", // 本日のnote勝負レース（①トーク出走表下に表示・空欄で非表示・8/6追加）
       campaignCount: null, // 本日のキャンペーン応募人数（バナー時計左・空＝非表示・8/6 FB21）
-      cfg: { closeMin: 3, netCloseMin: 5, timerCount: 3 }, // 公式＝発走−3分・民間＝発走−5分（7/29 Naoto指定）
+      // 公式＝発走−3分・民間＝発走−5分（7/29 Naoto指定）。
+      // autoScene＝発走時刻に②レース観戦へ自動切替（8/9 FB95）／autoAlign＝予想レースの自動追従（8/9 FB96）
+      cfg: { closeMin: 3, netCloseMin: 5, timerCount: 3, autoScene: true, autoAlign: true },
     };
   }
 
@@ -204,6 +206,60 @@
     return { totals: totals, hits: hits, chips: chips };
   }
 
+  /* ---------- 発走時刻ベースの自動追従（8/9 FB95/96） ----------
+     races＝[{venue, no, startSec}]（呼び出し側が「選択中の場」だけに絞って渡す）。
+     純関数としてここに置く＝コンソール・オーバーレイで共用し、Nodeテストで検証できる */
+
+  /** 発走直後（winSec秒以内）のレース。エッジ検知用＝毎tick呼び、新顔が出た1回だけ発火させる */
+  function justStartedRace(races, nowSec, winSec) {
+    var hit = null;
+    (races || []).forEach(function (r) {
+      if (r.startSec <= nowSec && nowSec - r.startSec <= winSec &&
+          (!hit || r.startSec > hit.startSec)) hit = r;
+    });
+    return hit;
+  }
+
+  /** タイマー基準の「いま映像に映っているはずのレース」：
+      発走からliveSec秒以内ならそのレース、いなければ次に発走するレース */
+  function videoRaceAt(races, nowSec, liveSec) {
+    var live = justStartedRace(races, nowSec, liveSec);
+    if (live) return live;
+    var next = null;
+    (races || []).forEach(function (r) {
+      if (r.startSec > nowSec && (!next || r.startSec < next.startSec)) next = r;
+    });
+    return next;
+  }
+
+  /** 盤面をraceに合わせる：メイン（activeVenue・currentRace）＝race／
+      サブ（raceSubBy）＝その次に発走するレースの場（サブONの配信者のみ・OFFの人は触らない）。
+      変更が1つでもあればtrue（保存は呼び出し側）。
+      ⚠️次レースが同じ場のとき（1場運用の帯など）はサブを触らない：
+        currentRaceが場単位のため「メイン＝2R・サブ＝3R」を同じ場では表現できない */
+  function alignToRace(state, races, race) {
+    if (!state || !race) return false;
+    var idx = -1;
+    (state.venues || []).forEach(function (v, i) { if (v.name === race.venue) idx = i; });
+    if (idx < 0) return false;
+    var changed = false;
+    if (state.activeVenue !== idx) { state.activeVenue = idx; changed = true; }
+    if (!state.currentRace) state.currentRace = {};
+    if (state.currentRace[race.venue] !== race.no) { state.currentRace[race.venue] = race.no; changed = true; }
+    var next = null;
+    (races || []).forEach(function (r) {
+      if (r.startSec > race.startSec && (!next || r.startSec < next.startSec)) next = r;
+    });
+    if (next && next.venue !== race.venue) {
+      if (state.currentRace[next.venue] !== next.no) { state.currentRace[next.venue] = next.no; changed = true; }
+      (state.racers || []).forEach(function (rc) {
+        var cur = state.raceSubBy && state.raceSubBy[rc.id];
+        if (cur && cur !== next.venue) { state.raceSubBy[rc.id] = next.venue; changed = true; }
+      });
+    }
+    return changed;
+  }
+
   /** 旧形式（文字列名簿・枠ID）からの移行と、配信者への色引き当て */
   function normalizeState(state) {
     state.roster = (state.roster || []).map(function (r) {
@@ -248,5 +304,8 @@
     resolvePred: resolvePred,
     settleRace: settleRace,
     day: day,
+    justStartedRace: justStartedRace,
+    videoRaceAt: videoRaceAt,
+    alignToRace: alignToRace,
   };
 })(typeof self !== "undefined" ? self : this);

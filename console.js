@@ -153,6 +153,7 @@
     el.querySelectorAll(".vbtn").forEach(function (b) {
       b.addEventListener("click", function () {
         state.activeVenue = +b.getAttribute("data-i");
+        manualNav(true); // 手動の場切替＝結果フォームの固定解除＋自動追従に手動優先を通知（FB96）
         save();
         renderAll();
       });
@@ -191,6 +192,7 @@
               list.push(vn);
             }
             state.talkRaces[rid] = list;
+            manualNav(); // 手動の表示場変更（FB96）
             save();
             renderAll();
           });
@@ -237,11 +239,12 @@
         if (b.getAttribute("data-nextsub")) {
           var vn = state.raceSubBy[rid];
           var next = vn ? nextRaceOf(vn) : null;
-          if (next) { state.currentRace[vn] = next.no; save(); renderAll(); }
+          if (next) { state.currentRace[vn] = next.no; manualNav(); save(); renderAll(); }
           return;
         }
         var v = b.getAttribute("data-v") || null;
         if (v) state.raceSubBy[rid] = v; else delete state.raceSubBy[rid];
+        manualNav(); // 手動のサブ変更＝発走直後の自動追従に上書きさせない（FB96）
         save();
         renderAll();
       });
@@ -270,6 +273,7 @@
     el.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
         state.currentRace[name] = +b.getAttribute("data-no");
+        manualNav(true); // 手動のレース切替＝結果フォームの固定解除＋手動優先を通知（FB96）
         save();
         renderAll();
       });
@@ -291,6 +295,7 @@
     var next = nextRaceOf(name);
     if (next) {
       state.currentRace[name] = next.no;
+      manualNav(true); // 手動のレース送り（FB96）
       save();
       renderAll();
     }
@@ -495,10 +500,16 @@
   var resDirty = false;
   var resKeyShown = null;
   function markResDirty() { resDirty = true; }
+  /* 結果フォームの対象レース（8/9 FB96対応＝FB75の延長）：
+     入力途中（resDirty）の間は表示中のレース（resKeyShown）に固定＝自動追従（発走・②切替）で
+     currentKeyが動いても、打ちかけの着順・払戻・回収を巻き込まない。
+     手動のレース移動（場ボタン・レースチップ等）は manualNav(true) で固定を解除＝従来どおり仕切り直し */
+  function resultKey() { return (resDirty && resKeyShown) ? resKeyShown : currentKey(); }
 
   function renderResultForm() {
-    var key = currentKey();
-    $("result-target").textContent = key ? key.replace("|", " ") + "R" : "（場・レース未選択）";
+    var key = resultKey(); // 入力途中は表示中のレースに固定（自動追従で巻き戻さない・FB96）
+    $("result-target").textContent = (key ? key.replace("|", " ") + "R" : "（場・レース未選択）") +
+      (resDirty && key !== currentKey() ? "　📌入力途中のため固定中（レースを選ぶと切替）" : "");
     if (key !== resKeyShown) { resDirty = false; resKeyShown = key; } // レースが変わったら仕切り直し
     else if (resDirty) {                                             // 入力途中＝触らずに帰る
       renderPayoutRows();
@@ -594,7 +605,7 @@
   });
 
   function renderSettlePreview() {
-    var key = currentKey();
+    var key = resultKey(); // 結果フォームと同じレースを見る（固定中はそのレース・FB96）
     var el = $("settle-preview");
     var order = parseOrderInput();
     if (!key || !order) { el.innerHTML = '<span class="miss">着順を入力すると的中・回収のプレビューが出ます</span>'; return; }
@@ -630,7 +641,7 @@
   }
 
   $("btn-settle").addEventListener("click", function () {
-    var key = currentKey();
+    var key = resultKey(); // フォームに出ているレースを確定する（固定中でも取り違えない・FB96）
     if (!key) return;
     var order = parseOrderInput();
     if (!order) { $("settle-preview").innerHTML = '<span class="manche">着順が読めません（例：1-9-2）</span>'; return; }
@@ -830,6 +841,8 @@
     $("cfg-close").value = state.cfg.closeMin;
     $("cfg-netclose").value = state.cfg.netCloseMin;
     $("cfg-autoresults").checked = !!state.cfg.autoResults;
+    $("cfg-autoscene").checked = state.cfg.autoScene !== false; // 発走時刻の自動シーン切替（8/9 FB95・既定ON）
+    $("cfg-autoalign").checked = state.cfg.autoAlign !== false; // 予想レースの自動追従（8/9 FB96・既定ON）
     $("note-races").value = state.noteRaces || "";
     $("campaign-count").value = (state.campaignCount === null || state.campaignCount === undefined) ? "" : state.campaignCount;
   }
@@ -859,6 +872,8 @@
     state.cfg.closeMin = +$("cfg-close").value || 3;
     state.cfg.netCloseMin = +$("cfg-netclose").value || 5;
     state.cfg.autoResults = $("cfg-autoresults").checked;
+    state.cfg.autoScene = $("cfg-autoscene").checked; // 8/9 FB95
+    state.cfg.autoAlign = $("cfg-autoalign").checked; // 8/9 FB96
     state.noteRaces = $("note-races").value.split(/\r?\n/)
       .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
     state.campaignCount = $("campaign-count").value === "" ? null : +$("campaign-count").value;
@@ -1010,6 +1025,54 @@
     }
   }
 
+  /* ---------- 発走・②切替に合わせた予想レースの自動追従（8/9 FB96） ----------
+     目的：②レース観戦に切り替わった瞬間の「メイン予想・サブ予想・映像のレースがバラバラ」を根治。
+     トリガー2系統：
+       ①発走時刻（毎秒エッジ検知・1レース1回）＝FB95の自動シーン切替と同じ瞬間に盤面も合う
+       ②オーバーレイ②が表示された瞬間（BC通知）＝手動でシーンを切り替えた場合も合う
+     合わせ方＝メイン：映像に映っているはずのレース／サブ：その次に発走するレース
+       （別の場のときだけ・サブONの配信者のみ。1場運用ではサブは触らない＝derive.alignToRace参照）。
+     自動で合わせた後の手動変更は自由＝次のトリガーまで上書きしない。
+     発走後すでに手動で盤面を触っていた場合も手動優先（そのレースぶんの発走トリガーは譲る）。
+     ON/OFF＝本日設定「発走・②切替時に予想レースを自動で合わせる」（既定ON） */
+  var alignDone = {};        // 日付|場|R → 発走トリガー済み（FB71の教訓＝日付をキーに含める）
+  var lastManualNavSec = -1; // 場・レース・サブを手で切り替えた時刻（0時からの秒）
+  var ALIGN_WIN = 60;   // 発走エッジの有効幅（ドックが裏に回りタイマーが間引かれても拾える幅）
+  var ALIGN_LIVE = 240; // ②切替時、発走からこの秒数まではそのレースが映像に映っているとみなす
+
+  function manualNav(resetResult) {
+    lastManualNavSec = nowSec();
+    if (resetResult) resDirty = false; // 手動のレース移動＝結果フォームの固定も解除（仕切り直し）
+  }
+  function selectedRaces() {
+    var out = [];
+    ((state && state.venues) || []).forEach(function (v) {
+      venueRaces(v.name).forEach(function (r) {
+        var s = timeToSec(r.start);
+        if (s !== null) out.push({ venue: v.name, no: r.no, startSec: s });
+      });
+    });
+    return out;
+  }
+  function alignBoard(race) {
+    if (!state || state.cfg.autoAlign === false || state.date !== todayStr()) return;
+    if (window.Derive.alignToRace(state, selectedRaces(), race)) {
+      save();
+      renderAll();
+    }
+  }
+  function autoAlignTick() {
+    if (!state || !timetable || !state.venues.length) return;
+    if (state.cfg.autoAlign === false || state.date !== todayStr()) return;
+    var just = window.Derive.justStartedRace(selectedRaces(), nowSec(), ALIGN_WIN);
+    if (!just) return;
+    var k = todayStr() + "|" + just.venue + "|" + just.no;
+    if (alignDone[k]) return;
+    alignDone[k] = true;
+    if (lastManualNavSec >= just.startSec) return; // 発走後すでに手で動かした＝手動優先
+    alignBoard(just);
+  }
+
   /* ---------- 結果の自動取得（keirin.jp JSJ018・60秒ポーリング） ----------
      取得結果はいったんautoResultsに保持し、
      ・自動確定OFF（既定）＝結果入力フォームに「⚡取得済み→反映」ボタンを出す（確定は人が1タップ）
@@ -1067,7 +1130,7 @@
     var hint = $("res-refresh-hint");
     hint.textContent = "取得中…";
     pollResults(true).then(function () {
-      var key = currentKey();
+      var key = resultKey();
       var got = key && (autoResults[key] || (state.results && state.results[key]));
       hint.textContent = got ? "" : "公式の結果がまだ出ていません（確定し次第、自動で反映されます）";
     });
@@ -1112,7 +1175,7 @@
   function renderResultHint() {
     var el = $("auto-result-hint");
     if (!el) return;
-    var key = currentKey();
+    var key = resultKey(); // 結果フォームと同じレースの⚡を出す（固定中はそのレース・FB96）
     var r = key ? autoResults[key] : null;
     if (!r || (state.results && state.results[key])) {
       el.classList.add("hidden");
@@ -1213,6 +1276,7 @@
       if (idx < 0) return;
       state.activeVenue = idx;
       state.currentRace[parts[0]] = +parts[1];
+      manualNav(true); // 回収入力のための手動ジャンプ（FB96）
       save();
       renderAll();
     };
@@ -1246,7 +1310,15 @@
     location.reload();
   });
 
-  window.Sync.initChannel(function () { /* pong受信でbcAliveが立つ */ });
+  window.Sync.initChannel(function (msg) { // pong受信でbcAliveが立つ
+    // ②レース観戦が表示された瞬間（オーバーレイからのBC通知・8/9 FB96）＝
+    // タイマー基準の「映像に映っているはずのレース」へ盤面を合わせる。
+    // 直前45秒以内に手動で盤面を触っていたら手動優先（特別なレースを出したまま切り替えられる）
+    if (msg && msg.type === "sceneShown" && msg.scene === "race") {
+      if (lastManualNavSec >= 0 && nowSec() - lastManualNavSec < 45) return;
+      alignBoard(window.Derive.videoRaceAt(selectedRaces(), nowSec(), ALIGN_LIVE));
+    }
+  });
 
   window.Sync.fetchState().then(function (s) {
     if (s) {
@@ -1281,5 +1353,5 @@
   loadTimetable();
   setInterval(loadTimetable, window.APP_CONFIG.TT_POLL_MS || 600000);
 
-  setInterval(tickStatus, 1000);
+  setInterval(function () { tickStatus(); autoAlignTick(); }, 1000); // 自動追従は毎秒エッジ検知（8/9 FB96）
 })();

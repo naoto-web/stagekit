@@ -173,6 +173,62 @@
     beepAt(audioCtx ? audioCtx.currentTime + Math.max(0, delaySec) : 0);
   }
 
+  /* ---------- 発走時刻の自動シーン切替（8/9 FB95） ----------
+     トーク中の切替忘れ対策：レースの発走時刻になったらOBSのシーンを②レース観戦へ自動で切り替える。
+     実行者＝「いま表示されているソース」（FB60と同じPage Visibility判定）＝①トーク・③結果のみ。
+       ④待機は対象外＝無人でレース映像だけが流れる区間を作らない（§2-3の審査設計を壊さない）。
+       ⑤広告も対象外＝案件の表示義務がある画面を自動で中断しない。②自身は切替不要。
+     window.obsstudio.setCurrentScene は、OBS側でこのソースの「ページの権限」を
+     「OBSへの高度なアクセス」にしたときだけ効く（未設定なら何も起きない＝安全側・手順書参照）。
+     ON/OFF＝コンソール本日設定「発走時刻に②レース観戦へ自動切替」（既定ON）。
+     切替先は②で始まるシーン名を自動検出（&racescene=名前 で上書き可＝OBS側だけの保険）。
+     発火は1レース1回（キーはFB71の教訓で日付込み）。発走から2分以内なら遅れて表示されたソース
+     （⑤広告からの復帰・OBS再起動直後）でも切り替える＝「出しっぱなし」を拾う */
+  var AUTOSW = SCENE === "talk" || SCENE === "result";
+  var SWITCH_WIN = 120;  // 発走からこの秒数まで＝そのレースが映像に映っているとみなし切替してよい
+  var autoSwitched = {}; // 日付|場|R → 済
+  var obsCtrlLevel = null; // OBSページ権限（デバッグ表示用。4以上＝切替可）
+  if (window.obsstudio && window.obsstudio.getControlLevel) {
+    try { window.obsstudio.getControlLevel(function (l) { obsCtrlLevel = l; }); } catch (e) {}
+  }
+  function autoSceneTick() {
+    if (!AUTOSW || !window.obsstudio || typeof window.obsstudio.setCurrentScene !== "function") return;
+    if (!state || !timetable || !state.venues.length) return;
+    if (state.cfg.autoScene === false) return;
+    if (document.visibilityState !== "visible") return; // 表示中のソースだけが切り替える（FB60）
+    var names = {};
+    state.venues.forEach(function (v) { names[v.name] = true; });
+    var just = window.Derive.justStartedRace(
+      allRaces().filter(function (r) { return names[r.venue]; }), nowSec(), SWITCH_WIN);
+    if (!just) return;
+    var k = todayStr() + "|" + just.venue + "|" + just.no;
+    if (autoSwitched[k]) return;
+    autoSwitched[k] = true;
+    switchToRaceScene();
+  }
+  function switchToRaceScene() {
+    var go = function (name) { try { window.obsstudio.setCurrentScene(name); } catch (e) {} };
+    var fixed = params.get("racescene");
+    if (fixed) return go(fixed);
+    try { // シーン名は改名に備えて実機から検出（②で始まる→「レース」を含む→固定名の順）
+      window.obsstudio.getScenes(function (list) {
+        var target = null;
+        (list || []).forEach(function (n) { if (!target && n.charAt(0) === "②") target = n; });
+        (list || []).forEach(function (n) { if (!target && n.indexOf("レース") >= 0) target = n; });
+        go(target || "②レース観戦");
+      });
+    } catch (e) { go("②レース観戦"); }
+  }
+  /* ②が表示された瞬間をコンソールへ通知（FB96＝予想レースの自動追従のトリガー）。
+     OBS内のソースだけが送る＝通常ブラウザで閲覧しているだけのタブが盤面を動かさないように */
+  if (SCENE === "race" && window.obsstudio) {
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") {
+        window.Sync.broadcast({ type: "sceneShown", scene: "race" });
+      }
+    });
+  }
+
   var zoneRank = { "": 0, green: 1, yellow: 2, red: 3 };
   var zones = {}; // 場名 → 現在の信号機色（切替検知・発音用）
   function zoneOf(remain) {
@@ -1916,6 +1972,8 @@
     if (!DEBUG) return;
     $("dbg").textContent = "scene:" + SCENE + "｜rev " + state.rev +
       "｜経路 " + syncPath + "｜BC " + (window.Sync.bcAlive ? "alive" : "-") +
+      // OBS権限＝自動シーン切替（FB95）の可否確認用。4以上＝setCurrentScene可
+      (window.obsstudio ? "｜OBS権限 " + (obsCtrlLevel === null ? "?" : obsCtrlLevel + (obsCtrlLevel >= 4 ? "(切替可)" : "(切替不可・要設定)")) : "") +
       (lastSyncAt ? "｜" + pad2(lastSyncAt.getHours()) + ":" + pad2(lastSyncAt.getMinutes()) + ":" + pad2(lastSyncAt.getSeconds()) : "");
   }
 
@@ -1959,6 +2017,7 @@
     tickClock();
     renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
+    autoSceneTick();    // 発走時刻の自動シーン切替（8/9 FB95・表示中ソースのみ実行）
     if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); fitNarabi(); } // 毎秒＝①②帯・ライン行の自己修復（8/6 FB32/37/44）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
