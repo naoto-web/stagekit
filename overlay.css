@@ -469,8 +469,9 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .nb-arrow { font-size: 26px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
 .nb-dot { font-size: 18px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
 .nb-group { display: flex; gap: 3px; flex: 0 0 auto; }
-/* ライン＝出走表と同じ正方形チップ（8/5 FB→FB115で32px角に拡大） */
-.narabi-row .car { width: 32px; height: 32px; font-size: 20px; border-radius: 6px; }
+/* ライン＝出走表と同じ正方形チップ（8/5 FB→FB115で32px角に拡大→8/10 FB116で文字を箱いっぱいに）
+   ＝出走表行のチップ（26px箱×24px文字）と同じ詰まり比率を32px箱に適用（Naoto「上の出走表と同じやつ」） */
+.narabi-row .car { width: 32px; height: 32px; font-size: 30px; border-radius: 5px; }
 /* 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定から・8/6追加）
    1行＝1件・最大8行。5行以上は段階的に文字を縮小（タイマーvt-n3/n4と同方式） */
 /* ①出走表下のnote勝負欄＝8/9 FB99で廃止（ヘッダーへ一本化）。要素は常時hiddenのため装飾は不要 */
