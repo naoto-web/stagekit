@@ -167,10 +167,12 @@ body.wm-on .gbar::before { display: block; }
   white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
 /* 配信者ごとの枠（8/9 FB101）＝枠線がメンバーカラー・中は名前チップ＋レース表記（場ごとに｜区切り）。
    文字サイズは枠のfont-sizeを基準にem連動＝件数の段階縮小は枠1か所で効く */
-/* 白背景×黒字（8/9 FB103・Naoto指定）＝ヘッダーの他の白要素（CTCロゴ・応募人数・時計）と統一 */
-.nh-group { display: inline-flex; align-items: center; gap: 10px; padding: 4px 14px 4px 6px;
+/* 白背景×黒字（8/9 FB103・Naoto指定）＝ヘッダーの他の白要素（CTCロゴ・応募人数・時計）と統一。
+   文字サイズ＝2行固定化（FB104）で高さに余裕ができたため30pxへ拡大＋縦paddingを詰める（FB105）。
+   縮小タイアは幅の都合だけ＝件数が多い日のみ段階縮小 */
+.nh-group { display: inline-flex; align-items: center; gap: 10px; padding: 2px 14px 2px 6px;
   border-radius: 10px; border: 2.5px solid rgba(0,0,0,.35); background: #ffffff;
-  font-size: 26px; line-height: 1.15; white-space: nowrap; }
+  font-size: 30px; line-height: 1.12; white-space: nowrap; }
 /* 場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104）＝1場1行・3場以上は右の列へ流す
    （縮小せず大きさ維持＝grid-auto-flow: column の2行グリッド） */
 .nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
@@ -180,10 +182,9 @@ body.wm-on .gbar::before { display: block; }
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
 .nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;
   border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; font-size: .78em; }
-.venue-tabs.note-head.nh-n4 .nh-group, .venue-tabs.note-head.nh-n5 .nh-group { font-size: 21px; }
-.venue-tabs.note-head.nh-n6 .nh-group, .venue-tabs.note-head.nh-n7 .nh-group,
-.venue-tabs.note-head.nh-n8 .nh-group { font-size: 17px; }
-/* （FB104で廃止）旧nh-r3＝枠内3行以上の縮小。2行×列送り化により行数は常に2以下 */
+/* 縮小＝幅の都合だけ（FB105で再調整）：5〜6件24px・7〜8件20px（高さは常に2行以下＝FB104） */
+.venue-tabs.note-head.nh-n5 .nh-group, .venue-tabs.note-head.nh-n6 .nh-group { font-size: 24px; }
+.venue-tabs.note-head.nh-n7 .nh-group, .venue-tabs.note-head.nh-n8 .nh-group { font-size: 20px; }
 
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */

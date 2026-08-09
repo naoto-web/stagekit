@@ -152,6 +152,15 @@
         return ra - rb || a.seq - b.seq;
       });
     });
+    // 枠（配信者）の並び＝席1が左・席2が右（8/9 FB105・Naoto指定）＝カメラ・予想帯と同じ並び。
+    // 席についていない名前・名前なし枠はその後ろ（入力の初登場順のまま）
+    var seats = seatMap();
+    groups.forEach(function (g, gi) {
+      g.rank = g.racer && seats.a && g.racer.name === seats.a.name ? 0
+        : g.racer && seats.b && g.racer.name === seats.b.name ? 1 : 2;
+      g.gi = gi;
+    });
+    groups.sort(function (a, b) { return a.rank - b.rank || a.gi - b.gi; });
     // 枠内は場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104「Max2行にして2列に」）＝
     // 3場以上でも文字サイズを落とさず右の列へ流す（CSSグリッドの2行縦流し）
     el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負レース</span>' +
