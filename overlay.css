@@ -167,12 +167,13 @@ body.wm-on .gbar::before { display: block; }
   white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
 /* 配信者ごとの枠（8/9 FB101）＝枠線がメンバーカラー・中は名前チップ＋レース表記（場ごとに｜区切り）。
    文字サイズは枠のfont-sizeを基準にem連動＝件数の段階縮小は枠1か所で効く */
+/* 白背景×黒字（8/9 FB103・Naoto指定）＝ヘッダーの他の白要素（CTCロゴ・応募人数・時計）と統一 */
 .nh-group { display: inline-flex; align-items: center; gap: 10px; padding: 4px 14px 4px 6px;
-  border-radius: 10px; border: 2px solid rgba(255,255,255,.35); background: #14204a;
+  border-radius: 10px; border: 2.5px solid rgba(0,0,0,.35); background: #ffffff;
   font-size: 26px; line-height: 1.15; white-space: nowrap; }
 /* 場ごとに縦積み（8/9 FB102）＝名前チップ左・レース右に1場1行 */
 .nh-items { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
-.nh-item { color: #fff; font-weight: 900; font-size: 1em; }
+.nh-item { color: #16181c; font-weight: 900; font-size: 1em; }
 .nh-item .grade-badge { margin-left: 7px; vertical-align: 1px; }
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
 .nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;
