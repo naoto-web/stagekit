@@ -168,6 +168,9 @@ body.wm-on .gbar::before { display: block; }
   border: 1.5px solid rgba(255,213,79,.55); background: #14204a; color: #fff;
   font-weight: 900; font-size: 26px; line-height: 1.15; white-space: nowrap; }
 .nh-chip .grade-badge { margin-left: 8px; vertical-align: 0; }
+/* 配信者名＝メンバーカラーのチップ（8/9 FB100・背景色はJSがインラインで指定＝名簿の色に追従） */
+.nh-name { display: inline-block; padding: 1px 10px; border-radius: 7px; margin-right: 7px;
+  border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; }
 .venue-tabs.note-head.nh-n4 .nh-chip, .venue-tabs.note-head.nh-n5 .nh-chip { font-size: 21px; padding: 4px 12px; }
 .venue-tabs.note-head.nh-n6 .nh-chip, .venue-tabs.note-head.nh-n7 .nh-chip,
 .venue-tabs.note-head.nh-n8 .nh-chip { font-size: 17px; padding: 3px 10px; }

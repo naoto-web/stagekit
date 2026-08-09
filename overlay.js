@@ -117,13 +117,30 @@
     (state.venues || []).forEach(function (v) { names[v.name] = 1; });
     if (timetable) (timetable.venues || []).forEach(function (tv) { names[tv.name] = 1; });
     var sorted = Object.keys(names).sort(function (a, b) { return b.length - a.length; });
+    // 配信者名の色付け（8/9 FB100「誰の勝負レースか分からない」）：行内に名簿の名前を見つけたら
+    // メンバーカラーのチップに置き換える（場名バッジと同じ照合方式＝自由入力のまま・長い名前順）
+    var roster = (state.roster || []).filter(function (r) { return r && r.name; })
+      .sort(function (a, b) { return b.name.length - a.name.length; });
+    function noteLineHtml(l) {
+      var html = esc(l);
+      roster.forEach(function (r) {
+        var en = esc(r.name);
+        if (html.indexOf(en) < 0) return;
+        var col = window.Derive.colorOf(r.color);
+        var chip = col
+          ? '<span class="nh-name" style="background:' + col + ";color:" + textOn(col) + '">' + en + "</span>"
+          : '<span class="nh-name">' + en + "</span>";
+        html = html.split(en).join(chip);
+      });
+      return html;
+    }
     el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負</span>' +
       lines.map(function (l) {
         var badge = "";
         for (var i = 0; i < sorted.length; i++) {
           if (l.indexOf(sorted[i]) >= 0) { badge = gradeBadge(sorted[i]); break; }
         }
-        return '<span class="nh-chip">' + esc(l) + badge + "</span>";
+        return '<span class="nh-chip">' + noteLineHtml(l) + badge + "</span>";
       }).join("");
   }
 
@@ -287,9 +304,9 @@
       timerRowKeys = keys;
       var html = cards.map(function (c) {
         var closed = c.race && now >= c.race.startSec - offSec;
-        // 場名の横にグレードバッジ（8/9 FB99＝場タブから移設・GI開催の一覧性をタイマーで維持）
-        var head = '<div class="vt-head">' + esc(c.venue) + gradeBadge(c.venue) +
-          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + "</div>";
+        // グレードバッジ＝「〇R」の右（8/9 FB100・Naoto指定。FB99の場名横から移動）
+        var head = '<div class="vt-head">' + esc(c.venue) +
+          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gradeBadge(c.venue) + "</div>";
         var body;
         if (!c.race) {
           body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
