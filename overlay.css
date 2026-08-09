@@ -163,10 +163,13 @@ body.wm-on .gbar::before { display: block; }
 /* align-items: stretch（8/9 FB106）＝同じ行の枠の高さを揃える（1行の枠も2行の枠と同じ高さに） */
 .venue-tabs.note-head { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: stretch;
   justify-content: center; gap: 6px 10px; max-height: 92px; overflow: hidden; }
-/* ラベル＝箱に入れず素の文字（8/9 FB101・Naoto「バッジは見づらい・普通に文字で」）。
+/* ラベル＝金チップ（8/10 FB108・Naoto「見えづらい」→比較モックから金チップ案を選択）。
+   金地×紺文字の不透明チップ＝19px素の金文字は透かしノイズに沈むため24pxに拡大し背景を遮断。
+   FB101「箱に入れず素の文字」は本FBで撤回（見づらさの原因は箱の有無でなくサイズ＋背景ノイズ）。
    align-self: center＝コンテナのstretch化（FB106）でもラベルは縦中央のまま */
-.nh-label { font-size: 19px; line-height: 1.2; text-align: center; font-weight: 900; color: #ffd54f;
-  white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,.6); align-self: center; }
+.nh-label { font-size: 24px; line-height: 1.2; text-align: center; font-weight: 900; color: #14204a;
+  background: #ffd54f; border: 2.5px solid #b8860b; border-radius: 10px; padding: 4px 14px;
+  white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.35); align-self: center; }
 /* 配信者ごとの枠（8/9 FB101）＝枠線がメンバーカラー・中は名前チップ＋レース表記（場ごとに｜区切り）。
    文字サイズは枠のfont-sizeを基準にem連動＝件数の段階縮小は枠1か所で効く */
 /* 白背景×黒字（8/9 FB103・Naoto指定）＝ヘッダーの他の白要素（CTCロゴ・応募人数・時計）と統一。
