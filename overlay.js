@@ -162,8 +162,13 @@
     });
     groups.sort(function (a, b) { return a.rank - b.rank || a.gi - b.gi; });
     // 枠内は場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104「Max2行にして2列に」）＝
-    // 3場以上でも文字サイズを落とさず右の列へ流す（CSSグリッドの2行縦流し）
-    el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負レース</span>' +
+    // 3場以上でも文字サイズを落とさず右の列へ流す（CSSグリッドの2行縦流し）。
+    // 全員が1行ずつの日＝枠を縦積み（配信者1の下に配信者2・8/9 FB107）＝2行分の高さを有効活用
+    var maxItems = 0;
+    groups.forEach(function (g) { if (g.items.length > maxItems) maxItems = g.items.length; });
+    if (maxItems === 1 && groups.length >= 2) el.classList.add("nh-stack");
+    el.innerHTML = '<span class="nh-label">🔥 本日のnote<br>勝負レース</span>' +
+      '<span class="nh-groups">' +
       groups.map(function (g) {
         var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";
         var name = g.racer
@@ -175,7 +180,7 @@
         }).join("");
         return '<span class="nh-group"' + (col ? ' style="border-color:' + col + '"' : "") + ">" + name +
           '<span class="nh-items">' + items + "</span></span>";
-      }).join("");
+      }).join("") + "</span>";
   }
 
   function tickClock() {

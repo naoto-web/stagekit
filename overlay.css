@@ -177,9 +177,12 @@ body.wm-on .gbar::before { display: block; }
   font-size: 30px; line-height: 1.12; white-space: nowrap; }
 /* 場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104）＝1場1行・3場以上は右の列へ流す
    （縮小せず大きさ維持＝grid-auto-flow: column の2行グリッド）。
-   rows=1fr×2＋align-self: stretch（FB106）＝枠が2行分に伸びたとき1行の内容は上段・下段は空白 */
-.nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 1fr);
-  justify-items: start; align-items: center; column-gap: 16px; row-gap: 1px; align-self: stretch; }
+   align-self: stretch＋align-content: start（FB106→FB107修正）＝枠が2行分に伸びたとき
+   1行の内容は上段・下段は空白。⚠️rows=1fr×2は不可＝Chromeは空行にも1行分の高さを与え、
+   全員1行の日に枠が勝手に2行分へ膨らむ（FB107の縦積みではみ出しとして実発見） */
+.nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
+  justify-items: start; align-items: center; column-gap: 16px; row-gap: 1px;
+  align-self: stretch; align-content: start; }
 .nh-item { color: #16181c; font-weight: 900; font-size: 1em; }
 .nh-item .grade-badge { margin-left: 7px; vertical-align: 1px; }
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
@@ -188,6 +191,12 @@ body.wm-on .gbar::before { display: block; }
 /* 縮小＝幅の都合だけ（FB105で再調整）：5〜6件24px・7〜8件20px（高さは常に2行以下＝FB104） */
 .venue-tabs.note-head.nh-n5 .nh-group, .venue-tabs.note-head.nh-n6 .nh-group { font-size: 24px; }
 .venue-tabs.note-head.nh-n7 .nh-group, .venue-tabs.note-head.nh-n8 .nh-group { font-size: 20px; }
+/* 全員1行ずつの日＝枠を縦積み（8/9 FB107）：既定はdisplay: contents＝FB106の横並びstretchのまま。
+   nh-stack時だけ2行グリッド（配信者1の下に配信者2・3人以上は右の列へ）＋列内で枠の幅を揃える */
+.nh-groups { display: contents; }
+.venue-tabs.note-head.nh-stack .nh-groups { display: grid; grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto); gap: 3px 12px; justify-items: stretch; align-self: center; }
+.venue-tabs.note-head.nh-stack .nh-group { padding-top: 1px; padding-bottom: 1px; }
 
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */
