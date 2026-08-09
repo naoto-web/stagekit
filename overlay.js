@@ -167,7 +167,10 @@
     var maxItems = 0;
     groups.forEach(function (g) { if (g.items.length > maxItems) maxItems = g.items.length; });
     if (maxItems === 1 && groups.length >= 2) el.classList.add("nh-stack");
-    el.innerHTML = '<span class="nh-label">本日のnote<br>勝負レース</span>' +
+    // 3行の枠がある日（8/10 FB110）＝枠は3行が入る字サイズへ・ラベルは「本日の/note/勝負レース」の3行組みに
+    if (maxItems >= 3) el.classList.add("nh-rows3");
+    el.innerHTML = '<span class="nh-label">' +
+      (maxItems >= 3 ? "本日の<br>note<br>勝負レース" : "本日のnote<br>勝負レース") + "</span>" +
       '<span class="nh-groups">' +
       groups.map(function (g) {
         var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";

@@ -135,9 +135,10 @@ body.wm-on .gbar::before { display: block; }
   background: #ffffff; border-radius: 10px; padding: 5px 24px; height: 80px; justify-content: center;
 }
 /* 本日のキャンペーン応募人数（8/6 FB21→8/10 FB109で移設）。コンソール本日設定から・空欄＝非表示。
-   FB109＝CTC主催キャンペーンなのでCTCロゴの左隣へ（Naoto「アイコンの隣の方がいい」）。
+   FB109＝CTC主催キャンペーンなのでCTCアイコンの隣へ（Naoto）→FB110で並びを訂正＝CTCロゴの右隣。
    マークアップは5か所（overlay.html＋ハーネス写し）にあるため触らず、FB93と同じくorderだけで移動：
-   ブランドロゴ::after=-2 → 応募人数=-1 → CTCロゴ以降=0。note勝負エリアはそのぶん右寄りになる */
+   ブランドロゴ::after=-2 → CTCロゴ=-1（DOM先勝ち）→ 応募人数=-1 → note勝負以降=0。
+   note勝負エリアはそのぶん右寄りになる */
 .camp-box { order: -1; height: 80px; background: #ffffff; border-radius: 10px;
   padding: 6px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;
   line-height: 1.15; }
@@ -186,12 +187,12 @@ body.wm-on .gbar::before { display: block; }
 .nh-group { display: inline-flex; align-items: center; gap: 10px; padding: 2px 14px 2px 6px;
   border-radius: 10px; border: 2.5px solid rgba(0,0,0,.35); background: #ffffff;
   font-size: 30px; line-height: 1.12; white-space: nowrap; }
-/* 場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104）＝1場1行・3場以上は右の列へ流す
-   （縮小せず大きさ維持＝grid-auto-flow: column の2行グリッド）。
-   align-self: stretch＋align-content: start（FB106→FB107修正）＝枠が2行分に伸びたとき
-   1行の内容は上段・下段は空白。⚠️rows=1fr×2は不可＝Chromeは空行にも1行分の高さを与え、
-   全員1行の日に枠が勝手に2行分へ膨らむ（FB107の縦積みではみ出しとして実発見） */
-.nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
+/* 場ごとに縦積み・最大3行×列送り（8/9 FB102→FB104のMax2行→8/10 FB110でMax3行へ拡大）＝
+   1場1行・4場以上は右の列へ流す（Naoto「4つめから2列目でいい・ほぼ起きない」）。
+   align-self: stretch＋align-content: start（FB106→FB107修正）＝枠が伸びたとき
+   内容は上詰め・下は空白。⚠️rows=1fr不可＝Chromeは空行にも1行分の高さを与え、
+   全員1行の日に枠が勝手に膨らむ（FB107の縦積みではみ出しとして実発見） */
+.nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto);
   justify-items: start; align-items: center; column-gap: 16px; row-gap: 1px;
   align-self: stretch; align-content: start; }
 .nh-item { color: #16181c; font-weight: 900; font-size: 1em; }
@@ -199,17 +200,21 @@ body.wm-on .gbar::before { display: block; }
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
 .nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;
   border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; font-size: .78em; }
-/* 縮小＝幅の都合だけ（FB105で再調整→FB108で6件を下段タイアへ移動）：5件24px・6〜8件20px。
+/* 縮小＝幅の都合だけ（FB105→FB108で6件を下段へ→FB110で3行対応）：5件24px・6〜8件20px。
    ⚠️6件＝24pxは旧ラベル時代から2枠目が2段目へ落ちてヘッダー外に切れていた（FB108作業中に
-   旧CSS復元撮影で実証した既存バグ＝2人×各3レースの形は24pxでは収まらない）。高さは常に2行以下＝FB104 */
+   旧CSS復元撮影で実証した既存バグ）。※カスケード順が意味を持つ：n5(24)→rows3(21)→n6〜8(20)＝
+   後勝ちで「3行あるならさらに小さく・幅タイアが最小」を実現 */
 .venue-tabs.note-head.nh-n5 .nh-group { font-size: 24px; }
+/* 3行の枠がある日（8/10 FB110・nh-rows3＝JSがmaxItems>=3で付与）＝
+   高さ85pxに3行が入る上限21px（3×1.12×21+padding8+枠5=83.6px） */
+.venue-tabs.note-head.nh-rows3 .nh-group { font-size: 21px; }
 .venue-tabs.note-head.nh-n6 .nh-group,
 .venue-tabs.note-head.nh-n7 .nh-group, .venue-tabs.note-head.nh-n8 .nh-group { font-size: 20px; }
-/* 金チップも件数タイアで縮小（FB108）＝24px固定だと多件数日に2枠目が2段目へ落ちる
-   （ハーネスnotes=8撮影で実測・17pxでも不足＝14pxまで絞って旧ラベル並みの幅に）。
-   6〜8件は枠内の列間も16→12pxに詰めて収まりを確保 */
+/* 金チップの縮小（FB108→FB110改定）：3行の枠がある日＝ラベルも「本日の/note/勝負レース」の
+   3行組み（JSが文言を切替）で幅を細く・20pxで高さぴったり（3×1.2×20+padding6+枠5=83px）。
+   7〜8件だけは幅が最タイトなので14pxまで絞る（FB108実測）。6件は3行化で1列に畳まれ幅に余裕＝rows3の20pxでOK */
 .venue-tabs.note-head.nh-n5 .nh-label { font-size: 18px; padding: 3px 10px; }
-.venue-tabs.note-head.nh-n6 .nh-label,
+.venue-tabs.note-head.nh-rows3 .nh-label { font-size: 20px; padding: 3px 10px; }
 .venue-tabs.note-head.nh-n7 .nh-label, .venue-tabs.note-head.nh-n8 .nh-label { font-size: 14px; padding: 2px 8px; }
 .venue-tabs.note-head.nh-n6 .nh-items,
 .venue-tabs.note-head.nh-n7 .nh-items, .venue-tabs.note-head.nh-n8 .nh-items { column-gap: 12px; }
@@ -221,9 +226,11 @@ body.wm-on .gbar::before { display: block; }
 .venue-tabs.note-head.nh-stack .nh-group { padding-top: 1px; padding-bottom: 1px; }
 
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
-   ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */
+   ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工）。
+   order:-1（8/10 FB110）＝応募人数枠と同値-1でDOM順により先勝ち＝並びは
+   ブランドロゴ(::after=-2)→CTCロゴ→応募人数（FB109の「CTCの左」をNaoto訂正で右隣へ） */
 .sp-logo {
-  width: 256px; height: 80px; background: #fff; border-radius: 8px; padding: 6px 10px;
+  order: -1; width: 256px; height: 80px; background: #fff; border-radius: 8px; padding: 6px 10px;
   display: flex; align-items: center; justify-content: center;
 }
 .sp-logo img { max-width: 100%; max-height: 100%; display: block; }
