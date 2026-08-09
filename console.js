@@ -361,6 +361,26 @@
   var predDrafts = {}; // key + " " + racerId → { text, invest, ore, note }
   function draftKey(key, racerId) { return key + " " + racerId; }
 
+  /* note勝負レースに書いたレース＝note予想チェックの既定ON（8/10 FB117・Naoto依頼「デフォルトで
+     入ってた方が配信者もありがたい」）。⚠️適用は「保存済みも下書きもない新規フォームの初期値」だけ：
+     一度保存/操作した値は再評価しない。勝負レース一覧の終了自動間引き（FB114）は表示側だけで
+     state.noteRacesは不変のため、レースが終わって一覧から消えても保存済みチェックは外れない */
+  function isNoteRaceDefault(key, rc) {
+    if (!key || !rc || !rc.name) return false;
+    var parts = key.split("|");
+    var venue = parts[0], rNo = String(+parts[1]);
+    var lines = String(state.noteRaces || "").split(/\r?\n/);
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      if (l.indexOf(rc.name) < 0 || l.indexOf(venue) < 0) continue;
+      var digits = (l.split(rc.name).join(" ").split(venue).join(" ")
+        .replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); })
+        .match(/\d+/g)) || [];
+      if (digits.indexOf(rNo) >= 0) return true;
+    }
+    return false;
+  }
+
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
     $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + effCars(key) + "車）" : "（場・レース未選択）") +
@@ -384,12 +404,14 @@
     }
 
     wrap.innerHTML = state.racers.map(function (rc, idx) {
-      var p = (race.byRacer && race.byRacer[rc.id]) || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
+      var saved = race.byRacer && race.byRacer[rc.id]; // 保存済みエントリの有無＝note既定判定に使う（FB117）
+      var p = saved || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
       var d = predDrafts[draftKey(key, rc.id)]; // 未保存の入力があればそれを表示（消さない）
       var vText = d ? d.text : p.text;
       var vInvest = d ? d.invest : (p.investInput || "");
       var vOre = d ? d.ore : (p.oreTachi || "");
-      var vNote = d ? d.note : !!p.isNote;
+      // note予想チェック＝下書き＞保存値＞（新規のみ）勝負レース照合の既定ON（8/10 FB117）
+      var vNote = d ? d.note : (saved ? !!p.isNote : isNoteRaceDefault(key, rc));
       return '<div class="pred-form" data-racer="' + rc.id + '">' +
         '<h3><span class="' + (idx === 1 ? "alt" : "") + '">' + esc(rc.name) + "</span> の予想</h3>" +
         '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
