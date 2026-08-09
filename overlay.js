@@ -52,7 +52,13 @@
     sec = ((sec % 86400) + 86400) % 86400;
     return Math.floor(sec / 3600) + ":" + pad2(Math.floor(sec / 60) % 60);
   }
+  // &mocknow=HH:MM＝時刻を固定する検証ハーネス用パラメータ（8/10 FB113＝終了判定の絵作り用。実運用では付けない）
+  var MOCK_NOW = (function () {
+    var m = params.get("mocknow"); if (!m) return null;
+    var p = m.split(":"); return (+p[0] || 0) * 3600 + (+p[1] || 0) * 60;
+  })();
   function nowSec() {
+    if (MOCK_NOW !== null) return MOCK_NOW;
     var d = new Date();
     return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
   }
@@ -96,6 +102,21 @@
     }
     return g || "";
   }
+  /* note勝負の終了判定（8/10 FB113・Naoto仕様）＝「同じ場の次のレースの発走時刻が来たら終了」
+     （例：佐世保7・8Rの8Rは、佐世保9Rの発走時刻が来た時点で終了→表示から個々に消す）。
+     時刻表に次のレースがない（＝その場の最終レース）は消さない。時刻は0時起点秒（鉄則） */
+  var nhBoundary = null; // 次に表示が変わる発走時刻（0時起点秒）。跨いだら毎秒ループが再描画
+  function nextRaceStartSec(venueName, no) {
+    if (!timetable || !timetable.venues) return null;
+    var next = null;
+    timetable.venues.forEach(function (tv) {
+      if (tv.name !== venueName) return;
+      (tv.races || []).forEach(function (r) {
+        if (+r.no > no && (!next || +r.no < +next.no)) next = r; // 番号が次に大きいレース＝欠番でもOK
+      });
+    });
+    return next ? timeToSec(next.start) : null;
+  }
   function renderVenueTabs() {
     var el = $("vtabs");
     if (!el) return;
@@ -110,7 +131,8 @@
     }
     var lines = (state && state.noteRaces ? String(state.noteRaces) : "")
       .split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8);
-    el.className = "venue-tabs note-head nh-n" + Math.min(lines.length, 8);
+    el.className = "venue-tabs note-head"; // 件数クラスは終了レースの間引き後に確定（8/10 FB113）
+    nhBoundary = null;
     if (!lines.length) { el.innerHTML = ""; return; }
     // 場名の照合リスト（8/9 FB104＝表示順の基準も兼ねる）：選択中の場→時刻表の場の順＝
     // タイマーカードと同じ並び。照合は長い名前から（部分一致の誤マッチ防止）
@@ -141,7 +163,29 @@
       for (var vi = 0; vi < sorted.length; vi++) {
         if (rest.indexOf(sorted[vi]) >= 0) { venue = sorted[vi]; break; }
       }
-      g.items.push({ t: rest, v: venue, seq: seq });
+      // 表記の正規化＋終了レースの間引き（8/10 FB113・Naoto3指定）：場が特定でき、残りが
+      // 数字とR・区切りだけの行は「場名␣番号R」に整形（半角スペース／番号は1桁＝全角・2桁＝半角）。
+      // 終了した番号は個々に消し、全部終了なら行ごと消す。自由文（場不明・メモ入り）は原文のまま
+      var t = rest;
+      if (venue) {
+        var tail = rest.split(venue).join(" ");
+        var half = tail.replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); });
+        if (/^[\s0-9rRｒＲ・.．,，、\-〜~]*$/.test(half) && /\d/.test(half)) {
+          var now = nowSec();
+          var nums = (half.match(/\d+/g) || []).filter(function (n) {
+            var b = nextRaceStartSec(venue, +n);
+            if (b === null) return true;               // 時刻表に次レースなし（最終レース等）＝消さない
+            if (now >= b) return false;                // 次レース発走済み＝終了→消す
+            if (nhBoundary === null || b < nhBoundary) nhBoundary = b;
+            return true;
+          });
+          if (!nums.length) return;                     // 全レース終了＝行ごと非表示
+          t = venue + " " + nums.map(function (n) {
+            return n.length === 1 ? "０１２３４５６７８９".charAt(+n) : n;
+          }).join("・") + "R";
+        }
+      }
+      g.items.push({ t: t, v: venue, seq: seq });
     });
     // 枠内の並び＝場の順で自動ソート（8/9 FB104・Naoto指定）＝タイマーカードと同じ順。
     // 場が読めない行は末尾（同順位は書いた順の安定ソート）
@@ -161,6 +205,12 @@
       g.gi = gi;
     });
     groups.sort(function (a, b) { return a.rank - b.rank || a.gi - b.gi; });
+    // 間引き後の実件数で表示クラスを確定（8/10 FB113）＝レースが減るたび文字サイズ段も自動で戻る
+    groups = groups.filter(function (g) { return g.items.length; });
+    var visCount = 0;
+    groups.forEach(function (g) { visCount += g.items.length; });
+    if (!visCount) { el.innerHTML = ""; return; } // 全部終了＝丸ごと非表示
+    el.className = "venue-tabs note-head nh-n" + Math.min(visCount, 8);
     // 枠内は場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104「Max2行にして2列に」）＝
     // 3場以上でも文字サイズを落とさず右の列へ流す（CSSグリッドの2行縦流し）。
     // 全員が1行ずつの日＝枠を縦積み（配信者1の下に配信者2・8/9 FB107）＝2行分の高さを有効活用
@@ -2092,6 +2142,7 @@
       renderTimers();
       renderBrb();
       renderStartList();
+      renderVenueTabs(); // note勝負の終了判定は時刻表基準（8/10 FB113）＝時刻表が届いたら即再評価
     }).catch(function () {
       setTimeout(loadTimetable, 15000); // 起動直後の取得失敗で10分空白にならないよう即リトライ
     });
@@ -2106,6 +2157,7 @@
     tickBrb();
     autoSceneTick();    // 発走時刻の自動シーン切替（8/9 FB95・表示中ソースのみ実行）
     if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); fitNarabi(); } // 毎秒＝①②帯・ライン行の自己修復（8/6 FB32/37/44）
+    if (nhBoundary !== null && nowSec() >= nhBoundary) renderVenueTabs(); // note勝負＝終了レースを個々に消す（8/10 FB113）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
   tickClock();
