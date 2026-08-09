@@ -167,18 +167,21 @@ body.wm-on .gbar::before { display: block; }
   white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
 /* 配信者ごとの枠（8/9 FB101）＝枠線がメンバーカラー・中は名前チップ＋レース表記（場ごとに｜区切り）。
    文字サイズは枠のfont-sizeを基準にem連動＝件数の段階縮小は枠1か所で効く */
-.nh-group { display: inline-flex; align-items: center; gap: 9px; padding: 5px 14px 5px 6px;
+.nh-group { display: inline-flex; align-items: center; gap: 10px; padding: 4px 14px 4px 6px;
   border-radius: 10px; border: 2px solid rgba(255,255,255,.35); background: #14204a;
   font-size: 26px; line-height: 1.15; white-space: nowrap; }
+/* 場ごとに縦積み（8/9 FB102）＝名前チップ左・レース右に1場1行 */
+.nh-items { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .nh-item { color: #fff; font-weight: 900; font-size: 1em; }
 .nh-item .grade-badge { margin-left: 7px; vertical-align: 1px; }
-.nh-isep { color: rgba(255,255,255,.45); font-weight: 900; font-size: .85em; }
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
 .nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;
   border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; font-size: .78em; }
 .venue-tabs.note-head.nh-n4 .nh-group, .venue-tabs.note-head.nh-n5 .nh-group { font-size: 21px; }
 .venue-tabs.note-head.nh-n6 .nh-group, .venue-tabs.note-head.nh-n7 .nh-group,
 .venue-tabs.note-head.nh-n8 .nh-group { font-size: 17px; }
+/* 枠内3行以上（1人で3場〜）＝ヘッダー96px高に収まるサイズへ（件数タイアより優先＝後勝ち） */
+.venue-tabs.note-head.nh-r3 .nh-group { font-size: 17px; }
 
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */

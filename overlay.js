@@ -137,6 +137,11 @@
       rest = rest.replace(/^[\s:：、・/／|｜-]+/, "").replace(/[\s、・/／|｜-]+$/, "").replace(/\s+/g, " ").trim();
       if (rest) g.items.push(rest);
     });
+    // 枠内は場ごとに縦積み（8/9 FB102・Naoto「佐世保といわき2行にするのは？」）＝
+    // 名前チップを左・レースを右に1場1行。ヘッダー96px高のため、枠内3行以上は自動縮小（nh-r3）
+    var maxRows = 1;
+    groups.forEach(function (g) { if (g.items.length > maxRows) maxRows = g.items.length; });
+    if (maxRows >= 3) el.classList.add("nh-r3");
     el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負レース</span>' +
       groups.map(function (g) {
         var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";
@@ -150,8 +155,9 @@
             if (it.indexOf(sorted[i]) >= 0) { badge = gradeBadge(sorted[i]); break; }
           }
           return '<span class="nh-item">' + esc(it) + badge + "</span>";
-        }).join('<span class="nh-isep">｜</span>');
-        return '<span class="nh-group"' + (col ? ' style="border-color:' + col + '"' : "") + ">" + name + items + "</span>";
+        }).join("");
+        return '<span class="nh-group"' + (col ? ' style="border-color:' + col + '"' : "") + ">" + name +
+          '<span class="nh-items">' + items + "</span></span>";
       }).join("");
   }
 
