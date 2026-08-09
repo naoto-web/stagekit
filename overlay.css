@@ -187,16 +187,17 @@ body.wm-on .gbar::before { display: block; }
 .nh-group { display: inline-flex; align-items: center; gap: 10px; padding: 2px 14px 2px 6px;
   border-radius: 10px; border: 2.5px solid rgba(0,0,0,.35); background: #ffffff;
   font-size: 30px; line-height: 1.12; white-space: nowrap; }
-/* 場ごとに縦積み・最大3行×列送り（8/9 FB102→FB104のMax2行→8/10 FB110でMax3行へ拡大）＝
-   1場1行・4場以上は右の列へ流す（Naoto「4つめから2列目でいい・ほぼ起きない」）。
-   align-self: stretch＋align-content: start（FB106→FB107修正）＝枠が伸びたとき
-   内容は上詰め・下は空白。⚠️rows=1fr不可＝Chromeは空行にも1行分の高さを与え、
-   全員1行の日に枠が勝手に膨らむ（FB107の縦積みではみ出しとして実発見） */
+/* 場ごとに縦積み（FB102→FB104 Max2行→FB110 Max3行→8/10 FB111）＝
+   3件まで1列縦積み・4件だけ2行×2列（.nh-r2＝JSが付与・Naoto指定）・5件〜は3行×列送り。
+   align-content: center（FB111）＝FB106の「上詰め・下は空白」をNaoto指示で高さ中央揃えへ改定
+   （「枠に対して下に空白が出てるように見える」）。⚠️rows=1fr不可＝Chromeは空行にも1行分の
+   高さを与え、全員1行の日に枠が勝手に膨らむ（FB107の縦積みではみ出しとして実発見） */
 .nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto);
   justify-items: start; align-items: center; column-gap: 16px; row-gap: 1px;
-  align-self: stretch; align-content: start; }
+  align-self: stretch; align-content: center; }
+.nh-items.nh-r2 { grid-template-rows: repeat(2, auto); } /* 4件＝2行×2列（FB111） */
 .nh-item { color: #16181c; font-weight: 900; font-size: 1em; }
-.nh-item .grade-badge { margin-left: 7px; vertical-align: 1px; }
+/* .nh-item .grade-badge＝FB111でバッジ廃止に伴い削除 */
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
 .nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;
   border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; font-size: .78em; }
@@ -205,8 +206,8 @@ body.wm-on .gbar::before { display: block; }
    旧CSS復元撮影で実証した既存バグ）。※カスケード順が意味を持つ：n5(24)→rows3(21)→n6〜8(20)＝
    後勝ちで「3行あるならさらに小さく・幅タイアが最小」を実現 */
 .venue-tabs.note-head.nh-n5 .nh-group { font-size: 24px; }
-/* 3行の枠がある日（8/10 FB110・nh-rows3＝JSがmaxItems>=3で付与）＝
-   高さ85pxに3行が入る上限21px（3×1.12×21+padding8+枠5=83.6px） */
+/* 3行表示の枠がある日（8/10 FB110・nh-rows3＝JSが付与。FB111で判定を「表示行数3以上」へ変更＝
+   4件は2行×2列表示なので対象外）＝高さ85pxに3行が入る上限21px（3×1.12×21+padding8+枠5=83.6px） */
 .venue-tabs.note-head.nh-rows3 .nh-group { font-size: 21px; }
 .venue-tabs.note-head.nh-n6 .nh-group,
 .venue-tabs.note-head.nh-n7 .nh-group, .venue-tabs.note-head.nh-n8 .nh-group { font-size: 20px; }
