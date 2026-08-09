@@ -112,11 +112,12 @@
       .split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8);
     el.className = "venue-tabs note-head nh-n" + Math.min(lines.length, 8);
     if (!lines.length) { el.innerHTML = ""; return; }
-    // 場名の照合リスト＝選択中の場＋時刻表の全場（長い名前から照合＝部分一致の誤マッチ防止）
-    var names = {};
-    (state.venues || []).forEach(function (v) { names[v.name] = 1; });
-    if (timetable) (timetable.venues || []).forEach(function (tv) { names[tv.name] = 1; });
-    var sorted = Object.keys(names).sort(function (a, b) { return b.length - a.length; });
+    // 場名の照合リスト（8/9 FB104＝表示順の基準も兼ねる）：選択中の場→時刻表の場の順＝
+    // タイマーカードと同じ並び。照合は長い名前から（部分一致の誤マッチ防止）
+    var venueOrder = [];
+    (state.venues || []).forEach(function (v) { if (venueOrder.indexOf(v.name) < 0) venueOrder.push(v.name); });
+    if (timetable) (timetable.venues || []).forEach(function (tv) { if (venueOrder.indexOf(tv.name) < 0) venueOrder.push(tv.name); });
+    var sorted = venueOrder.slice().sort(function (a, b) { return b.length - a.length; });
     // 配信者ごとに1枠へグループ化（8/9 FB101「配信者は配信者で1つの枠に・視聴者に見やすく」）：
     // 行から名簿（state.roster）の名前を検出し、同じ配信者の行を1つの枠にまとめる。
     // 枠線＝メンバーカラー＝画面全体の「色＝人」の視覚言語と統一（視聴者は色だけで誰のか分かる）。
@@ -124,7 +125,7 @@
     var roster = (state.roster || []).filter(function (r) { return r && r.name; })
       .sort(function (a, b) { return b.name.length - a.name.length; });
     var groups = [], byName = {};
-    lines.forEach(function (l) {
+    lines.forEach(function (l, seq) {
       var hit = null;
       for (var i = 0; i < roster.length; i++) {
         if (l.indexOf(roster[i].name) >= 0) { hit = roster[i]; break; }
@@ -135,13 +136,24 @@
       // 行から名前を除いた残り＝レース表記（残った区切り記号・余分な空白を掃除）
       var rest = hit ? l.split(hit.name).join(" ") : l;
       rest = rest.replace(/^[\s:：、・/／|｜-]+/, "").replace(/[\s、・/／|｜-]+$/, "").replace(/\s+/g, " ").trim();
-      if (rest) g.items.push(rest);
+      if (!rest) return;
+      var venue = null;
+      for (var vi = 0; vi < sorted.length; vi++) {
+        if (rest.indexOf(sorted[vi]) >= 0) { venue = sorted[vi]; break; }
+      }
+      g.items.push({ t: rest, v: venue, seq: seq });
     });
-    // 枠内は場ごとに縦積み（8/9 FB102・Naoto「佐世保といわき2行にするのは？」）＝
-    // 名前チップを左・レースを右に1場1行。ヘッダー96px高のため、枠内3行以上は自動縮小（nh-r3）
-    var maxRows = 1;
-    groups.forEach(function (g) { if (g.items.length > maxRows) maxRows = g.items.length; });
-    if (maxRows >= 3) el.classList.add("nh-r3");
+    // 枠内の並び＝場の順で自動ソート（8/9 FB104・Naoto指定）＝タイマーカードと同じ順。
+    // 場が読めない行は末尾（同順位は書いた順の安定ソート）
+    groups.forEach(function (g) {
+      g.items.sort(function (a, b) {
+        var ra = a.v ? venueOrder.indexOf(a.v) : 999;
+        var rb = b.v ? venueOrder.indexOf(b.v) : 999;
+        return ra - rb || a.seq - b.seq;
+      });
+    });
+    // 枠内は場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104「Max2行にして2列に」）＝
+    // 3場以上でも文字サイズを落とさず右の列へ流す（CSSグリッドの2行縦流し）
     el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負レース</span>' +
       groups.map(function (g) {
         var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";
@@ -150,11 +162,7 @@
             esc(g.racer.name) + "</span>"
           : "";
         var items = g.items.map(function (it) {
-          var badge = "";
-          for (var i = 0; i < sorted.length; i++) {
-            if (it.indexOf(sorted[i]) >= 0) { badge = gradeBadge(sorted[i]); break; }
-          }
-          return '<span class="nh-item">' + esc(it) + badge + "</span>";
+          return '<span class="nh-item">' + esc(it.t) + (it.v ? gradeBadge(it.v) : "") + "</span>";
         }).join("");
         return '<span class="nh-group"' + (col ? ' style="border-color:' + col + '"' : "") + ">" + name +
           '<span class="nh-items">' + items + "</span></span>";
