@@ -160,11 +160,13 @@ body.wm-on .gbar::before { display: block; }
 /* 本日のnote勝負（8/9 FB99）＝場タブを廃止しヘッダー中央に常設（全シーン共通＝②にも出る）。
    note販売の訴求なのでnote系の視覚言語（🔥＋金）で統一。&vtabs=1で旧・場タブへ復帰。
    件数で段階縮小：1〜3件＝1行フル／4〜5件＝中／6件〜＝小（2〜3行に自動折返し・枠外はヘッダーのoverflowで切れる） */
-.venue-tabs.note-head { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center;
+/* align-items: stretch（8/9 FB106）＝同じ行の枠の高さを揃える（1行の枠も2行の枠と同じ高さに） */
+.venue-tabs.note-head { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: stretch;
   justify-content: center; gap: 6px 10px; max-height: 92px; overflow: hidden; }
-/* ラベル＝箱に入れず素の文字（8/9 FB101・Naoto「バッジは見づらい・普通に文字で」） */
+/* ラベル＝箱に入れず素の文字（8/9 FB101・Naoto「バッジは見づらい・普通に文字で」）。
+   align-self: center＝コンテナのstretch化（FB106）でもラベルは縦中央のまま */
 .nh-label { font-size: 19px; line-height: 1.2; text-align: center; font-weight: 900; color: #ffd54f;
-  white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+  white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,.6); align-self: center; }
 /* 配信者ごとの枠（8/9 FB101）＝枠線がメンバーカラー・中は名前チップ＋レース表記（場ごとに｜区切り）。
    文字サイズは枠のfont-sizeを基準にem連動＝件数の段階縮小は枠1か所で効く */
 /* 白背景×黒字（8/9 FB103・Naoto指定）＝ヘッダーの他の白要素（CTCロゴ・応募人数・時計）と統一。
@@ -174,9 +176,10 @@ body.wm-on .gbar::before { display: block; }
   border-radius: 10px; border: 2.5px solid rgba(0,0,0,.35); background: #ffffff;
   font-size: 30px; line-height: 1.12; white-space: nowrap; }
 /* 場ごとに縦積み・最大2行×列送り（8/9 FB102→FB104）＝1場1行・3場以上は右の列へ流す
-   （縮小せず大きさ維持＝grid-auto-flow: column の2行グリッド） */
-.nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
-  justify-items: start; align-items: center; column-gap: 16px; row-gap: 1px; }
+   （縮小せず大きさ維持＝grid-auto-flow: column の2行グリッド）。
+   rows=1fr×2＋align-self: stretch（FB106）＝枠が2行分に伸びたとき1行の内容は上段・下段は空白 */
+.nh-items { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 1fr);
+  justify-items: start; align-items: center; column-gap: 16px; row-gap: 1px; align-self: stretch; }
 .nh-item { color: #16181c; font-weight: 900; font-size: 1em; }
 .nh-item .grade-badge { margin-left: 7px; vertical-align: 1px; }
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
