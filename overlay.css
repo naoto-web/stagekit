@@ -162,18 +162,23 @@ body.wm-on .gbar::before { display: block; }
    件数で段階縮小：1〜3件＝1行フル／4〜5件＝中／6件〜＝小（2〜3行に自動折返し・枠外はヘッダーのoverflowで切れる） */
 .venue-tabs.note-head { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center;
   justify-content: center; gap: 6px 10px; max-height: 92px; overflow: hidden; }
-.nh-label { font-size: 15px; line-height: 1.2; text-align: center; font-weight: 900; color: #ffd54f;
-  background: rgba(0,0,0,.55); padding: 4px 12px; border-radius: 9px; white-space: nowrap; }
-.nh-chip { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 10px;
-  border: 1.5px solid rgba(255,213,79,.55); background: #14204a; color: #fff;
-  font-weight: 900; font-size: 26px; line-height: 1.15; white-space: nowrap; }
-.nh-chip .grade-badge { margin-left: 8px; vertical-align: 0; }
-/* 配信者名＝メンバーカラーのチップ（8/9 FB100・背景色はJSがインラインで指定＝名簿の色に追従） */
-.nh-name { display: inline-block; padding: 1px 10px; border-radius: 7px; margin-right: 7px;
-  border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; }
-.venue-tabs.note-head.nh-n4 .nh-chip, .venue-tabs.note-head.nh-n5 .nh-chip { font-size: 21px; padding: 4px 12px; }
-.venue-tabs.note-head.nh-n6 .nh-chip, .venue-tabs.note-head.nh-n7 .nh-chip,
-.venue-tabs.note-head.nh-n8 .nh-chip { font-size: 17px; padding: 3px 10px; }
+/* ラベル＝箱に入れず素の文字（8/9 FB101・Naoto「バッジは見づらい・普通に文字で」） */
+.nh-label { font-size: 19px; line-height: 1.2; text-align: center; font-weight: 900; color: #ffd54f;
+  white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+/* 配信者ごとの枠（8/9 FB101）＝枠線がメンバーカラー・中は名前チップ＋レース表記（場ごとに｜区切り）。
+   文字サイズは枠のfont-sizeを基準にem連動＝件数の段階縮小は枠1か所で効く */
+.nh-group { display: inline-flex; align-items: center; gap: 9px; padding: 5px 14px 5px 6px;
+  border-radius: 10px; border: 2px solid rgba(255,255,255,.35); background: #14204a;
+  font-size: 26px; line-height: 1.15; white-space: nowrap; }
+.nh-item { color: #fff; font-weight: 900; font-size: 1em; }
+.nh-item .grade-badge { margin-left: 7px; vertical-align: 1px; }
+.nh-isep { color: rgba(255,255,255,.45); font-weight: 900; font-size: .85em; }
+/* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
+.nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;
+  border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; font-size: .78em; }
+.venue-tabs.note-head.nh-n4 .nh-group, .venue-tabs.note-head.nh-n5 .nh-group { font-size: 21px; }
+.venue-tabs.note-head.nh-n6 .nh-group, .venue-tabs.note-head.nh-n7 .nh-group,
+.venue-tabs.note-head.nh-n8 .nh-group { font-size: 17px; }
 
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */

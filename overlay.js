@@ -117,30 +117,41 @@
     (state.venues || []).forEach(function (v) { names[v.name] = 1; });
     if (timetable) (timetable.venues || []).forEach(function (tv) { names[tv.name] = 1; });
     var sorted = Object.keys(names).sort(function (a, b) { return b.length - a.length; });
-    // 配信者名の色付け（8/9 FB100「誰の勝負レースか分からない」）：行内に名簿の名前を見つけたら
-    // メンバーカラーのチップに置き換える（場名バッジと同じ照合方式＝自由入力のまま・長い名前順）
+    // 配信者ごとに1枠へグループ化（8/9 FB101「配信者は配信者で1つの枠に・視聴者に見やすく」）：
+    // 行から名簿（state.roster）の名前を検出し、同じ配信者の行を1つの枠にまとめる。
+    // 枠線＝メンバーカラー＝画面全体の「色＝人」の視覚言語と統一（視聴者は色だけで誰のか分かる）。
+    // 名前が検出できない行は独立の枠でそのまま表示（自由入力は壊さない）
     var roster = (state.roster || []).filter(function (r) { return r && r.name; })
       .sort(function (a, b) { return b.name.length - a.name.length; });
-    function noteLineHtml(l) {
-      var html = esc(l);
-      roster.forEach(function (r) {
-        var en = esc(r.name);
-        if (html.indexOf(en) < 0) return;
-        var col = window.Derive.colorOf(r.color);
-        var chip = col
-          ? '<span class="nh-name" style="background:' + col + ";color:" + textOn(col) + '">' + en + "</span>"
-          : '<span class="nh-name">' + en + "</span>";
-        html = html.split(en).join(chip);
-      });
-      return html;
-    }
-    el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負</span>' +
-      lines.map(function (l) {
-        var badge = "";
-        for (var i = 0; i < sorted.length; i++) {
-          if (l.indexOf(sorted[i]) >= 0) { badge = gradeBadge(sorted[i]); break; }
-        }
-        return '<span class="nh-chip">' + noteLineHtml(l) + badge + "</span>";
+    var groups = [], byName = {};
+    lines.forEach(function (l) {
+      var hit = null;
+      for (var i = 0; i < roster.length; i++) {
+        if (l.indexOf(roster[i].name) >= 0) { hit = roster[i]; break; }
+      }
+      var key = hit ? hit.name : "|" + groups.length; // 名前なし行＝独立枠（まとめない）
+      var g = byName[key];
+      if (!g) { g = { racer: hit, items: [] }; byName[key] = g; groups.push(g); }
+      // 行から名前を除いた残り＝レース表記（残った区切り記号・余分な空白を掃除）
+      var rest = hit ? l.split(hit.name).join(" ") : l;
+      rest = rest.replace(/^[\s:：、・/／|｜-]+/, "").replace(/[\s、・/／|｜-]+$/, "").replace(/\s+/g, " ").trim();
+      if (rest) g.items.push(rest);
+    });
+    el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負レース</span>' +
+      groups.map(function (g) {
+        var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";
+        var name = g.racer
+          ? '<span class="nh-name"' + (col ? ' style="background:' + col + ";color:" + textOn(col) + '"' : "") + ">" +
+            esc(g.racer.name) + "</span>"
+          : "";
+        var items = g.items.map(function (it) {
+          var badge = "";
+          for (var i = 0; i < sorted.length; i++) {
+            if (it.indexOf(sorted[i]) >= 0) { badge = gradeBadge(sorted[i]); break; }
+          }
+          return '<span class="nh-item">' + esc(it) + badge + "</span>";
+        }).join('<span class="nh-isep">｜</span>');
+        return '<span class="nh-group"' + (col ? ' style="border-color:' + col + '"' : "") + ">" + name + items + "</span>";
       }).join("");
   }
 
