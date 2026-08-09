@@ -167,7 +167,7 @@
     var maxItems = 0;
     groups.forEach(function (g) { if (g.items.length > maxItems) maxItems = g.items.length; });
     if (maxItems === 1 && groups.length >= 2) el.classList.add("nh-stack");
-    el.innerHTML = '<span class="nh-label">🔥 本日のnote<br>勝負レース</span>' +
+    el.innerHTML = '<span class="nh-label">本日のnote<br>勝負レース</span>' +
       '<span class="nh-groups">' +
       groups.map(function (g) {
         var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";

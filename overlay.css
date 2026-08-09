@@ -102,10 +102,11 @@ body.wm-on .gbar::before { display: block; }
    これが入ったぶん、CTCロゴ・場タブ・時計はgapぶん右へ自動でずれる（flexなので座標指定は不要）。
    ⚠️あえてマークアップを触らずCSSだけで足している：同じヘッダー構造が overlay.html のほか
       検証ハーネス4枚にも写しであり、要素を足すと5か所を同期させることになるため。
-      ::before は透かし柄が使用中なので ::after を使い、order:-1 で左端へ回している。
+      ::before は透かし柄が使用中なので ::after を使い、orderで左端へ回している。
+      order=-2（8/10 FB109で-1→-2）＝-1は応募人数枠（CTCロゴ左隣へ移設）に譲った。
    ⚠️.gbar > * のz-index指定は疑似要素に当たらないので、ここで自前に position/z-index を持たせる */
 .gbar::after {
-  content: ""; order: -1; flex: 0 0 auto; position: relative; z-index: 1;
+  content: ""; order: -2; flex: 0 0 auto; position: relative; z-index: 1;
   /* 実寸比 2.081:1。8/9 FB94で 80→92px に拡大（Naoto指示「もう少し大きく」）。
      ⚠️ヘッダーは96px高＋overflow:hiddenなので、上下の余白を残すとこの辺りが実質の上限。
         これ以上大きくしたいときはヘッダー自体の高さを上げる改修になる */
@@ -133,12 +134,14 @@ body.wm-on .gbar::before { display: block; }
   margin-left: auto; display: flex; flex-direction: column; align-items: center; line-height: 1.1;
   background: #ffffff; border-radius: 10px; padding: 5px 24px; height: 80px; justify-content: center;
 }
-/* 本日のキャンペーン応募人数（バナー・時計の左・8/6 FB21）。コンソール本日設定から・空欄＝非表示 */
-.camp-box { margin-left: auto; height: 80px; background: #ffffff; border-radius: 10px;
+/* 本日のキャンペーン応募人数（8/6 FB21→8/10 FB109で移設）。コンソール本日設定から・空欄＝非表示。
+   FB109＝CTC主催キャンペーンなのでCTCロゴの左隣へ（Naoto「アイコンの隣の方がいい」）。
+   マークアップは5か所（overlay.html＋ハーネス写し）にあるため触らず、FB93と同じくorderだけで移動：
+   ブランドロゴ::after=-2 → 応募人数=-1 → CTCロゴ以降=0。note勝負エリアはそのぶん右寄りになる */
+.camp-box { order: -1; height: 80px; background: #ffffff; border-radius: 10px;
   padding: 6px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;
   line-height: 1.15; }
 .camp-box.hidden { display: none; }
-.camp-box:not(.hidden) ~ .clock-box { margin-left: 0; } /* 表示中は時計との間隔＝通常gapに */
 .camp-label { font-size: 15px; font-weight: 900; color: #2a2f3a; white-space: nowrap; }
 .camp-num { font-size: 34px; font-weight: 900; color: #0b0e14; font-variant-numeric: tabular-nums; }
 .clock-date { font-size: 19px; color: #2a2f3a; font-weight: 700; }
@@ -158,18 +161,23 @@ body.wm-on .gbar::before { display: block; }
 .vtab small { font-size: 30px; margin-left: 6px; } /* 8/6 FB5：R番号も場名と同サイズに */
 
 /* 本日のnote勝負（8/9 FB99）＝場タブを廃止しヘッダー中央に常設（全シーン共通＝②にも出る）。
-   note販売の訴求なのでnote系の視覚言語（🔥＋金）で統一。&vtabs=1で旧・場タブへ復帰。
+   note販売の訴求なので金の視覚言語で統一（当初の🔥アイコンはFB109で削除＝チップ幅の圧縮）。&vtabs=1で旧・場タブへ復帰。
    件数で段階縮小：1〜3件＝1行フル／4〜5件＝中／6件〜＝小（2〜3行に自動折返し・枠外はヘッダーのoverflowで切れる） */
 /* align-items: stretch（8/9 FB106）＝同じ行の枠の高さを揃える（1行の枠も2行の枠と同じ高さに） */
+/* height固定（8/10 FB109・Naoto「8件の日は縦が短い→2件の時の高さに」）＝max-heightだと縮小タイア日に
+   行が痩せるため85pxに固定し、チップ・枠ともstretchで常にフル高さ。85px＝縦積み（nh-stack）2段84.2pxが
+   収まる最小値（2件時の実高さ）。文字サイズのタイアは幅の都合なので従来のまま */
 .venue-tabs.note-head { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: stretch;
-  justify-content: center; gap: 6px 10px; max-height: 92px; overflow: hidden; }
+  justify-content: center; gap: 6px 10px; height: 85px; overflow: hidden; }
 /* ラベル＝金チップ（8/10 FB108・Naoto「見えづらい」→比較モックから金チップ案を選択）。
    金地×紺文字の不透明チップ＝19px素の金文字は透かしノイズに沈むため24pxに拡大し背景を遮断。
    FB101「箱に入れず素の文字」は本FBで撤回（見づらさの原因は箱の有無でなくサイズ＋背景ノイズ）。
-   align-self: center＝コンテナのstretch化（FB106）でもラベルは縦中央のまま */
+   FB109（8/10）＝🔥アイコン削除（チップ幅の圧縮・Naoto指示・overlay.jsのラベル文言側）＋
+   align-self: stretch＝チップも枠と同じフル高さ（中の2行テキストはflexで縦横中央） */
 .nh-label { font-size: 24px; line-height: 1.2; text-align: center; font-weight: 900; color: #14204a;
   background: #ffd54f; border: 2.5px solid #b8860b; border-radius: 10px; padding: 4px 14px;
-  white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.35); align-self: center; }
+  white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  align-self: stretch; display: flex; align-items: center; justify-content: center; }
 /* 配信者ごとの枠（8/9 FB101）＝枠線がメンバーカラー・中は名前チップ＋レース表記（場ごとに｜区切り）。
    文字サイズは枠のfont-sizeを基準にem連動＝件数の段階縮小は枠1か所で効く */
 /* 白背景×黒字（8/9 FB103・Naoto指定）＝ヘッダーの他の白要素（CTCロゴ・応募人数・時計）と統一。
