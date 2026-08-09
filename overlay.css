@@ -191,9 +191,20 @@ body.wm-on .gbar::before { display: block; }
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
 .nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;
   border: 1px solid rgba(0,0,0,.35); font-weight: 900; line-height: 1.2; font-size: .78em; }
-/* 縮小＝幅の都合だけ（FB105で再調整）：5〜6件24px・7〜8件20px（高さは常に2行以下＝FB104） */
-.venue-tabs.note-head.nh-n5 .nh-group, .venue-tabs.note-head.nh-n6 .nh-group { font-size: 24px; }
+/* 縮小＝幅の都合だけ（FB105で再調整→FB108で6件を下段タイアへ移動）：5件24px・6〜8件20px。
+   ⚠️6件＝24pxは旧ラベル時代から2枠目が2段目へ落ちてヘッダー外に切れていた（FB108作業中に
+   旧CSS復元撮影で実証した既存バグ＝2人×各3レースの形は24pxでは収まらない）。高さは常に2行以下＝FB104 */
+.venue-tabs.note-head.nh-n5 .nh-group { font-size: 24px; }
+.venue-tabs.note-head.nh-n6 .nh-group,
 .venue-tabs.note-head.nh-n7 .nh-group, .venue-tabs.note-head.nh-n8 .nh-group { font-size: 20px; }
+/* 金チップも件数タイアで縮小（FB108）＝24px固定だと多件数日に2枠目が2段目へ落ちる
+   （ハーネスnotes=8撮影で実測・17pxでも不足＝14pxまで絞って旧ラベル並みの幅に）。
+   6〜8件は枠内の列間も16→12pxに詰めて収まりを確保 */
+.venue-tabs.note-head.nh-n5 .nh-label { font-size: 18px; padding: 3px 10px; }
+.venue-tabs.note-head.nh-n6 .nh-label,
+.venue-tabs.note-head.nh-n7 .nh-label, .venue-tabs.note-head.nh-n8 .nh-label { font-size: 14px; padding: 2px 8px; }
+.venue-tabs.note-head.nh-n6 .nh-items,
+.venue-tabs.note-head.nh-n7 .nh-items, .venue-tabs.note-head.nh-n8 .nh-items { column-gap: 12px; }
 /* 全員1行ずつの日＝枠を縦積み（8/9 FB107）：既定はdisplay: contents＝FB106の横並びstretchのまま。
    nh-stack時だけ2行グリッド（配信者1の下に配信者2・3人以上は右の列へ）＋列内で枠の幅を揃える */
 .nh-groups { display: contents; }
