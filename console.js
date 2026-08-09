@@ -479,6 +479,12 @@
     if (dirty) {
       html += '<div class="draft-warn">✏️ 未保存（「この予想を保存」を押すまで画面に出ません・入力は消えません）</div>';
     }
+    // 俺たち目の入れ忘れ通知（8/9 FB97）：「買い目だけ先に保存して見せる→後から俺たち目」は
+    // 正規の運用なのでブロックしない。保存済みの買い目があるのに俺たち目欄が空の間だけ知らせる
+    // （欄に打ち始めたら消える＝入力の邪魔をしない）
+    if (!form.querySelector(".pf-ore").value.trim() && (saved.text || "").trim()) {
+      html += '<div class="unit-warn">⚠ 「俺たち目」が入力されていません（買い目だけの表示はOK・レースまでに入力→保存）</div>';
+    }
     form.querySelector(".pf-total").innerHTML = html;
     form.classList.toggle("dirty", dirty);
   }
@@ -1022,6 +1028,38 @@
       }
     } else {
       warn.classList.add("hidden");
+    }
+
+    // 俺たち目の入れ忘れ警告バー（8/9 FB97）：次のレースが発走10分前を切っても、
+    // 買い目だけ保存されて俺たち目が空のままの配信者がいたら上部バーで知らせる。
+    // 保存・表示は一切ブロックしない（買い目先出しの運用が正）。タップで入力先を
+    // そのレースに固定（📌）して予想入力へジャンプ＝1タップで書ける
+    var ow = $("ore-warn");
+    if (ow) {
+      var oreMiss = [];
+      if (best && best.startSec - now <= 600 && now < best.startSec) {
+        var obr = (state.preds[window.Derive.raceKey(best.name, best.no)] || {}).byRacer || {};
+        (state.racers || []).forEach(function (rc) {
+          var p = obr[rc.id];
+          if (p && (p.text || "").trim() && !(p.oreTachi || "").trim()) oreMiss.push(rc.name);
+        });
+      }
+      if (oreMiss.length) {
+        ow.textContent = "⚠ 俺たち目が未入力：" + best.name + best.no + "R（" + oreMiss.join("・") + "）→ タップで予想入力へ";
+        ow.classList.remove("hidden");
+        ow.onclick = function () {
+          editVenue = best.name;
+          editRace = best.no;
+          var card = $("pred-forms").closest("details");
+          if (card) card.open = true;
+          renderPredTarget();
+          renderPredForms();
+          $("pred-forms").scrollIntoView({ behavior: "smooth" });
+        };
+      } else {
+        ow.classList.add("hidden");
+        ow.onclick = null;
+      }
     }
   }
 
