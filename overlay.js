@@ -163,23 +163,24 @@
       for (var vi = 0; vi < sorted.length; vi++) {
         if (rest.indexOf(sorted[vi]) >= 0) { venue = sorted[vi]; break; }
       }
-      // 表記の正規化＋終了レースの間引き（8/10 FB113・Naoto3指定）：場が特定でき、残りが
+      // 表記の正規化＋終了商品の間引き（8/10 FB113→FB114修正）：場が特定でき、残りが
       // 数字とR・区切りだけの行は「場名␣番号R」に整形（半角スペース／番号は1桁＝全角・2桁＝半角）。
-      // 終了した番号は個々に消し、全部終了なら行ごと消す。自由文（場不明・メモ入り）は原文のまま
+      // ⚠️終了判定は行（＝note商品）単位（FB114・Naoto「7・8Rで1つのnoteとして販売＝1商品」）：
+      // 行内の最終レース（最大番号）の次のレースが発走したら行ごと消す。番号単位では消さない。
+      // 自由文（場不明・メモ入り）は原文のまま＝入力を壊さない
       var t = rest;
       if (venue) {
         var tail = rest.split(venue).join(" ");
         var half = tail.replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); });
         if (/^[\s0-9rRｒＲ・.．,，、\-〜~]*$/.test(half) && /\d/.test(half)) {
-          var now = nowSec();
-          var nums = (half.match(/\d+/g) || []).filter(function (n) {
-            var b = nextRaceStartSec(venue, +n);
-            if (b === null) return true;               // 時刻表に次レースなし（最終レース等）＝消さない
-            if (now >= b) return false;                // 次レース発走済み＝終了→消す
+          var nums = half.match(/\d+/g) || [];
+          var maxNo = 0;
+          nums.forEach(function (n) { if (+n > maxNo) maxNo = +n; });
+          var b = nextRaceStartSec(venue, maxNo); // 最終レースの次＝商品終了の合図（時刻表に次がなければ消さない）
+          if (b !== null) {
+            if (nowSec() >= b) return;            // 商品まるごと終了＝行ごと非表示
             if (nhBoundary === null || b < nhBoundary) nhBoundary = b;
-            return true;
-          });
-          if (!nums.length) return;                     // 全レース終了＝行ごと非表示
+          }
           t = venue + " " + nums.map(function (n) {
             return n.length === 1 ? "０１２３４５６７８９".charAt(+n) : n;
           }).join("・") + "R";
