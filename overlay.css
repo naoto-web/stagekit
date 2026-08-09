@@ -157,6 +157,21 @@ body.wm-on .gbar::before { display: block; }
 }
 .vtab small { font-size: 30px; margin-left: 6px; } /* 8/6 FB5：R番号も場名と同サイズに */
 
+/* 本日のnote勝負（8/9 FB99）＝場タブを廃止しヘッダー中央に常設（全シーン共通＝②にも出る）。
+   note販売の訴求なのでnote系の視覚言語（🔥＋金）で統一。&vtabs=1で旧・場タブへ復帰。
+   件数で段階縮小：1〜3件＝1行フル／4〜5件＝中／6件〜＝小（2〜3行に自動折返し・枠外はヘッダーのoverflowで切れる） */
+.venue-tabs.note-head { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center;
+  justify-content: center; gap: 6px 10px; max-height: 92px; overflow: hidden; }
+.nh-label { font-size: 15px; line-height: 1.2; text-align: center; font-weight: 900; color: #ffd54f;
+  background: rgba(0,0,0,.55); padding: 4px 12px; border-radius: 9px; white-space: nowrap; }
+.nh-chip { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 10px;
+  border: 1.5px solid rgba(255,213,79,.55); background: #14204a; color: #fff;
+  font-weight: 900; font-size: 26px; line-height: 1.15; white-space: nowrap; }
+.nh-chip .grade-badge { margin-left: 8px; vertical-align: 0; }
+.venue-tabs.note-head.nh-n4 .nh-chip, .venue-tabs.note-head.nh-n5 .nh-chip { font-size: 21px; padding: 4px 12px; }
+.venue-tabs.note-head.nh-n6 .nh-chip, .venue-tabs.note-head.nh-n7 .nh-chip,
+.venue-tabs.note-head.nh-n8 .nh-chip { font-size: 17px; padding: 3px 10px; }
+
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工） */
 .sp-logo {
@@ -337,6 +352,12 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .timer-cards.vt-n4 .vt-row { font-size: 14px; } /* ②横4連＝カード幅136pxで「民間締切」が折れない上限（8/6 FB7） */
 .timer-cards.vt-n4 .vt-row b { font-size: 20px; }
 .timer-cards.vt-n4 .vt-row b.closed { font-size: 17px; }
+/* タイマーカードのグレードバッジ（8/9 FB99＝場タブから移設）。
+   白フチ＝信号機色（zone-red等）でカード地とバッジ色が同色になっても輪郭が残るように。
+   ⚠️3〜4場のコンパクト表示では非表示＝カード幅136〜190pxに「いわき平＋GI＋R番号」は入らず
+   場名が折り返す（実測）。並走帯のグレードはnote勝負ヘッダー・予想帯ラベルで補完される */
+.vt-head .grade-badge { box-shadow: 0 0 0 1.5px rgba(255,255,255,.7); }
+.timer-cards.vt-n3 .vt-head .grade-badge, .timer-cards.vt-n4 .vt-head .grade-badge { display: none; }
 .timer-cards.vt-n3 .vt-cta-main, .timer-cards.vt-n4 .vt-cta-main { font-size: 18px; }
 .timer-cards.vt-n3 .vt-cta-start, .timer-cards.vt-n4 .vt-cta-start { font-size: 22px; }
 .timer-cards.vt-n3 .vt-cta-line, .timer-cards.vt-n4 .vt-cta-line { font-size: 14px; }
@@ -387,15 +408,7 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .narabi-row .car { width: 22px; height: 22px; font-size: 14px; border-radius: 5px; }
 /* 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定から・8/6追加）
    1行＝1件・最大8行。5行以上は段階的に文字を縮小（タイマーvt-n3/n4と同方式） */
-.note-races-row { display: flex; flex-direction: column; gap: 3px; padding: 8px 12px;
-  border-top: 1.5px solid var(--panel-line); background: rgba(0,0,0,.25); }
-.nr-head { align-self: flex-start; font-size: 15px; font-weight: 900; color: #ffd54f;
-  background: rgba(0,0,0,.62); padding: 3px 10px; border-radius: 8px; white-space: nowrap; }
-.nr-line { font-size: 23px; font-weight: 900; color: var(--txt); line-height: 1.25;
-  white-space: nowrap; overflow: hidden; }
-.note-races-row.nr-many .nr-line { font-size: 19px; }
-.note-races-row.nr-max .nr-line { font-size: 16px; }
-/* note勝負行は常に下端優先で表示：出走表は残り高さに収める（あふれた分は下から切れる） */
+/* ①出走表下のnote勝負欄＝8/9 FB99で廃止（ヘッダーへ一本化）。要素は常時hiddenのため装飾は不要 */
 .slist-panel { display: flex; flex-direction: column; }
 .slist-panel .slist { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 

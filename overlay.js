@@ -81,14 +81,50 @@
     return allRaces().filter(function (r) { return r.startSec > now; }); // 発走したら即・次レースへ
   }
 
-  /* ---------- ヘッダー ---------- */
+  /* ---------- ヘッダー：本日のnote勝負（旧・場タブ）（8/9 FB99） ----------
+     場タブはタイマーカード・予想帯の場名Rラベルと情報が重複するため廃止し、
+     note販売の訴求（本日のnote勝負レース）に置き換えた。ヘッダーは全シーン共通なので、
+     ②レース観戦にも1か所の変更で乗る（①出走表下の旧note勝負欄はFB99で廃止＝ヘッダーに一本化）。
+     行内に本日の開催場名を見つけたらグレードバッジ（GI赤等）を自動付与。
+     保険＝ソースURLに &vtabs=1 で旧・場タブ表示へ即復帰（デプロイ不要） */
+  var SHOW_VTABS = params.get("vtabs") === "1";
+  /** 場のグレード文字列：手入力/自動プリセット（state.grade）→時刻表（未選択の場も拾える）の順 */
+  function gradeOfVenue(name) {
+    var g = (state.grade || {})[name];
+    if (!g && timetable) {
+      (timetable.venues || []).forEach(function (tv) { if (tv.name === name && tv.grade) g = tv.grade; });
+    }
+    return g || "";
+  }
   function renderVenueTabs() {
     var el = $("vtabs");
-    el.innerHTML = state.venues.map(function (v, i) {
-      var rNo = state.currentRace[v.name];
-      return '<button class="vtab' + (i === state.activeVenue ? " active" : "") + '">' +
-        esc(v.name) + (rNo ? "<small>" + rNo + "R</small>" : "") + gradeBadge(v.name) + "</button>";
-    }).join("");
+    if (!el) return;
+    if (SHOW_VTABS) { // 旧・場タブ（ロールバック用にそのまま残置）
+      el.className = "venue-tabs";
+      el.innerHTML = state.venues.map(function (v, i) {
+        var rNo = state.currentRace[v.name];
+        return '<button class="vtab' + (i === state.activeVenue ? " active" : "") + '">' +
+          esc(v.name) + (rNo ? "<small>" + rNo + "R</small>" : "") + gradeBadge(v.name) + "</button>";
+      }).join("");
+      return;
+    }
+    var lines = (state && state.noteRaces ? String(state.noteRaces) : "")
+      .split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8);
+    el.className = "venue-tabs note-head nh-n" + Math.min(lines.length, 8);
+    if (!lines.length) { el.innerHTML = ""; return; }
+    // 場名の照合リスト＝選択中の場＋時刻表の全場（長い名前から照合＝部分一致の誤マッチ防止）
+    var names = {};
+    (state.venues || []).forEach(function (v) { names[v.name] = 1; });
+    if (timetable) (timetable.venues || []).forEach(function (tv) { names[tv.name] = 1; });
+    var sorted = Object.keys(names).sort(function (a, b) { return b.length - a.length; });
+    el.innerHTML = '<span class="nh-label">🔥 本日の<br>note勝負</span>' +
+      lines.map(function (l) {
+        var badge = "";
+        for (var i = 0; i < sorted.length; i++) {
+          if (l.indexOf(sorted[i]) >= 0) { badge = gradeBadge(sorted[i]); break; }
+        }
+        return '<span class="nh-chip">' + esc(l) + badge + "</span>";
+      }).join("");
   }
 
   function tickClock() {
@@ -242,15 +278,17 @@
     var now = nowSec();
     var offSec = (state.cfg.closeMin || 3) * 60;
     // 公式締切〜発走の間は「締切ました」CTAカードに切り替える（モードもキーに含めて跨いだ瞬間に再構築）
+    // グレードもキーに含める＝場タブ廃止（FB99）でバッジがここへ移設・後着のグレードでも再構築される
     var keys = cards.map(function (c) {
       var closed = c.race && now >= c.race.startSec - offSec;
-      return c.venue + "|" + (c.race ? c.race.no : "-") + (closed ? "C" : "");
+      return c.venue + "|" + (c.race ? c.race.no : "-") + (closed ? "C" : "") + "|" + gradeOfVenue(c.venue);
     }).join(",");
     if (keys !== timerRowKeys) {
       timerRowKeys = keys;
       var html = cards.map(function (c) {
         var closed = c.race && now >= c.race.startSec - offSec;
-        var head = '<div class="vt-head">' + esc(c.venue) +
+        // 場名の横にグレードバッジ（8/9 FB99＝場タブから移設・GI開催の一覧性をタイマーで維持）
+        var head = '<div class="vt-head">' + esc(c.venue) + gradeBadge(c.venue) +
           (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + "</div>";
         var body;
         if (!c.race) {
@@ -376,7 +414,8 @@
   /** グレードバッジ（8/6 FB36）：場のグレード文字列からGP/GⅠ〜GⅢを検出（F級は非表示）。
       GP=金・GⅠ=赤・GⅡ=青・GⅢ=緑。サイズは.72em＝置き場所の文字サイズに追従 */
   function gradeBadge(venueName) {
-    var g = String((state.grade || {})[venueName] || "")
+    // 8/9 FB99：state.gradeに無い場（コンソール未選択）も時刻表のグレードで拾う
+    var g = String(gradeOfVenue(venueName))
       .replace(/Ⅰ/g, "1").replace(/Ⅱ/g, "2").replace(/Ⅲ/g, "3").toUpperCase();
     var cls = /GP|グランプリ/.test(g) ? "gp" : /G\s*1/.test(g) ? "g1" : /G\s*2/.test(g) ? "g2" : /G\s*3/.test(g) ? "g3" : null;
     if (!cls) return "";
@@ -1097,28 +1136,8 @@
     if (show) $("camp-num").textContent = (+n).toLocaleString() + "人";
   }
 
-  /** 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定の入力を表示・8/6）
-      1行＝1件・最大8行。5行以上はCSS側で段階縮小、長い行は枠幅に合わせて自動縮小 */
-  function renderNoteRaces() {
-    var el = $("note-races-talk");
-    if (!el) return;
-    var lines = (state && state.noteRaces ? String(state.noteRaces) : "")
-      .split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8);
-    el.classList.toggle("hidden", !lines.length);
-    el.classList.toggle("nr-many", lines.length >= 5 && lines.length <= 6);
-    el.classList.toggle("nr-max", lines.length >= 7);
-    if (!lines.length) { el.innerHTML = ""; fitSlist(); return; }
-    el.innerHTML = '<div class="nr-head">🔥 note勝負</div>' +
-      lines.map(function (l) { return '<div class="nr-line">' + esc(l) + "</div>"; }).join("");
-    el.querySelectorAll(".nr-line").forEach(function (ln) {
-      ln.style.transform = "";
-      if (ln.clientWidth > 0 && ln.scrollWidth > ln.clientWidth + 1) {
-        ln.style.transform = "scale(" + Math.max(0.55, ln.clientWidth / ln.scrollWidth) + ")";
-        ln.style.transformOrigin = "left center";
-      }
-    });
-    fitSlist(); // note勝負の行数で出走表の残り高さが変わるため再フィット（8/6 FB30）
-  }
+  /* 本日のnote勝負レース＝①出走表下の欄は廃止し、ヘッダー（旧・場タブ位置）へ一本化（8/9 FB99）。
+     #note-races-talk はHTML側の初期クラスhiddenのまま触らない（検証ハーネスの写しと同期を保つため要素は残置） */
 
   /* ②レース観戦：場名/Rバーは廃止（7/29 FB4＝映像は別ウィンドウのキャプチャで
      コンソールの場情報と実映像がズレうるため）。シーン固有の描画はタイマーカードと予想帯のみ */
@@ -1959,7 +1978,6 @@
     renderVenueTabs();
     renderPreds();
     renderStartList();
-    renderNoteRaces();
     renderCampaign();
     renderResultScene();
     renderBrb();
