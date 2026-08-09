@@ -211,12 +211,11 @@ body.wm-on .gbar::before { display: block; }
 .venue-tabs.note-head.nh-rows3 .nh-group { font-size: 21px; }
 .venue-tabs.note-head.nh-n6 .nh-group,
 .venue-tabs.note-head.nh-n7 .nh-group, .venue-tabs.note-head.nh-n8 .nh-group { font-size: 20px; }
-/* 金チップの縮小（FB108→FB110改定）：3行の枠がある日＝ラベルも「本日の/note/勝負レース」の
-   3行組み（JSが文言を切替）で幅を細く・20pxで高さぴったり（3×1.2×20+padding6+枠5=83px）。
-   7〜8件だけは幅が最タイトなので14pxまで絞る（FB108実測）。6件は3行化で1列に畳まれ幅に余裕＝rows3の20pxでOK */
-.venue-tabs.note-head.nh-n5 .nh-label { font-size: 18px; padding: 3px 10px; }
-.venue-tabs.note-head.nh-rows3 .nh-label { font-size: 20px; padding: 3px 10px; }
-.venue-tabs.note-head.nh-n7 .nh-label, .venue-tabs.note-head.nh-n8 .nh-label { font-size: 14px; padding: 2px 8px; }
+/* 金チップ（FB108→FB110→8/10 FB112）＝2段構え：2件以下の日は2行組み24px（基本ルール）、
+   どれかの枠が3件以上の日（nh-l3＝JSがmaxItems>=3で付与・文言も3行組みに切替）は20px。
+   3行組みは幅が細い（最長行「勝負レース」5字）ので8件日でも収まる＝FB108の14px縮小と
+   FB110のn5=18px段は廃止（4+4の日も3+3と同じ大きさに＝Naoto指示） */
+.venue-tabs.note-head.nh-l3 .nh-label { font-size: 20px; padding: 3px 10px; }
 .venue-tabs.note-head.nh-n6 .nh-items,
 .venue-tabs.note-head.nh-n7 .nh-items, .venue-tabs.note-head.nh-n8 .nh-items { column-gap: 12px; }
 /* 全員1行ずつの日＝枠を縦積み（8/9 FB107）：既定はdisplay: contents＝FB106の横並びstretchのまま。

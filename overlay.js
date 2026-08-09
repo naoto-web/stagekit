@@ -174,8 +174,12 @@
     var maxRows = 0;
     groups.forEach(function (g) { var r = rowsOf(g.items.length); if (r > maxRows) maxRows = r; });
     if (maxRows >= 3) el.classList.add("nh-rows3");
+    // 金チップ（8/10 FB112）＝どれかの枠が3件以上の日は常に3行組み20px（nh-l3）。
+    // 4+4の日（表示は2行×2列）も3+3と同じ大きさのチップに＝Naoto指示。2件以下の日は2行組み24pxのまま
+    var lab3 = maxItems >= 3;
+    if (lab3) el.classList.add("nh-l3");
     el.innerHTML = '<span class="nh-label">' +
-      (maxRows >= 3 ? "本日の<br>note<br>勝負レース" : "本日のnote<br>勝負レース") + "</span>" +
+      (lab3 ? "本日の<br>note<br>勝負レース" : "本日のnote<br>勝負レース") + "</span>" +
       '<span class="nh-groups">' +
       groups.map(function (g) {
         var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";
