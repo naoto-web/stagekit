@@ -433,6 +433,13 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
+/* 金帯ヘッダーの拡大（8/10 FB115・Naoto「枠いっぱいに・特に場名Rが大事」）＝
+   場名R（.sl-vr）を主役の28pxに・クラス（.sl-cls）は18pxの脇役・「出走表」は22px。
+   最長ケース（いわき平12R＋Ｌ級ガ選抜）でも396px幅に収まるサイズ設計 */
+.slist-panel .panel-head { font-size: 22px; padding: 7px 14px; }
+.slist-panel .panel-head-sub { display: flex; align-items: baseline; gap: 10px; }
+.sl-vr { font-size: 28px; font-weight: 900; line-height: 1.1; }
+.sl-cls { font-size: 18px; font-weight: 800; opacity: .95; }
 .slist { list-style: none; padding: 2px 0; }
 /* 行スリム化（8/6 FB30）：9車＋ライン＋note勝負が共存できる行高に（チップ26px角・行間圧縮） */
 .slist-row { display: flex; align-items: center; gap: 12px; padding: 5px 12px;
@@ -451,16 +458,19 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 /* ライン（並び予想）＝出走表の下に1行で車番チップをグループ表示（折返しなし） */
 /* ⚠️overflow:hiddenだと自身を縮小してもクリップ窓ごと縮んで見切れが直らない（8/6 FB52真犯人）
    →クリップ解除＝縮小フィットで収める（外側パネルのoverflow:hiddenが最終防波堤） */
-.narabi-row { display: flex; align-items: center; gap: 7px; padding: 8px 10px;
+/* 大型化（8/10 FB115・Naoto「枠いっぱいに・切れない範囲で・縦は多少広げてOK」）＝
+   「ライン」見出しはJS側で削除・チップ22→32px・戦型/矢印も拡大。
+   幅あふれはfitNarabi（行ごと縮小・FB44）が防波堤＝9車全バラ等でも切れない */
+.narabi-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px;
   border-top: 1.5px solid var(--panel-line); flex-wrap: nowrap; overflow: visible;
   background: rgba(0,0,0,.25); }
-.nb-label { font-size: 12px; font-weight: 900; color: var(--sub); letter-spacing: .08em; flex: 0 0 auto; }
-.nb-type { font-size: 13px; font-weight: 900; color: var(--acc); flex: 0 0 auto; }
-.nb-arrow { font-size: 20px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
-.nb-dot { font-size: 13px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
-.nb-group { display: flex; gap: 2px; flex: 0 0 auto; }
-/* ライン＝出走表と同じ正方形チップ（8/5 FB・1行に収まるサイズ） */
-.narabi-row .car { width: 22px; height: 22px; font-size: 14px; border-radius: 5px; }
+/* .nb-label＝FB115で「ライン」見出し廃止に伴い削除 */
+.nb-type { font-size: 24px; font-weight: 900; color: var(--acc); flex: 0 0 auto; }
+.nb-arrow { font-size: 26px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
+.nb-dot { font-size: 18px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
+.nb-group { display: flex; gap: 3px; flex: 0 0 auto; }
+/* ライン＝出走表と同じ正方形チップ（8/5 FB→FB115で32px角に拡大） */
+.narabi-row .car { width: 32px; height: 32px; font-size: 20px; border-radius: 6px; }
 /* 本日のnote勝負レース（①トーク・ラインの下・コンソール本日設定から・8/6追加）
    1行＝1件・最大8行。5行以上は段階的に文字を縮小（タイマーvt-n3/n4と同方式） */
 /* ①出走表下のnote勝負欄＝8/9 FB99で廃止（ヘッダーへ一本化）。要素は常時hiddenのため装飾は不要 */

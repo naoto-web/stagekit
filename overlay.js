@@ -1117,9 +1117,15 @@
         (tv.races || []).forEach(function (r) { if (r.no === +rNo) race = r; });
       });
     }
-    $("slist-sub").textContent = v && rNo
-      ? v.name + " " + rNo + "R" + (race && race.cls ? "　" + race.cls : "")
-      : "";
+    // 金帯＝場名Rを主役に拡大（8/10 FB115・Naoto「どの出走表を出してるかはめっちゃ大事」）
+    // ＝場名R（大）とクラス（小）を別スパンに分離。サイズはCSS .sl-vr / .sl-cls
+    var subEl = $("slist-sub");
+    if (v && rNo) {
+      subEl.innerHTML = '<b class="sl-vr">' + esc(v.name) + " " + rNo + "R</b>" +
+        (race && race.cls ? '<span class="sl-cls">' + esc(race.cls) + "</span>" : "");
+    } else {
+      subEl.textContent = "";
+    }
     if (!race || !race.racers || !race.racers.length) {
       el.innerHTML = '<li class="slist-empty">出走表データ取得待ち</li>';
       return;
@@ -1194,8 +1200,8 @@
     var groups = window.Keirin.normalize(manual || ttNarabi || auto).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
-    nb.innerHTML = '<span class="nb-label">ライン</span>' +
-      (lineType ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
+    // 「ライン」の見出し文字＝8/10 FB115で削除（Naoto「いらないかも」・そのぶんチップを大きく）
+    nb.innerHTML = (lineType ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
       '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {
