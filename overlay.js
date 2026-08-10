@@ -159,6 +159,55 @@
       var rest = hit ? l.split(hit.name).join(" ") : l;
       rest = rest.replace(/^[\s:：、・/／|｜-]+/, "").replace(/[\s、・/／|｜-]+$/, "").replace(/\s+/g, " ").trim();
       if (!rest) return;
+      /* ── 複数場の1行対応（8/10 FB125・Naoto「前橋と四日市が別で表示されれば」）：
+         「前橋3・四日市6レース」のように**すべての場に自分の番号が続く**行だけ、場ごとの行に分割する。
+         番号の付かない場が混じる行（「前橋四日市３・６」）は、3・6がどちらの場のものか機械では決められず、
+         位置で割り当てると存在しない商品（前橋3R）を捏造表示してしまう＝従来どおり原文のまま（8/10実事故の教訓）。
+         分割後は各場が独立に整形＋終了間引きの対象＝ナイター場とミッドナイト場の同居行でも終わった場から消える */
+      var segs = null;
+      (function () {
+        var found = [], pos = 0;
+        while (pos < rest.length) {           // 場名の出現を左から拾う（長い名前優先＝部分一致の誤マッチ防止）
+          var hitV = null;
+          for (var si = 0; si < sorted.length; si++) {
+            if (rest.slice(pos, pos + sorted[si].length) === sorted[si]) { hitV = sorted[si]; break; }
+          }
+          if (hitV) { found.push({ v: hitV, at: pos }); pos += hitV.length; }
+          else pos++;
+        }
+        var names = {};
+        found.forEach(function (f) { names[f.v] = 1; });
+        if (found.length < 2 || Object.keys(names).length < 2) return;         // 異なる場が2つ以上の行だけ対象
+        if (!/^[\s:：、・/／|｜-]*$/.test(rest.slice(0, found[0].at))) return; // 場の前にメモ文＝原文のまま
+        var out = [];
+        for (var fi = 0; fi < found.length; fi++) {
+          var end = fi + 1 < found.length ? found[fi + 1].at : rest.length;
+          var seg = rest.slice(found[fi].at + found[fi].v.length, end);
+          var segHalf = seg.replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); })
+            .split("レース").join(" ");       // 「〜レース」表記対応（FB124と同じ）
+          if (!(/^[\s0-9rRｒＲ・.．,，、\-〜~]*$/.test(segHalf) && /\d/.test(segHalf))) return; // 番号なしの場あり＝分割しない
+          out.push({ v: found[fi].v, nums: segHalf.match(/\d+/g) || [] });
+        }
+        segs = out;
+      })();
+      if (segs) {
+        segs.forEach(function (sg) {
+          var maxNo = 0;
+          sg.nums.forEach(function (n) { if (+n > maxNo) maxNo = +n; });
+          var b = nextRaceStartSec(sg.v, maxNo);
+          if (b !== null) {
+            if (nowSec() >= b) return;          // この場のぶんだけ終了＝非表示
+            if (nhBoundary === null || b < nhBoundary) nhBoundary = b;
+          }
+          g.items.push({
+            t: sg.v + " " + sg.nums.map(function (n) {
+              return n.length === 1 ? "０１２３４５６７８９".charAt(+n) : n;
+            }).join("・") + "R",
+            v: sg.v, seq: seq
+          });
+        });
+        return;                                 // 分割済み＝以降の単場処理はしない
+      }
       var venue = null;
       for (var vi = 0; vi < sorted.length; vi++) {
         if (rest.indexOf(sorted[vi]) >= 0) { venue = sorted[vi]; break; }
