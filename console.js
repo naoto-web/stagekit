@@ -398,7 +398,7 @@
     };
     var have = {};
     window.Keirin.parsePrediction(text, "3連単", cars).lines.forEach(function (l) {
-      if (!l.ok) return;
+      if (!l.ok || l.cut) return; // 切り目行は「買っている目」に数えない（8/10 FB122）
       l.combos.forEach(function (c) { have[keyOf(l.type, c)] = true; });
     });
     var missing = false;
@@ -532,10 +532,11 @@
     var parsed = window.Keirin.parsePrediction(form.querySelector(".pf-text").value, type, cars);
     form.querySelector(".pf-info").innerHTML = parsed.lines.map(function (l) {
       if (!l.ok) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ メモ行（点数外）</div>";
-      if (l.allDup) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 全部かぶり目（0点・画面に出ません）</div>";
+      if (l.cut) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 切り目（買目から除外・的中判定外）</div>";
+      if (l.allDup) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 全部かぶり/切り目（0点・画面に出ません）</div>";
       var dispNote = l.disp && l.disp !== window.Keirin.normalize(l.raw).replace(/\s+/g, "")
         ? '　<span class="pl-memo">画面表示 ' + esc(l.disp) + "</span>" : "";
-      var dupNote = l.dupCount ? '　<span class="pl-memo">かぶり' + l.dupCount + "点除外</span>" : "";
+      var dupNote = l.dupCount ? '　<span class="pl-memo">かぶり/切り目' + l.dupCount + "点除外</span>" : "";
       return '<div class="pl-ok">' + esc(l.raw.trim()) + "　→ " + esc(l.type) + " <b>" + l.points + "点</b>" + dupNote + dispNote + "</div>";
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;

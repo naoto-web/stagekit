@@ -247,17 +247,38 @@
    * @param {string} text 複数行の生テキスト
    * @return {lines:[], memos:[], points:number}
    */
+  /* 切り目（8/10 FB122・Naoto）：行頭「切り目/切目/切り/切」＝「書いてあるが買っていない目」の宣言。
+     展開（全・BOX・フォーメーション）も買目と同じ記法で書ける。どの位置に書いても全買目行から
+     除外される（点数減・的中判定外＝settleがcut行をスキップ）。表示は切り目行として残す（グレー帯） */
+  var CUT_RE = /^\s*(切り目|切目|切り|切)[\s:：]*/;
   function parsePrediction(text, defaultType, carCount) {
     var lines = String(text || "").split(/\r?\n/);
     var out = { lines: [], memos: [], points: 0 };
     var seen = {}; // 行またぎの「かぶり目」除外（先に書いた行が優先・点数/的中/表示すべてから除外）
-    lines.forEach(function (raw) {
+    // 1周目＝切り目行を先に集める（順不同で効かせるため）
+    var cutSet = {}, cutParsed = {};
+    lines.forEach(function (raw, i) {
+      if (!CUT_RE.test(String(raw || ""))) return;
+      var rest = String(raw).replace(CUT_RE, "");
+      var p = parseLine(rest, defaultType, carCount);
+      p.rawRest = rest.trim();
+      cutParsed[i] = p;
+      if (p.ok) p.combos.forEach(function (c) { cutSet[p.type + "|" + normalizedComboKey(p.type, c)] = true; });
+    });
+    lines.forEach(function (raw, i) {
       if (!raw.trim()) return;
+      if (cutParsed[i] !== undefined) { // 切り目行＝点数0・的中判定外・表示用に残す
+        var cp = cutParsed[i];
+        cp.raw = String(raw);
+        if (cp.ok) { cp.cut = true; cp.points = 0; out.lines.push(cp); }
+        else out.memos.push(cp.memo); // 読めない切り目行はメモ扱い
+        return;
+      }
       var p = parseLine(raw, defaultType, carCount);
       if (p.ok) {
         var kept = p.combos.filter(function (c) {
           var k = p.type + "|" + normalizedComboKey(p.type, c);
-          if (seen[k]) return false;
+          if (seen[k] || cutSet[k]) return false; // かぶり目 or 切り目
           seen[k] = true;
           return true;
         });
@@ -265,8 +286,8 @@
         if (p.dupCount) {
           p.combos = kept;
           p.points = kept.length;
-          if (kept.length) p.disp = dispOf(kept); // かぶった目を表示からも消す
-          else { p.allDup = true; p.disp = ""; }  // 行ごと全部かぶり→画面に出さない
+          if (kept.length) p.disp = dispOf(kept); // かぶり・切り目を表示からも消す
+          else { p.allDup = true; p.disp = ""; }  // 行ごと全部かぶり/切り→画面に出さない
         }
       }
       out.lines.push(p);
@@ -313,6 +334,7 @@
     if (!order || order.length < 2) return res;
     prediction.lines.forEach(function (line) {
       if (!line.ok) return;
+      if (line.cut) return; // 切り目行＝買っていない目＝的中判定外（8/10 FB122）
       hitCombos(line, order).forEach(function (combo) {
         var pay = findPayout(payouts, line.type, combo);
         var amount = pay ? pay.amount : 0;

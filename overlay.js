@@ -602,6 +602,12 @@
     glows.forEach(function (g) { if (!oreGlow && g.type === "俺たち目") oreGlow = g.combo; });
     return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small, oreGlow) + "</div>" : "") +
       okLines.map(function (l) {
+        // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
+        // チップは通常色のまま・的中強調の対象外（そもそも的中しない）
+        if (l.cut) {
+          return '<div class="pred-line chips cut-line"><span class="pl-cut' + (small ? " sm" : "") + '">切り目</span>' +
+            lineChips(/全/.test(l.rawRest || "") ? l.rawRest : (l.disp || l.rawRest || l.raw), small) + "</div>";
+        }
         var g = null;
         glows.forEach(function (gl) {
           if (g || gl.type !== l.type) return;
@@ -634,9 +640,25 @@
     }
   }
 
+  /** 切り目バッジの文言フィット（8/10 FB122・Naoto「基本は切り目・横が長すぎるときは切」）＝
+      行が枠幅に入らない時だけ「切」へ短縮してから、残りは既存の縮小フィットに任せる */
+  function fitCutLabels(scope) {
+    if (!scope) return;
+    scope.querySelectorAll(".pred-line.cut-line .pl-cut").forEach(function (b) {
+      if (b.textContent !== "切り目") b.textContent = "切り目";
+      var line = b.closest(".pred-line");
+      var parent = line && line.parentElement;
+      if (!parent) return;
+      var cs = getComputedStyle(parent);
+      var avail = parent.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      if (avail > 0 && line.scrollWidth > avail) b.textContent = "切";
+    });
+  }
+
   /** 買い目行のはみ出し自動縮小（8/6）：折り返す代わりに、枠幅に収まる倍率へスケールする */
   function fitPredLines(scope) {
     if (!scope) return;
+    fitCutLabels(scope); // 先にバッジ文言を確定させてから幅を測る（FB122）
     scope.querySelectorAll(".pred-line.chips").forEach(function (el) {
       el.style.transform = "";
       var parent = el.parentElement;
@@ -663,6 +685,7 @@
   /** ②サブ予想の行フィット（8/6 FB14）：買い目・俺たち目・合計行を折り返さず幅ぴったりに縮める */
   function fitSubRows(scope) {
     if (!scope) return;
+    fitCutLabels(scope); // ②サブ＝幅182pxで最タイト＝「切」への短縮を先に確定（FB122）
     var cs = getComputedStyle(scope);
     var avail = scope.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
     scope.querySelectorAll(".pred-line, .ore-row, .buy-meta, .race-col-head").forEach(function (el) {
