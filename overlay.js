@@ -1497,8 +1497,9 @@
     blue:   { effect: "yakumono" },   // 役物合体＝コインが四隅から合体（8/8 FB82・アイコン走行は出さない）
     pink:   { effect: "slot" },       // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
     green:  { effect: "sumo" },       // 相撲＝張り手で迫って「ごっちゃんです！！」（8/9 FB86・同上）
-    yellow: { effect: "pray" }        // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
-    // 例）red: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
+    yellow: { effect: "pray" },       // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
+    red:    { effect: "samba" }       // サンバ＝周りが踊って本人は腕組み→キメで「〇〇的中！！」（8/10 FB121・同上）
+    // 例）purple: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
   };
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
 
@@ -1617,6 +1618,23 @@
     return t;
   }
 
+  /* サンバの尺（8/10 FB121・赤メンバー専用＝ラボsambatest.htmlの本番移植）
+       ENTER…中央にドン！と登場するms（この間はコマ送り開始前）
+       DANCE…サンバ（3コマ送り＋紙吹雪＋♪）のms
+       KIME …キメ（腕組み①コマ固定＋ズーム＋フラッシュ＋後光＋「〇〇的中！！」）のms
+              （8/10 Naoto FBで1400→2600＝文字をもうちょい長く見せる）
+       OUT  …退場フェードms／BEAT…1拍ms（コマ送りは1拍の半分刻み・①→②→③→②）
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約8.4秒 */
+  var SAMBA_BASE = { ENTER: 500, DANCE: 5300, KIME: 2600, OUT: 600, BEAT: 500 };
+  var SAMBA_AR = 1047 / 1000; // fx_samba1..3.png の実寸比（横/縦）＝絵を差し替えたらここも直す
+  function sambaTimes() {
+    var t = { ENTER: SAMBA_BASE.ENTER };
+    t.KIME = SAMBA_BASE.ENTER + SAMBA_BASE.DANCE; // キメ開始（文字・フラッシュ・後光）
+    t.END  = t.KIME + SAMBA_BASE.KIME;            // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE = t.END + SAMBA_BASE.OUT;
+    return t;
+  }
+
   /** 的中の組合せ（comboLabel "1-3-5"）→ リールに出す車番配列。
       手動追加の的中はcomboLabelを持たない＝数字を作り話にしないため空配列を返す（呼び出し側で走行に落とす） */
   function slotCombo(hit) {
@@ -1638,6 +1656,9 @@
   });
   ["fx_pray.png", "fx_pray_shut.png"].forEach(function (f) {         // 念仏は2枚重ね（8/9 FB88）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
+  });
+  ["fx_samba1.png", "fx_samba2.png", "fx_samba3.png"].forEach(function (f) {
+    var im = new Image(); im.src = f;  // サンバは3コマ（8/10 FB121）＝初回的中でコマ落ちしないよう先読み
   });
   /** メンバーカラー→色キー（未登録の色は個人演出なし＝アイコンも雨も出ない従来動作） */
   function memberKey(rc) { return rc && COLOR_KEY[rc.color] ? COLOR_KEY[rc.color] : ""; }
@@ -2035,6 +2056,100 @@
     span.parentNode.style.setProperty("--cfs", fs + "px");
   }
 
+  /* サンバ（8/10 FB121・赤メンバー専用）：周りの4人がサンバで盛り上げ、本人は腕組みでキメ。
+     ラボ（検証ハーネス/sambatest.html）で詰めた試作の本番移植＝3コマ送り（①→②→③→②・1拍の半分刻み）
+     ＋紙吹雪＋♪ → キメ（①腕組みコマ固定・ズーム・フラッシュ・回る後光・「〇〇的中！！」）→ 退場。
+     ⚠️キメ文字は名簿の名前から組む（rc.name＋"的中！！"）＝人名をコードに書かない方針の維持・
+        色の割当を変えても名前が自動で追従する（ラボの直書き「カズ的中！！」は本番では組み立て式）
+     ⚠️コマ送り・紙吹雪はsetInterval駆動＋box.isConnectedで自己停止＝rAFが来ない環境（OBSの
+        裏画面）でも凍らず、除去後のリークもない（FB83「rAFが1枚も来ないケース」の教訓と同系） */
+  var SAMBA_CF = ["#ffd23e", "#ff5fa2", "#35d07f", "#48b7ff", "#ff9430", "#c66bff", "#fff"];
+  function spawnSamba(cam, key, name) {
+    var old = cam.querySelector(".fx-samba");
+    if (old) old.parentNode.removeChild(old);
+    var T = sambaTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var sh = Math.round(ch * 0.96), sw = Math.round(sh * SAMBA_AR);
+    var box = document.createElement("div");
+    box.className = ["fx-samba", "m-" + key].join(" ");
+    box.style.setProperty("--sw", sw + "px");
+    box.style.setProperty("--sh", sh + "px");
+    box.style.setProperty("--beat", (SAMBA_BASE.BEAT / 1000) + "s");
+    box.innerHTML =
+      '<div class="fx-samba-run"><div class="fx-samba-body"><div class="fx-samba-stack">' +
+        '<i class="fx-samba-img f1 on"></i><i class="fx-samba-img f2"></i><i class="fx-samba-img f3"></i>' +
+      "</div></div></div>" +
+      '<div class="fx-samba-kime"><span></span></div>';
+    var span = box.querySelector(".fx-samba-kime span");
+    span.textContent = (name || "") + "的中！！";
+    cam.appendChild(box);
+    fitSambaKime(span, cw, ch);
+
+    // コマ送り＝①→②→③→②を1拍の半分刻み（ラボのSEQと同じ）
+    var imgs = box.querySelectorAll(".fx-samba-img");
+    var SEQ = [0, 1, 2, 1], step = 0;
+    var flip = setInterval(function () {
+      if (!box.isConnected) { clearInterval(flip); return; }
+      step = (step + 1) % SEQ.length;
+      for (var i = 0; i < imgs.length; i++) imgs[i].classList.toggle("on", i === SEQ[step]);
+    }, SAMBA_BASE.BEAT / 2);
+    // 紙吹雪＋♪＝登場の途中から降りはじめ、キメで一斉60枚に切替
+    var conf = null;
+    setTimeout(function () {
+      if (!box.isConnected) return;
+      conf = setInterval(function () {
+        if (!box.isConnected) { clearInterval(conf); return; }
+        sambaConfetti(box, ch, 4, false);
+        if (Math.random() < .45) sambaNote(box);
+      }, 170);
+    }, Math.round(SAMBA_BASE.ENTER * 0.6));
+
+    setTimeout(function () {  // キメ＝コマ送りを止めて①（腕組み）に固定
+      clearInterval(flip);
+      if (conf) clearInterval(conf);
+      if (!box.isConnected) return;
+      for (var i = 0; i < imgs.length; i++) imgs[i].classList.toggle("on", i === 0);
+      box.classList.add("kime");
+      sambaConfetti(box, ch, 60, true);
+    }, T.KIME);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+  function sambaConfetti(box, ch, n, fast) {
+    for (var i = 0; i < n; i++) {
+      var p = document.createElement("span");
+      p.className = "fx-samba-cf";
+      p.style.left = (Math.random() * 100) + "%";
+      p.style.setProperty("--c", SAMBA_CF[Math.floor(Math.random() * SAMBA_CF.length)]);
+      p.style.setProperty("--d", (fast ? (1.1 + Math.random() * .8) : (1.8 + Math.random() * 1.4)) + "s");
+      p.style.setProperty("--fall", Math.round(ch * 1.15) + "px");
+      p.style.setProperty("--sx", Math.round((Math.random() - .5) * ch * .5) + "px");
+      p.style.setProperty("--rot", Math.round(360 + Math.random() * 540) + "deg");
+      box.appendChild(p);
+      p.addEventListener("animationend", function () { this.remove(); });
+    }
+  }
+  function sambaNote(box) {
+    var s = document.createElement("span");
+    s.className = "fx-samba-note";
+    s.textContent = Math.random() < .5 ? "♪" : "♫";
+    s.style.left = (8 + Math.random() * 84) + "%";
+    box.appendChild(s);
+    s.addEventListener("animationend", function () { this.remove(); });
+  }
+  /** キメ文字を枠に収める（名前の長さに追従・fitTeaCapと同じ手法）。
+      基本＝枠高の20%（8/10 Naoto FB「文字大き目」＝.155→.20）・収まらない時だけ段階縮小 */
+  function fitSambaKime(span, camW, camH) {
+    var avail = camW * 0.94;
+    if (avail <= 0) return;
+    var fs = Math.round(camH * 0.20);
+    span.style.fontSize = fs + "px";
+    var guard = 0;
+    while (span.scrollWidth > avail && fs > 14 && guard < 40) {
+      fs -= 2; span.style.fontSize = fs + "px"; guard++;
+    }
+  }
+
   /** その的中で出す専用演出を決める。effects（配列）があれば抽選＝1人で複数の演出を持てる（8/9 FB90）。
       ⚠️ここで1回だけ引く＝同じ的中の4シーン分のワイプで演出がバラバラにならない */
   function pickEffect(key) {
@@ -2056,6 +2171,7 @@
       : eff === "sumo" ? sumoTimes().END
       : eff === "pray" ? prayTimes().END
       : eff === "tea" ? teaTimes().END
+      : eff === "samba" ? sambaTimes().END
       : (key ? fxConf(key).rainMs : 0);
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
@@ -2073,6 +2189,7 @@
       else if (eff === "sumo") spawnSumo(cam, key, hit);
       else if (eff === "pray") spawnPray(cam, key);
       else if (eff === "tea") spawnTea(cam, key);
+      else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
       else if (key) spawnRain(cam, key);
       setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
     });
