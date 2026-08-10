@@ -1519,11 +1519,13 @@
     return t;
   }
 
-  /* スロットの尺（8/8 FB83・8/9 FB84でレバー追加・8/10 FB122でキャラ入場。ピンクメンバー専用）。
-     流れ＝①筐体が出る（リール静止）②キャラが左からぴょんぴょん入場③到着＝手上げポーズに切替
-           ＝その手がレバーの玉を掴む→レバーが下りる④引き切った瞬間に回り出す⑤左から順に停まる⑥ピカピカ
+  /* スロットの尺（8/8 FB83・8/9 FB84でレバー追加・8/10 FB122でキャラ入場・8/10 FB123で右入場＋溜め。ピンクメンバー専用）。
+     流れ＝①筐体が出る（リール静止）②キャラが右からぴょんぴょん入場③到着＝一拍止まる→しゃがんで溜める
+           ④バッと手上げポーズに切替＝その手がレバーの玉を掴む→レバーが下りる⑤引き切った瞬間に回り出す⑥左から順に停まる⑦ピカピカ
        WAIT   …筐体が出てからキャラが跳ね始めるまでの間ms（筐体を見せる間）
-       HOP    …キャラの入場ms（左画面外→定位置）／HOPSTEP…1跳ねms（HOP÷HOPSTEPは整数に＝着地で終わる）
+       HOP    …キャラの入場ms（右画面外→定位置）／HOPSTEP…1跳ねms（HOP÷HOPSTEPは整数に＝着地で終わる）
+       PAUSE  …到着してからしゃがみ始めるまでの間ms（①のまま静止＝「ちょっとだけ止まる」）
+       TAME   …しゃがんで溜めているms（切れた瞬間にバッと立つ＝手上げ②＋レバー）
        LEVER  …レバーを引き下ろすのにかかるms（引き切った瞬間＝回転開始）
        SPIN1  …回り出してから1つ目のリールが停まるまでのms
        GAP    …2つ目までの間隔ms／GROW…3つ目はその何倍焦らすか（試作の700ms刻みは
@@ -1531,20 +1533,25 @@
        DECEL  …各リールが減速に使う時間ms（この間だけ速度が落ちる＝クルクル→スーッ→ドン）
        CELL_MS…等速で回っているときの1コマあたりms（小さいほど速く回る）
      ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）。伸ばすと演出全体が長くなる
-        （バッジの表示時間 HIT_FX_MS=27秒 は別枠でその後ろに乗る。FB122のHOP追加で+1.28秒＝バッジ約11.0秒） */
-  var SLOT_BASE = { WAIT: 380, HOP: 1280, HOPSTEP: 320, LEVER: 340, SPIN1: 2000, GAP: 1900, GROW: 1.28, DECEL: 1400,
+        （バッジの表示時間 HIT_FX_MS=27秒 は別枠でその後ろに乗る。FB122のHOP＋FB123の溜めで計+2.1秒＝バッジ約11.8秒） */
+  var SLOT_BASE = { WAIT: 380, HOP: 1280, HOPSTEP: 320, PAUSE: 420, TAME: 380,
+    LEVER: 340, SPIN1: 2000, GAP: 1900, GROW: 1.28, DECEL: 1400,
     PIKA_LAG: 140, HOLD: 2500, FADE: 500, CELL_MS: 60 }; // HOLD＝揃ってキラキラを見せる時間（8/9 FB85で+1秒）
   var SLOT_LOOP = 9; // 1周＝車番1〜9の9コマ（当たり目は1周に必ず1回だけ出る）
   /* キャラ入場（8/10 FB122）＝「拳＝レバーの玉」の位置合わせ用の実測定数（fx_slotchar_make.pyが出力。
      ⚠️絵を差し替えたらスクリプトを再実行して3つとも貼り直す） */
   var SCHAR_AR = 681 / 800; // fx_slotchar1..2.png の実寸比（横/縦）
-  var SCHAR_FX = 0.683;     // ②の拳（ナックル）中心x＝画像幅に対する比率
+  var SCHAR_FX = 0.683;     // ②の拳（ナックル）中心x＝画像幅に対する比率（⚠️絵は左右反転して使う＝実効は 1-SCHAR_FX）
   var SCHAR_FY = 0.408;     // ②の拳（ナックル）中心y＝画像高に対する比率
+  var SCHAR_DY = 0.30;      // キャラの立ち位置を筐体の底からさらに下げる量（cell単位・8/10 FB123「もうちょっと下」。
+                            //   下げたぶん拳は玉より下にずれるが完全一致は不要＝Naoto了承済み）
   function slotTimes(n) {
     n = n || 3;
-    var t = { HOPIN: SLOT_BASE.WAIT };                // キャラが跳ね始める
-    t.PULL = SLOT_BASE.WAIT + SLOT_BASE.HOP;          // 到着＝手上げ切替＋レバーを引き始める
-    t.SPIN = t.PULL + SLOT_BASE.LEVER;                // 引き切った＝回転開始（レバーはバネで戻る）
+    var t = { HOPIN: SLOT_BASE.WAIT };                    // キャラが跳ね始める
+    t.ARRIVE = SLOT_BASE.WAIT + SLOT_BASE.HOP;            // 到着＝跳ね停止（①のまま一拍おく）
+    t.TAME = t.ARRIVE + SLOT_BASE.PAUSE;                  // しゃがんで溜め始める
+    t.PULL = t.TAME + SLOT_BASE.TAME;                     // バッと立つ＝手上げ②切替＋レバーを引き始める
+    t.SPIN = t.PULL + SLOT_BASE.LEVER;                    // 引き切った＝回転開始（レバーはバネで戻る）
     t.STOPS = [t.SPIN + SLOT_BASE.SPIN1];
     for (var i = 1; i < n; i++) {
       t.STOPS.push(Math.round(t.STOPS[i - 1] + SLOT_BASE.GAP * Math.pow(SLOT_BASE.GROW, i - 1)));
@@ -1786,21 +1793,23 @@
     var RAD = Math.PI / 180;
     // 箱幅＝cell*n ＋ すき間(cell*.14)*(n-1) ＋ 内余白(cell*.18)*2
     var wUnit = n + 0.14 * (n - 1) + 0.36;
-    /* キャラの幾何（8/10 FB122）＝すべて「拳＝レバーの玉」から逆算する：
-         レバーは左側面（.lv-left・静止＋10°＝筐体側へ傾く）→玉の静止位置(knob)を計算
-         →キャラは「②の拳(SCHAR_FX/FY)が玉に重なり、足元が筐体の底に揃う」大きさ・位置に置く。
-       キャラの胴体は筐体の左に立ち、右腕側は筐体の背面(z順で下)に隠れる＝リールの出目は隠れない */
+    /* キャラの幾何（8/10 FB122・8/10 FB123で右側へ移設）＝すべて「拳＝レバーの玉」から逆算する：
+         レバーは右側面（既定＝静止−10°で筐体側へ傾く）→玉の静止位置(knob)を計算
+         →キャラは「②の拳（絵を左右反転して使う＝x比率 1-SCHAR_FX）が玉に重なる」大きさに置き、
+         立ち位置はそこから SCHAR_DY だけ下げる（FB123・拳と玉の完全一致は不要＝Naoto了承）。
+       キャラの胴体は筐体の右に立ち、腕側は筐体の背面(z順で下)に隠れる＝リールの出目は隠れない */
     var boxHu = 1.36;                                                  // 箱高（cell単位・cell+pad×2）
     var knobYu = 0.54 * boxHu - Math.cos(10 * RAD) * 0.75 - 0.036;     // 玉中心y（箱上端基準・少し上に出る）
-    var knobXu = -0.15 + Math.sin(10 * RAD) * 0.75;                    // 玉中心x（箱左端基準・ほぼ左上角）
-    var charHu = (boxHu - knobYu) / (1 - SCHAR_FY);                    // 拳の高さ＝玉・足元＝箱の底
+    var knobXu = 0.15 - Math.sin(10 * RAD) * 0.75;                     // 玉中心x（箱右端基準・ほぼ右上角）
+    var fxm = 1 - SCHAR_FX;                                            // 反転後の拳x比率（画像左端基準）
+    var charHu = (boxHu - knobYu) / (1 - SCHAR_FY);                    // 拳の高さ＝玉・足元＝箱の底（下げる前）
     var charWu = charHu * SCHAR_AR;
-    var overUnit = SCHAR_FX * charWu - knobXu;                         // 筐体左への張り出し幅（cell単位）
-    var cell = Math.floor(Math.min((cw * 0.88) / (wUnit + overUnit), (ch * 0.80) / charHu));
+    var overUnit = knobXu + SCHAR_FX * charWu;                         // 筐体右への張り出し幅（cell単位）
+    var cell = Math.floor(Math.min((cw * 0.88) / (wUnit + overUnit), (ch * 0.80) / (charHu + SCHAR_DY)));
     if (cell < 24) cell = 24;
     var gap = Math.round(cell * 0.14), pad = Math.round(cell * 0.18);
     var box = document.createElement("div");
-    box.className = ["fx-slot", "lv-left", "m-" + key].join(" ") + (hit && hit.manche ? " manche" : "");
+    box.className = ["fx-slot", "m-" + key].join(" ") + (hit && hit.manche ? " manche" : "");
     box.style.setProperty("--cell", cell + "px");
     box.style.setProperty("--gap", gap + "px");
     box.style.setProperty("--pad", pad + "px");
@@ -1808,9 +1817,9 @@
     var bw = cell * n + gap * (n - 1) + pad * 2;
     var bh = cell + pad * 2;
     box.style.width = bw + "px";
-    // キャラの張り出しぶん筐体を右へ寄せる＝「キャラ＋筐体」で見た目の中心を取る（FB122）
+    // キャラの張り出しぶん筐体を左へ寄せる＝「キャラ＋筐体」で見た目の中心を取る（FB122・FB123で右→左に反転）
     var over = Math.round(overUnit * cell);
-    box.style.marginLeft = Math.round(over / 2) + "px";
+    box.style.marginLeft = -Math.round(over / 2) + "px";
     ["s1", "s2", "s3", "s4"].forEach(function (c) { // ✨は絶対配置＝レイアウトに参加しない
       var sp = document.createElement("span");
       sp.className = "fx-spark " + c; sp.textContent = "✨";
@@ -1822,29 +1831,37 @@
     box.appendChild(base); box.appendChild(lever);
     var reels = combo.map(function (num) { return buildSlotReel(box, num, cell); });
     cam.appendChild(box);
-    // キャラ本体（camに絶対配置・z＝筐体より下＝重なった右腕側は筐体の裏に隠れる）
+    // キャラ本体（camに絶対配置・z＝筐体より下＝重なった腕側は筐体の裏に隠れる）
     var charH = Math.round((bh - knobYu * cell) / (1 - SCHAR_FY));
     var charW = Math.round(charH * SCHAR_AR);
-    var boxAbsL = Math.round((cw - bw) / 2 + over / 2);
+    var boxAbsL = Math.round((cw - bw) / 2 - over / 2);
     var boxAbsT = Math.round((ch - bh) / 2);
-    var charAbsL = Math.round(boxAbsL + knobXu * cell - SCHAR_FX * charW);
-    var charAbsT = Math.round(boxAbsT + bh - charH);
+    var charAbsL = Math.round(boxAbsL + bw + knobXu * cell - fxm * charW);
+    var charAbsT = Math.round(boxAbsT + bh - charH + SCHAR_DY * cell);         // FB123＝立ち位置を下げる
     var schar = document.createElement("div");
     schar.className = "fx-schar";
     schar.style.left = charAbsL + "px";
     schar.style.top = charAbsT + "px";
     schar.style.width = charW + "px";
     schar.style.height = charH + "px";
-    schar.style.setProperty("--hx", (charAbsL + charW + 30) + "px");           // 左画面外からの距離
+    schar.style.setProperty("--hx", (cw - charAbsL + 30) + "px");              // 右画面外からの距離
     schar.style.setProperty("--hop", (SLOT_BASE.HOP / 1000) + "s");
     schar.style.setProperty("--hopstep", (SLOT_BASE.HOPSTEP / 1000) + "s");
     schar.style.setProperty("--hopd", (SLOT_BASE.WAIT / 1000) + "s");          // 筐体を見せる間だけ待つ
+    schar.style.setProperty("--tame", (SLOT_BASE.TAME / 1000) + "s");          // しゃがみ込みの尺
     schar.innerHTML = '<div class="fx-schar-run"><div class="fx-schar-body">' +
       '<i class="fx-schar-img p1 on"></i><i class="fx-schar-img p2"></i></div></div>';
     cam.appendChild(schar);
     runSlotReels(reels, T, cell);
-    setTimeout(function () {  // 到着＝ぴょんぴょん停止・手上げ②へ切替・その手でレバーを引く
+    setTimeout(function () {  // 到着＝ぴょんぴょん停止（①のまま一拍おく）
       schar.classList.add("arrive");
+    }, T.ARRIVE);
+    setTimeout(function () {  // しゃがんで溜める
+      schar.classList.add("tame");
+    }, T.TAME);
+    setTimeout(function () {  // バッと立ち上がる＝手上げ②へ切替・その手でレバーを引く
+      schar.classList.remove("tame");
+      schar.classList.add("up");
       var i1 = schar.querySelector(".p1"), i2 = schar.querySelector(".p2");
       if (i1) i1.classList.remove("on");
       if (i2) i2.classList.add("on");

@@ -915,6 +915,7 @@ body.race-sub-on .race-sub { display: flex; }
 .fx-slot.pika .fx-spark.s3 { animation-delay: .36s; }
 .fx-slot.pika .fx-spark.s4 { animation-delay: .52s; }
 /* レバー（8/9 FB84・Naoto案「右にレバー→引いてから回り出す」）＝筐体の右側面に生やす。
+   （FB122でキャラ左入場に合わせ一時左側面化＝.lv-left → FB123の右入場化でこの右側面版に戻した）
    支点＝根元（transform-origin: 50% 100%）。`left`に支点のx座標を置き、transformの
    translateX(-50%)で自分の中心を支点に合わせる（＝回転の中心が支点になる）。
    ⚠️箱のレイアウトには参加させない（絶対配置）＝「回転中と停止後で寸法が動かない」原則を守る。
@@ -940,26 +941,30 @@ body.race-sub-on .race-sub { display: flex; }
   transform: translate(-50%, 50%); border-radius: calc(var(--cell) * .05);
   background: linear-gradient(180deg, #9aa4b0, #454c56);
   box-shadow: 0 3px 8px rgba(0,0,0,.5); }
-/* レバー左側面版（8/10 FB122）＝キャラが左から来て手が届く側へ移設。角度は左右反転
-   （静止＋10°＝筐体側へ傾く／引き＝−58°で左下へ振り抜く） */
-.fx-slot.lv-left .fx-lever, .fx-slot.lv-left .fx-lever-base { left: calc(0% - var(--cell) * .15); }
-.fx-slot.lv-left .fx-lever { transform: translateX(-50%) rotate(10deg); }
-.fx-slot.lv-left .fx-lever.pull { transform: translateX(-50%) rotate(-58deg); }
-.fx-slot.lv-left .fx-lever.back { transform: translateX(-50%) rotate(10deg); }
-/* キャラ入場（8/10 FB122・Naoto案「①が左からぴょんぴょん→②手上げでレバーを引く」）：
-   位置・大きさはJSが「拳＝レバーの玉」から逆算してpx指定。z＝筐体(4)より下の3＝
-   重なった右腕側の胴体は筐体の裏に隠れてリールの出目を隠さない */
+/* キャラ入場（8/10 FB122・8/10 FB123で右入場＋溜めに変更）＝
+   「①が右からぴょんぴょん→到着で一拍止まる→しゃがんで溜める→②バッと手上げでレバーを引く」。
+   レバーは右側面（上の既定）に戻し、絵は scaleX(-1) で左向きに反転して使う（元絵は右向き）。
+   位置・大きさはJSが「拳＝レバーの玉」から逆算してpx指定（FB123で立ち位置を下げたぶん拳は
+   玉より下＝完全一致は不要のNaoto了承済み）。z＝筐体(4)より下の3＝
+   重なった腕側の胴体は筐体の裏に隠れてリールの出目を隠さない */
 .fx-schar { position: absolute; z-index: 3; pointer-events: none; }
 .fx-schar-run { width: 100%; height: 100%;
   animation: scharIn var(--hop, 1.28s) linear var(--hopd, .38s) both; }
-@keyframes scharIn { from { transform: translateX(calc(var(--hx, 400px) * -1)); } to { transform: none; } }
+@keyframes scharIn { from { transform: translateX(var(--hx, 400px)); } to { transform: none; } }
 .fx-schar-body { position: relative; width: 100%; height: 100%; transition: transform .12s ease-out;
+  transform-origin: 50% 100%;   /* しゃがみは足元を支点に沈む（FB123） */
   animation: scharHop var(--hopstep, .32s) ease-in-out var(--hopd, .38s) infinite; }
 @keyframes scharHop { 0%, 100% { transform: translateY(0) rotate(0); }
   30% { transform: translateY(-11%) rotate(-2.5deg); }
   60% { transform: translateY(-2%) rotate(1.5deg); } }
 .fx-schar.arrive .fx-schar-body { animation: none; }  /* 到着＝跳ね停止（transitionで滑らかに着地） */
-.fx-schar-img { position: absolute; inset: 0; opacity: 0; background: center bottom / contain no-repeat; }
+/* 溜め（FB123）＝足元を支点にぐっと沈み込む（少し横に潰れる＝バネを圧す感じ）。尺はJSの--tame */
+.fx-schar.tame .fx-schar-body { transform: translateY(4%) scaleY(.90) scaleX(1.05);
+  transition: transform var(--tame, .38s) cubic-bezier(.55, 0, .75, .6); }
+/* バッと立ち上がる（FB123）＝勢いよく戻る（行き過ぎて戻るバネ）。この瞬間に②手上げ＋レバー */
+.fx-schar.up .fx-schar-body { transition: transform .15s cubic-bezier(.2, 1.6, .4, 1); }
+.fx-schar-img { position: absolute; inset: 0; opacity: 0; background: center bottom / contain no-repeat;
+  transform: scaleX(-1); }      /* 右入場＝左向きに反転（FB123・元絵は右向き） */
 .fx-schar-img.p1 { background-image: url("fx_slotchar1.png"); }
 .fx-schar-img.p2 { background-image: url("fx_slotchar2.png"); }
 .fx-schar-img.on { opacity: 1; }
