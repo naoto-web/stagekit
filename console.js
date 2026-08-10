@@ -412,8 +412,6 @@
     var div = document.createElement("div");
     div.className = "ore-guard";
     div.innerHTML = "⚠ 俺たち目 <b>" + oreLine + "</b> が買目に入っていません。" +
-      "買目にないと、的中しても回収額が入力できずトータル回収に反映されません。" +
-      "実際に購入しているなら【追加して保存】、無料公開のみなら【追加せず保存】。" +
       '<div class="row gap">' +
       '<button type="button" class="btn small og-add">追加して保存</button>' +
       '<button type="button" class="btn small og-skip">追加せず保存</button>' +
