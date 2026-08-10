@@ -32,6 +32,15 @@ body {
 .warn code { background: rgba(0,0,0,.4); padding: 1px 6px; border-radius: 4px; }
 .hidden { display: none !important; }
 
+/* 俺たち目が買目にない保存の確認バー（8/10 FB118）＝予想フォーム内に出るインライン選択 */
+.ore-guard {
+  margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+  background: #4a3419; border: 1.5px solid #d9a441; color: #ffd98a;
+  font-size: 13px; font-weight: 700; line-height: 1.6;
+}
+.ore-guard b { color: #ffe9b8; }
+.ore-guard .row { margin-top: 8px; }
+
 /* ---------- カード ---------- */
 .card {
   margin: 10px; padding: 12px; border-radius: 10px;

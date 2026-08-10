@@ -381,6 +381,48 @@
     return false;
   }
 
+  /* 俺たち目が買目に入っていない保存の検知（8/10 FB118・Naoto案）：
+     買目にないと的中しても回収額を入力できない（8/4「俺たち目＝金額計算外」の仕様）ため、
+     保存時に【追加して保存】/【追加せず保存】を選ばせる。投資額の有無は見ない（Naoto指定）。
+     判定＝買目をパースした全組合せ（BOX・流し・全の展開込み）に俺たち目（書いた順ストレート換算）が
+     含まれるか。俺たち目が空・読めない行のときは対象外＝普通に保存 */
+  function oreMissingInBuys(key, text, ore) {
+    if (!ore || !String(ore).trim()) return null;
+    var cars = effCars(key);
+    var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(ore), "3連単", cars);
+    var oreL = op.lines && op.lines[0];
+    if (!oreL || !oreL.ok || !oreL.combos.length) return null;
+    var keyOf = function (type, c) {
+      var cc = (type === "3連複" || type === "2車複" || type === "ワイド") ? c.slice().sort() : c;
+      return type + "|" + cc.join("-");
+    };
+    var have = {};
+    window.Keirin.parsePrediction(text, "3連単", cars).lines.forEach(function (l) {
+      if (!l.ok) return;
+      l.combos.forEach(function (c) { have[keyOf(l.type, c)] = true; });
+    });
+    var missing = false;
+    oreL.combos.forEach(function (c) { if (!have[keyOf(oreL.type, c)]) missing = true; });
+    return missing ? window.Keirin.oreNormalize(ore) : null;
+  }
+  /** 確認バー＝ブラウザconfirmはボタン文言を変えられないためフォーム内のインラインUIで出す */
+  function showOreGuard(form, oreLine, doSave) {
+    var old = form.querySelector(".ore-guard");
+    if (old) old.remove();
+    var div = document.createElement("div");
+    div.className = "ore-guard";
+    div.innerHTML = "⚠ 俺たち目 <b>" + oreLine + "</b> が買目に入っていません。" +
+      "買目にないと、的中しても回収額が入力できずトータル回収に反映されません。" +
+      "実際に購入しているなら【追加して保存】、無料公開のみなら【追加せず保存】。" +
+      '<div class="row gap">' +
+      '<button type="button" class="btn small og-add">追加して保存</button>' +
+      '<button type="button" class="btn small og-skip">追加せず保存</button>' +
+      "</div>";
+    form.appendChild(div);
+    div.querySelector(".og-add").addEventListener("click", function () { div.remove(); doSave(oreLine); });
+    div.querySelector(".og-skip").addEventListener("click", function () { div.remove(); doSave(); });
+  }
+
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
     $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + effCars(key) + "車）" : "（場・レース未選択）") +
@@ -445,7 +487,12 @@
         form.querySelector("." + cls).addEventListener("input", update);
       });
       form.querySelector(".pf-note").addEventListener("change", update);
-      form.querySelector(".pf-save").addEventListener("click", function () {
+      // 保存本体（8/10 FB118で分離）：extraLine＝【追加して保存】で俺たち目を買目に足す1行
+      var doSave = function (extraLine) {
+        if (extraLine) {
+          var ta = form.querySelector(".pf-text");
+          ta.value = (ta.value.trim() ? ta.value.replace(/\s+$/, "") + "\n" : "") + extraLine;
+        }
         var entry = ensurePredEntry(key, racerId);
         entry.text = form.querySelector(".pf-text").value;
         entry.defaultType = form.querySelector(".pf-type").value;
@@ -459,6 +506,13 @@
         save();
         renderSettlePreview();
         updatePredInfo(form, key);                 // 「未保存」表示を消す
+      };
+      form.querySelector(".pf-save").addEventListener("click", function () {
+        // 俺たち目が買目にない保存＝【追加して保存】/【追加せず保存】の確認バー（8/10 FB118）
+        var oreLine = oreMissingInBuys(key, form.querySelector(".pf-text").value,
+          form.querySelector(".pf-ore").value.trim());
+        if (oreLine) { showOreGuard(form, oreLine, doSave); return; }
+        doSave();
       });
       update();
     });
