@@ -251,6 +251,17 @@
      展開（全・BOX・フォーメーション）も買目と同じ記法で書ける。どの位置に書いても全買目行から
      除外される（点数減・的中判定外＝settleがcut行をスキップ）。表示は切り目行として残す（グレー帯） */
   var CUT_RE = /^\s*(切り目|切目|切り|切)[\s:：]*/;
+  // 後ろ切り（8/10 FB125・Naoto「※24→24→36切でも判定できる？」）＝行末が切系でもOK。
+  // 「は切」「を切」も許容。行頭の飾り（※・＊等）は外す。残りが買目記法として読める行だけ
+  // 切り目扱い＝「思い切」「〜で勝ち切」等の文章は買目として読めないので誤爆しない
+  var CUT_TAIL_RE = /\s*(?:は|を)?\s*(切り目|切目|切り|切)\s*$/;
+  var CUT_DECO_RE = /^[\s※＊*・●○◎▲△☆★]+/;
+  function cutRestOf(raw) {
+    var s = String(raw || "");
+    if (CUT_RE.test(s)) return s.replace(CUT_RE, "");
+    if (CUT_TAIL_RE.test(s)) return s.replace(CUT_TAIL_RE, "").replace(CUT_DECO_RE, "");
+    return null;
+  }
   function parsePrediction(text, defaultType, carCount) {
     var lines = String(text || "").split(/\r?\n/);
     var out = { lines: [], memos: [], points: 0 };
@@ -258,8 +269,8 @@
     // 1周目＝切り目行を先に集める（順不同で効かせるため）
     var cutSet = {}, cutParsed = {};
     lines.forEach(function (raw, i) {
-      if (!CUT_RE.test(String(raw || ""))) return;
-      var rest = String(raw).replace(CUT_RE, "");
+      var rest = cutRestOf(raw);
+      if (rest === null) return;
       var p = parseLine(rest, defaultType, carCount);
       p.rawRest = rest.trim();
       cutParsed[i] = p;
