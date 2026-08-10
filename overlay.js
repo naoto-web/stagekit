@@ -505,13 +505,29 @@
   }
 
   /** 買い目1行を車番色チップの並びとして描画する */
-  function lineChips(raw, small) {
-    return window.Keirin.displayTokens(raw).map(function (tk) {
+  /** hlCombo（8/10 FB119）＝的中した組合せ [1,2,4]。渡された行では該当車番チップに hit-glow を付ける。
+      ポジション厳密照合は「-」区切りの素直な並びのときだけ（1-23-45で1-2-4なら1・2・4だけ光る）。
+      ＝（折返し）・BOX・区切りなしは順序が入れ替わり得るので「組合せに含まれる車番」を光らせる。
+      「全」チップは行が的中していれば光らせる（当たり車番がその裏に居るため） */
+  function lineChips(raw, small, hlCombo) {
+    var toks = window.Keirin.displayTokens(raw);
+    var strict = false;
+    if (hlCombo) {
+      var seps = toks.filter(function (t) { return t.t === "sep"; });
+      strict = seps.length > 0 &&
+        seps.every(function (t) { return t.v === "-"; }) &&
+        !toks.some(function (t) { return t.t === "box"; });
+    }
+    var pos = 0;
+    return toks.map(function (tk) {
       switch (tk.t) {
-        case "car": return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + '">' + tk.v + "</i>";
-        case "sep": return '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
+        case "car": {
+          var glow = hlCombo && (strict ? hlCombo[pos] === tk.v : hlCombo.indexOf(tk.v) >= 0);
+          return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + (glow ? " hit-glow" : "") + '">' + tk.v + "</i>";
+        }
+        case "sep": pos++; return '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
         case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
-        case "all": return '<span class="pl-all' + (small ? " sm" : "") + '">全</span>';
+        case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hlCombo ? " hit-glow" : "") + '">全</span>';
         case "box": return '<span class="pl-box' + (small ? " sm" : "") + '">BOX</span>';
         case "gap": return '<span class="pl-gap"></span>';
         default: return '<span class="pl-txt">' + esc(tk.v) + "</span>";
@@ -579,10 +595,22 @@
         (rp.invest > 0 ? '<span class="bm-part">投資 ' + fmtYen(rp.invest) + "</span>" : "") +
         "</div>";
     }
-    return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small) + "</div>" : "") +
+    // 的中買目の車番強調（8/10 FB119）＝このレース×この配信者に有効な的中があれば、
+    // 該当する行（式別＋組合せ一致）にだけ当たり組合せを渡してチップを光らせる
+    var glows = rc && k ? glowsFor(k, rc.id) : [];
+    var oreGlow = null;
+    glows.forEach(function (g) { if (!oreGlow && g.type === "俺たち目") oreGlow = g.combo; });
+    return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small, oreGlow) + "</div>" : "") +
       okLines.map(function (l) {
+        var g = null;
+        glows.forEach(function (gl) {
+          if (g || gl.type !== l.type) return;
+          l.combos.forEach(function (c) {
+            if (!g && window.Keirin.comboLabel(l.type, c) === gl.comboLabel) g = gl.combo;
+          });
+        });
         var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
-        return '<div class="pred-line chips">' + lineChips(src, small) + "</div>";
+        return '<div class="pred-line chips">' + lineChips(src, small, g) + "</div>";
       }).join("") +
       (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
       metaLine;
@@ -1390,8 +1418,33 @@
      状態更新のたびに的中リストを前回と比較し、増えた的中だけ発火（リロード時は再生しない）。 */
   var seenHits = null; // null＝初回未初期化
   var HIT_FX_MS = 27000; // 8/6 FB46：12秒→20秒→8/7 FB62：+7秒＝27秒に延長
+
+  /* 的中買目の車番強調（8/10 FB119・Naoto依頼「当たった買目の車番だけ強調」）＝
+     予想帯（①トーク・②メイン/サブ共通＝raceBuyHtml）の該当行で、当たり組合せの車番チップに
+     hit-glow（金リング＋パルス）を付ける。発火条件は演出と同一（手動確定のみ）・
+     持続もワイプ的中演出と同じHIT_FX_MS＝期限切れは0.25秒ループが掃除して再描画 */
+  var hitGlows = []; // {key, racerId, type, comboLabel, combo:[..], until}
+  function addHitGlow(h) {
+    var p = String(h.id).split("|"); // id＝場|R|配信者|式別|組合せ（hitId）
+    if (p.length < 5) return;
+    var combo = String(h.comboLabel).split("-").map(Number).filter(Boolean);
+    if (!combo.length) return;
+    hitGlows.push({ key: p[0] + "|" + p[1], racerId: p[2], type: h.type,
+      comboLabel: h.comboLabel, combo: combo, until: Date.now() + HIT_FX_MS });
+  }
+  function glowsFor(key, racerId) {
+    var now = Date.now();
+    return hitGlows.filter(function (g) { return g.until > now && g.key === key && g.racerId === racerId; });
+  }
+  function sweepHitGlows() { // 期限切れ＝配列から外して帯を通常表示へ戻す
+    if (!hitGlows.length) return;
+    var now = Date.now();
+    var alive = hitGlows.filter(function (g) { return g.until > now; });
+    if (alive.length !== hitGlows.length) { hitGlows = alive; renderPreds(); }
+  }
   function checkNewHits() {
     var ids = {};
+    var glowAdded = false; // FB119：この呼び出しで買目強調が追加されたか
     derived.hits.forEach(function (h) { ids[h.id] = h; });
     if (seenHits === null) { seenHits = ids; return; }
     Object.keys(ids).forEach(function (id) {
@@ -1401,12 +1454,16 @@
       if (prev && !(prev.resAuto && !h.resAuto)) return;
       // 自動確定由来は演出を出さない（8/6 FB47・手動の「結果を確定」の時だけ演出）＝記録だけ残す
       if (h.resAuto) return;
+      addHitGlow(h); // 予想帯の的中買目チップ強調（8/10 FB119・演出と同条件・同尺）
+      glowAdded = true;
       var seats = seatMap();
       ["a", "b"].forEach(function (slot) {
         if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h, seats[slot]);
       });
     });
     seenHits = ids;
+    // 帯はcheckNewHitsより先（renderAll内）に描画済みのため、強調が追加された時だけ描き直す（FB119）
+    if (glowAdded) renderPreds();
   }
 
   /* ══════════ 配信者ごとの個人演出（8/8 FB73＝テーブル化） ══════════
@@ -2165,6 +2222,7 @@
     autoSceneTick();    // 発走時刻の自動シーン切替（8/9 FB95・表示中ソースのみ実行）
     if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); fitNarabi(); } // 毎秒＝①②帯・ライン行の自己修復（8/6 FB32/37/44）
     if (nhBoundary !== null && nowSec() >= nhBoundary) renderVenueTabs(); // note勝負＝終了レースを個々に消す（8/10 FB113）
+    sweepHitGlows();    // 的中買目チップ強調の期限切れ掃除（8/10 FB119・27秒で通常表示へ）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
 
   tickClock();
