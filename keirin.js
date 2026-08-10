@@ -271,7 +271,11 @@
         var cp = cutParsed[i];
         cp.raw = String(raw);
         if (cp.ok) { cp.cut = true; cp.points = 0; out.lines.push(cp); }
-        else out.memos.push(cp.memo); // 読めない切り目行はメモ扱い
+        else { // 読めない切り目行＝普通のメモ行と同じ扱い（「切り目4点追加」等の文章を行全体のまま残す）
+          cp.memo = String(raw).trim();
+          out.lines.push(cp);
+          out.memos.push(cp.memo);
+        }
         return;
       }
       var p = parseLine(raw, defaultType, carCount);
