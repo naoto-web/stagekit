@@ -266,11 +266,12 @@ body[data-theme="w"] .pred-line.cut-line { background: rgba(0,0,0,.10); }
   position: relative; z-index: 1;
   animation: hitGlowPulse .9s ease-in-out infinite alternate;
 }
-/* 大小の脈動も追加（8/10 FB120・Naoto「大きくなったり小さくなったり」）＝金リングと同じ0.9秒周期で
-   1.0〜1.25倍を往復。transformは自前でチップ単位（行の縮小フィットは親.pred-line側なので衝突しない） */
+/* 大小の脈動も追加（8/10 FB120→FB126で増強・Naoto「視聴者まだ気づいてない」）＝金リングと同じ
+   0.9秒周期で1.0〜1.45倍を往復・光も広く強く（リング4→5px・外光34px）。
+   transformは自前でチップ単位（行の縮小フィットは親.pred-line側なので衝突しない） */
 @keyframes hitGlowPulse {
-  from { box-shadow: 0 0 0 3px #ffd54f, 0 0 8px 2px rgba(255,179,0,.55); transform: scale(1); }
-  to   { box-shadow: 0 0 0 3px #ffc400, 0 0 16px 6px rgba(255,179,0,.95); transform: scale(1.25); }
+  from { box-shadow: 0 0 0 4px #ffd54f, 0 0 12px 4px rgba(255,179,0,.7); transform: scale(1); }
+  to   { box-shadow: 0 0 0 5px #ffc400, 0 0 34px 14px rgba(255,179,0,1); transform: scale(1.45); }
 }
 
 /* グレードバッジ（8/6 FB36）：GP=金・GⅠ=赤・GⅡ=青・GⅢ=緑（F級は非表示・場タブとレースラベル共通） */
