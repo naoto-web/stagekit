@@ -1519,9 +1519,11 @@
     return t;
   }
 
-  /* スロットの尺（8/8 FB83・8/9 FB84でレバー追加。ピンクメンバー専用）。
-     流れ＝①筐体が出る（止まったまま）②レバーを引く③引き切った瞬間に回り出す④左から順に停まる⑤ピカピカ
-       WAIT   …筐体が出てからレバーを引き始めるまでの間ms（見せる間）
+  /* スロットの尺（8/8 FB83・8/9 FB84でレバー追加・8/10 FB122でキャラ入場。ピンクメンバー専用）。
+     流れ＝①筐体が出る（リール静止）②キャラが左からぴょんぴょん入場③到着＝手上げポーズに切替
+           ＝その手がレバーの玉を掴む→レバーが下りる④引き切った瞬間に回り出す⑤左から順に停まる⑥ピカピカ
+       WAIT   …筐体が出てからキャラが跳ね始めるまでの間ms（筐体を見せる間）
+       HOP    …キャラの入場ms（左画面外→定位置）／HOPSTEP…1跳ねms（HOP÷HOPSTEPは整数に＝着地で終わる）
        LEVER  …レバーを引き下ろすのにかかるms（引き切った瞬間＝回転開始）
        SPIN1  …回り出してから1つ目のリールが停まるまでのms
        GAP    …2つ目までの間隔ms／GROW…3つ目はその何倍焦らすか（試作の700ms刻みは
@@ -1529,13 +1531,19 @@
        DECEL  …各リールが減速に使う時間ms（この間だけ速度が落ちる＝クルクル→スーッ→ドン）
        CELL_MS…等速で回っているときの1コマあたりms（小さいほど速く回る）
      ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）。伸ばすと演出全体が長くなる
-        （バッジの表示時間 HIT_FX_MS=27秒 は別枠でその後ろに乗る） */
-  var SLOT_BASE = { WAIT: 380, LEVER: 340, SPIN1: 2000, GAP: 1900, GROW: 1.28, DECEL: 1400,
+        （バッジの表示時間 HIT_FX_MS=27秒 は別枠でその後ろに乗る。FB122のHOP追加で+1.28秒＝バッジ約11.0秒） */
+  var SLOT_BASE = { WAIT: 380, HOP: 1280, HOPSTEP: 320, LEVER: 340, SPIN1: 2000, GAP: 1900, GROW: 1.28, DECEL: 1400,
     PIKA_LAG: 140, HOLD: 2500, FADE: 500, CELL_MS: 60 }; // HOLD＝揃ってキラキラを見せる時間（8/9 FB85で+1秒）
   var SLOT_LOOP = 9; // 1周＝車番1〜9の9コマ（当たり目は1周に必ず1回だけ出る）
+  /* キャラ入場（8/10 FB122）＝「拳＝レバーの玉」の位置合わせ用の実測定数（fx_slotchar_make.pyが出力。
+     ⚠️絵を差し替えたらスクリプトを再実行して3つとも貼り直す） */
+  var SCHAR_AR = 681 / 800; // fx_slotchar1..2.png の実寸比（横/縦）
+  var SCHAR_FX = 0.683;     // ②の拳（ナックル）中心x＝画像幅に対する比率
+  var SCHAR_FY = 0.408;     // ②の拳（ナックル）中心y＝画像高に対する比率
   function slotTimes(n) {
     n = n || 3;
-    var t = { PULL: SLOT_BASE.WAIT };                 // レバーを引き始める
+    var t = { HOPIN: SLOT_BASE.WAIT };                // キャラが跳ね始める
+    t.PULL = SLOT_BASE.WAIT + SLOT_BASE.HOP;          // 到着＝手上げ切替＋レバーを引き始める
     t.SPIN = t.PULL + SLOT_BASE.LEVER;                // 引き切った＝回転開始（レバーはバネで戻る）
     t.STOPS = [t.SPIN + SLOT_BASE.SPIN1];
     for (var i = 1; i < n; i++) {
@@ -1660,6 +1668,9 @@
   ["fx_samba1.png", "fx_samba2.png", "fx_samba3.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // サンバは3コマ（8/10 FB121）＝初回的中でコマ落ちしないよう先読み
   });
+  ["fx_slotchar1.png", "fx_slotchar2.png"].forEach(function (f) {
+    var im = new Image(); im.src = f;  // スロットのキャラ2ポーズ（8/10 FB122）＝入場でコマ落ちしないよう先読み
+  });
   /** メンバーカラー→色キー（未登録の色は個人演出なし＝アイコンも雨も出ない従来動作） */
   function memberKey(rc) { return rc && COLOR_KEY[rc.color] ? COLOR_KEY[rc.color] : ""; }
   function fxConf(key) {
@@ -1767,26 +1778,39 @@
   function spawnSlot(cam, key, hit, combo) {
     var old = cam.querySelector(".fx-slot");
     if (old) old.parentNode.removeChild(old);
+    var oldC = cam.querySelector(".fx-schar");
+    if (oldC) oldC.parentNode.removeChild(oldC);
     var n = combo.length;
     var T = slotTimes(n);
     var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var RAD = Math.PI / 180;
     // 箱幅＝cell*n ＋ すき間(cell*.14)*(n-1) ＋ 内余白(cell*.18)*2
     var wUnit = n + 0.14 * (n - 1) + 0.36;
-    // レバーの取り分＝支点(.15)＋振り抜いた玉の最遠点(sin58°×0.75＋玉の半径.15)。
-    // ⚠️引き下ろすと玉が右へ大きく振れる＝この幅を先に確保しないと枠から見切れる
-    var lvUnit = 0.95;
-    var cell = Math.floor(Math.min((cw * 0.78) / (wUnit + lvUnit), (ch * 0.66) / 1.36));
+    /* キャラの幾何（8/10 FB122）＝すべて「拳＝レバーの玉」から逆算する：
+         レバーは左側面（.lv-left・静止＋10°＝筐体側へ傾く）→玉の静止位置(knob)を計算
+         →キャラは「②の拳(SCHAR_FX/FY)が玉に重なり、足元が筐体の底に揃う」大きさ・位置に置く。
+       キャラの胴体は筐体の左に立ち、右腕側は筐体の背面(z順で下)に隠れる＝リールの出目は隠れない */
+    var boxHu = 1.36;                                                  // 箱高（cell単位・cell+pad×2）
+    var knobYu = 0.54 * boxHu - Math.cos(10 * RAD) * 0.75 - 0.036;     // 玉中心y（箱上端基準・少し上に出る）
+    var knobXu = -0.15 + Math.sin(10 * RAD) * 0.75;                    // 玉中心x（箱左端基準・ほぼ左上角）
+    var charHu = (boxHu - knobYu) / (1 - SCHAR_FY);                    // 拳の高さ＝玉・足元＝箱の底
+    var charWu = charHu * SCHAR_AR;
+    var overUnit = SCHAR_FX * charWu - knobXu;                         // 筐体左への張り出し幅（cell単位）
+    var cell = Math.floor(Math.min((cw * 0.88) / (wUnit + overUnit), (ch * 0.80) / charHu));
     if (cell < 24) cell = 24;
     var gap = Math.round(cell * 0.14), pad = Math.round(cell * 0.18);
     var box = document.createElement("div");
-    box.className = ["fx-slot", "m-" + key].join(" ") + (hit && hit.manche ? " manche" : "");
+    box.className = ["fx-slot", "lv-left", "m-" + key].join(" ") + (hit && hit.manche ? " manche" : "");
     box.style.setProperty("--cell", cell + "px");
     box.style.setProperty("--gap", gap + "px");
     box.style.setProperty("--pad", pad + "px");
     box.style.setProperty("--lvms", (SLOT_BASE.LEVER / 1000) + "s");
-    box.style.width = (cell * n + gap * (n - 1) + pad * 2) + "px";
-    // 待機中のレバーぶんだけ筐体を左へ寄せる＝「筐体＋レバー」で見た目の中心を取る
-    box.style.marginLeft = "-" + Math.round(cell * 0.16) + "px";
+    var bw = cell * n + gap * (n - 1) + pad * 2;
+    var bh = cell + pad * 2;
+    box.style.width = bw + "px";
+    // キャラの張り出しぶん筐体を右へ寄せる＝「キャラ＋筐体」で見た目の中心を取る（FB122）
+    var over = Math.round(overUnit * cell);
+    box.style.marginLeft = Math.round(over / 2) + "px";
     ["s1", "s2", "s3", "s4"].forEach(function (c) { // ✨は絶対配置＝レイアウトに参加しない
       var sp = document.createElement("span");
       sp.className = "fx-spark " + c; sp.textContent = "✨";
@@ -1798,12 +1822,41 @@
     box.appendChild(base); box.appendChild(lever);
     var reels = combo.map(function (num) { return buildSlotReel(box, num, cell); });
     cam.appendChild(box);
+    // キャラ本体（camに絶対配置・z＝筐体より下＝重なった右腕側は筐体の裏に隠れる）
+    var charH = Math.round((bh - knobYu * cell) / (1 - SCHAR_FY));
+    var charW = Math.round(charH * SCHAR_AR);
+    var boxAbsL = Math.round((cw - bw) / 2 + over / 2);
+    var boxAbsT = Math.round((ch - bh) / 2);
+    var charAbsL = Math.round(boxAbsL + knobXu * cell - SCHAR_FX * charW);
+    var charAbsT = Math.round(boxAbsT + bh - charH);
+    var schar = document.createElement("div");
+    schar.className = "fx-schar";
+    schar.style.left = charAbsL + "px";
+    schar.style.top = charAbsT + "px";
+    schar.style.width = charW + "px";
+    schar.style.height = charH + "px";
+    schar.style.setProperty("--hx", (charAbsL + charW + 30) + "px");           // 左画面外からの距離
+    schar.style.setProperty("--hop", (SLOT_BASE.HOP / 1000) + "s");
+    schar.style.setProperty("--hopstep", (SLOT_BASE.HOPSTEP / 1000) + "s");
+    schar.style.setProperty("--hopd", (SLOT_BASE.WAIT / 1000) + "s");          // 筐体を見せる間だけ待つ
+    schar.innerHTML = '<div class="fx-schar-run"><div class="fx-schar-body">' +
+      '<i class="fx-schar-img p1 on"></i><i class="fx-schar-img p2"></i></div></div>';
+    cam.appendChild(schar);
     runSlotReels(reels, T, cell);
-    setTimeout(function () { lever.classList.add("pull"); }, T.PULL);
+    setTimeout(function () {  // 到着＝ぴょんぴょん停止・手上げ②へ切替・その手でレバーを引く
+      schar.classList.add("arrive");
+      var i1 = schar.querySelector(".p1"), i2 = schar.querySelector(".p2");
+      if (i1) i1.classList.remove("on");
+      if (i2) i2.classList.add("on");
+      lever.classList.add("pull");
+    }, T.PULL);
     setTimeout(function () { lever.classList.remove("pull"); lever.classList.add("back"); }, T.SPIN);
     setTimeout(function () { box.classList.add("pika"); }, T.PIKA);
-    setTimeout(function () { box.classList.add("out"); }, T.END);
-    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+    setTimeout(function () { box.classList.add("out"); schar.classList.add("out"); }, T.END);
+    setTimeout(function () {
+      if (box.parentNode) box.parentNode.removeChild(box);
+      if (schar.parentNode) schar.parentNode.removeChild(schar);
+    }, T.GONE);
   }
   /** リール1本＝1〜9をシャッフルした9コマを2周ぶん並べたもの（2周ぶん描くと継ぎ目なくループできる） */
   function buildSlotReel(box, target, cell) {

@@ -940,6 +940,31 @@ body.race-sub-on .race-sub { display: flex; }
   transform: translate(-50%, 50%); border-radius: calc(var(--cell) * .05);
   background: linear-gradient(180deg, #9aa4b0, #454c56);
   box-shadow: 0 3px 8px rgba(0,0,0,.5); }
+/* レバー左側面版（8/10 FB122）＝キャラが左から来て手が届く側へ移設。角度は左右反転
+   （静止＋10°＝筐体側へ傾く／引き＝−58°で左下へ振り抜く） */
+.fx-slot.lv-left .fx-lever, .fx-slot.lv-left .fx-lever-base { left: calc(0% - var(--cell) * .15); }
+.fx-slot.lv-left .fx-lever { transform: translateX(-50%) rotate(10deg); }
+.fx-slot.lv-left .fx-lever.pull { transform: translateX(-50%) rotate(-58deg); }
+.fx-slot.lv-left .fx-lever.back { transform: translateX(-50%) rotate(10deg); }
+/* キャラ入場（8/10 FB122・Naoto案「①が左からぴょんぴょん→②手上げでレバーを引く」）：
+   位置・大きさはJSが「拳＝レバーの玉」から逆算してpx指定。z＝筐体(4)より下の3＝
+   重なった右腕側の胴体は筐体の裏に隠れてリールの出目を隠さない */
+.fx-schar { position: absolute; z-index: 3; pointer-events: none; }
+.fx-schar-run { width: 100%; height: 100%;
+  animation: scharIn var(--hop, 1.28s) linear var(--hopd, .38s) both; }
+@keyframes scharIn { from { transform: translateX(calc(var(--hx, 400px) * -1)); } to { transform: none; } }
+.fx-schar-body { position: relative; width: 100%; height: 100%; transition: transform .12s ease-out;
+  animation: scharHop var(--hopstep, .32s) ease-in-out var(--hopd, .38s) infinite; }
+@keyframes scharHop { 0%, 100% { transform: translateY(0) rotate(0); }
+  30% { transform: translateY(-11%) rotate(-2.5deg); }
+  60% { transform: translateY(-2%) rotate(1.5deg); } }
+.fx-schar.arrive .fx-schar-body { animation: none; }  /* 到着＝跳ね停止（transitionで滑らかに着地） */
+.fx-schar-img { position: absolute; inset: 0; opacity: 0; background: center bottom / contain no-repeat; }
+.fx-schar-img.p1 { background-image: url("fx_slotchar1.png"); }
+.fx-schar-img.p2 { background-image: url("fx_slotchar2.png"); }
+.fx-schar-img.on { opacity: 1; }
+@keyframes scharOut { to { opacity: 0; } }
+.fx-schar.out { animation: scharOut .45s ease-in forwards; }
 /* 退場 */
 @keyframes fxSlotOut { to { opacity: 0; transform: translate(-50%, -50%) scale(.86); } }
 .fx-slot.out { animation: fxSlotOut .45s ease-in forwards; }
