@@ -531,8 +531,13 @@
     var type = form.querySelector(".pf-type").value;
     var parsed = window.Keirin.parsePrediction(form.querySelector(".pf-text").value, type, cars);
     form.querySelector(".pf-info").innerHTML = parsed.lines.map(function (l) {
-      if (!l.ok) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ メモ行（点数外）</div>";
-      if (l.cut) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 切り目（買目から除外・的中判定外）</div>";
+      // 1行に切り目を2つ書いた疑い（8/11 FB134）＝黙って誤読される前に打った本人へ知らせる。
+      // ブロックはしない（保存は通す）＝FB97「俺たち目の入れ忘れ」と同じ、気づかせるだけの通知
+      var cutWarn = l.cutMulti
+        ? '<div class="unit-warn">⚠ 切り目は1行に1つずつ（「切 1-2-3」と「切 4-5-6」の2行に分けてください。' +
+          "1行に並べると別の目として読まれます）</div>" : "";
+      if (!l.ok) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ メモ行（点数外）</div>" + cutWarn;
+      if (l.cut) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 切り目（買目から除外・的中判定外）</div>" + cutWarn;
       if (l.allDup) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 全部かぶり/切り目（0点・画面に出ません）</div>";
       var dispNote = l.disp && l.disp !== window.Keirin.normalize(l.raw).replace(/\s+/g, "")
         ? '　<span class="pl-memo">画面表示 ' + esc(l.disp) + "</span>" : "";

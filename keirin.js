@@ -262,6 +262,21 @@
     if (CUT_TAIL_RE.test(s)) return s.replace(CUT_TAIL_RE, "").replace(CUT_DECO_RE, "");
     return null;
   }
+  /* 「1行に切り目を2つ書いた」検知（8/11 FB134・Naoto質問→実測で判明した誤読の芽）：
+       「切 1-2-3 4-5-6」＝空白が詰められて 1-2-34 のフォーメーションと読まれ、頼んでいない
+       1-2-4まで切られ 4-5-6 は切られない／「切 1-2-3・4-5-6」＝記法として読めずただのメモ行
+       ＝どちらも黙って期待と違う結果になる（画面には切り目行らしく出るのでなお気づけない）。
+     ⚠️自動で2つに割るのはNG＝空白は既存記法で「1-9-2 3 5」のように脚の中の区切りとして
+        現役（＝割ると既存の正しい書き方が壊れる）。よって直さず「1行1つに分けて」と警告する
+        （FB125で「推測して捏造しない」と決めたのと同じ方針）。
+     判定＝空白/・/、/, で分けて「数字-数字」を含む塊が2つ以上あるか。
+        「1-9-2 3 5」は塊が1つ（残りは裸の数字）＝誤爆しない */
+  function cutHasMultiTargets(rest) {
+    var toks = String(rest || "").split(/[\s・、,／\/]+/).filter(Boolean);
+    var n = 0;
+    toks.forEach(function (t) { if (/\d[\-－ー=＝]+.*\d/.test(t)) n++; });
+    return n >= 2;
+  }
   function parsePrediction(text, defaultType, carCount) {
     var lines = String(text || "").split(/\r?\n/);
     var out = { lines: [], memos: [], points: 0 };
@@ -273,6 +288,7 @@
       if (rest === null) return;
       var p = parseLine(rest, defaultType, carCount);
       p.rawRest = rest.trim();
+      p.cutMulti = cutHasMultiTargets(rest); // 1行に2つ書いた疑い（8/11 FB134・コンソールが警告に使う）
       cutParsed[i] = p;
       if (p.ok) p.combos.forEach(function (c) { cutSet[p.type + "|" + normalizedComboKey(p.type, c)] = true; });
     });
@@ -444,6 +460,7 @@
     oreNormalize: oreNormalize,
     parseLine: parseLine,
     parsePrediction: parsePrediction,
+    cutHasMultiTargets: cutHasMultiTargets, // 8/11 FB134（テスト・将来の別UIから使えるように）
     hitCombos: hitCombos,
     settle: settle,
     standardCombos: standardCombos,
