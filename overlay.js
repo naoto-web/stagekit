@@ -1582,7 +1582,7 @@
   var MEMBER_FX = {
     // effects＝2つ以上ある人は的中のたびに抽選（8/9 FB90・""＝既定のアイコン走行）
     orange: { fx: ["dust-xl"], effects: ["", "tea"] }, // 白いモクモクの砂埃（8/8 FB72）／お茶（8/9 FB90）
-    blue:   { effect: "yakumono" },   // 役物合体＝コインが四隅から合体（8/8 FB82・アイコン走行は出さない）
+    blue:   { effects: ["yakumono", "adjust"] }, // 役物合体（8/8 FB82）／アジャスト（8/11 FB130）＝的中のたびに抽選（アイコン走行は出さない）
     pink:   { effect: "slot" },       // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
     green:  { effect: "sumo" },       // 相撲＝張り手で迫って「ごっちゃんです！！」（8/9 FB86・同上）
     yellow: { effect: "pray" },       // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
@@ -1738,6 +1738,31 @@
     return t;
   }
 
+  /* アジャストの尺（8/11 FB130・青メンバーの2つ目の演出＝Naoto案）
+       流れ＝①「アジャ・・」が右から左へ流れる（最初は少なく→どんどん多く）②一通り流れたら
+             本人が右からてくてく歩いてきて中央で止まる③一拍→しゃがんで溜める
+             ④バッ！とダブルバイセップス＝「アジャストー！！」がドン
+       RAIN   …「アジャ・・」を湧かせ続ける時間ms（湧いた文字はこの後FLYぶん流れて消える）
+       AJA_N  …「アジャ・・」の総数／FLY_MIN/MAX…1枚が流れ切るms（個体差のランダム幅）
+       RAINGAP…湧き終わりから歩き出しまでの間ms（流れの残りをはかせる＝「一通り流れた後」）
+       WALK   …右画面外→中央までのms／STEP…歩き2コマの切替間隔ms（⚠️WALKと同率で動かす＝お茶の教訓）
+       PAUSE  …中央到着（直立①）から溜めまでの一拍ms／TAME…しゃがみ溜めms
+       HOLD   …キメ（④＋文字）を見せる時間ms／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約10.3秒 */
+  var ADJ_BASE = { RAIN: 3000, AJA_N: 26, FLY_MIN: 1400, FLY_MAX: 2200, RAINGAP: 800,
+    WALK: 3000, STEP: 260, PAUSE: 450, TAME: 420, HOLD: 2600, FADE: 500 };
+  var ADJ_AR = 693 / 1000; // fx_adj1..4.png の実寸比（横/縦）＝絵を差し替えたら素材加工/fx_adjust_make.pyを再実行
+  var ADJ_KIME = "アジャストー！！";
+  function adjTimes() {
+    var t = { WALKIN: ADJ_BASE.RAIN + ADJ_BASE.RAINGAP };  // 歩き出し
+    t.STOP = t.WALKIN + ADJ_BASE.WALK;                     // 中央到着＝直立①で一拍
+    t.TAME = t.STOP + ADJ_BASE.PAUSE;                      // しゃがんで溜め始める
+    t.POSE = t.TAME + ADJ_BASE.TAME;                       // バッ！＝ダブルバイセップス④＋「アジャストー！！」
+    t.END  = t.POSE + ADJ_BASE.HOLD;                       // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE = t.END + ADJ_BASE.FADE;
+    return t;
+  }
+
   /** 的中の組合せ（comboLabel "1-3-5"）→ リールに出す車番配列。
       手動追加の的中はcomboLabelを持たない＝数字を作り話にしないため空配列を返す（呼び出し側で走行に落とす） */
   function slotCombo(hit) {
@@ -1756,6 +1781,9 @@
   (function () { var im = new Image(); im.src = "fx_sumo.png"; })(); // 相撲も先読み（8/9 FB86）
   ["fx_tea_w1.png", "fx_tea_w2.png", "fx_tea_stand.png", "fx_tea_up.png"].forEach(function (f) {
     var im = new Image(); im.src = f;   // お茶は4コマ（8/9 FB90）＝歩き出しでコマ落ちしないよう先読み
+  });
+  ["fx_adj1.png", "fx_adj2.png", "fx_adj3.png", "fx_adj4.png"].forEach(function (f) {
+    var im = new Image(); im.src = f;   // アジャストも4コマ（8/11 FB130）＝同じく先読み
   });
   ["fx_pray.png", "fx_pray_shut.png"].forEach(function (f) {         // 念仏は2枚重ね（8/9 FB88）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
@@ -2214,6 +2242,67 @@
     span.parentNode.style.setProperty("--cfs", fs + "px");
   }
 
+  /* アジャスト（8/11 FB130・青メンバーの2つ目＝Naoto案）：「アジャ・・」が右から左へ流れる
+     （まばら→どんどん密に）→一通り流れたら本人が右からてくてく歩いて中央で止まる→一拍→
+     しゃがんで溜める→バッ！とダブルバイセップス＝「アジャストー！！」がドン。
+     役物合体との抽選（effects・8/9 FB90の仕組み）。このメンバーはアイコン走行を出さない。
+     ⚠️歩き・コマ送りの作りはお茶（FB90）と同型＝2階建てtransform（run=移動／body=歩調・溜め・キメ） */
+  function spawnAdjust(cam, key) {
+    var old = cam.querySelector(".fx-adj");
+    if (old) old.parentNode.removeChild(old);
+    var T = adjTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var ah = Math.round(ch * 0.86), aw = Math.round(ah * ADJ_AR);
+    var box = document.createElement("div");
+    box.className = ["fx-adj", "m-" + key].join(" ");
+    box.style.setProperty("--aw", aw + "px");
+    box.style.setProperty("--ah", ah + "px");
+    box.style.setProperty("--walk", (ADJ_BASE.WALK / 1000) + "s");
+    box.style.setProperty("--step", (ADJ_BASE.STEP / 1000) + "s");
+    box.style.setProperty("--tame", (ADJ_BASE.TAME / 1000) + "s");
+    box.style.setProperty("--x0", Math.round(cw / 2 + aw / 2) + "px"); // 出発点＝枠の外（右）
+    box.innerHTML =
+      '<div class="fx-adj-run"><div class="fx-adj-body">' +
+        '<i class="fx-adj-img w1"></i><i class="fx-adj-img w2"></i>' +
+        '<i class="fx-adj-img stand"></i><i class="fx-adj-img pose"></i>' +
+      "</div></div>" +
+      '<i class="fx-adj-flash"></i>' +
+      '<div class="fx-adj-kime"><span></span></div>';
+    box.querySelector(".fx-adj-kime span").textContent = ADJ_KIME;
+    cam.appendChild(box);
+    fitSambaKime(box.querySelector(".fx-adj-kime span"), cw, ch); // キメ文字のフィット＝サンバと同手法（枠高20%基準）
+    // 「アジャ・・」の湧き時刻＝√カーブ（序盤はまばら・終盤ほど密）＋ゆらぎ。流し切りはCSSのadjFly
+    for (var i = 0; i < ADJ_BASE.AJA_N; i++) {
+      var at = Math.round(ADJ_BASE.RAIN * Math.sqrt((i + 0.5) / ADJ_BASE.AJA_N) + Math.random() * 240 - 120);
+      setTimeout(function () {
+        if (!box.parentNode) return; // 退場後は湧かせない
+        var s = document.createElement("span");
+        s.className = "fx-adj-aja";
+        s.textContent = "アジャ・・";
+        var fs = Math.round(ch * (0.07 + Math.random() * 0.09)); // 大小ランダム
+        s.style.fontSize = fs + "px";
+        s.style.top = Math.round(Math.random() * Math.max(1, ch - fs * 1.4)) + "px";
+        s.style.left = cw + "px";
+        s.style.setProperty("--fly",
+          ((ADJ_BASE.FLY_MIN + Math.random() * (ADJ_BASE.FLY_MAX - ADJ_BASE.FLY_MIN)) / 1000).toFixed(2) + "s");
+        s.style.setProperty("--dx", -(cw + fs * 6) + "px");  // 枠幅＋文字ぶん＝流れ切る距離
+        s.style.setProperty("--tilt", (Math.random() * 10 - 5).toFixed(1) + "deg");
+        box.appendChild(s);
+        s.addEventListener("animationend", function () { this.remove(); });
+      }, Math.max(0, at));
+    }
+    setTimeout(function () { box.classList.add("walking"); }, T.WALKIN);
+    setTimeout(function () {  // 中央到着＝歩き停止・直立①で一拍
+      box.classList.remove("walking"); box.classList.add("standing");
+    }, T.STOP);
+    setTimeout(function () { box.classList.add("tame"); }, T.TAME);  // しゃがんで溜める
+    setTimeout(function () {  // バッ！＝ダブルバイセップス④＋フラッシュ＋「アジャストー！！」
+      box.classList.remove("tame"); box.classList.add("posed");
+    }, T.POSE);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
   /* サンバ（8/10 FB121・赤メンバー専用）：周りの4人がサンバで盛り上げ、本人は腕組みでキメ。
      ラボ（検証ハーネス/sambatest.html）で詰めた試作の本番移植＝3コマ送り（①→②→③→②・1拍の半分刻み）
      ＋紙吹雪＋♪ → キメ（①腕組みコマ固定・ズーム・フラッシュ・回る後光・「〇〇的中！！」）→ 退場。
@@ -2330,6 +2419,7 @@
       : eff === "pray" ? prayTimes().END
       : eff === "tea" ? teaTimes().END
       : eff === "samba" ? sambaTimes().END
+      : eff === "adjust" ? adjTimes().END
       : (key ? fxConf(key).rainMs : 0);
     ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
       var el = $(p + slot);
@@ -2348,6 +2438,7 @@
       else if (eff === "pray") spawnPray(cam, key);
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
+      else if (eff === "adjust") spawnAdjust(cam, key);
       else if (key) spawnRain(cam, key);
       setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
     });

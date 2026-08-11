@@ -1388,6 +1388,74 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes teaOut { to { opacity: 0; } }
 .fx-tea.out { animation: teaOut .45s ease-in forwards; }
 
+/* ══════════ アジャスト＝青メンバーの2つ目の個人演出（8/11 FB130・Naoto案）
+   「アジャ・・」が右から左へ流れる（まばら→どんどん密に）→本人が右からてくてく歩いて
+   中央で止まる→一拍→しゃがんで溜める→バッ！とダブルバイセップス＝「アジャストー！！」。
+   歩きの作りはお茶（FB90）と同型＝2階建てtransform（run=右→中央の移動／body=歩調・溜め・キメのポップ）。
+   尺・湧き時刻はJS側の ADJ_BASE / spawnAdjust で管理 ══════════ */
+.fx-adj { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+/* 流れる「アジャ・・」＝白字×青フチ（しょーたカラー）。傾き・大きさ・速さは個体差。
+   z=1＝あとから歩いてくる本人の後ろを流れる */
+.fx-adj-aja { position: absolute; z-index: 1; font-weight: 900; white-space: nowrap; color: #fff;
+  font-family: "Yu Gothic UI", "Meiryo", sans-serif; line-height: 1;
+  text-shadow: 2px 2px 0 #1d4ed8, -2px 2px 0 #1d4ed8, 2px -2px 0 #1d4ed8, -2px -2px 0 #1d4ed8,
+    0 4px 10px rgba(0,0,0,.5);
+  animation: adjFly var(--fly, 1.8s) linear forwards; will-change: transform; }
+@keyframes adjFly { from { transform: translateX(0) rotate(var(--tilt, 0deg)); }
+  to { transform: translateX(var(--dx, -1400px)) rotate(var(--tilt, 0deg)); } }
+/* 本人＝基準位置は中央（adjWalkInがx0→0へ運ぶ＝お茶と同じ。歩き出す前は全コマopacity:0で見えない） */
+.fx-adj-run { position: absolute; z-index: 2; left: 50%; bottom: 4%; width: var(--aw); height: var(--ah);
+  margin-left: calc(var(--aw) / -2); will-change: transform; }
+@keyframes adjWalkIn { from { transform: translateX(var(--x0)); } to { transform: translateX(0); } }
+.fx-adj.walking .fx-adj-run { animation: adjWalkIn var(--walk, 3s) linear forwards; }
+.fx-adj-body { position: absolute; inset: 0; transform-origin: 50% 100%; transition: transform .14s ease-out; }
+/* 歩調の上下＝1歩ごとに沈んで伸びる（2コマ切替の倍の周期で1往復＝お茶と同じ語彙） */
+@keyframes adjBob { 0%, 100% { transform: translateY(0) rotate(-1.4deg); }
+  50% { transform: translateY(-2.5%) rotate(1.4deg); } }
+.fx-adj.walking .fx-adj-body { animation: adjBob calc(var(--step, .26s) * 2) ease-in-out infinite; }
+/* しゃがんで溜める＝足元を支点に沈む（FB123スロットの溜めと同じ語彙） */
+.fx-adj.tame .fx-adj-body { transform: translateY(3%) scaleY(.90) scaleX(1.05);
+  transition: transform var(--tame, .42s) cubic-bezier(.55, 0, .75, .6); }
+/* キメ＝バネで勢いよく立ち上がって一回り大きく（行き過ぎて戻る） */
+.fx-adj.posed .fx-adj-body { transform: scale(1.08);
+  transition: transform .16s cubic-bezier(.2, 1.7, .4, 1); }
+.fx-adj-img { position: absolute; inset: 0; opacity: 0;
+  background-position: center bottom; background-repeat: no-repeat; background-size: contain;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); }
+.fx-adj-img.w1 { background-image: url("fx_adj2.png"); }
+.fx-adj-img.w2 { background-image: url("fx_adj3.png"); }
+.fx-adj-img.stand { background-image: url("fx_adj1.png"); }
+.fx-adj-img.pose { background-image: url("fx_adj4.png"); }
+/* 歩行＝2コマを半周期ずつ表示（steps(1)＝ぬるっと混ざらずパッと切り替わる＝お茶と同じ） */
+@keyframes adjStepA { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes adjStepB { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
+.fx-adj.walking .fx-adj-img.w1 { animation: adjStepA var(--step, .26s) steps(1, end) infinite; }
+.fx-adj.walking .fx-adj-img.w2 { animation: adjStepB var(--step, .26s) steps(1, end) infinite; }
+.fx-adj.standing .fx-adj-img.stand { opacity: 1; }
+.fx-adj.posed .fx-adj-img.stand { opacity: 0; }
+.fx-adj.posed .fx-adj-img.pose { opacity: 1; }
+/* キメの白フラッシュ（相撲と同じ語彙・一拍で消える） */
+.fx-adj-flash { position: absolute; inset: 0; z-index: 5; background: #fff; opacity: 0; }
+.fx-adj.posed .fx-adj-flash { animation: adjFlash .5s ease-out both; }
+@keyframes adjFlash { 0% { opacity: .92; } 100% { opacity: 0; } }
+/* 「アジャストー！！」＝白×青グラデの極太（サイズはJSのfitSambaKime＝枠高20%基準）。
+   ⚠️background-clip:textにtext-shadowは重ねない（真っ黒潰れ罠・FB86の教訓）＝フチはdrop-shadowの重ねがけ */
+.fx-adj-kime { position: absolute; left: 0; right: 0; top: 8%; z-index: 6; text-align: center; opacity: 0; }
+.fx-adj.posed .fx-adj-kime { opacity: 1; }
+.fx-adj-kime span { display: inline-block; white-space: nowrap;
+  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900;
+  line-height: 1.05; letter-spacing: .04em;
+  background: linear-gradient(#ffffff, #dbeafe 40%, #60a5fa 72%, #dbeafe);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 #1e3a8a) drop-shadow(0 0 3px #1d4ed8) drop-shadow(0 6px 14px rgba(0,0,0,.55)); }
+.fx-adj.posed .fx-adj-kime span { animation: adjKpop .5s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes adjKpop { 0% { transform: scale(2.6); opacity: 0; }
+  60% { transform: scale(.95); opacity: 1; }
+  100% { transform: scale(1); } }
+/* 退場 */
+@keyframes fxAdjOut { to { opacity: 0; } }
+.fx-adj.out { animation: fxAdjOut .5s ease-in forwards; }
+
 /* ══════════ サンバ（赤・8/10 FB121）＝ラボsambatest.htmlの本番移植 ══════════
    周りの4人が踊る3コマ送り＋紙吹雪＋♪→キメ（①腕組み固定・ズーム・フラッシュ・回る後光・
    「〇〇的中！！」）→退場。
