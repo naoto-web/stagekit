@@ -201,7 +201,7 @@
           }
           g.items.push({
             t: sg.v + " " + sg.nums.map(function (n) {
-              return n.length === 1 ? "０１２３４５６７８９".charAt(+n) : n;
+              return n.replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }); // 8/11 FB129＝2桁も全角
             }).join("・") + "R",
             v: sg.v, seq: seq
           });
@@ -213,7 +213,8 @@
         if (rest.indexOf(sorted[vi]) >= 0) { venue = sorted[vi]; break; }
       }
       // 表記の正規化＋終了商品の間引き（8/10 FB113→FB114修正）：場が特定でき、残りが
-      // 数字とR・区切りだけの行は「場名␣番号R」に整形（半角スペース／番号は1桁＝全角・2桁＝半角）。
+      // 数字とR・区切りだけの行は「場名␣番号R」に整形（半角スペース／番号は全角＝
+      // 8/11 FB129で2桁も全角化・旧FB113の「2桁は半角」はNaoto依頼で撤回）。
       // FB124＝「川崎５・９レース」の「レース」表記も整形・間引きの対象に（現場の実書式が
       // 「レース」で、ホワイトリスト外＝両機能とも眠っていた8/10実測への対応。判定前に除去する。
       // 「前橋四日市３・６レース」のような場2つ混じり・メモ混じりは従来どおり原文のまま＝安全側）
@@ -235,7 +236,7 @@
             if (nhBoundary === null || b < nhBoundary) nhBoundary = b;
           }
           t = venue + " " + nums.map(function (n) {
-            return n.length === 1 ? "０１２３４５６７８９".charAt(+n) : n;
+            return n.replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }); // 8/11 FB129＝2桁も全角
           }).join("・") + "R";
         }
       }
