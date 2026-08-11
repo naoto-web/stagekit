@@ -382,8 +382,10 @@
     beepAt(audioCtx ? audioCtx.currentTime + Math.max(0, delaySec) : 0);
   }
 
-  /* ---------- 発走時刻の自動シーン切替（8/9 FB95） ----------
-     トーク中の切替忘れ対策：レースの発走時刻になったらOBSのシーンを②レース観戦へ自動で切り替える。
+  /* ---------- 発走時刻の自動シーン切替（8/9 FB95・8/11 FB128で発走10秒前に前倒し） ----------
+     トーク中の切替忘れ対策：レースの発走10秒前になったらOBSのシーンを②レース観戦へ自動で切り替える。
+     （当初は発走ちょうど＝視聴者から「レース映像切り替わってないよ？」の心配コメントが出たため前倒し。
+       判定時刻に先読み秒を足すだけ＝共用のjustStartedRaceは不変・遅れ拾いの後端120秒も維持）
      実行者＝「いま表示されているソース」（FB60と同じPage Visibility判定）＝①トーク・③結果のみ。
        ④待機は対象外＝無人でレース映像だけが流れる区間を作らない（§2-3の審査設計を壊さない）。
        ⑤広告も対象外＝案件の表示義務がある画面を自動で中断しない。②自身は切替不要。
@@ -394,6 +396,7 @@
      発火は1レース1回（キーはFB71の教訓で日付込み）。発走から2分以内なら遅れて表示されたソース
      （⑤広告からの復帰・OBS再起動直後）でも切り替える＝「出しっぱなし」を拾う */
   var AUTOSW = SCENE === "talk" || SCENE === "result";
+  var SWITCH_LEAD = 10;  // 発走の何秒前に切り替えるか（8/11 FB128・0で発走ちょうどの旧動作。コンソール側ALIGN_LEADと同値に保つ）
   var SWITCH_WIN = 120;  // 発走からこの秒数まで＝そのレースが映像に映っているとみなし切替してよい
   var autoSwitched = {}; // 日付|場|R → 済
   var obsCtrlLevel = null; // OBSページ権限（デバッグ表示用。4以上＝切替可）
@@ -408,7 +411,8 @@
     var names = {};
     state.venues.forEach(function (v) { names[v.name] = true; });
     var just = window.Derive.justStartedRace(
-      allRaces().filter(function (r) { return names[r.venue]; }), nowSec(), SWITCH_WIN);
+      allRaces().filter(function (r) { return names[r.venue]; }),
+      nowSec() + SWITCH_LEAD, SWITCH_LEAD + SWITCH_WIN);
     if (!just) return;
     var k = todayStr() + "|" + just.venue + "|" + just.no;
     if (autoSwitched[k]) return;

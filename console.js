@@ -1181,6 +1181,7 @@
   var lastManualNavSec = -1; // 場・レース・サブを手で切り替えた時刻（0時からの秒）
   var ALIGN_WIN = 60;   // 発走エッジの有効幅（ドックが裏に回りタイマーが間引かれても拾える幅）
   var ALIGN_LIVE = 240; // ②切替時、発走からこの秒数まではそのレースが映像に映っているとみなす
+  var ALIGN_LEAD = 10;  // FB128＝②への自動切替は発走10秒前（オーバーレイのSWITCH_LEADと同値に保つ）
 
   function manualNav(resetResult) {
     lastManualNavSec = nowSec();
@@ -1211,7 +1212,7 @@
     var k = todayStr() + "|" + just.venue + "|" + just.no;
     if (alignDone[k]) return;
     alignDone[k] = true;
-    if (lastManualNavSec >= just.startSec) return; // 発走後すでに手で動かした＝手動優先
+    if (lastManualNavSec >= just.startSec - ALIGN_LEAD) return; // 発走後＋②切替済みの先読み10秒間（FB128）に手で動かした＝手動優先（エッジが引き戻さない）
     alignBoard(just);
   }
 
