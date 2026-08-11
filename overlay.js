@@ -461,8 +461,12 @@
       var html = cards.map(function (c) {
         var closed = c.race && now >= c.race.startSec - offSec;
         // グレードバッジ＝「〇R」の右（8/9 FB100・Naoto指定。FB99の場名横から移動）
-        var head = '<div class="vt-head">' + esc(c.venue) +
-          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gradeBadge(c.venue) + "</div>";
+        // 3〜4場でも表示する（8/11 FB126・松山GⅠ実戦でNaoto指摘）：カード幅に収めるため
+        // 長い場名（3場=4字〜・4場=3字〜）はvh-tightで頭ごと一段縮小＝「いわき平＋GⅠ」でも折り返さない
+        var gb = gradeBadge(c.venue);
+        var tight = gb && cards.length >= 3 && c.venue.length >= (cards.length >= 4 ? 3 : 4);
+        var head = '<div class="vt-head' + (tight ? " vh-tight" : "") + '">' + esc(c.venue) +
+          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + "</div>";
         var body;
         if (!c.race) {
           body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";

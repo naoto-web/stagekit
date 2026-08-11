@@ -435,10 +435,17 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .timer-cards.vt-n4 .vt-row b.closed { font-size: 17px; }
 /* タイマーカードのグレードバッジ（8/9 FB99＝場タブから移設）。
    白フチ＝信号機色（zone-red等）でカード地とバッジ色が同色になっても輪郭が残るように。
-   ⚠️3〜4場のコンパクト表示では非表示＝カード幅136〜190pxに「いわき平＋GI＋R番号」は入らず
-   場名が折り返す（実測）。並走帯のグレードはnote勝負ヘッダー・予想帯ラベルで補完される */
+   3〜4場のコンパクト表示でも表示する（8/11 FB126・松山GⅠ実戦＝FB99の非表示措置を置き換え）：
+   バッジを小型化（余白・フチを詰める）し、長い場名はJSがvh-tightを付けて頭ごと一段縮小
+   ＝カード幅136〜190pxでも「いわき平＋12R＋GⅠ」が折り返さない（nowrapは保険）。
+   縮小しきい値（3場=4字〜・4場=3字〜）はrenderTimers側・字幅の概算実測に基づく */
 .vt-head .grade-badge { box-shadow: 0 0 0 1.5px rgba(255,255,255,.7); }
-.timer-cards.vt-n3 .vt-head .grade-badge, .timer-cards.vt-n4 .vt-head .grade-badge { display: none; }
+.timer-cards.vt-n3 .vt-head, .timer-cards.vt-n4 .vt-head { white-space: nowrap; }
+.timer-cards.vt-n3 .vt-head .grade-badge, .timer-cards.vt-n4 .vt-head .grade-badge {
+  margin-left: 5px; padding: 1px 6px; box-shadow: 0 0 0 1px rgba(255,255,255,.7); }
+.timer-cards.vt-n3 .vt-head.vh-tight { font-size: 18px; }
+.timer-cards.vt-n4 .vt-head.vh-tight { font-size: 14px; }
+#scene-talk .timer-cards.vt-n3 .vt-head.vh-tight, #scene-talk .timer-cards.vt-n4 .vt-head.vh-tight { font-size: 20px; }
 .timer-cards.vt-n3 .vt-cta-main, .timer-cards.vt-n4 .vt-cta-main { font-size: 18px; }
 .timer-cards.vt-n3 .vt-cta-start, .timer-cards.vt-n4 .vt-cta-start { font-size: 22px; }
 .timer-cards.vt-n3 .vt-cta-line, .timer-cards.vt-n4 .vt-cta-line { font-size: 14px; }
