@@ -663,7 +663,10 @@
         }
         var g = null;
         glows.forEach(function (gl) {
-          if (g || gl.type !== l.type) return;
+          if (g) return;
+          // 俺たち目の的中＝FB53の重複排除でhitsは俺たち目名義だけになるが、同じ目を持つ
+          // 買目行も同じように光らせる（8/11 FB127・Naoto「普通の買目の方も同じように強調して」）
+          if (gl.type !== l.type && gl.type !== "俺たち目") return;
           l.combos.forEach(function (c) {
             if (!g && window.Keirin.comboLabel(l.type, c) === gl.comboLabel) g = gl.combo;
           });
