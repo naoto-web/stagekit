@@ -854,11 +854,15 @@ body.race-sub-on .race-sub { display: flex; }
   filter: brightness(0) invert(1) drop-shadow(0 0 14px #fff)
     drop-shadow(0 0 30px #ffe97a) drop-shadow(0 0 60px rgba(255,213,79,.85)) drop-shadow(0 0 95px rgba(255,196,0,.5)); }
 /* ガシャーンの一撃（8/11 FB132で増強＝Naoto「光が小さい」→ピークscale1.06→1.10・ブルーム4段へ）。
+   ⚠️0〜14%（=133ms）は光ゼロのゲート（8/11 FB133）：boomと同時にカケラが定位置へ閉じる
+   .lockのtransitionが0.13秒あり、閉じ切る前に光らせると開いている中央の隙間から
+   背後の白シルエットが丸見え＝「真ん中に白い〇」事故（Naoto実見）。ゲート後にカッ！と光る。
    100%の値は下のピカピカ（fxRimPulse）の0%と同値＝バーストから明滅へ継ぎ目なく引き継ぐ */
 @keyframes fxRimPika {
   0%   { opacity: 0;   transform: translate(-50%, -50%) scale(1.005); }
-  14%  { opacity: 1;   transform: translate(-50%, -50%) scale(1.10); }  /* カッ！と最大 */
-  60%  { opacity: .9;  transform: translate(-50%, -50%) scale(1.07); }
+  14%  { opacity: 0;   transform: translate(-50%, -50%) scale(1.005); } /* カケラが閉じ切るまで光らせない */
+  28%  { opacity: 1;   transform: translate(-50%, -50%) scale(1.10); }  /* カッ！と最大 */
+  65%  { opacity: .9;  transform: translate(-50%, -50%) scale(1.07); }
   100% { opacity: .45; transform: translate(-50%, -50%) scale(1.05); }
 }
 /* 消えるまでフチがピカピカ（8/11 FB132・Naoto依頼）＝バースト後は明滅へ移行し.outのフェードまで続く。
