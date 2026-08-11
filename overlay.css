@@ -851,15 +851,24 @@ body.race-sub-on .race-sub { display: flex; }
   width: calc(var(--pw) * 2); height: calc(var(--ph) * 2);
   transform: translate(-50%, -50%); opacity: 0;
   background: url("fx_coin.png") center / contain no-repeat;
-  filter: brightness(0) invert(1)
-    drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #ffe97a) drop-shadow(0 0 40px rgba(255,213,79,.75)); }
+  filter: brightness(0) invert(1) drop-shadow(0 0 14px #fff)
+    drop-shadow(0 0 30px #ffe97a) drop-shadow(0 0 60px rgba(255,213,79,.85)) drop-shadow(0 0 95px rgba(255,196,0,.5)); }
+/* ガシャーンの一撃（8/11 FB132で増強＝Naoto「光が小さい」→ピークscale1.06→1.10・ブルーム4段へ）。
+   100%の値は下のピカピカ（fxRimPulse）の0%と同値＝バーストから明滅へ継ぎ目なく引き継ぐ */
 @keyframes fxRimPika {
-  0%   { opacity: 0;  transform: translate(-50%, -50%) scale(1.005); }
-  16%  { opacity: 1;  transform: translate(-50%, -50%) scale(1.06); }  /* ガシャーンでカッ！と最大 */
-  55%  { opacity: .75; transform: translate(-50%, -50%) scale(1.04); }
-  100% { opacity: 0;  transform: translate(-50%, -50%) scale(1.025); }
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(1.005); }
+  14%  { opacity: 1;   transform: translate(-50%, -50%) scale(1.10); }  /* カッ！と最大 */
+  60%  { opacity: .9;  transform: translate(-50%, -50%) scale(1.07); }
+  100% { opacity: .45; transform: translate(-50%, -50%) scale(1.05); }
 }
-.fx-yak.boom .fx-rimlight { animation: fxRimPika .85s ease-out; }
+/* 消えるまでフチがピカピカ（8/11 FB132・Naoto依頼）＝バースト後は明滅へ移行し.outのフェードまで続く。
+   2本のアニメを同要素に張る＝後者はdelay .95s開始なので前半はfxRimPikaが専有→そのままバトンタッチ */
+@keyframes fxRimPulse {
+  0%, 100% { opacity: .45; transform: translate(-50%, -50%) scale(1.05); }
+  50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.095); }
+}
+.fx-yak.boom .fx-rimlight { animation: fxRimPika .95s ease-out,
+  fxRimPulse 1.1s ease-in-out .95s infinite; }
 /* 合体の衝撃：白フラッシュ＋衝撃波リング2本＋枠の揺れ */
 @keyframes fxHitFlash { 0% { opacity: .92; } 100% { opacity: 0; } }
 .fx-yak .fx-boom { position: absolute; inset: 0; background: #fff; opacity: 0; }

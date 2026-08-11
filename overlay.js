@@ -1592,11 +1592,12 @@
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
 
   /* 役物合体の尺（8/8 FB82）。倍率kを掛けるのは「焦らし」の2つ（寄る・震える）だけ。
-     ⚠️合体の一撃(CSS .fx-piece.lock の0.13秒)と、合体後の余韻HOLDには掛けない：
-        前者を伸ばすと叩きつけでなくスーッと寄るだけになり、後者を伸ばすと
-        決着後の見せっぱなしが延びて間延びする（Naoto実見でk=3・HOLD固定に決定） */
+     ⚠️合体の一撃(CSS .fx-piece.lock の0.13秒)には掛けない：
+        伸ばすと叩きつけでなくスーッと寄るだけになり迫力が消える（Naoto実見でk=3に決定）
+     HOLD＝合体後の余韻。8/8は1100で「間延びする」判定だったが、8/11 FB132で2400へ延長＝
+        フチが消えるまでピカピカし続けるようになり「見せっぱなし」でなくなったため（Naoto依頼） */
   var YAK_K = 3;
-  var YAK_BASE = { IN: 50, FLY: 1400, SHAKE: 700, GLOW_LAG: 180, HOLD: 1100, FADE: 450 };
+  var YAK_BASE = { IN: 50, FLY: 1400, SHAKE: 700, GLOW_LAG: 180, HOLD: 2400, FADE: 450 };
   function yakTimes() {
     var t = { IN: YAK_BASE.IN, FLY: YAK_BASE.FLY * YAK_K, SHAKE_LEN: YAK_BASE.SHAKE * YAK_K };
     t.SHAKE = t.IN + t.FLY;                 // 震え始め
