@@ -842,6 +842,24 @@ body.race-sub-on .race-sub { display: flex; }
 .fx-piece.lock { animation: none; filter: none;
   transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(1) rotate(0deg);
   transition: transform .13s cubic-bezier(.7,0,.9,.4); }
+/* 合体の瞬間のフチ光（8/11 FB131・Naoto「役物のフチがもっとピカっと光ってほしい」）＝
+   コイン画像を白シルエット化（brightness(0) invert(1)）してカケラの背後に敷き、少しだけ拡大
+   →本体はコインに隠れ、輪郭からはみ出た白フチ＋金の後光だけが「コインの形に沿って」光る。
+   ⚠️カケラ側にdrop-shadowを足す方式はNG＝4枚の継ぎ目が内側で光って「1枚のコイン」に見えなくなる
+   （.lockで影を消しているのと同じ理由）。boomと同時発火＝ガシャーンの瞬間にピカッ */
+.fx-yak .fx-rimlight { position: absolute; left: 50%; top: 50%;
+  width: calc(var(--pw) * 2); height: calc(var(--ph) * 2);
+  transform: translate(-50%, -50%); opacity: 0;
+  background: url("fx_coin.png") center / contain no-repeat;
+  filter: brightness(0) invert(1)
+    drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #ffe97a) drop-shadow(0 0 40px rgba(255,213,79,.75)); }
+@keyframes fxRimPika {
+  0%   { opacity: 0;  transform: translate(-50%, -50%) scale(1.005); }
+  16%  { opacity: 1;  transform: translate(-50%, -50%) scale(1.06); }  /* ガシャーンでカッ！と最大 */
+  55%  { opacity: .75; transform: translate(-50%, -50%) scale(1.04); }
+  100% { opacity: 0;  transform: translate(-50%, -50%) scale(1.025); }
+}
+.fx-yak.boom .fx-rimlight { animation: fxRimPika .85s ease-out; }
 /* 合体の衝撃：白フラッシュ＋衝撃波リング2本＋枠の揺れ */
 @keyframes fxHitFlash { 0% { opacity: .92; } 100% { opacity: 0; } }
 .fx-yak .fx-boom { position: absolute; inset: 0; background: #fff; opacity: 0; }

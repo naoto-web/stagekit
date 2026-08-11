@@ -1876,9 +1876,11 @@
       box.appendChild(el);
       return el;
     });
-    ["fx-halo", "fx-boom", "fx-ring", "fx-ring r2"].forEach(function (c) {
+    // fx-rimlight＝合体の瞬間のフチ光（8/11 FB131・Naoto「フチがもっとピカっと」）。
+    // カケラの背後（haloの上）に置く＝白シルエット本体はコインに隠れ、はみ出したフチと後光だけが見える
+    ["fx-halo", "fx-rimlight", "fx-boom", "fx-ring", "fx-ring r2"].forEach(function (c) {
       var e = document.createElement("div"); e.className = c;
-      if (c === "fx-halo") box.insertBefore(e, box.firstChild); else box.appendChild(e);
+      if (c === "fx-halo" || c === "fx-rimlight") box.insertBefore(e, pieces[0]); else box.appendChild(e);
     });
     cam.appendChild(box);
 
