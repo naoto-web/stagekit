@@ -6,7 +6,7 @@
            通れば C案（操作をOBS内に常設）が成立する。
 
    ・?view=output を付けた側が「出力」。付けない側が「操作」
-   ・同一オリジンであることが条件（どちらも naoto-web.github.io/tenkai/）
+   ・同一オリジンであることが条件（どちらも naoto-web.github.io/stagekit/tenkai/）
    ・操作側は2秒ごとにpingを打ち、出力側がpongを返す。
      操作側の緑/赤インジケータはこの往復で決まる＝これがC案の可否判定そのもの
 
