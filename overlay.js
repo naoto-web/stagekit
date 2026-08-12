@@ -88,107 +88,15 @@
     return allRaces().filter(function (r) { return r.startSec > now; }); // 発走したら即・次レースへ
   }
 
-  /* ---------- ③レース展開：対象レースの受信（8/12 Step3・要件§11.8） ----------
-     マスターは展開ボードのドック（naoto-web.github.io/tenkai/）。そこで場・レースを選ぶと
-     ③の出走表・ライン・予想帯がそのレースに追従する＝配信者の操作は1か所だけで済む。
-     stagekit と tenkai は同一オリジン（naoto-web.github.io）なので、パスが違ってもBCは通る。
+  /* ---------- ③レース展開の対象レース（8/12・設計変更／要件§11.8改） ----------
+     **コンソールが唯一の親**。③の出走表・ライン・予想帯は①トーク・②レース観戦とまったく同じ
+     「操作中の場＋そのレース」を見る＝③だけのための特別な配線は無い。
 
-     ⚠️必ず聞き専にすること。pingにpongを返すと、穴に敷く展開ボードの出力ソースが死んでいても
-        ドックの「出力：接続中」が緑のままになり、あちらの生存判定を壊す。
-     ⚠️ドックはドラッグ中に約30fpsで状態を流してくる。選択が変わった時だけ描き直す
-        （毎メッセージで描くとpackRaceBandの総当たりが毎フレーム走る）。 */
-  var TENKAI_BC = "tenkai-live-v1";
-  /* 展開ボードのlocalStorageキー（tenkai側 config.js の STORAGE_KEY）。
-     ⚠️読むだけ。ここへ書くと操作ドックの保存を壊す */
-  var TENKAI_LS = "keirin-tenkai-board-v1";
-  var tenkaiSel = null;    // {joCode, raceNo}＝ドックが選んでいるレース。未選択はnull＝③は空のまま
-  var tenkaiVia = "-";     // どの経路で取れたか（?debug=1の切り分け用）
-  var tenkaiLsRaw = null;  // 前回読んだ生JSON（変化検知＝毎回パースしないため）
-
-  function selOf(data) {
-    var sel = (data && data.sel) || {};
-    var jo = String(sel.joCode || ""), no = +sel.raceNo || 0;
-    return (jo && no) ? { joCode: jo, raceNo: no } : null;
-  }
-  /** 選択が実際に変わった時だけ描き直す。ドラッグ中の座標更新では呼ばれても素通りする */
-  function setTenkaiSel(next, via) {
-    var was = tenkaiSel ? tenkaiSel.joCode + "|" + tenkaiSel.raceNo : "";
-    var now = next ? next.joCode + "|" + next.raceNo : "";
-    tenkaiVia = via;
-    if (was === now) return;
-    tenkaiSel = next;
-    renderPreds();
-    renderStartList();
-    renderDbg();
-  }
-
-  /* localStorage経路＝土台。BroadcastChannelは「変化があった瞬間」しか流れないので、
-     ドックが先にレースを選び、あとから③のブラウザソースが起動（or 更新）されると
-     BCだけでは永遠に何も受け取れない（8/12 実機で発生）。
-     ドック・展開ボードの出力・このオーバーレイは同一オリジンで同じ保存領域を共有しているため、
-     ここを読めば「今どのレースを選んでいるか」が起動直後から確実に分かる。
-     ＝stagekit本体と同じ二段構え（ポーリングが土台・BCが高速経路） */
-  function pollTenkaiSel() {
-    var raw = null;
-    try { raw = localStorage.getItem(TENKAI_LS); } catch (e) { return; }
-    if (raw === tenkaiLsRaw) return; // 文字列比較だけで済ませる（変化が無ければパースしない）
-    tenkaiLsRaw = raw;
-    var data = null;
-    try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = null; }
-    setTenkaiSel(selOf(data), "LS");
-  }
-
-  var tenkaiCh = null;
-  function initTenkaiChannel() {
-    if (SCENE !== "tenkai") return;
-    pollTenkaiSel(); // 起動直後に現在の選択へ追いつく
-
-    // 他ページの書き込みは storage イベントで即座に届く（BCが通らない環境の保険にもなる）
-    window.addEventListener("storage", function (ev) {
-      if (!ev.key || ev.key === TENKAI_LS) pollTenkaiSel();
-    });
-
-    if (typeof BroadcastChannel === "undefined") return;
-    try {
-      tenkaiCh = new BroadcastChannel(TENKAI_BC);
-      tenkaiCh.onmessage = function (ev) {
-        var m = ev.data || {};
-        if (m.type !== "state" || !m.data) return;
-        setTenkaiSel(selOf(m.data), "BC");
-      };
-      wantTenkaiState();
-    } catch (e) { tenkaiCh = null; /* BCが無くてもlocalStorage経路だけで成立する */ }
-  }
-
-  /* ドックへ「今の状態をください」と聞く。展開ボードは render() のときしか状態を流さないので、
-     ドックを開いたまま放置されていると、後から起動した③は永久に何も受け取れない（8/12 実機）。
-     ドック側は onWant で publishLive(true) を返す＝**出力ソースの生存判定は汚さない**（live.js参照）。
-     localStorage経路とは独立の保険。どちらか一方が通れば③は正しく描ける */
-  function wantTenkaiState() {
-    if (!tenkaiCh) return;
-    try { tenkaiCh.postMessage({ type: "want" }); } catch (e) {}
-  }
-
-  /** 場コード→場名（時刻表から逆引き）。時刻表の到着前は空＝届いた時点で描き直される */
-  function venueNameOfJo(jo) {
-    var name = "";
-    if (timetable) {
-      (timetable.venues || []).forEach(function (tv) {
-        if (String(tv.joCode) === String(jo)) name = tv.name;
-      });
-    }
-    return name;
-  }
-  /** ③が描くレース。未選択・場コード未解決は {name:"", no:0} */
-  function tenkaiRace() {
-    if (!tenkaiSel) return { name: "", no: 0 };
-    return { name: venueNameOfJo(tenkaiSel.joCode), no: tenkaiSel.raceNo };
-  }
-  /** ③の予想帯が引くレースキー。コンソールの操作中レース（currentKey）とは独立 */
-  function tenkaiKey() {
-    var t = tenkaiRace();
-    return t.name && t.no ? window.Derive.raceKey(t.name, t.no) : null;
-  }
+     経緯：当初は展開ボードのドックを親にしていたが、ドック→③の伝送が実機で成立しなかった
+     （BroadcastChannelは変化の瞬間しか流れず、localStorage共有もOBSでは効かなかった）。
+     中央の展開図とのズレは、**ボード側をコンソールに追従させる**ことで解決した
+     （tenkai の「配信に追従」・既定ON）。＝親は1つ、ボードもオーバーレイもそれを見る、
+     という形になり、両者のあいだの通信そのものが不要になった。 */
 
   /* ---------- ヘッダー：本日のnote勝負（旧・場タブ）（8/9 FB99） ----------
      場タブはタイマーカード・予想帯の場名Rラベルと情報が重複するため廃止し、
@@ -1213,12 +1121,10 @@
 
       // 予想帯＝①トーク（tband-）・②レース観戦（band-）・③レース展開（kband-）で同一様式：
       // メンバーカラーのヘッダー（〇〇予想＋noteバッジ＋投資/回収の日次累計）＋俺たち目＋買い目チップ
+      // ③は②とまったく同じレース（操作中のレース）を見る＝専用の配線は持たない（8/12設計変更）
       ["band-", "tband-", "kband-"].forEach(function (bp) {
         var bandHead = $(bp + "head-" + slot);
         if (!bandHead) return;
-        // ③は展開ボードのドックが選んだレース＝②の操作中レースとは独立（8/12 Step3・要件§11.8）。
-        // 未選択・買い目なしとも bKey/rp が空になり、ヘッダーだけ出て中身は空になる（仕様どおり）
-        var bKey = bp === "kband-" ? tenkaiKey() : key;
         var bandName = $(bp + "name-" + slot);
         // note予想バッジは廃止（8/6 FB25・レースラベル側の🔥表記のみ残す）。
         // 空席は文言ごと出さない＝③は席を畳まないので「名前の無い『予想』」が画面に残るため（8/12）
@@ -1284,7 +1190,7 @@
           // metaを先に確定させてから買い目を組む（FB58・順序に意味あり）
           var bMeta = $(bp + "meta-" + slot);
           if (bMeta) {
-            var rpm = rc && bKey ? window.Derive.resolvePred(state, bKey, rc.id) : null;
+            var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
             var mt = rpm && (rpm.points || rpm.invest > 0)
               ? (rpm.points ? "合計 " + rpm.points + "点" : "") +
                 (rpm.invest > 0 ? (rpm.points ? "　" : "") + "投資 " + fmtYen(rpm.invest) : "")
@@ -1297,7 +1203,7 @@
           // 空席は中身ごと空にする＝③は席を畳まないので、誰もいない枠にレースラベルだけ
           // 残ると「予想を出し忘れている」ように見える（8/12）
           band.innerHTML = !rc ? ""
-            : (bKey ? raceColHead(rc, bKey, true) : "") + raceBuyHtml(rc, bKey, false, true, true);
+            : (key ? raceColHead(rc, key, true) : "") + raceBuyHtml(rc, key, false, true, true);
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
         }
       });
@@ -1350,17 +1256,15 @@
 
   function renderStartList() {
     var v = state.venues[state.activeVenue];
-    renderStartListInto(SL_TALK, v ? v.name : "", v ? state.currentRace[v.name] : null, false);
-    if (SCENE === "tenkai") {
-      var t = tenkaiRace();
-      // 未選択は空のまま（枠だけ）。次の予想レース等へ自動追従はしない＝
-      // 穴に敷いた展開ボードはドックの選択しか映せないので、ここだけ動くとズレる（§11.8）
-      renderStartListInto(SL_TK, t.name, t.no, true);
-    }
+    var vName = v ? v.name : "";
+    var rNo = v ? state.currentRace[v.name] : null;
+    renderStartListInto(SL_TALK, vName, rNo);
+    // ③は①とまったく同じレースを描く（8/12設計変更）。中央の展開図はボード側が
+    // 同じコンソールに追従するので揃う＝ここに専用の分岐は要らない
+    if (SCENE === "tenkai") renderStartListInto(SL_TK, vName, rNo);
   }
 
-  /** @param {boolean} blankIfUnset レース未選択のとき「取得待ち」も出さず完全に空にする（③用） */
-  function renderStartListInto(ids, vName, rNo, blankIfUnset) {
+  function renderStartListInto(ids, vName, rNo) {
     var el = $(ids.list);
     if (!el) return;
     var race = null;
@@ -1382,8 +1286,7 @@
       }
     }
     if (!race || !race.racers || !race.racers.length) {
-      el.innerHTML = (blankIfUnset && (!vName || !rNo))
-        ? "" : '<li class="slist-empty">出走表データ取得待ち</li>';
+      el.innerHTML = '<li class="slist-empty">出走表データ取得待ち</li>';
       // 前のレースのライン行を残さない（別レースの並びが出たままになるのを防ぐ）
       var nb0 = $(ids.narabi);
       if (nb0) nb0.classList.add("hidden");
@@ -2684,14 +2587,9 @@
 
   function renderDbg() {
     if (!DEBUG) return;
-    // ③は「ドックと繋がっているか・どのレースを掴んでいるか」が最初の切り分けポイント
-    var tk = "";
-    if (SCENE === "tenkai") {
-      var t = tenkaiRace();
-      tk = "｜③ " + (!tenkaiSel ? "ドック未選択"
-        : t.name ? t.name + " " + t.no + "R"
-        : "場コード" + tenkaiSel.joCode + "（時刻表待ち）") + "(" + tenkaiVia + ")";
-    }
+    // 今どのレースを描いているか＝①②③とも同じ（操作中のレース）
+    var cv = state.venues[state.activeVenue];
+    var tk = cv ? "｜" + cv.name + " " + (state.currentRace[cv.name] || "?") + "R" : "";
     $("dbg").textContent = "scene:" + SCENE + tk + "｜rev " + state.rev +
       "｜経路 " + syncPath + "｜BC " + (window.Sync.bcAlive ? "alive" : "-") +
       // OBS権限＝自動シーン切替（FB95）の可否確認用。4以上＝setCurrentScene可
@@ -2728,14 +2626,11 @@
       renderBrb();
       renderStartList();
       renderVenueTabs(); // note勝負の終了判定は時刻表基準（8/10 FB113）＝時刻表が届いたら即再評価
-      // ③は場コード→場名の逆引きに時刻表が要る。届いた時点で予想帯のレースキーが確定する
-      if (SCENE === "tenkai") renderPreds();
     }).catch(function () {
       setTimeout(loadTimetable, 15000); // 起動直後の取得失敗で10分空白にならないよう即リトライ
     });
   }
   loadTimetable();
-  initTenkaiChannel(); // ③のみ：展開ボードのドックからレース選択を購読（聞き専）
   setInterval(loadTimetable, (window.APP_CONFIG.TT_POLL_MS || 600000));
 
   var fitTick = 0;
@@ -2749,9 +2644,6 @@
       fitTalkBands(); fitRaceBands();
       fitNarabi(SL_TALK.narabi); fitNarabi(SL_TK.narabi);
     }
-    // 2秒ごと＝③の対象レースを取り直す。保存を読む経路とドックへ聞く経路の二重化＝
-    // どちらか一方が通れば正しく描ける（8/12・BCだけでは起動順に依存して空になった）
-    if (SCENE === "tenkai" && fitTick % 8 === 0) { pollTenkaiSel(); wantTenkaiState(); }
     if (nhBoundary !== null && nowSec() >= nhBoundary) renderVenueTabs(); // note勝負＝終了レースを個々に消す（8/10 FB113）
     sweepHitGlows();    // 的中買目チップ強調の期限切れ掃除（8/10 FB119・27秒で通常表示へ）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
