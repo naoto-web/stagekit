@@ -13,6 +13,25 @@
      名前を分ければ、テストと本番は同じOBS内に同居しても互いに干渉しない。 */
   var BC_NAME = "live-sync-v1" + (cfg.IS_TEST_BACKEND ? "-test" : "");
 
+  var SAVE_RETRY = 3;         // 保存のやり直し回数（0.6→1.2→1.8秒と間隔を空ける）
+  var SAVE_BACKOFF_MS = 600;
+
+  /* GASは混雑・エラー・権限切れのとき、JSONではなく**HTMLのエラーページ**を返す。
+     そのまま r.json() に渡すと「Unexpected token '<'」という中身の分からない例外になり、
+     生HTMLの断片が画面に出てしまう（8/12・コンソールの保存失敗として実際に発生）。
+     ここで1か所に集約し、短く意味の分かるエラーへ翻訳する。 */
+  function asJson(r) {
+    return r.text().then(function (t) {
+      try { return JSON.parse(t); }
+      catch (e) {
+        var why = r.status === 401 || r.status === 403 ? "権限（再承認が要るかも）"
+          : r.status >= 500 ? "GAS側のエラー"
+          : "混雑かエラーページ";
+        throw new Error("GASがJSONを返しませんでした（HTTP " + r.status + "・" + why + "）");
+      }
+    });
+  }
+
   var Sync = {
     channel: null,
     lastRev: 0,
@@ -40,7 +59,7 @@
     /* ---------- GAS読み取り ---------- */
     fetchState: function () {
       return fetch(cfg.GAS_URL + "?action=state", { redirect: "follow" })
-        .then(function (r) { return r.json(); })
+        .then(asJson)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "state fetch failed");
           return j.state; // 未初期化ならnull
@@ -49,7 +68,7 @@
     fetchTimetable: function (day, refresh) {
       var url = cfg.GAS_URL + "?action=timetable&day=" + (day ? 1 : 0) + (refresh ? "&refresh=1" : "");
       return fetch(url, { redirect: "follow" })
-        .then(function (r) { return r.json(); })
+        .then(asJson)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "timetable fetch failed");
           return j.timetable;
@@ -59,7 +78,7 @@
     fetchResults: function (jo, force) {
       var url = cfg.GAS_URL + "?action=results&jo=" + encodeURIComponent(jo) + (force ? "&force=1" : "");
       return fetch(url, { redirect: "follow" })
-        .then(function (r) { return r.json(); })
+        .then(asJson)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "results fetch failed");
           return j.results || [];
@@ -69,7 +88,7 @@
     fetchNarabi: function (jo, race) {
       var url = cfg.GAS_URL + "?action=narabi&jo=" + encodeURIComponent(jo) + "&race=" + (+race || 0);
       return fetch(url, { redirect: "follow" })
-        .then(function (r) { return r.json(); })
+        .then(asJson)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "narabi fetch failed");
           return { narabi: j.narabi || "", scores: j.scores || {} };
@@ -84,24 +103,38 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(body),
         redirect: "follow",
-      }).then(function (r) { return r.json(); });
+      }).then(asJson);
     },
-    saveState: function (key, state) {
+    /* GASは混雑時にHTMLのエラーページを返したり、ときどき落ちたりする（8/12・実測で本番が36秒や失敗）。
+       1回失敗しただけで配信者の入力（予想・結果）が消えるのは配信事故なので、**自動で数回やり直す**。
+       同じstateを2回書いてもrevが進むだけで害はない＝やり直して安全な操作。
+       @param {number} [attempt] 内部用の試行回数 */
+    saveState: function (key, state, attempt) {
       var self = this;
-      // 楽観送信（8/6）：GAS保存の完了を待たずBroadcastChannelへ先に流す
-      // ＝BCが通る環境（同一ブラウザ/OBS内）ではレース切替などが即時反映される
-      // revを外して送る＝受信側の「同一revはスキップ」ガードを通過させるため
-      var optimistic = Object.assign({}, state);
-      delete optimistic.rev;
-      this.broadcast({ type: "state", state: optimistic });
+      attempt = attempt || 0;
+      if (!attempt) {
+        // 楽観送信（8/6）：GAS保存の完了を待たずBroadcastChannelへ先に流す
+        // ＝BCが通る環境（同一ブラウザ/OBS内）ではレース切替などが即時反映される
+        // revを外して送る＝受信側の「同一revはスキップ」ガードを通過させるため
+        var optimistic = Object.assign({}, state);
+        delete optimistic.rev;
+        this.broadcast({ type: "state", state: optimistic });
+      }
       return this.post({ key: key, action: "setState", state: state }).then(function (j) {
         if (!j.ok) throw new Error(j.error || "save failed");
         state.rev = j.rev;
         self.lastRev = j.rev;
         self.broadcast({ type: "state", state: state }); // rev確定版も送る
         return j.rev;
+      }).catch(function (e) {
+        // 鍵ちがい等の「やり直しても直らない失敗」は即座に諦める（無駄打ちで混雑を悪化させない）
+        if (attempt >= SAVE_RETRY || /key|権限/i.test(e && e.message || "")) throw e;
+        self.saveRetries++;
+        return new Promise(function (r) { setTimeout(r, SAVE_BACKOFF_MS * (attempt + 1)); })
+          .then(function () { return self.saveState(key, state, attempt + 1); });
       });
     },
+    saveRetries: 0,   // やり直した回数（診断表示用）
 
     /* ---------- オーバーレイ用ポーリング ---------- */
     startPolling: function (onState, onError) {
