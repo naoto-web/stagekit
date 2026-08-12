@@ -8,6 +8,14 @@
   var KEY = params.get("key") || localStorage.getItem("console_key") || "";
   if (params.get("key")) localStorage.setItem("console_key", params.get("key"));
 
+  /* 保守用の項目を表示する（8/12 Naoto要望）。
+     名簿・締切オフセットは配信者が触る場面が無く、画面を圧迫するだけなので既定で隠す。
+     ⚠️隠すのはCSSだけで、入力欄はDOMに残したまま値も入れる。
+     save() がこの欄を読み戻して state に書くので、要素を消すと保存のたびに
+     名簿が空・締切が既定値で上書きされる（＝チームカラーが全部飛ぶ）。
+     変更が要るときは URL に &admin=1 を付けて開く。 */
+  if (params.get("admin") === "1") document.documentElement.classList.add("admin-on");
+
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {

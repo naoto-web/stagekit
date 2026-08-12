@@ -65,6 +65,13 @@ details.card[open] summary { margin-bottom: 10px; }
 
 .lbl { display: block; font-size: 12px; color: #9aa0ab; font-weight: 700; margin: 10px 0 4px; }
 .lbl.inline { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+
+/* 保守用の項目（名簿・締切オフセット）＝配信者は触らないので既定で隠す（8/12 Naoto要望）。
+   ⚠️入力欄はDOMに残したまま隠すだけ。save()がここを読み戻して state に書くので、
+   要素ごと消すと保存のたびに名簿が空・締切が既定値で上書きされる（チームカラーが全部飛ぶ）。
+   直すときは URL に &admin=1 を付けて開く（console.js が html に .admin-on を付ける）。
+   :not() 側で消しているので、表示時は各要素の本来の display がそのまま戻る */
+html:not(.admin-on) .admin-only { display: none; }
 .row { display: flex; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .row.gap { gap: 8px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }

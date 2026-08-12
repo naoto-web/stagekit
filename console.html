@@ -149,12 +149,15 @@
     <button class="btn small" id="btn-seat-swap" title="席1と席2を入れ替えて即保存">⇄ 席替え</button>
     <select id="racer-2" class="inp slim"></select>
   </div>
-  <label class="lbl">配信者の名簿（1行に1人：名前 チームカラー。色＝青/緑/オレンジ/赤/ピンク/黄色 か #RRGGBB。カメラ枠・ネームプレートに反映）</label>
-  <textarea id="roster" class="inp" rows="6"></textarea>
+  <!-- 名簿・締切オフセットは配信者が触らないので既定で非表示（8/12）。
+       ⚠️DOMから消してはいけない＝save()がここを読み戻すため、消すと保存のたびに
+       名簿が空・締切が既定値で上書きされる。直すときは URL に &admin=1 を付けて開く -->
+  <label class="lbl admin-only">配信者の名簿（1行に1人：名前 チームカラー。色＝青/緑/オレンジ/赤/ピンク/黄色 か #RRGGBB。カメラ枠・ネームプレートに反映）</label>
+  <textarea id="roster" class="inp admin-only" rows="6"></textarea>
 
   <div class="row gap">
-    <label class="lbl inline">公式締切 発走−<input type="number" id="cfg-close" class="inp tiny">分</label>
-    <label class="lbl inline">民間締切 発走−<input type="number" id="cfg-netclose" class="inp tiny">分</label>
+    <label class="lbl inline admin-only">公式締切 発走−<input type="number" id="cfg-close" class="inp tiny">分</label>
+    <label class="lbl inline admin-only">民間締切 発走−<input type="number" id="cfg-netclose" class="inp tiny">分</label>
     <label class="lbl inline"><input type="checkbox" id="cfg-autoresults"> 結果の自動確定（取得したら人の確認なしで即反映）</label>
   </div>
   <div class="row gap">
