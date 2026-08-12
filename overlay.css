@@ -1746,8 +1746,9 @@ body.v2 #scene-race .panel.slot-b .band-head { justify-content: flex-end; }
 
 /* 中央のライン枠。top/height/left/width とチップ・苗字のサイズはすべてJSが実測から入れる。
    ここの値は取得前の初期表示用フォールバック */
+/* align-items:flex-start＝白窓をヘッダー行の「上辺」に合わせる（8/13 FB・centerだと下寄りに見えた） */
 .rb-line { display: none; position: absolute; top: 0; height: 52px; z-index: 3;
-  align-items: center; }
+  align-items: flex-start; }
 body.v2 #scene-race .rb-line { display: flex; }
 body.v2 #scene-race .rb-line.hidden { display: none; }
 /* 枠の意匠＝白地に黒字（8/13 FB）。左右どちらのメンバーカラーにも寄らない中立の窓にして、
@@ -1764,9 +1765,9 @@ body.v2 .rb-line .narabi-row {
 }
 /* 場名＋R＝②には場名バーが無いので、どのレースの並びかをここで示す。
    2段組み＝縦を使って横幅を節約し、そのぶんを苗字に回す（8/13 FB） */
-/* 場名＋Rは2段組み＝縦を使って横幅を節約し、そのぶんを苗字に回す（8/13 FB） */
-body.v2 .rb-line .nb-race { display: flex; flex-direction: column; align-items: center;
-  font-size: var(--rbrace, 22px); font-weight: 900; color: #16202e; line-height: 1.04;
+/* 場名＋Rは1行（8/13 FB）。縦より横に余裕があるので、2段にせず1行で大きく出す */
+body.v2 .rb-line .nb-race { display: flex; flex-direction: row; align-items: center; gap: 9px;
+  font-size: var(--rbrace, 22px); font-weight: 900; color: #16202e; line-height: 1;
   white-space: nowrap; flex: 0 0 auto; }
 body.v2 .rb-line .nb-arrow { font-size: calc(var(--rbchip, 30px) * .9); color: #16202e; }
 /* ライン同士の区切り「・」＝8/13 FBで復活（gapだけだと切れ目が読み取れない） */
@@ -1781,10 +1782,8 @@ body.v2 .rb-line .car { width: var(--rbchip, 30px); height: var(--rbchip, 30px);
   font-size: calc(var(--rbchip, 30px) * .93); border-radius: 5px; }
 body.v2 .rb-line .nb-nm { font-size: var(--rbnm, 16px); font-weight: 900; color: #16202e;
   line-height: 1; white-space: nowrap; letter-spacing: -.03em; }
-/* 苗字なし（&ln=0）＝チップだけ。高さがまるごとチップに回るのでJSが大きく取る。
-   場名Rは1行に戻す（縦を節約する必要がないため） */
+/* 苗字なし（&ln=0）＝チップだけ。高さがまるごとチップに回るのでJSが大きく取る */
 body.v2:not(.ln-name) .rb-line .nb-nm { display: none; }
-body.v2:not(.ln-name) .rb-line .nb-race { flex-direction: row; gap: 8px; }
 
 /* メンバーカラー枠を2倍に（Naoto指定「いったん2倍」）＝白テーマの3px → 6px。
    box-sizing:border-box なので要素の外形は不変＝OBSの穴座標には影響しない。

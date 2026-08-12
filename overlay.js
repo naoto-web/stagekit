@@ -1477,8 +1477,8 @@
       }
       box.style.setProperty("--rbchip", chip + "px");
       box.style.setProperty("--rbnm", nm + "px");
-      // 場名Rは苗字ありのとき2段組み＝1段あたり内寸の42%まで
-      box.style.setProperty("--rbrace", Math.round(inner * (LINE_NAMES ? 0.42 : 0.62)) + "px");
+      // 場名Rは1行（8/13 FB「縦より横に余裕があるから1行で大きく」）＝内寸の62%まで使う
+      box.style.setProperty("--rbrace", Math.round(inner * 0.62) + "px");
     }
     fitNarabi("narabi-race"); // 幅が確定してから縮小判定（先に測ると常に0幅になる）
   }
