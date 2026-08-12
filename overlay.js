@@ -1465,9 +1465,14 @@
     var head = $("band-head-a");
     var hr = head ? head.getBoundingClientRect() : null;
     if (hr && hr.height > 0) {
-      box.style.top = Math.round(hr.top - br.top) + "px";
-      box.style.height = Math.round(hr.height) + "px";
-      var inner = hr.height - 10;           // padding 3×2＋border 2×2
+      /* 上端は「帯の見た目の上端」＝予想パネルの枠線の外側に合わせる（8/13 FB）。
+         枠線はメンバーカラーで塗られていて帯の一部に見えるため、ヘッダー本体の上端
+         （＝枠線6pxの内側）に合わせると、その6pxが色の帯として上に残ってズレて見える。
+         高さ＝帯の上端からヘッダー行の下端まで＝買い目エリアには一切かからない */
+      var h = hr.bottom - br.top;
+      box.style.top = "0px";
+      box.style.height = Math.round(h) + "px";
+      var inner = h - 10;                   // padding 3×2＋border 2×2
       var nm = 0, chip;
       if (LINE_NAMES) {
         nm = Math.max(12, Math.min(26, Math.round(inner * 0.37)));
