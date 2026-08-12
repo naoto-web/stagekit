@@ -138,6 +138,7 @@
     setTenkaiSel(selOf(data), "LS");
   }
 
+  var tenkaiCh = null;
   function initTenkaiChannel() {
     if (SCENE !== "tenkai") return;
     pollTenkaiSel(); // 起動直後に現在の選択へ追いつく
@@ -149,13 +150,23 @@
 
     if (typeof BroadcastChannel === "undefined") return;
     try {
-      var ch = new BroadcastChannel(TENKAI_BC);
-      ch.onmessage = function (ev) {
+      tenkaiCh = new BroadcastChannel(TENKAI_BC);
+      tenkaiCh.onmessage = function (ev) {
         var m = ev.data || {};
         if (m.type !== "state" || !m.data) return;
         setTenkaiSel(selOf(m.data), "BC");
       };
-    } catch (e) { /* BCが使えなくてもlocalStorage経路だけで成立する */ }
+      wantTenkaiState();
+    } catch (e) { tenkaiCh = null; /* BCが無くてもlocalStorage経路だけで成立する */ }
+  }
+
+  /* ドックへ「今の状態をください」と聞く。展開ボードは render() のときしか状態を流さないので、
+     ドックを開いたまま放置されていると、後から起動した③は永久に何も受け取れない（8/12 実機）。
+     ドック側は onWant で publishLive(true) を返す＝**出力ソースの生存判定は汚さない**（live.js参照）。
+     localStorage経路とは独立の保険。どちらか一方が通れば③は正しく描ける */
+  function wantTenkaiState() {
+    if (!tenkaiCh) return;
+    try { tenkaiCh.postMessage({ type: "want" }); } catch (e) {}
   }
 
   /** 場コード→場名（時刻表から逆引き）。時刻表の到着前は空＝届いた時点で描き直される */
@@ -2738,8 +2749,9 @@
       fitTalkBands(); fitRaceBands();
       fitNarabi(SL_TALK.narabi); fitNarabi(SL_TK.narabi);
     }
-    // 2秒ごと＝③の対象レースを展開ボードの保存から取り直す（BCが届かなくても必ず追いつく土台）
-    if (SCENE === "tenkai" && fitTick % 8 === 0) pollTenkaiSel();
+    // 2秒ごと＝③の対象レースを取り直す。保存を読む経路とドックへ聞く経路の二重化＝
+    // どちらか一方が通れば正しく描ける（8/12・BCだけでは起動順に依存して空になった）
+    if (SCENE === "tenkai" && fitTick % 8 === 0) { pollTenkaiSel(); wantTenkaiState(); }
     if (nhBoundary !== null && nowSec() >= nhBoundary) renderVenueTabs(); // note勝負＝終了レースを個々に消す（8/10 FB113）
     sweepHitGlows();    // 的中買目チップ強調の期限切れ掃除（8/10 FB119・27秒で通常表示へ）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
