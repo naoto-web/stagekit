@@ -1414,7 +1414,9 @@
     // 「ライン」の見出し文字＝8/10 FB115で削除（Naoto「いらないかも」・そのぶんチップを大きく）
     nb.innerHTML = ((lineType && !o.noType) ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
       // 場名＋R＝②は場名バーを置いていない（7/29 FB4）ので、ラインの左に添えて「どのレースの並びか」を示す
-      (o.race ? '<span class="nb-race">' + esc(vName) + " " + esc(String(rNo)) + "R</span>" : "") +
+      // 場名とRは2段組み＝1行だと「西武園 11R」で240px近く食い、そのぶん苗字が縮小される。
+      // 縦は枠を広げた分の余りがあるので、高さを使って幅を節約する（8/13 FB）
+      (o.race ? '<span class="nb-race"><b>' + esc(vName) + "</b><b>" + esc(String(rNo)) + "R</b></span>" : "") +
       '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {

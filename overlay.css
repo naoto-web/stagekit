@@ -1740,11 +1740,13 @@ body.debug .dbg { display: block; }
 body.v2 #scene-race .band-inv { display: none; }
 /* 右パネルの見出しを右端へ寄せて中央を空ける */
 body.v2 #scene-race .panel.slot-b .band-head { justify-content: flex-end; }
-/* ヘッダー行を高くしてラインの居場所を作る（苗字ありのときだけ） */
-body.v2.ln-name #scene-race .band-head { min-height: 72px; }
+/* ヘッダー行を高くしてラインの居場所を作る（苗字ありのときだけ）。
+   8/13 FB「もう少し上下に広げて文字を大きく」で72→88px＝買い目エリアから計36px借りている。
+   予想帯は上が映像(y864)・下が画面端(y1072)で208px固定＝これ以上は買い目を削るしかない */
+body.v2.ln-name #scene-race .band-head { min-height: 88px; }
 
 /* 中央のライン枠。left/width はJS（fitRaceLine）が配信者名の実測から入れる */
-.rb-line { display: none; position: absolute; top: 0; height: 72px; z-index: 3;
+.rb-line { display: none; position: absolute; top: 0; height: 88px; z-index: 3;
   align-items: center; }
 body.v2 #scene-race .rb-line { display: flex; }
 body.v2 #scene-race .rb-line.hidden { display: none; }
@@ -1761,17 +1763,20 @@ body.v2 .rb-line .narabi-row {
   border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
 /* 場名＋R＝②には場名バーが無いので、どのレースの並びかをここで示す。
-   枠の高さいっぱいまで大きく（8/13 FB） */
-body.v2 .rb-line .nb-race { font-size: 40px; font-weight: 900; color: #16202e;
-  white-space: nowrap; flex: 0 0 auto; line-height: 1; }
-body.v2 .rb-line .nb-arrow { font-size: 34px; color: #16202e; }
+   2段組み＝縦を使って横幅を節約し、そのぶんを苗字に回す（8/13 FB） */
+body.v2 .rb-line .nb-race { display: flex; flex-direction: column; align-items: center;
+  font-size: 34px; font-weight: 900; color: #16202e; line-height: 1.04;
+  white-space: nowrap; flex: 0 0 auto; }
+body.v2 .rb-line .nb-arrow { font-size: 38px; color: #16202e; }
 /* ライン同士の区切り「・」＝8/13 FBで復活（gapだけだと切れ目が読み取れない） */
-body.v2 .rb-line .nb-dot { display: block; font-size: 26px; color: #16202e; opacity: .5; }
+body.v2 .rb-line .nb-dot { display: block; font-size: 30px; color: #16202e; opacity: .5; }
 body.v2 .rb-line .nb-group { gap: 10px; }
-body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-body.v2 .rb-line .car { width: 34px; height: 34px; font-size: 32px; border-radius: 5px; }
-body.v2 .rb-line .nb-nm { font-size: 17px; font-weight: 900; color: #16202e;
-  line-height: 1; white-space: nowrap; letter-spacing: -.02em; }
+body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+/* 枠を88pxに広げた分をチップと苗字へ配分（8/13 FB・スマホ視聴での可読性が主目的）。
+   内寸78px＝チップ44＋隙間2＋苗字26＋padding6 でちょうど収まる */
+body.v2 .rb-line .car { width: 44px; height: 44px; font-size: 41px; border-radius: 6px; }
+body.v2 .rb-line .nb-nm { font-size: 26px; font-weight: 900; color: #16202e;
+  line-height: 1; white-space: nowrap; letter-spacing: -.03em; }
 /* 苗字なし（&ln=0）＝ヘッダーを広げる必要がないので買い目エリアは元の高さのまま。
    浮いた高さぶんチップを大きくする */
 body.v2:not(.ln-name) .rb-line { height: 52px; }
