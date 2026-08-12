@@ -1777,11 +1777,12 @@ body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: 
 body.v2 .rb-line .car { width: 44px; height: 44px; font-size: 41px; border-radius: 6px; }
 body.v2 .rb-line .nb-nm { font-size: 26px; font-weight: 900; color: #16202e;
   line-height: 1; white-space: nowrap; letter-spacing: -.03em; }
-/* 苗字なし（&ln=0）＝ヘッダーを広げる必要がないので買い目エリアは元の高さのまま。
-   浮いた高さぶんチップを大きくする */
+/* 苗字なし＝既定（8/13 FB）。ヘッダーを広げないので買い目エリアは1pxも削らない。
+   浮いた高さぶんチップを大きくする。場名Rは2段だと52pxに入らないので1行へ戻す */
 body.v2:not(.ln-name) .rb-line { height: 52px; }
 body.v2:not(.ln-name) .rb-line .nb-nm { display: none; }
 body.v2:not(.ln-name) .rb-line .car { width: 40px; height: 40px; font-size: 38px; }
+body.v2:not(.ln-name) .rb-line .nb-race { flex-direction: row; gap: 8px; font-size: 32px; }
 
 /* メンバーカラー枠を2倍に（Naoto指定「いったん2倍」）＝白テーマの3px → 6px。
    box-sizing:border-box なので要素の外形は不変＝OBSの穴座標には影響しない。

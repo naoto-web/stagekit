@@ -17,7 +17,10 @@
      既定OFFにしておかないと公開した瞬間に本番の②が変わる。検証OKなら既定trueの1行で昇格。
      &ln=0 … 車番チップの下の苗字を消す（幅・可読性が厳しいときの逃げ道＝Naoto「泣く泣く苗字なし」） */
   var V2 = params.get("v2") === "1";
-  var LINE_NAMES = params.get("ln") !== "0";
+  /* 苗字は既定OFF（8/13 FBで反転）。苗字を出すにはヘッダー行を52→88pxに広げる必要があり、
+     その36pxは買い目エリアから借りるしかない＝元から小さい予想枠をさらに削ることになるため。
+     &ln=1 で検証用に出せるが、その状態は買い目が狭くなっていると理解して見ること */
+  var LINE_NAMES = params.get("ln") === "1";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
