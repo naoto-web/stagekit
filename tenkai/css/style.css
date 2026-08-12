@@ -1,0 +1,479 @@
+/* ===========================================================
+   競輪 展開ボード — スタイル
+   路面・線の配色はすべて独自設計（他所の配色を流用しない）
+   =========================================================== */
+
+:root {
+  --ui-bg:        #16181d;
+  --ui-panel:     #212530;
+  --ui-border:    #333949;
+  --ui-text:      #e7ebf2;
+  --ui-muted:     #8b93a5;
+  --ui-accent:    #3d8bfd;
+
+  /* バンク路面（アスファルト系グレー） */
+  /* 外側（上）を暗く、内側（下）を明るくして奥行きを出す */
+  --track-top:    #6f777f;
+  --track-bottom: #9aa2a9;
+  --track-edge:   #cfd5da;
+  --outer-wall:   #2b313a;
+  --infield:      #41503c;
+
+  /* 走路の目安線 */
+  --line-outer:   #d94a4a;  /* 外帯線（赤） */
+  --line-inner:   #f2f4f7;  /* 内圏線（白） */
+}
+
+* { box-sizing: border-box; }
+
+/* PC専用レイアウト。
+   ウィンドウ全体を使い、盤面が入る最大サイズまで自動で広がる（ページはスクロールしない）。
+   ステージの実寸は main.js の fitStage() が毎回計算して入れる。 */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-family: "Segoe UI", "Yu Gothic UI", "Hiragino Sans", system-ui, sans-serif;
+}
+
+.app {
+  height: 100%;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===================== 操作パネル ===================== */
+
+.panel {
+  flex: 0 0 auto;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  align-items: flex-end;
+}
+.panel-row + .panel-row { margin-top: 12px; }
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field-grow { flex: 1 1 320px; }
+.field-right { margin-left: auto; }
+
+.field > label {
+  font-size: 13px;
+  color: var(--ui-muted);
+  white-space: nowrap;
+}
+
+#lineup-input {
+  flex: 1;
+  min-width: 0;
+  background: #171a22;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font-size: 16px;
+  font-family: ui-monospace, "Consolas", monospace;
+  padding: 8px 10px;
+}
+#lineup-input:focus {
+  outline: none;
+  border-color: var(--ui-accent);
+}
+
+.btn {
+  background: #2c3242;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font-size: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { background: #363d50; }
+
+/* 「配信に追従」＝既定ON。ONのあいだは枠を色付けて、今どちらのモードかひと目で分かるようにする
+   （実況中に「なぜ勝手にレースが変わった／変わらない」で迷わないため） */
+.chk {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--ui-border); border-radius: 6px;
+  padding: 7px 12px; font-size: 14px; white-space: nowrap; cursor: pointer;
+  color: var(--ui-muted);
+}
+.chk:has(input:checked) {
+  border-color: var(--ui-accent); color: var(--ui-text); background: rgba(74,144,255,.14);
+}
+.chk input { accent-color: var(--ui-accent); cursor: pointer; }
+
+/* 常時追従（既定）では、ボードでレースを選ぶ操作が無いので手動UIごと隠す。
+   DOMには残してあるので、?follow=0 を付ければそのまま手動モードとして使える */
+/* テスト用バックエンド接続中の目印（?gas= を付けたときだけ出る）。
+   stagekit側のオーバーレイと同じ見た目・同じ意味 */
+body.is-test #stage::after {
+  content: "TEST"; position: absolute; left: 12px; bottom: 12px; z-index: 9999;
+  background: #d32f2f; color: #fff; font-size: 22px; font-weight: 900;
+  letter-spacing: .12em; padding: 5px 15px; border-radius: 6px;
+  border: 3px solid #fff; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+}
+
+body.follow-auto .manual-only { display: none; }
+body:not(.follow-auto) .auto-only { display: none; }
+
+/* 常時追従のときの「いま何を描いているか」表示。操作ではなく状態の提示 */
+.now-race {
+  border: 1px solid var(--ui-accent); border-radius: 6px;
+  background: rgba(74,144,255,.14); color: var(--ui-text);
+  padding: 7px 14px; font-size: 15px; font-weight: 700; white-space: nowrap;
+}
+
+/* 追従OFFで配信とズレているときだけ出る警告。押すとその場で追い付く（＝復帰も1クリック） */
+.diff {
+  border: 1px solid #d9534f; background: rgba(217,83,79,.18); color: #ff9a97;
+  border-radius: 6px; padding: 7px 12px; font-size: 14px; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+}
+.diff:hover { background: rgba(217,83,79,.3); color: #ffc9c7; }
+.btn-primary {
+  background: var(--ui-accent);
+  border-color: var(--ui-accent);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-primary:hover { background: #5a9dff; }
+
+/* セグメント切替 */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg-btn {
+  background: #262b38;
+  border: 0;
+  color: var(--ui-muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seg-btn + .seg-btn { border-left: 1px solid var(--ui-border); }
+.seg-btn:hover { background: #303747; }
+.seg-btn.is-on {
+  background: var(--ui-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.sel {
+  background: #171a22;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font-size: 14px;
+  padding: 7px 8px;
+  min-width: 92px;
+  max-width: 220px;
+}
+.sel:focus { outline: none; border-color: var(--ui-accent); }
+.sel:disabled { opacity: .5; }
+
+#size-range { width: 120px; }
+.val {
+  font-size: 13px;
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+}
+
+.hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--ui-muted);
+}
+.hint.is-warn { color: #ffc46b; }
+
+/* 出力画面（ブラウザソース）と繋がっているか。C案が成立するかの判定そのもの */
+.live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--ui-border);
+  white-space: nowrap;
+}
+.live-dot::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.live-dot[data-live="on"]  { color: #46d17f; background: rgba(70, 209, 127, .10); border-color: rgba(70, 209, 127, .40); }
+.live-dot[data-live="off"] { color: #ff7a7a; background: rgba(255, 122, 122, .10); border-color: rgba(255, 122, 122, .35); }
+.live-dot[data-live="na"]  { color: var(--ui-muted); }
+
+/* ===================== 出力ビュー（?view=output） =====================
+   OBSのブラウザソース用。操作UIを消して、盤面だけを画面いっぱいに出す。
+   背景を透明にしてあるので、OBS側で映像に重ねてもクロマキーが要らない */
+
+body.view-output {
+  background: transparent;
+  overflow: hidden;
+}
+body.view-output .panel { display: none; }
+body.view-output .app { padding: 0; }
+body.view-output .stage { border-radius: 0; }
+/* 出力側で掴めてしまうと操作側とズレるので、当たり判定を殺す */
+body.view-output .rider,
+body.view-output .line-bar-hit { pointer-events: none; }
+
+/* ===================== 表示エリア ===================== */
+
+/* 残りの高さを全部使い、その中で盤面を中央に置く */
+.stage-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage {
+  position: relative;
+  /* width / height は fitStage() が px で入れる（16:9を保ったまま最大化） */
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--outer-wall);
+  touch-action: none;          /* ドラッグ中にスクロールさせない */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.stage[data-bg="green"] { background: #00b140; }
+.stage[data-bg="green"] .bank { opacity: 1; }
+
+.bank {
+  position: absolute;
+  inset: 0;
+}
+
+/* 路面：上＝外側、下＝内側
+   0〜5%   外側の壁（stage の背景色がそのまま出る）
+   5〜80%  路面
+   80〜100% インフィールド                              */
+.bank-surface {
+  position: absolute;
+  left: 0; right: 0;
+  top: 5%;
+  bottom: 12%;   /* 苗字ラベルが芝に落ちないよう内側を詰めてある */
+  background:
+    /* 路面の質感（バンクの傾斜を感じさせる薄い横縞） */
+    repeating-linear-gradient(to bottom,
+      rgba(255, 255, 255, .014) 0 3.5%,
+      rgba(0, 0, 0, .014) 3.5% 7%),
+    linear-gradient(to bottom, var(--track-top), var(--track-bottom));
+  border-top: 0.7% solid var(--track-edge);
+}
+
+/* インフィールド（内側の芝） */
+.bank-infield {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 0;
+  height: 12%;
+  background: linear-gradient(to bottom, var(--infield), #35422f);
+}
+
+.bank-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 0.8%;
+}
+.bank-line-outer {   /* 外帯線（赤） */
+  top: 48%;
+  background: var(--line-outer);
+}
+.bank-line-inner {   /* 内圏線（白） */
+  top: 80%;
+  background: var(--line-inner);
+}
+
+.riders {
+  position: absolute;
+  inset: 0;
+}
+
+/* ============ レース見出し／進行方向 ============
+   どちらも z-index 4 ＝ ライン帯(5)・丸(10) より下。
+   選手を上にドラッグしてきたときは選手のほうが手前に出る */
+
+.stage-title {
+  position: absolute;
+  top: 2.4%;
+  left: 1.8%;
+  z-index: 4;
+  pointer-events: none;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, .8), 0 0 2px rgba(0, 0, 0, .6);
+}
+.stage-title.is-empty { display: none; }
+
+.stage-title-main {
+  font-size: calc(var(--stage-h, 700px) * 0.064);
+  font-weight: 800;
+  line-height: 1.08;
+  color: #fff;
+}
+.stage-title-sub {
+  margin-top: .28em;
+  font-size: calc(var(--stage-h, 700px) * 0.031);
+  font-weight: 700;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, .84);
+}
+
+/* 進行方向＝先頭がどちら側か。
+   インフィールド（下の芝）は選手を置かない死にスペースなので、そこに置く。
+   上はドラッグで大外に持ち出す領域なので空けておきたい。
+   ラベル自体を先頭側の端に寄せることで、位置そのものでも向きが伝わる */
+.stage-dir {
+  position: absolute;
+  bottom: 2.2%;
+  z-index: 4;
+  pointer-events: none;
+  font-size: calc(var(--stage-h, 700px) * 0.040);
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #fff;
+  background: rgba(12, 15, 20, .60);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: .45em;
+  padding: .16em .72em;
+  white-space: nowrap;
+}
+.stage[data-dir="right"] .stage-dir { right: 1.8%; }
+.stage[data-dir="left"]  .stage-dir { left: 1.8%; }
+
+/* ===================== ライン連結バー ===================== */
+
+.line-bars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;                /* 丸（z-index:10）より下 */
+  pointer-events: none;      /* 掴めるのは中の hit だけ */
+  overflow: visible;
+}
+
+/* 見えるバー：丸の「後ろ」を通るカプセル。
+   丸よりわずかに太くしてあるので、はみ出した縁がそのまま掴みしろになる。
+   細い線にすると丸に完全に隠れて掴めなくなる（一度それで失敗した） */
+.line-bar {
+  fill: none;
+  stroke: rgba(255, 255, 255, .20);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+/* 当たり判定用（透明・太め）。pointer-events:stroke は塗りの有無に関係なく線を拾う */
+.line-bar-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+  cursor: grab;
+  touch-action: none;
+}
+.line-bar-hit.is-dragging { cursor: grabbing; }
+
+/* ===================== アイコン ===================== */
+
+.rider {
+  position: absolute;
+  width: var(--icon-px, 64px);
+  height: var(--icon-px, 64px);
+  margin-left: calc(var(--icon-px, 64px) / -2);
+  margin-top: calc(var(--icon-px, 64px) / -2);
+  cursor: grab;
+  touch-action: none;
+  z-index: 10;
+}
+.rider.is-dragging {
+  cursor: grabbing;
+  z-index: 100;
+}
+.rider.is-hidden { display: none; }
+
+.rider-body {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: calc(var(--icon-px, 64px) * 0.56);
+  line-height: 1;
+  font-family: "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+.rider.is-dragging .rider-body {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .6);
+  transform: scale(1.08);
+}
+
+/* 苗字ラベル。丸の下にぶら下げる。
+   隣の丸と近くても読めるよう、丸幅からはみ出してよい扱いにしてある */
+.rider-name {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: calc(var(--icon-px, 64px) * 0.04);
+  font-size: calc(var(--icon-px, 64px) * 0.30);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+  background: rgba(14, 17, 22, .74);
+  border-radius: .32em;
+  padding: .10em .40em;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+}
+.rider.is-noname .rider-name,
+.stage[data-names="off"] .rider-name { display: none; }
+
+/* ===================== 画面が狭いとき =====================
+   PC専用だが、ウィンドウを小さくしても壊れないだけの保険 */
+
+@media (max-width: 900px) {
+  .app { padding: 8px; }
+  .panel { padding: 8px 10px; }
+  .panel-row { gap: 8px 12px; }
+  .field-right { margin-left: 0; }
+  #size-range { width: 100px; }
+}

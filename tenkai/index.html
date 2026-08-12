@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>競輪 展開ボード</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== 操作パネル（OBSではクロップで除外する） ===== -->
+  <header class="panel" id="panel">
+
+    <div class="panel-row">
+      <!-- 場・レースは配信（コンソール）に常時追従するので通常は隠れている。
+           ?follow=0 を付けたときだけ現れる緊急用の手動操作 -->
+      <div class="field manual-only">
+        <label for="venue-select">場</label>
+        <select id="venue-select" class="sel" disabled></select>
+      </div>
+
+      <div class="field manual-only">
+        <label for="race-select">レース</label>
+        <select id="race-select" class="sel" disabled></select>
+      </div>
+
+      <div class="field manual-only">
+        <label class="chk" for="follow-chk" title="コンソールが出しているレースに自動で合わせます。場やレースを手で選ぶと自動で外れます">
+          <input type="checkbox" id="follow-chk" checked>配信に追従
+        </label>
+        <!-- 追従OFFで配信とズレているときだけ出る。押すとその場で追い付く -->
+        <button type="button" class="diff" id="follow-diff" hidden></button>
+      </div>
+
+      <!-- 常時追従のときは「今どのレースを描いているか」だけ出す（操作はできない） -->
+      <div class="field auto-only">
+        <span class="now-race" id="now-race">配信のレースに追従中…</span>
+      </div>
+
+      <div class="field">
+        <button type="button" id="reload-btn" class="btn">出走表を再取得</button>
+      </div>
+
+      <div class="field field-grow">
+        <label for="lineup-input">並び</label>
+        <input type="text" id="lineup-input" placeholder="例）1-3-5 / 2-7 / 4-6-9" autocomplete="off" spellcheck="false">
+        <button type="button" id="apply-btn" class="btn btn-primary">配置</button>
+      </div>
+
+      <div class="field">
+        <label for="size-range">サイズ</label>
+        <input type="range" id="size-range" min="30" max="120" step="1">
+        <span class="val" id="size-val">6.2%</span>
+      </div>
+
+      <div class="field">
+        <button type="button" id="reset-btn" class="btn">配置を戻す</button>
+      </div>
+
+      <div class="field">
+        <span class="live-dot" id="live-dot" data-live="off">出力：未接続</span>
+      </div>
+    </div>
+
+    <p class="hint" id="hint">レースを選ぶと並びが入ります。<b>丸をドラッグ＝1台だけ</b>／<b>ラインの帯をドラッグ＝そのライン全員</b>。</p>
+  </header>
+
+  <!-- ===== 表示エリア（この矩形だけをOBSに映す） ===== -->
+  <main class="stage-wrap">
+    <div class="stage" id="stage" data-bg="normal">
+      <div class="bank" id="bank">
+        <div class="bank-surface"></div>
+        <div class="bank-line bank-line-outer"></div>
+        <div class="bank-line bank-line-inner"></div>
+        <div class="bank-infield"></div>
+
+        <div class="stage-title is-empty" id="stage-title">
+          <div class="stage-title-main" id="stage-title-main"></div>
+          <div class="stage-title-sub" id="stage-title-sub"></div>
+        </div>
+
+        <div class="stage-dir" id="stage-dir"></div>
+
+        <svg class="line-bars" id="line-bars"></svg>
+        <div class="riders" id="riders"></div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/bars.js"></script>
+<script src="js/racecard.js"></script>
+<script src="js/live.js"></script>
+<script src="js/lineup.js"></script>
+<script src="js/drag.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
