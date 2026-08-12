@@ -1770,7 +1770,10 @@ body.v2 .rb-line .narabi-row {
 body.v2 .rb-line .nb-race { display: flex; flex-direction: row; align-items: center; gap: 9px;
   font-size: var(--rbrace, 22px); font-weight: 900; color: #16202e; line-height: 1;
   white-space: nowrap; flex: 0 0 auto; }
-body.v2 .rb-line .nb-arrow { font-size: calc(var(--rbchip, 30px) * .9); color: #16202e; }
+/* 太字化（8/13 FB）。font-weight は既に900だが「←」は記号グリフでウェイトが効かない font が多い。
+   縁取りを同色で足して線そのものを太らせる（高さ・位置は変えない） */
+body.v2 .rb-line .nb-arrow { font-size: calc(var(--rbchip, 30px) * .9); color: #16202e;
+  font-weight: 900; -webkit-text-stroke: calc(var(--rbchip, 30px) * .07) #16202e; }
 /* ライン同士の区切り「・」＝8/13 FBで復活。同FBでさらに「もっと濃く・大きく」（薄いと切れ目が読めない）。
    line-height:1＝文字を大きくしても行箱が伸びて枠からはみ出さないように */
 /* 高さは車番バッジに合わせる（8/13 FB）＝行の中央に置くと、下の苗字ぶん重心が下がって
