@@ -23,6 +23,21 @@
     : (SCENE === "talk" || SCENE === "race" || SCENE === "tenkai" ? "w" : "a");
   document.body.setAttribute("data-theme", theme);
 
+  /* テスト用バックエンドに繋いでいるときは、画面に赤い「TEST」を出す（8/12）。
+     ねらいは2つ：
+       ①テストのデータを本番配信に出してしまう事故を防ぐ（見れば分かる）
+       ②③の出走表とボードで別のバックエンドを掴んでいるとき、どちらがテストかすぐ分かる
+         （?gas= の付け忘れで「出走表は8R・展開図は6R」というズレが実際に起きた）
+     ⚠️本番（?gas=なし）では何も出ないので、通常運用の見た目は一切変わらない */
+  if (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) {
+    document.addEventListener("DOMContentLoaded", function () {
+      var b = document.createElement("div");
+      b.className = "test-badge";
+      b.textContent = "TEST";
+      document.body.appendChild(b);
+    });
+  }
+
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
