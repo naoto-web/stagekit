@@ -48,6 +48,9 @@
     if (!KEY) { setSync("err", "書込キー未設定"); return; }
     /* まだ一度も読めていない＝手元のstateは仮の器。ここで保存すると本物を空で上書きする（8/12） */
     if (!stateLoaded) { setSync("err", "未接続のため保存しません（接続できるまでお待ちください）"); return; }
+    /* ⚠️キューより前に流す（8/12）。オーバーレイ・展開ボードへの反映はGAS保存の完了を待たない。
+       ここを下に置くと、前の保存がGAS待ちの間の操作が画面に出ず「切り替えたのに変わらない」になる */
+    window.Sync.broadcastState(state);
     if (saveRunning) { savePending = true; return; }
     saveRunning = true;
     setSync("", "保存中…");

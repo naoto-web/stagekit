@@ -121,17 +121,22 @@
        1回失敗しただけで配信者の入力（予想・結果）が消えるのは配信事故なので、**自動で数回やり直す**。
        同じstateを2回書いてもrevが進むだけで害はない＝やり直して安全な操作。
        @param {number} [attempt] 内部用の試行回数 */
+    /** 画面へ即座に流す（保存の完了を待たない・8/6の楽観送信をここへ独立させた）。
+        revを外して送る＝受信側の「同一revはスキップ」ガードを通過させるため。
+
+        ⚠️**保存のキューより前に呼ぶこと**（8/12）。以前は saveState の中にあったため、
+          前の保存がGAS待ちで走っていると（実測で最大36秒）その間の操作は
+          `savePending` に積まれるだけで**通知が出ず、出走表も展開ボードも動かなかった**。
+          画面反映と保存は別物＝画面は待たせない。 */
+    broadcastState: function (state) {
+      var optimistic = Object.assign({}, state);
+      delete optimistic.rev;
+      this.broadcast({ type: "state", state: optimistic });
+    },
+
     saveState: function (key, state, attempt) {
       var self = this;
       attempt = attempt || 0;
-      if (!attempt) {
-        // 楽観送信（8/6）：GAS保存の完了を待たずBroadcastChannelへ先に流す
-        // ＝BCが通る環境（同一ブラウザ/OBS内）ではレース切替などが即時反映される
-        // revを外して送る＝受信側の「同一revはスキップ」ガードを通過させるため
-        var optimistic = Object.assign({}, state);
-        delete optimistic.rev;
-        this.broadcast({ type: "state", state: optimistic });
-      }
       return this.post({ key: key, action: "setState", state: state }).then(function (j) {
         if (!j.ok) throw new Error(j.error || "save failed");
         state.rev = j.rev;
