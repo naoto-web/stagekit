@@ -1773,7 +1773,10 @@ body.v2 .rb-line .nb-race { display: flex; flex-direction: row; align-items: cen
 body.v2 .rb-line .nb-arrow { font-size: calc(var(--rbchip, 30px) * .9); color: #16202e; }
 /* ライン同士の区切り「・」＝8/13 FBで復活。同FBでさらに「もっと濃く・大きく」（薄いと切れ目が読めない）。
    line-height:1＝文字を大きくしても行箱が伸びて枠からはみ出さないように */
-body.v2 .rb-line .nb-dot { display: block; font-size: calc(var(--rbchip, 30px) * 1.15);
+/* 高さは車番バッジに合わせる（8/13 FB）＝行の中央に置くと、下の苗字ぶん重心が下がって
+   バッジより低い位置に見える。バッジと同じ高さの箱を作り、その中で上下中央に置く */
+body.v2 .rb-line .nb-dot { display: flex; align-items: center; align-self: flex-start;
+  height: var(--rbchip, 30px); font-size: calc(var(--rbchip, 30px) * 1.15);
   color: #16202e; opacity: 1; line-height: 1; }
 body.v2 .rb-line .nb-group { gap: 10px; }
 body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
