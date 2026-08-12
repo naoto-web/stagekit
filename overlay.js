@@ -12,8 +12,15 @@
   var SCENES = ["talk", "race", "tenkai", "result", "brb", "ad"];
   var SCENE = SCENES.indexOf(params.get("scene")) >= 0 ? params.get("scene") : "talk";
   var DEBUG = params.get("debug") === "1";
+  /* ②レース観戦の中央ライン（8/13 Naoto案）＝&v2=1 のときだけ有効。
+     このファイルは本番・テストで共用（?gas= はデータの向き先を変えるだけ）なので、
+     既定OFFにしておかないと公開した瞬間に本番の②が変わる。検証OKなら既定trueの1行で昇格。
+     &ln=0 … 車番チップの下の苗字を消す（幅・可読性が厳しいときの逃げ道＝Naoto「泣く泣く苗字なし」） */
+  var V2 = params.get("v2") === "1";
+  var LINE_NAMES = params.get("ln") !== "0";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
+    (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
     (params.get("wm") === "0" ? "" : " wm-on"); // CTC透かし＝既定ON（8/6）・&wm=0で非表示
   // テーマ：①トーク・②レース観戦は白（w）が既定（7/30 FB10）。
   // URLの &theme=a|b|c|w が最優先＝OBS側だけで即時に戻せる保険
@@ -1280,6 +1287,12 @@
     // ③は①とまったく同じレースを描く（8/12設計変更）。中央の展開図はボード側が
     // 同じコンソールに追従するので揃う＝ここに専用の分岐は要らない
     if (SCENE === "tenkai") renderStartListInto(SL_TK, vName, rNo);
+    // ②は出走表を出す場所が無いので、ラインだけを予想帯ヘッダーの中央へ差し込む（8/13 v2）。
+    // 戦型（三分戦等）は出さない＝Naoto「二分戦とかの情報はいらない」
+    if (SCENE === "race" && V2) {
+      renderNarabi(vName, rNo, "narabi-race", { names: LINE_NAMES, noType: true });
+      fitRaceLine();
+    }
   }
 
   function renderStartListInto(ids, vName, rNo) {
@@ -1357,9 +1370,27 @@
       if (hasRaceInfo(narabiAuto[key])) renderStartList();
     }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
   }
-  function renderNarabi(vName, rNo, nbId) {
+  /** 車番→苗字（②中央ライン用）。時刻表の出走表は「阪本 正和」形式＝最初の空白まで＝苗字 */
+  function surnameOf(vName, rNo, no) {
+    var out = "";
+    if (!timetable || !vName || !rNo) return out;
+    (timetable.venues || []).forEach(function (tv) {
+      if (tv.name !== vName) return;
+      (tv.races || []).forEach(function (r) {
+        if (r.no !== +rNo) return;
+        (r.racers || []).forEach(function (p) {
+          if (+p.no === +no) out = String(p.name || "").split(/[\s　]+/)[0];
+        });
+      });
+    });
+    return out;
+  }
+  /* opts.names＝車番チップの下に苗字を出す／opts.noType＝戦型（三分戦等）を出さない。
+     どちらも②の中央ライン専用。①③は従来どおり（引数なし＝挙動不変） */
+  function renderNarabi(vName, rNo, nbId, opts) {
     var nb = $(nbId);
     if (!nb) return;
+    var o = opts || {};
     var key = vName && rNo ? window.Derive.raceKey(vName, rNo) : null;
     var manual = key ? ((state.narabi || {})[key] || "") : "";
     // keirin.jp経路では時刻表に並び・戦型（三分戦等）が同梱されている
@@ -1381,14 +1412,45 @@
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
     // 「ライン」の見出し文字＝8/10 FB115で削除（Naoto「いらないかも」・そのぶんチップを大きく）
-    nb.innerHTML = (lineType ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
+    nb.innerHTML = ((lineType && !o.noType) ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
       '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {
-          return '<i class="car c' + n + '">' + n + "</i>";
+          var chip = '<i class="car c' + n + '">' + n + "</i>";
+          if (!o.names) return chip;
+          // 苗字が取れない選手（時刻表が旧経路等）はチップだけ＝高さが揃うよう空要素は残す
+          return '<span class="nb-cell">' + chip +
+            '<b class="nb-nm">' + esc(surnameOf(vName, rNo, n)) + "</b></span>";
         }).join("") + "</span>";
       }).join('<span class="nb-dot">・</span>');
     fitNarabi(nbId); // 収まらない時は行ごと縮小（8/6 FB44）
+  }
+
+  /* ②中央ラインの位置決め（8/13 v2）＝左右の「〇〇 予想」の実測位置の隙間へ差し込む。
+     配信者名の長さで空きが変わるので、CSSの固定値ではなく毎回測る。
+     入り切らないぶんは fitNarabi（行ごと縮小・FB44）が最後に吸収する */
+  function fitRaceLine() {
+    var box = $("rb-line");
+    if (!box) return;
+    var inner = $("narabi-race");
+    var band = document.querySelector("#scene-race .race-band");
+    var na = $("band-name-a"), nbB = $("band-name-b");
+    // ライン未発表・並び不明の日は枠ごと出さない（空の窓だけが残るのを防ぐ）
+    if (!inner || inner.classList.contains("hidden") || !band || !na || !nbB) {
+      box.classList.add("hidden");
+      return;
+    }
+    var br = band.getBoundingClientRect();
+    var ar = na.getBoundingClientRect(), brr = nbB.getBoundingClientRect();
+    var PAD = 22; // 配信者名とラインの間に空ける余白
+    var left = Math.max(0, ar.right - br.left + PAD);
+    var right = Math.min(br.width, brr.left - br.left - PAD);
+    var w = right - left;
+    if (w < 140) { box.classList.add("hidden"); return; } // 名前が長すぎて隙間が無い日は諦める
+    box.classList.remove("hidden");
+    box.style.left = Math.round(left) + "px";
+    box.style.width = Math.round(w) + "px";
+    fitNarabi("narabi-race"); // 幅が確定してから縮小判定（先に測ると常に0幅になる）
   }
 
   /** ライン行の幅フィット（8/6 FB44）：「ライン無し」の全バラ表示等で右端チップが切れる→行ごと縮小 */
