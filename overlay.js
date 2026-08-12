@@ -98,26 +98,64 @@
      ⚠️ドックはドラッグ中に約30fpsで状態を流してくる。選択が変わった時だけ描き直す
         （毎メッセージで描くとpackRaceBandの総当たりが毎フレーム走る）。 */
   var TENKAI_BC = "tenkai-live-v1";
-  var tenkaiSel = null; // {joCode, raceNo}＝ドックが選んでいるレース。未選択はnull＝③は空のまま
+  /* 展開ボードのlocalStorageキー（tenkai側 config.js の STORAGE_KEY）。
+     ⚠️読むだけ。ここへ書くと操作ドックの保存を壊す */
+  var TENKAI_LS = "keirin-tenkai-board-v1";
+  var tenkaiSel = null;    // {joCode, raceNo}＝ドックが選んでいるレース。未選択はnull＝③は空のまま
+  var tenkaiVia = "-";     // どの経路で取れたか（?debug=1の切り分け用）
+  var tenkaiLsRaw = null;  // 前回読んだ生JSON（変化検知＝毎回パースしないため）
+
+  function selOf(data) {
+    var sel = (data && data.sel) || {};
+    var jo = String(sel.joCode || ""), no = +sel.raceNo || 0;
+    return (jo && no) ? { joCode: jo, raceNo: no } : null;
+  }
+  /** 選択が実際に変わった時だけ描き直す。ドラッグ中の座標更新では呼ばれても素通りする */
+  function setTenkaiSel(next, via) {
+    var was = tenkaiSel ? tenkaiSel.joCode + "|" + tenkaiSel.raceNo : "";
+    var now = next ? next.joCode + "|" + next.raceNo : "";
+    tenkaiVia = via;
+    if (was === now) return;
+    tenkaiSel = next;
+    renderPreds();
+    renderStartList();
+    renderDbg();
+  }
+
+  /* localStorage経路＝土台。BroadcastChannelは「変化があった瞬間」しか流れないので、
+     ドックが先にレースを選び、あとから③のブラウザソースが起動（or 更新）されると
+     BCだけでは永遠に何も受け取れない（8/12 実機で発生）。
+     ドック・展開ボードの出力・このオーバーレイは同一オリジンで同じ保存領域を共有しているため、
+     ここを読めば「今どのレースを選んでいるか」が起動直後から確実に分かる。
+     ＝stagekit本体と同じ二段構え（ポーリングが土台・BCが高速経路） */
+  function pollTenkaiSel() {
+    var raw = null;
+    try { raw = localStorage.getItem(TENKAI_LS); } catch (e) { return; }
+    if (raw === tenkaiLsRaw) return; // 文字列比較だけで済ませる（変化が無ければパースしない）
+    tenkaiLsRaw = raw;
+    var data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = null; }
+    setTenkaiSel(selOf(data), "LS");
+  }
+
   function initTenkaiChannel() {
-    if (SCENE !== "tenkai" || typeof BroadcastChannel === "undefined") return;
+    if (SCENE !== "tenkai") return;
+    pollTenkaiSel(); // 起動直後に現在の選択へ追いつく
+
+    // 他ページの書き込みは storage イベントで即座に届く（BCが通らない環境の保険にもなる）
+    window.addEventListener("storage", function (ev) {
+      if (!ev.key || ev.key === TENKAI_LS) pollTenkaiSel();
+    });
+
+    if (typeof BroadcastChannel === "undefined") return;
     try {
       var ch = new BroadcastChannel(TENKAI_BC);
       ch.onmessage = function (ev) {
         var m = ev.data || {};
         if (m.type !== "state" || !m.data) return;
-        var sel = m.data.sel || {};
-        var jo = String(sel.joCode || ""), no = +sel.raceNo || 0;
-        var next = (jo && no) ? { joCode: jo, raceNo: no } : null;
-        var was = tenkaiSel ? tenkaiSel.joCode + "|" + tenkaiSel.raceNo : "";
-        var now = next ? next.joCode + "|" + next.raceNo : "";
-        if (was === now) return; // 位置だけの更新（ドラッグ中）＝描き直さない
-        tenkaiSel = next;
-        renderPreds();
-        renderStartList();
-        renderDbg();
+        setTenkaiSel(selOf(m.data), "BC");
       };
-    } catch (e) { /* BCが使えない環境＝③は空のまま。②までは通常どおり動く */ }
+    } catch (e) { /* BCが使えなくてもlocalStorage経路だけで成立する */ }
   }
 
   /** 場コード→場名（時刻表から逆引き）。時刻表の到着前は空＝届いた時点で描き直される */
@@ -2641,7 +2679,7 @@
       var t = tenkaiRace();
       tk = "｜③ " + (!tenkaiSel ? "ドック未選択"
         : t.name ? t.name + " " + t.no + "R"
-        : "場コード" + tenkaiSel.joCode + "（時刻表待ち）");
+        : "場コード" + tenkaiSel.joCode + "（時刻表待ち）") + "(" + tenkaiVia + ")";
     }
     $("dbg").textContent = "scene:" + SCENE + tk + "｜rev " + state.rev +
       "｜経路 " + syncPath + "｜BC " + (window.Sync.bcAlive ? "alive" : "-") +
@@ -2700,6 +2738,8 @@
       fitTalkBands(); fitRaceBands();
       fitNarabi(SL_TALK.narabi); fitNarabi(SL_TK.narabi);
     }
+    // 2秒ごと＝③の対象レースを展開ボードの保存から取り直す（BCが届かなくても必ず追いつく土台）
+    if (SCENE === "tenkai" && fitTick % 8 === 0) pollTenkaiSel();
     if (nhBoundary !== null && nowSec() >= nhBoundary) renderVenueTabs(); // note勝負＝終了レースを個々に消す（8/10 FB113）
     sweepHitGlows();    // 的中買目チップ強調の期限切れ掃除（8/10 FB119・27秒で通常表示へ）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える
