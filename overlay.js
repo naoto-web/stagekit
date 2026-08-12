@@ -1290,7 +1290,7 @@
     // ②は出走表を出す場所が無いので、ラインだけを予想帯ヘッダーの中央へ差し込む（8/13 v2）。
     // 戦型（三分戦等）は出さない＝Naoto「二分戦とかの情報はいらない」
     if (SCENE === "race" && V2) {
-      renderNarabi(vName, rNo, "narabi-race", { names: LINE_NAMES, noType: true });
+      renderNarabi(vName, rNo, "narabi-race", { names: LINE_NAMES, noType: true, race: true });
       fitRaceLine();
     }
   }
@@ -1413,6 +1413,8 @@
     nb.classList.remove("hidden");
     // 「ライン」の見出し文字＝8/10 FB115で削除（Naoto「いらないかも」・そのぶんチップを大きく）
     nb.innerHTML = ((lineType && !o.noType) ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
+      // 場名＋R＝②は場名バーを置いていない（7/29 FB4）ので、ラインの左に添えて「どのレースの並びか」を示す
+      (o.race ? '<span class="nb-race">' + esc(vName) + " " + esc(String(rNo)) + "R</span>" : "") +
       '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {

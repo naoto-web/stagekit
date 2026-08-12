@@ -1748,19 +1748,25 @@ body.v2.ln-name #scene-race .band-head { min-height: 72px; }
   align-items: center; }
 body.v2 #scene-race .rb-line { display: flex; }
 body.v2 #scene-race .rb-line.hidden { display: none; }
-/* 枠の意匠（Naotoお任せ分）＝左右どちらのメンバーカラーにも寄らない中立色の窓にする。
-   ヘッダーの色帯から浮かせて「くり抜いた穴」に見せる */
+/* 枠の意匠＝白地に黒字（8/13 FB）。左右どちらのメンバーカラーにも寄らない中立の窓にして、
+   ヘッダーの色帯から浮かせる。中身が枠より狭い日は窓ごと中央に置く＝width:auto＋親でcenter。
+   入り切らない日だけ max-width:100% で目一杯まで広がり、あとは fitNarabi が縮小して吸収する */
+body.v2 .rb-line { justify-content: center; }
 body.v2 .rb-line .narabi-row {
-  width: 100%; gap: 18px; padding: 3px 12px;
-  background: rgba(10, 16, 26, .92); border: 2px solid rgba(255, 255, 255, .6);
-  border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, .45);
+  width: auto; max-width: 100%; gap: 18px; padding: 3px 14px;
+  justify-content: center;
+  background: #fff; border: 2px solid rgba(22, 32, 46, .5);
+  border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
-body.v2 .rb-line .nb-arrow { font-size: 30px; color: #fff; }
+/* 場名＋R＝②には場名バーが無いので、どのレースの並びかをここで示す */
+body.v2 .rb-line .nb-race { font-size: 26px; font-weight: 900; color: #16202e;
+  white-space: nowrap; flex: 0 0 auto; }
+body.v2 .rb-line .nb-arrow { font-size: 30px; color: #16202e; }
 body.v2 .rb-line .nb-dot { display: none; }   /* グループの区切りはgapで見せる＝「・」は幅の無駄 */
 body.v2 .rb-line .nb-group { gap: 4px; }
 body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 body.v2 .rb-line .car { width: 34px; height: 34px; font-size: 32px; border-radius: 5px; }
-body.v2 .rb-line .nb-nm { font-size: 17px; font-weight: 900; color: #fff;
+body.v2 .rb-line .nb-nm { font-size: 17px; font-weight: 900; color: #16202e;
   line-height: 1; white-space: nowrap; letter-spacing: -.02em; }
 /* 苗字なし（&ln=0）＝ヘッダーを広げる必要がないので買い目エリアは元の高さのまま。
    浮いた高さぶんチップを大きくする */
