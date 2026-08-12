@@ -1753,17 +1753,21 @@ body.v2 #scene-race .rb-line.hidden { display: none; }
    入り切らない日だけ max-width:100% で目一杯まで広がり、あとは fitNarabi が縮小して吸収する */
 body.v2 .rb-line { justify-content: center; }
 body.v2 .rb-line .narabi-row {
-  width: auto; max-width: 100%; gap: 18px; padding: 3px 14px;
+  /* gap＝ライン（グループ）同士の間隔。「・」の左右に効くので実効は gap×2＋「・」の幅。
+     苗字が隣のラインの苗字とくっつくというFB（8/13）を受けて広めに取っている */
+  width: auto; max-width: 100%; gap: 22px; padding: 3px 14px;
   justify-content: center;
   background: #fff; border: 2px solid rgba(22, 32, 46, .5);
   border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
-/* 場名＋R＝②には場名バーが無いので、どのレースの並びかをここで示す */
-body.v2 .rb-line .nb-race { font-size: 26px; font-weight: 900; color: #16202e;
-  white-space: nowrap; flex: 0 0 auto; }
-body.v2 .rb-line .nb-arrow { font-size: 30px; color: #16202e; }
-body.v2 .rb-line .nb-dot { display: none; }   /* グループの区切りはgapで見せる＝「・」は幅の無駄 */
-body.v2 .rb-line .nb-group { gap: 4px; }
+/* 場名＋R＝②には場名バーが無いので、どのレースの並びかをここで示す。
+   枠の高さいっぱいまで大きく（8/13 FB） */
+body.v2 .rb-line .nb-race { font-size: 40px; font-weight: 900; color: #16202e;
+  white-space: nowrap; flex: 0 0 auto; line-height: 1; }
+body.v2 .rb-line .nb-arrow { font-size: 34px; color: #16202e; }
+/* ライン同士の区切り「・」＝8/13 FBで復活（gapだけだと切れ目が読み取れない） */
+body.v2 .rb-line .nb-dot { display: block; font-size: 26px; color: #16202e; opacity: .5; }
+body.v2 .rb-line .nb-group { gap: 10px; }
 body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 body.v2 .rb-line .car { width: 34px; height: 34px; font-size: 32px; border-radius: 5px; }
 body.v2 .rb-line .nb-nm { font-size: 17px; font-weight: 900; color: #16202e;

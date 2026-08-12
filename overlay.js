@@ -1444,7 +1444,7 @@
     }
     var br = band.getBoundingClientRect();
     var ar = na.getBoundingClientRect(), brr = nbB.getBoundingClientRect();
-    var PAD = 22; // 配信者名とラインの間に空ける余白
+    var PAD = 10; // 配信者名とラインの間に空ける余白（8/13 FB「もっと横に広げてOK」で22→10）
     var left = Math.max(0, ar.right - br.left + PAD);
     var right = Math.min(br.width, brr.left - br.left - PAD);
     var w = right - left;
