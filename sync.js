@@ -15,6 +15,22 @@
 
   var SAVE_RETRY = 3;         // 保存のやり直し回数（0.6→1.2→1.8秒と間隔を空ける）
   var SAVE_BACKOFF_MS = 600;
+  var READ_RETRY = 2;         // 読み取りのやり直し回数（0.5→1.0秒）
+  var READ_BACKOFF_MS = 500;
+
+  /* 読み取りのやり直し（8/12）。
+     GASの `/exec` は302で script.googleusercontent.com へ飛ぶが、
+     **この転送先がときどき404を返す**（実測：1段目は常に302で、2段目だけ失敗する）。
+     Google側の一時的な不安定さなので、少し待って叩き直せば通る。
+     ⚠️読み取りは何度やっても副作用が無いので、やり直して安全 */
+  function getJson(url, attempt) {
+    attempt = attempt || 0;
+    return fetch(url, { redirect: "follow" }).then(asJson).catch(function (e) {
+      if (attempt >= READ_RETRY) throw e;
+      return new Promise(function (r) { setTimeout(r, READ_BACKOFF_MS * (attempt + 1)); })
+        .then(function () { return getJson(url, attempt + 1); });
+    });
+  }
 
   /* GASは混雑・エラー・権限切れのとき、JSONではなく**HTMLのエラーページ**を返す。
      そのまま r.json() に渡すと「Unexpected token '<'」という中身の分からない例外になり、
@@ -58,8 +74,7 @@
 
     /* ---------- GAS読み取り ---------- */
     fetchState: function () {
-      return fetch(cfg.GAS_URL + "?action=state", { redirect: "follow" })
-        .then(asJson)
+      return getJson(cfg.GAS_URL + "?action=state")
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "state fetch failed");
           return j.state; // 未初期化ならnull
@@ -67,8 +82,7 @@
     },
     fetchTimetable: function (day, refresh) {
       var url = cfg.GAS_URL + "?action=timetable&day=" + (day ? 1 : 0) + (refresh ? "&refresh=1" : "");
-      return fetch(url, { redirect: "follow" })
-        .then(asJson)
+      return getJson(url)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "timetable fetch failed");
           return j.timetable;
@@ -77,8 +91,7 @@
     /** 確定済みレース結果の自動取得。[{no, order, names, kimarite, payouts}] */
     fetchResults: function (jo, force) {
       var url = cfg.GAS_URL + "?action=results&jo=" + encodeURIComponent(jo) + (force ? "&force=1" : "");
-      return fetch(url, { redirect: "follow" })
-        .then(asJson)
+      return getJson(url)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "results fetch failed");
           return j.results || [];
@@ -87,8 +100,7 @@
     /** 並び予想（ライン）＋競走得点の自動取得。{narabi:'147 26 35', scores:{車番:'111.72'}} */
     fetchNarabi: function (jo, race) {
       var url = cfg.GAS_URL + "?action=narabi&jo=" + encodeURIComponent(jo) + "&race=" + (+race || 0);
-      return fetch(url, { redirect: "follow" })
-        .then(asJson)
+      return getJson(url)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "narabi fetch failed");
           return { narabi: j.narabi || "", scores: j.scores || {} };

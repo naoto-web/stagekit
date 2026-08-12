@@ -35,6 +35,7 @@
   }
 
   var state = null;
+  var stateLoaded = false;  // GASから一度でも正しく読めたか。falseの間は保存を止める（空上書き防止）
   var timetable = null;
   var payoutRows = [];     // 結果入力中の払戻行（ローカル編集用）
   var refundInputs = {};   // 配信者id→回収額（手入力・確定時にresults.refundsへ保存）
@@ -45,6 +46,8 @@
   /* ---------- 保存（直列キュー・最終状態が必ず載る） ---------- */
   function save() {
     if (!KEY) { setSync("err", "書込キー未設定"); return; }
+    /* まだ一度も読めていない＝手元のstateは仮の器。ここで保存すると本物を空で上書きする（8/12） */
+    if (!stateLoaded) { setSync("err", "未接続のため保存しません（接続できるまでお待ちください）"); return; }
     if (saveRunning) { savePending = true; return; }
     saveRunning = true;
     setSync("", "保存中…");
@@ -1469,24 +1472,34 @@
     }
   });
 
-  window.Sync.fetchState().then(function (s) {
-    if (s) {
-      var base = window.Derive.defaultState(todayStr());
-      state = Object.assign({}, base, s);
-      state.cfg = Object.assign({}, base.cfg, s.cfg || {});
-      state.ad = Object.assign({}, base.ad, s.ad || {});
-      window.Derive.normalizeState(state);
-    } else {
-      state = window.Derive.defaultState(todayStr());
-    }
-    setSync("ok", "接続OK（rev " + (state.rev || 0) + "）");
-    renderAll();
-    pollResults();
-  }).catch(function (e) {
-    setSync("err", "GAS接続失敗: " + e.message);
-    state = window.Derive.defaultState(todayStr());
-    renderAll();
-  });
+  /* 起動時のstate読み込み。**失敗しても空のstateで確定させない**（8/12）。
+     以前は失敗時に既定state（場もレースも空）を入れて描いていたため、
+     そのまま何か操作すると**本物のstateを空で上書きしてしまう**危険があった
+     （GASの転送先がときどき404を返すので、実際に起こりうる）。
+     読めるまで5秒ごとに再試行し、それまでは保存を止める（stateLoaded）。 */
+  function loadState() {
+    window.Sync.fetchState().then(function (s) {
+      if (s) {
+        var base = window.Derive.defaultState(todayStr());
+        state = Object.assign({}, base, s);
+        state.cfg = Object.assign({}, base.cfg, s.cfg || {});
+        state.ad = Object.assign({}, base.ad, s.ad || {});
+        window.Derive.normalizeState(state);
+      } else {
+        state = window.Derive.defaultState(todayStr());
+      }
+      stateLoaded = true;
+      setSync("ok", "接続OK（rev " + (state.rev || 0) + "）");
+      renderAll();
+      pollResults();
+    }).catch(function (e) {
+      setSync("err", "GAS接続失敗: " + e.message + "　再試行中…（つながるまで保存しません）");
+      // 画面が真っ白にならないよう仮の器だけ用意する。stateLoadedは立てない＝保存は止まったまま
+      if (!state) { state = window.Derive.defaultState(todayStr()); renderAll(); }
+      setTimeout(loadState, 5000);
+    });
+  }
+  loadState();
 
   /* タイムテーブル：失敗したら15秒後に自動リトライ＋10分ごとに定期再取得。
      （旧実装は起動時1回きり・失敗すると無言でチップが空のままになるバグがあった） */
