@@ -1,6 +1,6 @@
 /* overlay.js — オーバーレイ描画エンジン
    URLパラメータ:
-     ?scene=talk|race|result|brb|ad … このソースが描画するシーン（OBSのシーンごとに1ソース）
+     ?scene=talk|race|tenkai|result|brb|ad … このソースが描画するシーン（OBSのシーンごとに1ソース）
      ?theme=a|b|c                  … 配色
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
      ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
@@ -8,7 +8,8 @@
 
 (function () {
   var params = new URLSearchParams(location.search);
-  var SCENES = ["talk", "race", "result", "brb", "ad"];
+  // tenkai＝③レース展開（8/12追加）。中央は透過穴で、展開ボードを別ソースとして下に敷く
+  var SCENES = ["talk", "race", "tenkai", "result", "brb", "ad"];
   var SCENE = SCENES.indexOf(params.get("scene")) >= 0 ? params.get("scene") : "talk";
   var DEBUG = params.get("debug") === "1";
 
@@ -19,7 +20,7 @@
   var THEMES = ["a", "b", "c", "w"];
   var theme = THEMES.indexOf(params.get("theme")) >= 0
     ? params.get("theme")
-    : (SCENE === "talk" || SCENE === "race" ? "w" : "a");
+    : (SCENE === "talk" || SCENE === "race" || SCENE === "tenkai" ? "w" : "a");
   document.body.setAttribute("data-theme", theme);
 
   var $ = function (id) { return document.getElementById(id); };
@@ -85,6 +86,59 @@
   function upcoming() {
     var now = nowSec();
     return allRaces().filter(function (r) { return r.startSec > now; }); // 発走したら即・次レースへ
+  }
+
+  /* ---------- ③レース展開：対象レースの受信（8/12 Step3・要件§11.8） ----------
+     マスターは展開ボードのドック（naoto-web.github.io/tenkai/）。そこで場・レースを選ぶと
+     ③の出走表・ライン・予想帯がそのレースに追従する＝配信者の操作は1か所だけで済む。
+     stagekit と tenkai は同一オリジン（naoto-web.github.io）なので、パスが違ってもBCは通る。
+
+     ⚠️必ず聞き専にすること。pingにpongを返すと、穴に敷く展開ボードの出力ソースが死んでいても
+        ドックの「出力：接続中」が緑のままになり、あちらの生存判定を壊す。
+     ⚠️ドックはドラッグ中に約30fpsで状態を流してくる。選択が変わった時だけ描き直す
+        （毎メッセージで描くとpackRaceBandの総当たりが毎フレーム走る）。 */
+  var TENKAI_BC = "tenkai-live-v1";
+  var tenkaiSel = null; // {joCode, raceNo}＝ドックが選んでいるレース。未選択はnull＝③は空のまま
+  function initTenkaiChannel() {
+    if (SCENE !== "tenkai" || typeof BroadcastChannel === "undefined") return;
+    try {
+      var ch = new BroadcastChannel(TENKAI_BC);
+      ch.onmessage = function (ev) {
+        var m = ev.data || {};
+        if (m.type !== "state" || !m.data) return;
+        var sel = m.data.sel || {};
+        var jo = String(sel.joCode || ""), no = +sel.raceNo || 0;
+        var next = (jo && no) ? { joCode: jo, raceNo: no } : null;
+        var was = tenkaiSel ? tenkaiSel.joCode + "|" + tenkaiSel.raceNo : "";
+        var now = next ? next.joCode + "|" + next.raceNo : "";
+        if (was === now) return; // 位置だけの更新（ドラッグ中）＝描き直さない
+        tenkaiSel = next;
+        renderPreds();
+        renderStartList();
+        renderDbg();
+      };
+    } catch (e) { /* BCが使えない環境＝③は空のまま。②までは通常どおり動く */ }
+  }
+
+  /** 場コード→場名（時刻表から逆引き）。時刻表の到着前は空＝届いた時点で描き直される */
+  function venueNameOfJo(jo) {
+    var name = "";
+    if (timetable) {
+      (timetable.venues || []).forEach(function (tv) {
+        if (String(tv.joCode) === String(jo)) name = tv.name;
+      });
+    }
+    return name;
+  }
+  /** ③が描くレース。未選択・場コード未解決は {name:"", no:0} */
+  function tenkaiRace() {
+    if (!tenkaiSel) return { name: "", no: 0 };
+    return { name: venueNameOfJo(tenkaiSel.joCode), no: tenkaiSel.raceNo };
+  }
+  /** ③の予想帯が引くレースキー。コンソールの操作中レース（currentKey）とは独立 */
+  function tenkaiKey() {
+    var t = tenkaiRace();
+    return t.name && t.no ? window.Derive.raceKey(t.name, t.no) : null;
   }
 
   /* ---------- ヘッダー：本日のnote勝負（旧・場タブ）（8/9 FB99） ----------
@@ -492,7 +546,8 @@
         }
         return '<li class="vt-card" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
       }).join("");
-      ["timer-talk", "timer-race"].forEach(function (id) {
+      // ③レース展開も②と同じタイマー（8/12 Step3）＝右レールは②と同一構造
+      ["timer-talk", "timer-race", "timer-tk"].forEach(function (id) {
         var el = $(id);
         if (!el) return;
         el.innerHTML = html;
@@ -836,7 +891,8 @@
     return false;
   }
   function fitRaceBands() {
-    ["band-pred-a", "band-pred-b"].forEach(function (id) {
+    // ③レース展開の帯（kband-）も②と同じパッキングなので同じ自己修復に乗せる（8/12 Step3）
+    ["band-pred-a", "band-pred-b", "kband-pred-a", "kband-pred-b"].forEach(function (id) {
       var band = $(id);
       if (!band || band.clientWidth <= 0) return;
       // 非表示中にrenderPredsされた帯はパック未実施のまま残る（旧48px予約も廃止済み）→表示復帰を検知して自己修復
@@ -1088,7 +1144,7 @@
       var rc = seats[slot];
       var name = rc ? rc.name : "";
       var color = rc ? window.Derive.colorOf(rc.color) : "";
-      ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
+      ["np-talk-", "np-race-", "np-result-", "np-ad-", "np-tk-"].forEach(function (p) {
         var el = $(p + slot);
         if (!el) return;
         el.textContent = name;
@@ -1106,13 +1162,18 @@
       var isNote = !!(rp && rp.entry.isNote);  // note予想（勝負レース）＝ヘッダーバッジはメインレース基準
       var talkKeys = talkKeysOf(rc);           // この配信者のトーク表示レース（1〜3）
 
-      // 予想帯＝①トーク（tband-）と②レース観戦（band-）で同一様式：
+      // 予想帯＝①トーク（tband-）・②レース観戦（band-）・③レース展開（kband-）で同一様式：
       // メンバーカラーのヘッダー（〇〇予想＋noteバッジ＋投資/回収の日次累計）＋俺たち目＋買い目チップ
-      ["band-", "tband-"].forEach(function (bp) {
+      ["band-", "tband-", "kband-"].forEach(function (bp) {
         var bandHead = $(bp + "head-" + slot);
         if (!bandHead) return;
+        // ③は展開ボードのドックが選んだレース＝②の操作中レースとは独立（8/12 Step3・要件§11.8）。
+        // 未選択・買い目なしとも bKey/rp が空になり、ヘッダーだけ出て中身は空になる（仕様どおり）
+        var bKey = bp === "kband-" ? tenkaiKey() : key;
         var bandName = $(bp + "name-" + slot);
-        if (bandName) bandName.innerHTML = esc(name) + " 予想"; // note予想バッジは廃止（8/6 FB25・レースラベル側の🔥表記のみ残す）
+        // note予想バッジは廃止（8/6 FB25・レースラベル側の🔥表記のみ残す）。
+        // 空席は文言ごと出さない＝③は席を畳まないので「名前の無い『予想』」が画面に残るため（8/12）
+        if (bandName) bandName.innerHTML = name ? esc(name) + " 予想" : "";
         var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
           var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
@@ -1128,6 +1189,15 @@
           bandHead.style.color = btc;
           bandHead.classList.toggle("txt-edge", btc === "#fff"); // 白文字のみ黒フチ（8/6 FB19）
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = color;
+        } else {
+          // 空席になったら前の配信者の色を消す（8/12）。起動時の既定stateには配信者が2人入っている
+          // ので、1人配信の実stateが届いた後も席bに初期メンバーの色が残り続けていた。
+          // ①②は空席パネルがdisplay:noneなので見えなかったが、③は席を畳まないので露出する。
+          // ネームプレート・カメラ枠は無条件代入で""が入る＝あちらは元から消えている
+          bandHead.style.background = "";
+          bandHead.style.color = "";
+          bandHead.classList.remove("txt-edge");
+          if (bandHead.parentElement) bandHead.parentElement.style.borderColor = "";
         }
         fitBandHead(bandHead); // 名前＋バッジ＋投資/回収が1行に収まるよう自動縮小
         var band = $(bp + "pred-" + slot);
@@ -1163,9 +1233,9 @@
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）。
           // 合計/投資は右下の固定枠へ分離（8/6 FB57）。パッキングが実座標で衝突判定するため
           // metaを先に確定させてから買い目を組む（FB58・順序に意味あり）
-          var bMeta = $("band-meta-" + slot);
+          var bMeta = $(bp + "meta-" + slot);
           if (bMeta) {
-            var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
+            var rpm = rc && bKey ? window.Derive.resolvePred(state, bKey, rc.id) : null;
             var mt = rpm && (rpm.points || rpm.invest > 0)
               ? (rpm.points ? "合計 " + rpm.points + "点" : "") +
                 (rpm.invest > 0 ? (rpm.points ? "　" : "") + "投資 " + fmtYen(rpm.invest) : "")
@@ -1174,8 +1244,11 @@
             bMeta.classList.toggle("hidden", !mt);
           }
           band.classList.remove("buy-xl", "buy-lg");
-          // 第5引数keepAll=true＝②メイン帯も「全」を展開せず元記法で描く（8/8 FB74）
-          band.innerHTML = (key ? raceColHead(rc, key, true) : "") + raceBuyHtml(rc, key, false, true, true);
+          // 第5引数keepAll=true＝②メイン帯も「全」を展開せず元記法で描く（8/8 FB74）。
+          // 空席は中身ごと空にする＝③は席を畳まないので、誰もいない枠にレースラベルだけ
+          // 残ると「予想を出し忘れている」ように見える（8/12）
+          band.innerHTML = !rc ? ""
+            : (bKey ? raceColHead(rc, bKey, true) : "") + raceBuyHtml(rc, bKey, false, true, true);
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
         }
       });
@@ -1220,33 +1293,54 @@
     setTimeout(fitTalkBands, 300);
   }
 
-  /* ---------- 出走表（①トーク右下・現在の場/レースに連動） ---------- */
+  /* ---------- 出走表（①トーク右下／③レース展開の左） ----------
+     ①＝コンソールの操作中レース／③＝展開ボードのドックが選んだレース（§11.8）。
+     描画は完全に同じなので、対象のid3点と場・レースだけ差し替えて共用する */
+  var SL_TALK = { list: "slist-talk", sub: "slist-sub", narabi: "narabi-talk" };
+  var SL_TK = { list: "slist-tk", sub: "slist-sub-tk", narabi: "narabi-tk" };
+
   function renderStartList() {
-    var el = $("slist-talk");
-    if (!el) return;
     var v = state.venues[state.activeVenue];
-    var rNo = v ? state.currentRace[v.name] : null;
+    renderStartListInto(SL_TALK, v ? v.name : "", v ? state.currentRace[v.name] : null, false);
+    if (SCENE === "tenkai") {
+      var t = tenkaiRace();
+      // 未選択は空のまま（枠だけ）。次の予想レース等へ自動追従はしない＝
+      // 穴に敷いた展開ボードはドックの選択しか映せないので、ここだけ動くとズレる（§11.8）
+      renderStartListInto(SL_TK, t.name, t.no, true);
+    }
+  }
+
+  /** @param {boolean} blankIfUnset レース未選択のとき「取得待ち」も出さず完全に空にする（③用） */
+  function renderStartListInto(ids, vName, rNo, blankIfUnset) {
+    var el = $(ids.list);
+    if (!el) return;
     var race = null;
-    if (v && rNo && timetable) {
+    if (vName && rNo && timetable) {
       (timetable.venues || []).forEach(function (tv) {
-        if (tv.name !== v.name) return;
+        if (tv.name !== vName) return;
         (tv.races || []).forEach(function (r) { if (r.no === +rNo) race = r; });
       });
     }
     // 金帯＝場名Rを主役に拡大（8/10 FB115・Naoto「どの出走表を出してるかはめっちゃ大事」）
     // ＝場名R（大）とクラス（小）を別スパンに分離。サイズはCSS .sl-vr / .sl-cls
-    var subEl = $("slist-sub");
-    if (v && rNo) {
-      subEl.innerHTML = '<b class="sl-vr">' + esc(v.name) + " " + rNo + "R</b>" +
-        (race && race.cls ? '<span class="sl-cls">' + esc(race.cls) + "</span>" : "");
-    } else {
-      subEl.textContent = "";
+    var subEl = $(ids.sub);
+    if (subEl) {
+      if (vName && rNo) {
+        subEl.innerHTML = '<b class="sl-vr">' + esc(vName) + " " + rNo + "R</b>" +
+          (race && race.cls ? '<span class="sl-cls">' + esc(race.cls) + "</span>" : "");
+      } else {
+        subEl.textContent = "";
+      }
     }
     if (!race || !race.racers || !race.racers.length) {
-      el.innerHTML = '<li class="slist-empty">出走表データ取得待ち</li>';
+      el.innerHTML = (blankIfUnset && (!vName || !rNo))
+        ? "" : '<li class="slist-empty">出走表データ取得待ち</li>';
+      // 前のレースのライン行を残さない（別レースの並びが出たままになるのを防ぐ）
+      var nb0 = $(ids.narabi);
+      if (nb0) nb0.classList.add("hidden");
       return;
     }
-    var key = window.Derive.raceKey(v.name, rNo);
+    var key = window.Derive.raceKey(vName, rNo);
     var scores = narabiAuto[key] ? narabiAuto[key].scores || {} : {};
     // 競走得点の1位＝赤・2位＝青（同点は同色）
     var scoreVals = [];
@@ -1266,8 +1360,8 @@
         '<span class="sl-name">' + esc(p.name) + '</span><span class="sl-sub">' + esc(sub) + "</span>" +
         (sc ? '<span class="' + scls + '">' + esc(sc) + "</span>" : "") + "</li>";
     }).join("");
-    renderNarabi(v, rNo);
-    fitSlist(); // ライン表示で高さが変わった後に9車の収まりを確認（8/6 FB30）
+    renderNarabi(vName, rNo, ids.narabi);
+    fitSlist(ids.list); // ライン表示で高さが変わった後に9車の収まりを確認（8/6 FB30）
   }
 
   /** ライン（並び予想）＋競走得点＝GAS経由でkeirin.jpから自動取得。並びは手入力があれば優先（修正用） */
@@ -1283,9 +1377,9 @@
   function hasRaceInfo(e) {
     return e && (e.val || (e.scores && Object.keys(e.scores).length > 0));
   }
-  function ensureNarabi(v, rNo, key) {
+  function ensureNarabi(vName, rNo, key) {
     if (narabiAuto[key]) return;
-    var jo = joCodeOf(v.name);
+    var jo = joCodeOf(vName);
     if (!jo) return; // 時刻表の取得待ち
     narabiAuto[key] = { val: "", scores: {}, pending: true };
     window.Sync.fetchNarabi(jo, rNo).then(function (info) {
@@ -1293,17 +1387,17 @@
       if (hasRaceInfo(narabiAuto[key])) renderStartList();
     }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
   }
-  function renderNarabi(v, rNo) {
-    var nb = $("narabi-talk");
+  function renderNarabi(vName, rNo, nbId) {
+    var nb = $(nbId);
     if (!nb) return;
-    var key = v && rNo ? window.Derive.raceKey(v.name, rNo) : null;
+    var key = vName && rNo ? window.Derive.raceKey(vName, rNo) : null;
     var manual = key ? ((state.narabi || {})[key] || "") : "";
     // keirin.jp経路では時刻表に並び・戦型（三分戦等）が同梱されている
     var ttNarabi = "";
     var lineType = "";
-    if (v && rNo && timetable) {
+    if (vName && rNo && timetable) {
       (timetable.venues || []).forEach(function (tv) {
-        if (tv.name !== v.name) return;
+        if (tv.name !== vName) return;
         (tv.races || []).forEach(function (r) {
           if (r.no !== +rNo) return;
           if (r.narabi) ttNarabi = r.narabi;
@@ -1312,7 +1406,7 @@
       });
     }
     var auto = key && narabiAuto[key] ? narabiAuto[key].val : "";
-    if (key && !narabiAuto[key]) ensureNarabi(v, rNo, key); // 得点＋並びの保険はエンドポイントから
+    if (key && !narabiAuto[key]) ensureNarabi(vName, rNo, key); // 得点＋並びの保険はエンドポイントから
     var groups = window.Keirin.normalize(manual || ttNarabi || auto).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
@@ -1324,12 +1418,12 @@
           return '<i class="car c' + n + '">' + n + "</i>";
         }).join("") + "</span>";
       }).join('<span class="nb-dot">・</span>');
-    fitNarabi(); // 収まらない時は行ごと縮小（8/6 FB44）
+    fitNarabi(nbId); // 収まらない時は行ごと縮小（8/6 FB44）
   }
 
   /** ライン行の幅フィット（8/6 FB44）：「ライン無し」の全バラ表示等で右端チップが切れる→行ごと縮小 */
-  function fitNarabi() {
-    var nb = $("narabi-talk");
+  function fitNarabi(nbId) {
+    var nb = $(nbId);
     if (!nb || nb.classList.contains("hidden")) return;
     nb.style.transform = "";
     var nr = nb.getBoundingClientRect();
@@ -1350,8 +1444,8 @@
 
   /** 出走表の縦フィット（8/6 FB30）：ライン・note勝負を下に固定したまま、9車が入り切らない時は
       出走表リストだけを自動縮小（他の枠に干渉しない）。子要素の実下端で測る（scrollHeight不使用） */
-  function fitSlist() {
-    var el = $("slist-talk");
+  function fitSlist(listId) {
+    var el = $(listId);
     if (!el) return;
     el.style.transform = "";
     var er = el.getBoundingClientRect();
@@ -2424,7 +2518,8 @@
       : eff === "samba" ? sambaTimes().END
       : eff === "adjust" ? adjTimes().END
       : (key ? fxConf(key).rainMs : 0);
-    ["np-talk-", "np-race-", "np-result-", "np-ad-"].forEach(function (p) {
+    // ③レース展開でも発火させる（8/12・③結果・的中シーンを消したため。要件§11.2）
+    ["np-talk-", "np-race-", "np-result-", "np-ad-", "np-tk-"].forEach(function (p) {
       var el = $(p + slot);
       if (!el) return;
       var cam = el.closest(".cam");
@@ -2540,7 +2635,15 @@
 
   function renderDbg() {
     if (!DEBUG) return;
-    $("dbg").textContent = "scene:" + SCENE + "｜rev " + state.rev +
+    // ③は「ドックと繋がっているか・どのレースを掴んでいるか」が最初の切り分けポイント
+    var tk = "";
+    if (SCENE === "tenkai") {
+      var t = tenkaiRace();
+      tk = "｜③ " + (!tenkaiSel ? "ドック未選択"
+        : t.name ? t.name + " " + t.no + "R"
+        : "場コード" + tenkaiSel.joCode + "（時刻表待ち）");
+    }
+    $("dbg").textContent = "scene:" + SCENE + tk + "｜rev " + state.rev +
       "｜経路 " + syncPath + "｜BC " + (window.Sync.bcAlive ? "alive" : "-") +
       // OBS権限＝自動シーン切替（FB95）の可否確認用。4以上＝setCurrentScene可
       (window.obsstudio ? "｜OBS権限 " + (obsCtrlLevel === null ? "?" : obsCtrlLevel + (obsCtrlLevel >= 4 ? "(切替可)" : "(切替不可・要設定)")) : "") +
@@ -2576,11 +2679,14 @@
       renderBrb();
       renderStartList();
       renderVenueTabs(); // note勝負の終了判定は時刻表基準（8/10 FB113）＝時刻表が届いたら即再評価
+      // ③は場コード→場名の逆引きに時刻表が要る。届いた時点で予想帯のレースキーが確定する
+      if (SCENE === "tenkai") renderPreds();
     }).catch(function () {
       setTimeout(loadTimetable, 15000); // 起動直後の取得失敗で10分空白にならないよう即リトライ
     });
   }
   loadTimetable();
+  initTenkaiChannel(); // ③のみ：展開ボードのドックからレース選択を購読（聞き専）
   setInterval(loadTimetable, (window.APP_CONFIG.TT_POLL_MS || 600000));
 
   var fitTick = 0;
@@ -2589,7 +2695,11 @@
     renderTimers();     // カードセット変化時のみDOM再構築
     tickBrb();
     autoSceneTick();    // 発走時刻の自動シーン切替（8/9 FB95・表示中ソースのみ実行）
-    if (++fitTick % 4 === 0) { fitTalkBands(); fitRaceBands(); fitNarabi(); } // 毎秒＝①②帯・ライン行の自己修復（8/6 FB32/37/44）
+    // 毎秒＝①②③帯・ライン行の自己修復（8/6 FB32/37/44・8/12で③を追加）
+    if (++fitTick % 4 === 0) {
+      fitTalkBands(); fitRaceBands();
+      fitNarabi(SL_TALK.narabi); fitNarabi(SL_TK.narabi);
+    }
     if (nhBoundary !== null && nowSec() >= nhBoundary) renderVenueTabs(); // note勝負＝終了レースを個々に消す（8/10 FB113）
     sweepHitGlows();    // 的中買目チップ強調の期限切れ掃除（8/10 FB119・27秒で通常表示へ）
   }, 250);              // 0.25秒刻み＝信号機色の切替と音のズレを知覚できない範囲に抑える

@@ -93,7 +93,50 @@
     </aside>
   </section>
 
-  <!-- ================= ③結果・的中シーン ================= -->
+  <!-- ================= ③レース展開シーン（8/12新設） =================
+       中央は透過穴。展開ボード（naoto-web.github.io/tenkai/?view=output）を
+       別ブラウザソースとして下に敷き、その上にこのオーバーレイを重ねる。
+       右レール・予想帯は②レース観戦のクラスをそのまま使い回す＝寸法と見た目が自動で揃う。
+       ②との差は「映像枠(1360x768)」が「左400px＋中央960px」に割れている点と、
+       予想帯の上辺が864→668に上がって高さが208→404になる点だけ。 -->
+  <section class="scene" id="scene-tenkai">
+    <!-- 左：対象レースの出走表＋ライン -->
+    <aside class="tk-left">
+      <div class="panel slist-panel">
+        <div class="panel-head">出走表<span class="panel-head-sub" id="slist-sub-tk"></span></div>
+        <ul class="slist" id="slist-tk"></ul>
+        <div class="narabi-row hidden" id="narabi-tk"></div>
+      </div>
+    </aside>
+
+    <!-- 中央：レース展開（展開ボードを敷く穴） -->
+    <div class="tk-board" data-hole><div class="video-ph">レース展開</div></div>
+
+    <!-- 下：予想帯（②と同じ様式・高さ約2倍） -->
+    <div class="race-band tk-band">
+      <div class="panel slot-a">
+        <div class="panel-head band-head" id="kband-head-a"><span id="kband-name-a">予想</span><span class="band-inv" id="kband-inv-a"></span></div>
+        <div class="buy-line" id="kband-pred-a"></div>
+        <div class="band-meta hidden" id="kband-meta-a"></div>
+      </div>
+      <div class="panel slot-b">
+        <div class="panel-head band-head" id="kband-head-b"><span id="kband-name-b">予想</span><span class="band-inv" id="kband-inv-b"></span></div>
+        <div class="buy-line" id="kband-pred-b"></div>
+        <div class="band-meta hidden" id="kband-meta-b"></div>
+      </div>
+    </div>
+
+    <!-- 右：タイマー＋ワイプ2つ（②と同寸・同位置） -->
+    <aside class="vrail race-rail">
+      <ul class="timer-cards" id="timer-tk"></ul>
+      <div class="race-wipes">
+        <div class="cam slot-a" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot"></i><span id="np-tk-a"></span></div></div>
+        <div class="cam slot-b" data-hole><div class="cam-ph">👤</div><div class="nameplate"><i class="np-dot alt"></i><span id="np-tk-b"></span></div></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ================= ④結果・的中シーン ================= -->
   <section class="scene" id="scene-result">
     <div class="panel race-chips" id="race-chips"><span class="chips-title">本日の結果</span><span id="race-chips-body"></span></div>
 

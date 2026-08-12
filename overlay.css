@@ -75,6 +75,7 @@ body[data-theme="w"] .tick-manche { color: #d32f2f; }
 .scene { display: none; position: absolute; inset: 0; z-index: 1; }
 body.scene-talk   #scene-talk   { display: block; }
 body.scene-race   #scene-race   { display: block; }
+body.scene-tenkai #scene-tenkai { display: block; }
 body.scene-result #scene-result { display: block; }
 body.scene-brb    #scene-brb    { display: block; }
 body.scene-ad     #scene-ad     { display: block; }
@@ -538,6 +539,55 @@ body.debug .video-ph { display: flex; }
 
 .race-band { position: absolute; left: 8px; top: 864px; width: 1360px; bottom: 8px;
   display: flex; gap: 0; }
+
+/* ============ ③レース展開シーン（8/12新設） ============
+   数値はすべて②レース観戦から導いた固定値。可変要素はない。
+
+     ヘッダー          y   0– 96（全シーン共通）
+     右レール          x 1368–1912（.race-rail の 544px をそのまま使用）
+       └ タイマー      y  96–264（.timer-cards の flex:0 0 168px ＝場数が増えても高さは不変）
+       └ ワイプ①      y 264–668
+       └ ワイプ②      y 668–1072   ← この上辺が予想帯の上辺（Naoto指定）
+     左（出走表＋ライン）x    8– 408、y 96–668
+     中央（展開の穴）   x  408–1368、y 96–668 ＝ 960×572
+     予想帯            x    8–1368、y 668–1072 ＝ 1360×404（②の208pxから約1.9倍）
+
+   左を400pxにしたのは、出走表が「最長ケースでも396pxに収まる」設計だから（.slist-panel 参照）＝
+   ①②のコンポーネントを一切いじらずに流用できる幅。 */
+
+#scene-tenkai .tk-left {
+  position: absolute; left: 8px; top: 96px; width: 400px; height: 572px;
+  display: flex; flex-direction: column;
+}
+#scene-tenkai .tk-board { position: absolute; left: 408px; top: 96px; width: 960px; height: 572px; }
+/* 予想帯＝.race-band の位置だけ上書き（left/width/bottom/レイアウトは共通定義を継承） */
+#scene-tenkai .tk-band { top: 668px; }
+
+/* 1人配信でも枠は2つ出す（8/12 Naoto指定）。
+   カメラ穴は①②と同じ扱いでよい＝あちらも「外形・位置は変えず不透明で塞ぐ」なので枠は残る。
+   ③で上書きが要るのは予想パネルだけ（display:noneだと相方が全幅へ広がりレイアウトが動く）。
+   空席側は色も文言も付けない＝畳まない以上「名前の無い緑の『予想』帯」が出てしまうため */
+body.seat-a-off #scene-tenkai .panel.slot-a,
+body.seat-b-off #scene-tenkai .panel.slot-b { display: flex; }
+body.seat-a-off #scene-tenkai .panel.slot-a .band-head,
+body.seat-b-off #scene-tenkai .panel.slot-b .band-head { background: transparent; }
+/* 枠線もメンバーカラー既定（--acc）のままだと空枠だけが派手に光る→カメラ穴の空席と同じ静けさに */
+body.seat-a-off #scene-tenkai .panel.slot-a,
+body.seat-b-off #scene-tenkai .panel.slot-b { border-color: var(--panel-line); }
+
+/* レイアウト確認用（?debug=1 のときだけ）＝中身が空の枠を破線で見せる。
+   実運用ではタイマーは常に埋まるので出ない */
+body.debug #scene-tenkai .timer-cards:empty {
+  outline: 2px dashed rgba(0, 0, 0, .3); outline-offset: -2px;
+  display: flex; align-items: center; justify-content: center;
+}
+body.debug #scene-tenkai .timer-cards:empty::after {
+  content: "タイマー（②と同じ・168px）"; font-size: 22px; font-weight: 800; opacity: .35;
+}
+body.debug #scene-tenkai .slist:empty::after {
+  content: "（展開ボードのドックでレース未選択）";
+  display: block; padding: 14px; font-size: 20px; opacity: .3; font-weight: 700;
+}
 .race-band .panel { flex: 1 1 0; min-width: 0; }
 /* 白文字ヘッダーの黒フチ（8/6 FB19）：メンバーカラー上の視認性向上。text-shadowは子（投資/回収等）にも継承。
    黒文字になる明色チームカラー時はJSが外す */
