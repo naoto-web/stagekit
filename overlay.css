@@ -1740,15 +1740,13 @@ body.debug .dbg { display: block; }
 body.v2 #scene-race .band-inv { display: none; }
 /* 右パネルの見出しを右端へ寄せて中央を空ける */
 body.v2 #scene-race .panel.slot-b .band-head { justify-content: flex-end; }
-/* ヘッダー行を高くしてラインの居場所を作る（苗字ありのときだけ）。
-   82px＝チップ44＋隙間2＋苗字26＝72に padding6＋border4 を足した必要最小値（余白の遊びをゼロにして
-   買い目から借りる量を最小化した）。予想帯は上が映像(y864)・下が画面端(y1072)で208px固定のため、
-   苗字を出す高さは買い目エリアから借りるしかない＝8/13にNaotoがトレードオフを承知で選択。
-   映像に重ねる案は映像利用の条件で不可（同節の🚫参照） */
-body.v2.ln-name #scene-race .band-head { min-height: 82px; }
+/* ⚠️ヘッダー行の高さは一切いじらない（8/13 Naoto指定）＝買い目エリアを1pxも削らないため。
+   min-height を当てると予想帯208pxの中で買い目が痩せる。ここは触らないこと。
+   ラインは「ヘッダー行の実寸に収まる最大サイズ」をJS（fitRaceLine）が毎回計算して当てる。 */
 
-/* 中央のライン枠。left/width はJS（fitRaceLine）が配信者名の実測から入れる */
-.rb-line { display: none; position: absolute; top: 0; height: 82px; z-index: 3;
+/* 中央のライン枠。top/height/left/width とチップ・苗字のサイズはすべてJSが実測から入れる。
+   ここの値は取得前の初期表示用フォールバック */
+.rb-line { display: none; position: absolute; top: 0; height: 52px; z-index: 3;
   align-items: center; }
 body.v2 #scene-race .rb-line { display: flex; }
 body.v2 #scene-race .rb-line.hidden { display: none; }
@@ -1766,25 +1764,27 @@ body.v2 .rb-line .narabi-row {
 }
 /* 場名＋R＝②には場名バーが無いので、どのレースの並びかをここで示す。
    2段組み＝縦を使って横幅を節約し、そのぶんを苗字に回す（8/13 FB） */
+/* 場名＋Rは2段組み＝縦を使って横幅を節約し、そのぶんを苗字に回す（8/13 FB） */
 body.v2 .rb-line .nb-race { display: flex; flex-direction: column; align-items: center;
-  font-size: 34px; font-weight: 900; color: #16202e; line-height: 1.04;
+  font-size: var(--rbrace, 22px); font-weight: 900; color: #16202e; line-height: 1.04;
   white-space: nowrap; flex: 0 0 auto; }
-body.v2 .rb-line .nb-arrow { font-size: 38px; color: #16202e; }
+body.v2 .rb-line .nb-arrow { font-size: calc(var(--rbchip, 30px) * .9); color: #16202e; }
 /* ライン同士の区切り「・」＝8/13 FBで復活（gapだけだと切れ目が読み取れない） */
-body.v2 .rb-line .nb-dot { display: block; font-size: 30px; color: #16202e; opacity: .5; }
+body.v2 .rb-line .nb-dot { display: block; font-size: calc(var(--rbchip, 30px) * .7);
+  color: #16202e; opacity: .5; }
 body.v2 .rb-line .nb-group { gap: 10px; }
-body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-/* 枠を88pxに広げた分をチップと苗字へ配分（8/13 FB・スマホ視聴での可読性が主目的）。
-   内寸78px＝チップ44＋隙間2＋苗字26＋padding6 でちょうど収まる */
-body.v2 .rb-line .car { width: 44px; height: 44px; font-size: 41px; border-radius: 6px; }
-body.v2 .rb-line .nb-nm { font-size: 26px; font-weight: 900; color: #16202e;
+body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+/* サイズはJSがヘッダー行の実寸から計算して --rbchip / --rbnm に入れる（8/13）。
+   固定pxで決め打ちすると「入らないから枠を広げる」＝買い目を削る方向に流れるため、
+   与えられた高さの中で最大化する方式に変えた */
+body.v2 .rb-line .car { width: var(--rbchip, 30px); height: var(--rbchip, 30px);
+  font-size: calc(var(--rbchip, 30px) * .93); border-radius: 5px; }
+body.v2 .rb-line .nb-nm { font-size: var(--rbnm, 16px); font-weight: 900; color: #16202e;
   line-height: 1; white-space: nowrap; letter-spacing: -.03em; }
-/* 苗字なし＝既定（8/13 FB）。ヘッダーを広げないので買い目エリアは1pxも削らない。
-   浮いた高さぶんチップを大きくする。場名Rは2段だと52pxに入らないので1行へ戻す */
-body.v2:not(.ln-name) .rb-line { height: 52px; }
+/* 苗字なし（&ln=0）＝チップだけ。高さがまるごとチップに回るのでJSが大きく取る。
+   場名Rは1行に戻す（縦を節約する必要がないため） */
 body.v2:not(.ln-name) .rb-line .nb-nm { display: none; }
-body.v2:not(.ln-name) .rb-line .car { width: 40px; height: 40px; font-size: 38px; }
-body.v2:not(.ln-name) .rb-line .nb-race { flex-direction: row; gap: 8px; font-size: 32px; }
+body.v2:not(.ln-name) .rb-line .nb-race { flex-direction: row; gap: 8px; }
 
 /* メンバーカラー枠を2倍に（Naoto指定「いったん2倍」）＝白テーマの3px → 6px。
    box-sizing:border-box なので要素の外形は不変＝OBSの穴座標には影響しない。

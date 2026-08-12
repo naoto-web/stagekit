@@ -1458,6 +1458,28 @@
     box.classList.remove("hidden");
     box.style.left = Math.round(left) + "px";
     box.style.width = Math.round(w) + "px";
+    /* 高さ＝ヘッダー行の実寸にぴったり合わせる（8/13 Naoto指定）。
+       ⚠️ここでヘッダーを広げてはいけない＝予想帯208pxの中で買い目エリアが痩せるため。
+       与えられた高さの中でチップ・苗字を最大化する（固定pxで決め打ちすると「入らない→枠を広げる」
+       という買い目を削る方向に流れる）。苗字なしのときは高さを全部チップに回す */
+    var head = $("band-head-a");
+    var hr = head ? head.getBoundingClientRect() : null;
+    if (hr && hr.height > 0) {
+      box.style.top = Math.round(hr.top - br.top) + "px";
+      box.style.height = Math.round(hr.height) + "px";
+      var inner = hr.height - 10;           // padding 3×2＋border 2×2
+      var nm = 0, chip;
+      if (LINE_NAMES) {
+        nm = Math.max(12, Math.min(26, Math.round(inner * 0.37)));
+        chip = Math.max(16, Math.round(inner - nm - 1));
+      } else {
+        chip = Math.max(16, Math.round(inner));
+      }
+      box.style.setProperty("--rbchip", chip + "px");
+      box.style.setProperty("--rbnm", nm + "px");
+      // 場名Rは苗字ありのとき2段組み＝1段あたり内寸の42%まで
+      box.style.setProperty("--rbrace", Math.round(inner * (LINE_NAMES ? 0.42 : 0.62)) + "px");
+    }
     fitNarabi("narabi-race"); // 幅が確定してから縮小判定（先に測ると常に0幅になる）
   }
 
