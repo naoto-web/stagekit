@@ -1245,11 +1245,13 @@
         if (sPanel) sPanel.style.display = (rc && svn) ? "" : "none";
         var sName = $("sband-name-" + slot);
         if (sName) {
-          sName.textContent = name ? name + " 予想（NEXT）" : "";
+          // 「予想（NEXT）」は添え字（.sub-sfx＝0.62em）に分離＝同サイズで並べると
+          // 名前が9文字分に引きずられて頭打ちになるため（8/13 FB「文字が小さい」）
+          sName.innerHTML = name ? esc(name) + '<span class="sub-sfx">予想（NEXT）</span>' : "";
           // 幅にぴったり収まるフォントサイズを自動計算（8/6 FB34：縮小だけでなく拡大もして枠パンパンに・改行なし）
           sName.style.transform = "";
           sName.style.fontSize = "";
-          var sAvail = sHead.clientWidth - 20; // ヘッダー左右padding分
+          var sAvail = sHead.clientWidth - 14; // ヘッダー左右padding分（8/13に10→7へ変更）
           if (sAvail > 0 && sName.scrollWidth > 0) {
             var sBase = parseFloat(getComputedStyle(sName).fontSize) || 18;
             var sFs = Math.max(12, Math.min(34, sBase * sAvail / sName.scrollWidth));
