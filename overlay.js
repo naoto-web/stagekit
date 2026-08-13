@@ -1247,7 +1247,9 @@
         if (sName) {
           // 「予想（NEXT）」は添え字（.sub-sfx＝0.62em）に分離＝同サイズで並べると
           // 名前が9文字分に引きずられて頭打ちになるため（8/13 FB「文字が小さい」）
-          sName.innerHTML = name ? esc(name) + '<span class="sub-sfx">予想（NEXT）</span>' : "";
+          // 括弧は半角＝全角（）は1文字ぶんの幅を取るため、半角にするだけで全体が約1割詰まり、
+          // 自動フィットのぶん名前が大きくなる（8/13 FB）
+          sName.innerHTML = name ? esc(name) + '<span class="sub-sfx">予想(NEXT)</span>' : "";
           // 幅にぴったり収まるフォントサイズを自動計算（8/6 FB34：縮小だけでなく拡大もして枠パンパンに・改行なし）
           sName.style.transform = "";
           sName.style.fontSize = "";
