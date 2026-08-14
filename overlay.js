@@ -372,11 +372,16 @@
      OBSに裏画面扱い（タイマー間引き＋音声バッファ遅延）され音が実測9秒遅れた。OBSはソースの
      表示/非表示をPage Visibilityで通知してくるため、タイマーを持つ①②が自分の表示中だけ鳴らせば
      見ている画面の色切替と同一ソース発音＝ズレゼロ・二重発音もなし。
-     タイマーの無い③⑤等の表示中は無音（8/7 Naoto了承）。
+     タイマーの無い⑤等の表示中は無音（8/7 Naoto了承）。
+     ⚠️③レース展開は8/12 Step3で②と同じタイマーを持ったので発音対象に含める（8/15 追加）。
+        当初の「タイマーの無い③」という前提が変わったのに、この行だけ8/7のまま取り残されていた
+        ＝③表示中は色だけ変わって無音になっていた（Naoto指摘で発覚）。
+        表示中の1ソースだけが鳴らす設計（audible）は不変なので、③を足しても二重発音は起きない。
      &sound=0＝完全無効／&sound=1＝表示状態に関わらず発音（旧挙動・検証用）。
      色切替と音ズレしないよう、コンテキストは起動時に初期化しておく（鳴らす瞬間の初期化遅延をなくす）。 */
   var SOUND_FORCE = params.get("sound") === "1";
-  var SOUND = SOUND_FORCE || (params.get("sound") !== "0" && (SCENE === "race" || SCENE === "talk"));
+  var SOUND = SOUND_FORCE || (params.get("sound") !== "0" &&
+    (SCENE === "race" || SCENE === "talk" || SCENE === "tenkai"));
   function audible() { return SOUND && (SOUND_FORCE || document.visibilityState === "visible"); }
   var audioCtx = null;
   if (SOUND) {
@@ -411,12 +416,18 @@
     } catch (e) { /* 音を出せない環境では無音のまま */ }
   }
   /* 色切替と音のズレ対策（8/6 FB6）：境界の実時刻にサンプル精度で事前予約する。
-     キー＝「民間締切の絶対秒|境界秒」＝レースごと・境界ごとに1回だけ（即時フォールバックとの二重鳴り防止） */
+     キー＝「日付|民間締切の絶対秒|境界秒」＝レースごと・境界ごとに1回だけ（即時フォールバックとの二重鳴り防止）。
+     ⚠️日付を前置するのは、締切の絶対秒が「0時からの経過秒」で日付を持たないため（8/15 追加）。
+        ミッドナイトは毎日ほぼ同じ20分グリッド＝前日と発走時刻が一致した瞬間にキーが衝突し、
+        OBSソースを開きっぱなしにしていると「もう鳴らした」扱いで永久に無音になっていた。
+        autoSwitched（FB71）・narabiAuto（8/8）と同じ日跨ぎ事故で、ここだけ対策が漏れていた。
+        呼び出し側ではなくこの中で足す＝予約と即時フォールバックの両方に一度で効く。 */
   var beepDone = {};
   function scheduleBeep(key, delaySec) {
     if (!audible()) return; // 非表示中は「鳴らした扱い」にもしない（表示切替直後の境界はフォールバックが拾える）
-    if (beepDone[key]) return;
-    beepDone[key] = true;
+    var k = todayStr() + "|" + key;
+    if (beepDone[k]) return;
+    beepDone[k] = true;
     beepAt(audioCtx ? audioCtx.currentTime + Math.max(0, delaySec) : 0);
   }
 
