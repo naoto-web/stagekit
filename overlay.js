@@ -181,19 +181,18 @@
     // 行から名簿（state.roster）の名前を検出し、同じ配信者の行を1つの枠にまとめる。
     // 枠線＝メンバーカラー＝画面全体の「色＝人」の視覚言語と統一（視聴者は色だけで誰のか分かる）。
     // 名前が検出できない行は独立の枠でそのまま表示（自由入力は壊さない）
-    var roster = (state.roster || []).filter(function (r) { return r && r.name; })
-      .sort(function (a, b) { return b.name.length - a.name.length; });
+    // 名前の照合は表記ゆれを無視（8/15 FB135）＝「むねお」でも「ムネオ」でも、「ピータ」でも「ピーター」でも本人。
+    // 判定はDerive側（コンソールのnote予想チェック既定ONと同じ関数）に集約＝ルールが2か所に割れないように
+    var roster = (state.roster || []).filter(function (r) { return r && r.name; });
     var groups = [], byName = {};
     lines.forEach(function (l, seq) {
-      var hit = null;
-      for (var i = 0; i < roster.length; i++) {
-        if (l.indexOf(roster[i].name) >= 0) { hit = roster[i]; break; }
-      }
+      var hit = window.Derive.matchRacer(l, roster);
       var key = hit ? hit.name : "|" + groups.length; // 名前なし行＝独立枠（まとめない）
       var g = byName[key];
       if (!g) { g = { racer: hit, items: [] }; byName[key] = g; groups.push(g); }
-      // 行から名前を除いた残り＝レース表記（残った区切り記号・余分な空白を掃除）
-      var rest = hit ? l.split(hit.name).join(" ") : l;
+      // 行から名前を除いた残り＝レース表記（残った区切り記号・余分な空白を掃除）。
+      // 除去も表記ゆれ込み＝書かれた通りの「ピータ」を取り除ける
+      var rest = hit ? window.Derive.stripName(l, hit.name) : l;
       rest = rest.replace(/^[\s:：、・/／|｜-]+/, "").replace(/[\s、・/／|｜-]+$/, "").replace(/\s+/g, " ").trim();
       if (!rest) return;
       /* ── 複数場の1行対応（8/10 FB125・Naoto「前橋と四日市が別で表示されれば」）：
@@ -1180,9 +1179,10 @@
         }
         if (color) {
           bandHead.style.background = color;
-          var btc = textOn(color);
-          bandHead.style.color = btc;
-          bandHead.classList.toggle("txt-edge", btc === "#fff"); // 白文字のみ黒フチ（8/6 FB19）
+          // 予想帯の「〇〇 予想」は色に関係なく白の太字＋黒フチで統一（8/15 FB136・Naoto指定）。
+          // 旧＝明色（黄）だけ黒文字（textOn）＝ムネオの帯だけ見え方が違っていた
+          bandHead.style.color = "#fff";
+          bandHead.classList.add("txt-edge");
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = color;
         } else {
           // 空席になったら前の配信者の色を消す（8/12）。起動時の既定stateには配信者が2人入っている
@@ -1273,9 +1273,8 @@
         }
         if (color) {
           sHead.style.background = color;
-          var stc = textOn(color);
-          sHead.style.color = stc;
-          sHead.classList.toggle("txt-edge", stc === "#fff"); // 白文字のみ黒フチ（8/6 FB19）
+          sHead.style.color = "#fff"; // メイン帯と同じ白＋黒フチで統一（8/15 FB136）
+          sHead.classList.add("txt-edge");
           if (sPanel) sPanel.style.borderColor = color;
         }
         var sBand = $("sband-pred-" + slot);
@@ -1344,6 +1343,7 @@
     }
     var key = window.Derive.raceKey(vName, rNo);
     var scores = narabiAuto[key] ? narabiAuto[key].scores || {} : {};
+    var ages = narabiAuto[key] ? narabiAuto[key].ages || {} : {}; // 年齢＝得点と同じkeirin.jp JSJ002由来（8/15）
     // 競走得点の1位＝赤・2位＝青（同点は同色）
     var scoreVals = [];
     race.racers.forEach(function (p) {
@@ -1358,16 +1358,20 @@
       var sc = scores[String(p.no)] || "";
       var sv = parseFloat(sc);
       var scls = "sl-score" + (sv === top1 ? " top1" : sv === top2 ? " top2" : "");
+      // 年齢＝選手名の右に半角の(36)（8/15）。名前と同じspanの中＝行のgapを挟まずぴったり続ける
+      var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
       return '<li class="slist-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
-        '<span class="sl-name">' + esc(p.name) + '</span><span class="sl-sub">' + esc(sub) + "</span>" +
+        '<span class="sl-name">' + esc(p.name) +
+        (age ? '<span class="sl-age">(' + age + ")</span>" : "") +
+        '</span><span class="sl-sub">' + esc(sub) + "</span>" +
         (sc ? '<span class="' + scls + '">' + esc(sc) + "</span>" : "") + "</li>";
     }).join("");
     renderNarabi(vName, rNo, ids.narabi);
     fitSlist(ids.list); // ライン表示で高さが変わった後に9車の収まりを確認（8/6 FB30）
   }
 
-  /** ライン（並び予想）＋競走得点＝GAS経由でkeirin.jpから自動取得。並びは手入力があれば優先（修正用） */
-  var narabiAuto = {}; // raceKey → { val, scores, pending, at }
+  /** ライン（並び予想）＋競走得点＋年齢＝GAS経由でkeirin.jpから自動取得。並びは手入力があれば優先（修正用） */
+  var narabiAuto = {}; // raceKey → { val, scores, ages, pending, at }
   var narabiDate = ""; // narabiAutoに入っている値の取得日（yyyyMMdd）＝日跨ぎ検知用
   function joCodeOf(venueName) {
     var jo = null;
@@ -1377,15 +1381,16 @@
     return jo;
   }
   function hasRaceInfo(e) {
-    return e && (e.val || (e.scores && Object.keys(e.scores).length > 0));
+    return e && (e.val || (e.scores && Object.keys(e.scores).length > 0) ||
+      (e.ages && Object.keys(e.ages).length > 0));
   }
   function ensureNarabi(vName, rNo, key) {
     if (narabiAuto[key]) return;
     var jo = joCodeOf(vName);
     if (!jo) return; // 時刻表の取得待ち
-    narabiAuto[key] = { val: "", scores: {}, pending: true };
+    narabiAuto[key] = { val: "", scores: {}, ages: {}, pending: true };
     window.Sync.fetchNarabi(jo, rNo).then(function (info) {
-      narabiAuto[key] = { val: info.narabi, scores: info.scores, at: Date.now() };
+      narabiAuto[key] = { val: info.narabi, scores: info.scores, ages: info.ages, at: Date.now() };
       if (hasRaceInfo(narabiAuto[key])) renderStartList();
     }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
   }

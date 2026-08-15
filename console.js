@@ -386,8 +386,10 @@
     var lines = String(state.noteRaces || "").split(/\r?\n/);
     for (var i = 0; i < lines.length; i++) {
       var l = lines[i];
-      if (l.indexOf(rc.name) < 0 || l.indexOf(venue) < 0) continue;
-      var digits = (l.split(rc.name).join(" ").split(venue).join(" ")
+      // 名前の照合は表記ゆれ込み（8/15 FB135・上部バナーと同じDeriveの判定を使う）＝
+      // 「むねお／ムネオ」「ピータ／ピーター」どちらで書いても本人のレースとして拾う
+      if (!window.Derive.nameHit(l, rc.name) || l.indexOf(venue) < 0) continue;
+      var digits = (window.Derive.stripName(l, rc.name).split(venue).join(" ")
         .replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); })
         .match(/\d+/g)) || [];
       if (digits.indexOf(rNo) >= 0) return true;

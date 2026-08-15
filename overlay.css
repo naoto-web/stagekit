@@ -490,6 +490,10 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 .slist-row:last-child { border-bottom: none; }
 .slist-row .car { width: 26px; height: 26px; font-size: 24px; border-radius: 5px; }
 .sl-name { font-size: 21px; font-weight: 900; line-height: 1.25; }
+/* 年齢（8/15）＝選手名の右に半角(36)。名前spanの中に置くので行のgap(12px)は挟まらない。
+   所属・得点の並びを押し出さないよう名前より一回り小さく・色は脇役（--sub）に寄せる */
+.sl-age { font-size: 17px; font-weight: 800; color: var(--sub); margin-left: 3px;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* 所属・得点を名前に近いサイズへ（8/6 FB49・最長「神奈川・追」＋6桁得点でも1行に収まる幅計算済み） */
 .sl-sub { margin-left: auto; font-size: 19px; color: var(--sub); font-weight: 700;
   text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

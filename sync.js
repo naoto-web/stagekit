@@ -97,13 +97,14 @@
           return j.results || [];
         });
     },
-    /** 並び予想（ライン）＋競走得点の自動取得。{narabi:'147 26 35', scores:{車番:'111.72'}} */
+    /** 並び予想（ライン）＋競走得点＋年齢の自動取得。
+        {narabi:'147 26 35', scores:{車番:'111.72'}, ages:{車番:'36'}} */
     fetchNarabi: function (jo, race) {
       var url = cfg.GAS_URL + "?action=narabi&jo=" + encodeURIComponent(jo) + "&race=" + (+race || 0);
       return getJson(url)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "narabi fetch failed");
-          return { narabi: j.narabi || "", scores: j.scores || {} };
+          return { narabi: j.narabi || "", scores: j.scores || {}, ages: j.ages || {} };
         });
     },
 

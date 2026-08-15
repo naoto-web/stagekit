@@ -7,6 +7,107 @@
 
   function raceKey(venue, r) { return venue + "|" + r; }
 
+  /* ---------- 配信者名の表記ゆれ吸収（8/15 FB135） ----------
+     コンソールのnote勝負メモは手打ちなので「むねお／ムネオ」「ピータ／ピーター」のように揺れる。
+     ひらがな/カタカナ・長音（ー）の有無・小書き文字・区切り記号/空白の違いを無視して名簿と突き合わせる。
+     ⚠️使うのは「同じ人か」の判定だけ。画面に出す表記は名簿（state.roster）の表記が正。 */
+  var KANA_BIG = {
+    "ァ": "ア", "ィ": "イ", "ゥ": "ウ", "ェ": "エ", "ォ": "オ",
+    "ヵ": "カ", "ヶ": "ケ", "ッ": "ツ", "ャ": "ヤ", "ュ": "ユ", "ョ": "ヨ", "ヮ": "ワ",
+  };
+  /* 無視する文字＝長音記号（ー・半角ｰ）／各種ハイフン・波ダッシュ／中黒／空白（全角空白は\sに含まれる）。
+     ⚠️半角ハイフンは必ず \- でエスケープする（生の「ｰ-‐」は文字クラスの範囲指定と解釈されて構文エラー） */
+  var KANA_SKIP = /[ーｰ\-‐‑‒–—―〜～~・･\s]/;
+  /** 1文字の正規化。""＝無視する文字 */
+  function kanaChar(c) {
+    if (KANA_SKIP.test(c)) return "";
+    var code = c.charCodeAt(0);
+    if (code >= 0x3041 && code <= 0x3096) c = String.fromCharCode(code + 0x60); // ひらがな→カタカナ
+    return KANA_BIG[c] || c;
+  }
+  /** 正規化形＋「正規化後n文字目が元文字列の何文字目か」の対応表（末尾に番兵を1つ置く） */
+  function kanaMap(s) {
+    var str = String(s == null ? "" : s);
+    var norm = "", idx = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = kanaChar(str.charAt(i));
+      if (!c) continue;
+      norm += c;
+      idx.push(i);
+    }
+    idx.push(str.length);
+    return { norm: norm, idx: idx };
+  }
+  /** 表記ゆれを無視した同一判定用のキー（"ピーター"も"ピータ"も"ピタ"） */
+  function nameKey(s) { return kanaMap(s).norm; }
+  /** line の中の name（表記ゆれ可）の位置。元文字列上の [start, end) ／無ければ null */
+  function nameHit(line, name) {
+    var k = nameKey(name);
+    if (!k) return null;
+    var m = kanaMap(line);
+    var at = m.norm.indexOf(k);
+    if (at < 0) return null;
+    return { start: m.idx[at], end: m.idx[at + k.length] };
+  }
+  /** 1行から名簿の配信者を1人特定する（長い名前優先＝部分一致の誤マッチ防止）。無ければ null */
+  function matchRacer(line, roster) {
+    var m = kanaMap(line);
+    var list = (roster || []).filter(function (r) { return r && r.name && nameKey(r.name); })
+      .sort(function (a, b) { return nameKey(b.name).length - nameKey(a.name).length; });
+    for (var i = 0; i < list.length; i++) {
+      if (m.norm.indexOf(nameKey(list[i].name)) >= 0) return list[i];
+    }
+    return null;
+  }
+  /** 1行から name（表記ゆれ可）を全部取り除いた残り＝レース表記の抽出用 */
+  function stripName(line, name) {
+    var s = String(line == null ? "" : line);
+    for (var guard = 0; guard < 8; guard++) {
+      var h = nameHit(s, name);
+      if (!h) break;
+      s = s.slice(0, h.start) + " " + s.slice(h.end);
+    }
+    return s;
+  }
+
+  /* ---------- 名簿表記の変更（8/15・ひらがな→カタカナ統一） ----------
+     stateは「名前＝配信者ID」で予想・回収・的中がぶら下がっているため、単に名簿を書き換えるだけだと
+     旧名義の実績が孤児になる（＝投資/回収が0に戻る）。読み込み時にキーごと付け替える。
+     GAS上の保存データはコンソールが次に保存した時点で新表記に置き換わる（それまでは読むたびに変換）。 */
+  var RENAME = { "むねお": "ムネオ" };
+  function renameRacers(state) {
+    var olds = Object.keys(RENAME);
+    if (!olds.length) return state;
+    var rn = function (v) { return RENAME[v] || v; };
+    var mapKeys = function (obj) { // 配信者IDをキーに持つマップの付け替え
+      if (!obj || typeof obj !== "object") return;
+      olds.forEach(function (o) {
+        if (!Object.prototype.hasOwnProperty.call(obj, o)) return;
+        if (!Object.prototype.hasOwnProperty.call(obj, RENAME[o])) obj[RENAME[o]] = obj[o];
+        delete obj[o];
+      });
+    };
+    (state.roster || []).forEach(function (r) { if (r && r.name) r.name = rn(r.name); });
+    (state.racers || []).forEach(function (r) {
+      if (!r) return;
+      if (r.name) r.name = rn(r.name);
+      if (r.id) r.id = rn(r.id);
+    });
+    Object.keys(state.preds || {}).forEach(function (k) { mapKeys((state.preds[k] || {}).byRacer); });
+    Object.keys(state.results || {}).forEach(function (k) { mapKeys((state.results[k] || {}).refunds); });
+    mapKeys(state.talkRaces);
+    mapKeys(state.raceSubBy);
+    mapKeys(state.subVenueBy);
+    (state.hitsManual || []).forEach(function (h) { if (h && h.racerName) h.racerName = rn(h.racerName); });
+    // 非表示にした的中のID（場|R|配信者|種別|組）も付け替える＝消した的中が改名で復活しないように
+    state.hitsHidden = (state.hitsHidden || []).map(function (id) {
+      var p = String(id).split("|");
+      if (p.length >= 3) p[2] = rn(p[2]);
+      return p.join("|");
+    });
+    return state;
+  }
+
   /* チームカラー：名簿の色は日本語（またはhex）で保存し、表示時にhexへ変換 */
   var COLOR_MAP = {
     "青": "#3b82f6", "緑": "#22c55e", "オレンジ": "#f97316", "橙": "#f97316",
@@ -34,7 +135,7 @@
         { name: "えーす", color: "オレンジ" },
         { name: "カズ", color: "赤" },
         { name: "もとき", color: "ピンク" },
-        { name: "むねお", color: "黄色" },
+        { name: "ムネオ", color: "黄色" }, // 8/15にひらがな「むねお」から変更（旧表記はrenameRacersで吸収）
       ],
       venues: [],
       activeVenue: 0,
@@ -265,6 +366,7 @@
     state.roster = (state.roster || []).map(function (r) {
       return typeof r === "string" ? { name: r, color: "" } : r;
     });
+    renameRacers(state); // 名簿表記の変更（むねお→ムネオ）を実績ごと付け替える（8/15）
     state.narabi = state.narabi || {};
     // 旧スロットID（r1/r2）→ 人ベースID（名前）へ移行。
     // 予想データのキーも現在の割当で付け替える（移行時点の割当までしか遡れない点は許容）
@@ -307,5 +409,9 @@
     justStartedRace: justStartedRace,
     videoRaceAt: videoRaceAt,
     alignToRace: alignToRace,
+    nameKey: nameKey,
+    nameHit: nameHit,
+    matchRacer: matchRacer,
+    stripName: stripName,
   };
 })(typeof self !== "undefined" ? self : this);
