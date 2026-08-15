@@ -324,8 +324,10 @@
       '<span class="nh-groups">' +
       groups.map(function (g) {
         var col = g.racer ? window.Derive.colorOf(g.racer.color) : "";
+        // 名前チップも予想帯ヘッダーと同じ白の太字＋黒フチで統一（8/15 FB136・Naoto指定）＝
+        // 明色メンバー（黄）だけ黒文字になる旧仕様（textOn）を全画面で廃止
         var name = g.racer
-          ? '<span class="nh-name"' + (col ? ' style="background:' + col + ";color:" + textOn(col) + '"' : "") + ">" +
+          ? '<span class="nh-name txt-edge"' + (col ? ' style="background:' + col + ';color:#fff"' : "") + ">" +
             esc(g.racer.name) + "</span>"
           : "";
         var items = g.items.map(function (it) {
@@ -608,7 +610,9 @@
     return window.Derive.raceKey(v.name, rNo);
   }
 
-  /** メンバーカラー背景に対する文字色（明るい色＝黒・暗い色＝白） */
+  /** メンバーカラー背景に対する文字色（明るい色＝黒・暗い色＝白）。
+      ⚠️8/15 FB136で全表示（予想帯ヘッダー・note勝負の名前チップ）が「白＋黒フチ固定」になり、
+      現在の呼び出し元はゼロ。色を増やしたときの判定用に関数だけ残してある */
   function textOn(hex) {
     var m = /^#?([0-9a-fA-F]{6})$/.exec(hex || "");
     if (!m) return "#fff";
