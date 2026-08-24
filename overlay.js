@@ -4,6 +4,10 @@
      ?theme=a|b|c                  … 配色
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
      ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
+     ?thxv=1|2|3                   … 選手リスペクト演出の表示（1:名前だけ／2:着順＋車番＋名前＝既定／3:2＋決まり手）
+     ?thxn=1|2|3                   … 同・選手名の出し方（1:姓大・名小＝既定／2:フルネーム均等／3:姓だけ）
+     ?fx=<演出キー>                 … 的中演出の抽選をやめて指定の演出を出す（検証用・本番URLには付けない）
+                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|thanks
    データ: GAS状態（5秒ポーリング＋BroadcastChannel即時反映）＋タイムテーブル（10分毎） */
 
 (function () {
@@ -1398,8 +1402,12 @@
       if (hasRaceInfo(narabiAuto[key])) renderStartList();
     }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
   }
-  /** 車番→苗字（②中央ライン用）。時刻表の出走表は「阪本 正和」形式＝最初の空白まで＝苗字 */
-  function surnameOf(vName, rNo, no) {
+  /** 車番→フルネーム（出走表から）。時刻表の出走表は「阪本 正和」形式。
+      選手リスペクト演出（8/25）の名前の主経路：本番運用は結果の自動取得を待たず
+      着順＋払戻だけ手入力で確定する＝state.resultsのnamesはほぼ空。
+      しかも手入力済みレースは後からのスクレイプで上書きしない（console.js「手入力済みは触らない」）
+      ＝結果側から名前が来ることは期待できない。着順の車番→出走表で引くのが実態に合う */
+  function fullNameOf(vName, rNo, no) {
     var out = "";
     if (!timetable || !vName || !rNo) return out;
     (timetable.venues || []).forEach(function (tv) {
@@ -1407,11 +1415,15 @@
       (tv.races || []).forEach(function (r) {
         if (r.no !== +rNo) return;
         (r.racers || []).forEach(function (p) {
-          if (+p.no === +no) out = String(p.name || "").split(/[\s　]+/)[0];
+          if (+p.no === +no) out = String(p.name || "").trim();
         });
       });
     });
     return out;
+  }
+  /** 車番→苗字（②中央ライン用）＝フルネームの最初の空白まで */
+  function surnameOf(vName, rNo, no) {
+    return fullNameOf(vName, rNo, no).split(/[\s　]+/)[0];
   }
   /* opts.names＝車番チップの下に苗字を出す／opts.noType＝戦型（三分戦等）を出さない。
      どちらも②の中央ライン専用。①③は従来どおり（引数なし＝挙動不変） */
@@ -1755,8 +1767,10 @@
              dur    …1体の走破秒[最小,最大]（既定[2.2,3.2]）
              rainMs …走行の長さ＝バッジが出るまでの時間ms（既定4500）
              effect …アイコン走行の代わりに出す専用演出（"yakumono"＝役物合体／"slot"＝スロット
-                      ／"sumo"＝相撲／"pray"＝念仏）。
-                      ／"tea"＝お茶）。
+                      ／"sumo"＝相撲／"pray"＝念仏／"tea"＝お茶／"samba"＝サンバ
+                      ／"adjust"＝アジャスト／"thanks"＝選手リスペクト）。
+                      ⚠️"thanks" だけは絵柄が人に紐づかない全員共通の演出（8/23）＝
+                        誰に付けてもよいし、THX_IN_ROTATION=true で全色の抽選に一括で入る。
                       指定した色キーはアイコン走行を出さない＝二重演出にしない。尺は各演出側が決める
              effects…専用演出を複数持たせる場合の配列（8/9 FB90）＝**的中のたびに1つ抽選**する。
                       ""（空文字）を混ぜると「既定のアイコン走行」も抽選対象にできる。
@@ -2589,19 +2603,272 @@
 
   /** その的中で出す専用演出を決める。effects（配列）があれば抽選＝1人で複数の演出を持てる（8/9 FB90）。
       ⚠️ここで1回だけ引く＝同じ的中の4シーン分のワイプで演出がバラバラにならない */
+  /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
+       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba
+     window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
+       本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
+       選んだ状態で強制すると「絵は別人・枠の色は選んだ人」という組み合わせになる（ラボ用途では想定内） */
+  var FX_FORCE = params.get("fx") || "";
   function pickEffect(key) {
+    var force = window.__FX_FORCE || FX_FORCE;
+    if (force) return force === "rain" ? "" : force;
     var c = MEMBER_FX[key] || {};
-    if (c.effects && c.effects.length) return c.effects[Math.floor(Math.random() * c.effects.length)];
-    return c.effect || "";
+    var list = (c.effects && c.effects.length) ? c.effects : [c.effect || ""];
+    // 選手リスペクトは全員共通＝色に紐づかないので、抽選に入れるときは全色へ1つ足す（8/23）
+    if (THX_IN_ROTATION) list = list.concat("thanks");
+    return list[Math.floor(Math.random() * list.length)];
   }
+
+  /* ══════════ 選手リスペクト演出 "thanks"（8/23 Naoto案） ══════════
+     「結果発表！！／3着 ○○選手！／2着 ○○選手！／1着 ○○選手！／おめざいます！！」をワイプの中に1枚ずつ出す。
+     ⚠️8/25＝表彰台＋チビキャラ版を実装したが同日取りやめ（台に目が行って名前に注目が行かない懸念）。
+       着順チップ＋車番チップ方式へ戻し、代わりに先頭の「結果発表！！」と🚴を追加した。
+     ねらい＝的中演出が配信者だけを映すものになっているので、走った選手を出す面を1枚足す。
+     （YouTube収益化の「独自の付加価値」・C社への説明材料としても使える）
+
+     ⚠️8/23にNaoto指示で「映像中央の独立パネル」から**他と同じ枠の演出**へ作り直した。
+       ・出る場所＝cam（ワイプ）の中。尺の流儀も他と同じ＝ENDで的中バッジにバトンを渡す
+       ・違いは絵柄が特定の人に紐づかないこと＝誰の的中でも出せる「全員共通」の演出
+       ・寸法は①(752×423)と②(544×404)で変わるので、文字は --thx-h（＝ワイプの高さ）基準で組む
+     ⚠️本番の抽選にはまだ入っていない（THX_IN_ROTATION=false）＝今は ?fx=thanks と
+       fxlabの「演出」でだけ出る。全員に出すなら THX_IN_ROTATION を true にするだけ
+     ⚠️最後の札は8/25に「的中！！」→「おめざいます！！」へ変更（Naoto指定）。
+       **誤字ではない**＝「おめでとうございます」に直さないこと。
+       （副次効果＝hit-mainバッジ／ティッカー／サンバのキメ文字「的中」との文言重複も解消）
+     ⚠️落車・失格のガードは入れていない（8/23判断）。1〜3着しか出さないので落車選手の名前は
+       そもそも出ず、失格・降着はJSJ018の確定値に反映済みのため
+
+     ⚠️8/23 Naoto指示で「1枚ずつ・バン！バン！バン！」に作り直した（一覧で並べるのをやめた）。
+       **単独の札**が入れ替わる＝1枚しか出さないぶん字を大きく取れる＝544pxのワイプでも読める。
+       切り替えのたびに叩きつけの閃光＋画面の揺れが入る。
+
+     ══ ステップアップ構成（8/23 Naoto承認・パチンコ/スロットの文法に寄せた） ══
+       ・順番は **3着→2着→1着**＝弱いものから強いものへ。表彰式と同じで最後が勝者になる
+         （前は1着→2着→3着で下がっていた＝盛り上がりと逆行していた）
+       ・色は **青→緑→金**＝期待度の階段。説明なしで伝わる唯一の共通言語
+       ・溜めは **1着だけ長い**＝ロングリーチ。均等なテンポは緊張を生まない
+       ・回転は 2→3→4回転。1着だけ「止まりかけてもう1回転」の煽り付き（擬似連・スベリ）
+       ・最後の「的中！！」は **回転なし**（8/23 Naoto指示）＝大きく迫って一撃で止まる
+     ⚠️煽りは必ず昇格で終わらせる（落とさない）。この演出は的中確定後にしか出ないので、
+       パチンコ流の「煽って外す」を持ち込むと視聴者に「ハズレるかも」と誤読される
+     ⚠️派手さは最後の「的中！！」に寄せ、選手の札は"格上げ"止まりにする。
+       選手を役物のように振り回すとリスペクトの趣旨と衝突する
+
+     THX_STEPS＝選手3枚の設計（配列の順＝出る順）
+       idx  …r.order の添字（0＝1着）。⚠️ここを並べ替えるだけで順番が変わる
+       tier …色の段（1:青 2:緑 3:金）→ CSSの .t1/.t2/.t3
+       spin …回転量deg。⚠️360の倍数にすること（半端だと傾いたまま止まる）
+       hold …その札を見せているms（次の札に変わるまで）。⚠️lag+bangより十分長く保つ
+       bang …名前の登場アニメのms（--thx-bang でCSSへ渡す）
+       lag  …着順チップが出てから名前が飛び込むまでのms（--thx-lag）。
+              「3着は…（誰だ）…○○選手！」の読み順を作る溜め。⚠️0にすると同時に出て煽りにならない
+       don  …叩きつけの瞬間が bang のどこか（0〜1）。揺れを鳴らすタイミング（実際は lag+bang*don）。
+              ⚠️overlay.css の thxBang=68% / thxBangTease=82% / thxKimeIn=22% と対応。
+                片方だけ動かすとズレる
+       shk  …揺れの強さ倍率（--shk）／tease…止まりかけてもう1回転する */
+  var THX_STEPS = [
+    { idx: 2, tier: 1, spin: 720,  hold: 1900, bang: 950,  lag: 450, don: 0.68, shk: 0.8 },
+    { idx: 1, tier: 2, spin: 1080, hold: 2100, bang: 950,  lag: 450, don: 0.68, shk: 1.1 },
+    { idx: 0, tier: 3, spin: 1440, hold: 3200, bang: 1350, lag: 500, don: 0.82, shk: 1.7, tease: true }
+  ];
+  /* 最後の「的中！！」。spinなし＝回転しない・前置きも無いのでlagなし。
+     色は既存バッジの区分（通常/note/万車）に接続 */
+  var THX_KIME_STEP = { hold: 3000, bang: 750, lag: 0, don: 0.22, shk: 2.0 };
+  /* 先頭の「結果発表！！」（8/25 Naoto指示）＝的中！！と同じ登場（thxKimeIn＝回転なしの一撃）。
+     何が始まるのかを1枚で宣言してから3着に入る */
+  var THX_INTRO = "結果発表！！";
+  var THX_INTRO_STEP = { hold: 1400, bang: 750, lag: 0, don: 0.22, shk: 1.2 };
+  var THX_FADE = 520;   // 退場ms
+  /* ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝1400+1900+2100+3200+3000＝約11.6秒
+     （最長だったアジャスト10.3秒を超える。長いと感じたら INTRO と KIME の hold から削る） */
+  var THX_KIME = "おめざいます！！";   // 8/25 Naoto指定。⚠️誤字ではない＝この表記のまま（直さない）
+  var THX_SFX  = "選手！";     // 名前の後ろに付ける敬称＋感嘆
+  /* 表示バリエーション（?thxv=1|2|3）＝1:名前だけ／2:着順＋🚴＋車番＋名前（既定）／3:2＋決まり手 */
+  var THX_VARIANT = (function () { var v = parseInt(params.get("thxv"), 10); return (v >= 1 && v <= 3) ? v : 2; })();
+  /* 名前の出し方（?thxn=1|2|3）
+       1＝姓大・名小（既定）…視線が姓に落ちてテンポは姓だけの時と変わらず、フルネームの格式も残る
+       2＝フルネーム均等　…表彰アナウンスの語感が最も強い
+       3＝姓だけ　　　　　…最短でリズムに乗るが、②中央ラインの苗字表示と情報が同じになる
+     ⚠️keirin.jpの選手名は「阪本 正和」形式＝最初の空白までが姓（surnameOf が同じ前提で本番稼働中）。
+       空白が無い名前が来たら割れないので、1でも3でも全体をそのまま出す＝姓を推測して切らない */
+  var THX_NAME = (function () { var v = parseInt(params.get("thxn"), 10); return (v >= 1 && v <= 3) ? v : 1; })();
+  function thxNameHtml(nm) {
+    var s = String(nm);
+    var i = s.search(/[\s　]/);
+    if (THX_NAME === 2 || i <= 0) return esc(s);
+    var sei = s.slice(0, i), mei = s.slice(i).replace(/^[\s　]+/, "");
+    if (THX_NAME === 3 || !mei) return esc(sei);
+    return esc(sei) + '<span class="given">' + esc(mei) + "</span>";
+  }
+  /* trueにすると全色の抽選に "thanks" が1つ足される＝誰が当てても一定確率で出る（本番投入用の1行スイッチ） */
+  var THX_IN_ROTATION = false;
+  /** その札で実際に使う lag。名前だけ表示（THX_VARIANT=1）は着順チップが無い＝前置きが成立しないので0。
+      ⚠️CSSに渡す --thx-lag と揺れのタイミング計算の両方でこれを使う（片方だけだとズレる） */
+  function thxLagOf(st) { return (THX_VARIANT >= 2 && st.lag) ? st.lag : 0; }
+
+  function thxTimes() {
+    var kime = THX_INTRO_STEP.hold;   // 結果発表！！＋選手3枚を見せ切ったところ＝「的中！！」が出る時刻
+    for (var i = 0; i < THX_STEPS.length; i++) kime += THX_STEPS[i].hold;
+    return { KIME: kime, END: kime + THX_KIME_STEP.hold,
+      GONE: kime + THX_KIME_STEP.hold + THX_FADE };
+  }
+
+  /** 的中したレースの1〜3着を返す（揃わなければnull）。
+      ⚠️結果のnamesはあれば使うが**期待しない**（8/25 Naoto指摘＝実運用は自動取得を待たず
+        着順＋払戻だけの手入力で確定する→namesは空のまま・後からのスクレイプでも上書きされない）。
+        名前は出走表（fullNameOf）から着順の車番で引くのが主経路。それも引けなければ「〇番車」＝
+        選手名を作り話にしない。誤表示はリスペクトの真逆になるため */
+  function thxResult(hit) {
+    var p = String(hit && hit.id).split("|");      // id＝場|R|配信者|式別|組合せ
+    if (p.length < 5) return null;
+    var r = state.results[p[0] + "|" + p[1]];
+    if (!r || !r.order || r.order.length < 3) return null;  // 2車単だけの結果などでは出さない
+    return r;
+  }
+
+  function spawnThanks(cam, key, hit) {
+    var old = cam.querySelector(".fx-thx");
+    if (old) old.parentNode.removeChild(old);
+    var r = thxResult(hit);
+    if (!r) return;
+    var T = thxTimes();
+    var idp = String(hit.id).split("|");   // id＝場|R|配信者|式別|組合せ → 出走表を引く鍵
+
+    /* 札は5枚（結果発表！！・3着・2着・1着・おめざいます！！）。全部DOMに置いて .on を付け替えて1枚ずつ見せる。
+       ⚠️display:none で隠さない：幅が測れなくなって fitThxNames が効かない
+       尺と回転は札ごとに違うので、インライン style で各札に持たせる
+       （あとから付けると .on を足した瞬間のアニメに間に合わないことがある） */
+    var posLabel = ["1着", "2着", "3着"];
+    // 先頭＝結果発表！！（8/25）。class kime＝的中！！と同じ登場（回転なしの一撃）を使い回す。
+    // k-* は付けない＝色は基本の金のまま（虹・黄金は本物の的中！！だけの格）
+    var cards = ['<div class="thx-card kime" style="--thx-bang:' + THX_INTRO_STEP.bang + 'ms">' +
+      '<div class="thx-kime">' + esc(THX_INTRO) + '</div></div>'];
+    THX_STEPS.forEach(function (st) {
+      var car = r.order[st.idx];
+      // 名前の優先順（8/25）：結果に入っていれば最優先（自動取得済み・手で直した場合）
+      // →出走表から車番で引く（★実運用の主経路＝手入力確定はnamesが空のため）→「○番車」
+      var nm = (r.names && r.names[st.idx]) || fullNameOf(idp[0], idp[1], car) || (car + "番車");
+      var kim = (r.kimarite && r.kimarite[st.idx]) ? r.kimarite[st.idx] : "";
+      var head = "";
+      if (THX_VARIANT >= 2) {
+        // 並び＝着順→🚴→車番（8/25：チップの間に自転車の絵文字・8/23：着順が先）
+        head = '<div class="thx-head"><span class="thx-pos">' + posLabel[st.idx] + '</span>' +
+          '<span class="thx-bike">🚴</span>' +
+          '<i class="thx-car c' + car + '">' + car + '</i>' +
+          ((THX_VARIANT >= 3 && kim) ? '<span class="thx-kim">' + esc(kim) + '</span>' : '') +
+          '</div>';
+      }
+      cards.push('<div class="thx-card t' + st.tier + (st.tease ? " tease" : "") +
+        '" style="--thx-bang:' + st.bang + 'ms;--thx-spin:' + st.spin + 'deg;--thx-lag:' +
+        thxLagOf(st) + 'ms">' + head +
+        '<div class="thx-name">' + thxNameHtml(nm) + '<span class="sfx">' + THX_SFX + '</span></div></div>');
+    });
+    // 的中！！＝回転なし。色は既存バッジと同じ区分（万車＝虹／note＝黄金／通常＝金）
+    cards.push('<div class="thx-card kime ' +
+      (hit.manche ? "k-manche" : (hit.note ? "k-note" : "k-normal")) +
+      '" style="--thx-bang:' + THX_KIME_STEP.bang + 'ms">' +
+      '<div class="thx-kime">' + esc(THX_KIME) + '</div></div>');
+
+    var box = document.createElement("div");
+    box.className = "fx-thx" + (key ? " m-" + key : "");
+    // 文字はワイプの高さ基準で組む＝①(752×423)でも②(544×404)でも同じ見え方になる
+    box.style.setProperty("--thx-h", (cam.clientHeight || 400) + "px");
+    box.innerHTML = '<div class="thx-stage">' + cards.join("") + '</div>';
+    cam.appendChild(box);
+    fitThxNames(box, cam);
+
+    var stage = box.querySelector(".thx-stage");
+    var els = box.querySelectorAll(".thx-card");
+    var plan = [THX_INTRO_STEP].concat(THX_STEPS, [THX_KIME_STEP]);
+    var gen = fxGen;
+    var at = 0;
+    plan.forEach(function (st, n) {
+      var showAt = at;
+      at += st.hold;
+      setTimeout(function () {
+        if (gen !== fxGen || !box.parentNode) return;
+        stage.style.setProperty("--shk", st.shk);
+        for (var j = 0; j < els.length; j++) els[j].classList.toggle("on", j === n);
+        // 揺れは「クルクル」の途中ではなく着弾（ドン！）の瞬間に鳴らす＝閃光と同時。
+        // ⚠️着順チップの前置き（lag）ぶん後ろにずれる＝CSSに渡している値と必ず揃える（thxLagOf）
+        setTimeout(function () {
+          if (gen !== fxGen || !box.parentNode) return;
+          // 毎回鳴らし直す＝クラスを外して強制リフローしてから付け直す
+          stage.classList.remove("shake");
+          void stage.offsetWidth;
+          stage.classList.add("shake");
+        }, thxLagOf(st) + Math.round(st.bang * st.don));
+      }, showAt);
+    });
+    setTimeout(function () { if (gen === fxGen) box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
+  /** はみ出す時だけ縮める（的中バッジの fitHitBadge と同じ流儀）。
+      8/25に名前を「結果発表！！」と同格（.24h）へ拡大したので、②の544px幅では長い名前が
+      普通にあふれる＝この縮小が常用の前提になった。
+      ・名前3枚＝札ごとに字の大きさが変わるとチカチカするので、1枚でもあふれたら3枚まとめて縮める
+      ・kime札（結果発表！！／おめざいます！！）＝文言が違い同時に見えないので1枚ずつ縮める
+        （「おめざいます！！」8字は②では確実にあふれる＝ここが吸収する） */
+  function fitThxNames(box, cam) {
+    if (!cam.clientWidth) return;
+    var names = box.querySelectorAll(".thx-name");
+    for (var step = 0; names.length && step < 6; step++) {
+      var over = false;
+      for (var i = 0; i < names.length; i++) {
+        if (names[i].scrollWidth > names[i].clientWidth + 1) { over = true; break; }
+      }
+      if (!over) break;
+      var next = Math.round((parseFloat(getComputedStyle(names[0]).fontSize) || 30) * 0.9);
+      for (var j = 0; j < names.length; j++) names[j].style.fontSize = next + "px";
+    }
+    var kimes = box.querySelectorAll(".thx-kime");
+    for (var k = 0; k < kimes.length; k++) {
+      for (var s = 0; s < 6 && kimes[k].scrollWidth > kimes[k].clientWidth + 1; s++) {
+        var f = Math.round((parseFloat(getComputedStyle(kimes[k]).fontSize) || 40) * 0.9);
+        kimes[k].style.fontSize = f + "px";
+      }
+    }
+  }
+
+  /* ══════════ 演出の掃除（8/23 Naoto依頼「次の演出を押したら前のは消える」）══════════
+     ⚠️本番の fireHitFx からは呼ばない。理由2つ：
+       ①fireHitFx は slot a/b それぞれで呼ばれる＝中で呼ぶと片方がもう片方を消す
+       ②本番では別々の配信者が別レースを同時に的中させることがあり、
+         後の的中が前の演出を消す挙動は望ましくない
+     fxGen＝世代番号。掃除のたびに繰り上げ、掃除前に予約された setTimeout は
+     自分の世代と違えば何もしない（止められないタイマーの空振り対策） */
+  var fxGen = 0;
+  var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea," +
+    " .fx-adj, .fx-samba, .fx-thx, .hit-fx-badge";
+  function clearHitFx() {
+    fxGen++;
+    var nodes = document.querySelectorAll(FX_ROOTS);
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
+    }
+    var cams = document.querySelectorAll(".cam");
+    var keys = Object.keys(MEMBER_FX);
+    for (var j = 0; j < cams.length; j++) {
+      cams[j].classList.remove("hit-fx", "hit-fx-note", "hit-fx-manche");
+      for (var k = 0; k < keys.length; k++) cams[j].classList.remove("m-" + keys[k]);
+    }
+    // 予想帯の買目強調も一緒に落とす。強調が無いときは描き直さない
+    // （＝stateが来る前に叩かれても renderPreds に入らないようにする保険）
+    if (hitGlows.length) { hitGlows = []; renderPreds(); }
+  }
+  window.__clearHitFx = clearHitFx;   // 検証ハーネス（fxlab）から叩く
 
   function fireHitFx(slot, hit, rc) {
     var key = memberKey(rc);
     var eff = key ? pickEffect(key) : "";
+    var gen = fxGen;
     // スロットは当たり目の数字そのものを見せる演出。車番が取れない的中（手動追加）では
     // 数字を作り話にせず、既定のアイコン走行に落とす
     var combo = eff === "slot" ? slotCombo(hit) : [];
     if (eff === "slot" && !combo.length) eff = "";
+    // 選手リスペクトは結果の1〜3着が要る。揃わない的中では既定のアイコン走行に落とす
+    if (eff === "thanks" && !thxResult(hit)) eff = "";
     // バッジまでの待ち時間＝その人の前奏の長さ。専用演出は退場開始と同時に出す（消えきるのを待たない）
     var rainMs = eff === "yakumono" ? yakTimes().END
       : eff === "slot" ? slotTimes(combo.length).END
@@ -2610,6 +2877,7 @@
       : eff === "tea" ? teaTimes().END
       : eff === "samba" ? sambaTimes().END
       : eff === "adjust" ? adjTimes().END
+      : eff === "thanks" ? thxTimes().END
       : (key ? fxConf(key).rainMs : 0);
     // ③レース展開でも発火させる（8/12・③結果・的中シーンを消したため。要件§11.2）
     ["np-talk-", "np-race-", "np-result-", "np-ad-", "np-tk-"].forEach(function (p) {
@@ -2630,8 +2898,10 @@
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
       else if (eff === "adjust") spawnAdjust(cam, key);
+      else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）
       else if (key) spawnRain(cam, key);
-      setTimeout(function () { showHitBadge(cam, hit, key); }, rainMs);
+      // 掃除（clearHitFx）が挟まったらバッジは出さない＝消したのに後から出る事故を防ぐ
+      setTimeout(function () { if (gen === fxGen) showHitBadge(cam, hit, key); }, rainMs);
     });
   }
   function showHitBadge(cam, hit, key) {
