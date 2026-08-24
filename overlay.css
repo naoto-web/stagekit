@@ -914,9 +914,6 @@ body.race-sub-on .race-sub { display: flex; }
   border-radius: calc(var(--thx-h) * .03); font-weight: 900; font-size: calc(var(--thx-h) * .10);
   border: 3px solid rgba(0,0,0,.35); }
 .thx-car.c2 { border-color: rgba(255,255,255,.5); }
-.thx-kim { font-size: calc(var(--thx-h) * .075); font-weight: 800; color: var(--thx-sub);
-  border: 1px solid rgba(255,255,255,.24); border-radius: 999px;
-  padding: calc(var(--thx-h) * .008) calc(var(--thx-h) * .045); }
 /* max-width と overflow:hidden＝fitThxNames が scrollWidth ではみ出しを測るために要る。
    ⚠️78%＝ドン！の行き過ぎ(scale 1.24)でも枠に収まる幅。94%だと長い名前が一瞬切れる
    8/25：.155h→.24h＝「結果発表！！」と同格へ拡大（Naoto指示）。②では長い名前が入り切らないが
@@ -924,9 +921,7 @@ body.race-sub-on .race-sub { display: flex; }
 .thx-name { position: relative; max-width: 78%; overflow: hidden; white-space: nowrap;
   font-size: calc(var(--thx-h) * .24); font-weight: 900; letter-spacing: .01em;
   text-shadow: 0 4px 0 rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.7); }
-/* 名（＝姓の後ろ）。emで持つ＝fitThxNames が親を縮めたときに一緒に縮む */
-.thx-name .given { font-size: .62em; margin-left: .1em; opacity: .93; }
-/* 敬称は名前より一段小さく＝主役を名前にする（8/23） */
+/* 敬称は名前より一段小さく＝主役を名前にする（8/23）。名前はフルネーム均等（8/25確定） */
 .thx-name .sfx { font-size: .72em; color: var(--thx-acc); }
 
 /* kime札（結果発表！！／おめざいます！！）の色＝既存の的中バッジの区分に接続

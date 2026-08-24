@@ -4,8 +4,6 @@
      ?theme=a|b|c                  … 配色
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
      ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
-     ?thxv=1|2|3                   … 選手リスペクト演出の表示（1:名前だけ／2:着順＋車番＋名前＝既定／3:2＋決まり手）
-     ?thxn=1|2|3                   … 同・選手名の出し方（1:姓大・名小＝既定／2:フルネーム均等／3:姓だけ）
      ?fx=<演出キー>                 … 的中演出の抽選をやめて指定の演出を出す（検証用・本番URLには付けない）
                                       rain|yakumono|adjust|slot|sumo|pray|tea|samba|thanks|auto
                                       ⚠️テスト接続（?gas=）の既定はthanks固定（8/25）＝auto指定で抽選に戻る
@@ -2688,28 +2686,14 @@
      （最長だったアジャスト10.3秒を超える。長いと感じたら INTRO と KIME の hold から削る） */
   var THX_KIME = "おめざいます！！";   // 8/25 Naoto指定。⚠️誤字ではない＝この表記のまま（直さない）
   var THX_SFX  = "選手！";     // 名前の後ろに付ける敬称＋感嘆
-  /* 表示バリエーション（?thxv=1|2|3）＝1:名前だけ／2:着順＋🚴＋車番＋名前（既定）／3:2＋決まり手 */
-  var THX_VARIANT = (function () { var v = parseInt(params.get("thxv"), 10); return (v >= 1 && v <= 3) ? v : 2; })();
-  /* 名前の出し方（?thxn=1|2|3）
-       1＝姓大・名小（既定）…視線が姓に落ちてテンポは姓だけの時と変わらず、フルネームの格式も残る
-       2＝フルネーム均等　…表彰アナウンスの語感が最も強い
-       3＝姓だけ　　　　　…最短でリズムに乗るが、②中央ラインの苗字表示と情報が同じになる
-     ⚠️keirin.jpの選手名は「阪本 正和」形式＝最初の空白までが姓（surnameOf が同じ前提で本番稼働中）。
-       空白が無い名前が来たら割れないので、1でも3でも全体をそのまま出す＝姓を推測して切らない */
-  var THX_NAME = (function () { var v = parseInt(params.get("thxn"), 10); return (v >= 1 && v <= 3) ? v : 1; })();
-  function thxNameHtml(nm) {
-    var s = String(nm);
-    var i = s.search(/[\s　]/);
-    if (THX_NAME === 2 || i <= 0) return esc(s);
-    var sei = s.slice(0, i), mei = s.slice(i).replace(/^[\s　]+/, "");
-    if (THX_NAME === 3 || !mei) return esc(sei);
-    return esc(sei) + '<span class="given">' + esc(mei) + "</span>";
-  }
+  /* 表示は1パターンに確定（8/25 Naoto実機確認）＝着順＋🚴＋車番＋フルネーム（均等）。
+     旧・切替（?thxv＝名前だけ/決まり手・?thxn＝姓大名小/姓だけ）は撤去した＝
+     URLパラメータの既定値で意図しないパターンが出る事故（テストで姓大が出た件）の根治 */
   /* trueにすると全色の抽選に "thanks" が1つ足される＝誰が当てても一定確率で出る（本番投入用の1行スイッチ） */
   var THX_IN_ROTATION = false;
-  /** その札で実際に使う lag。名前だけ表示（THX_VARIANT=1）は着順チップが無い＝前置きが成立しないので0。
+  /** その札の前置き（着順チップ）→名前までの溜め。
       ⚠️CSSに渡す --thx-lag と揺れのタイミング計算の両方でこれを使う（片方だけだとズレる） */
-  function thxLagOf(st) { return (THX_VARIANT >= 2 && st.lag) ? st.lag : 0; }
+  function thxLagOf(st) { return st.lag || 0; }
 
   function thxTimes() {
     var kime = THX_INTRO_STEP.hold;   // 結果発表！！＋選手3枚を見せ切ったところ＝「的中！！」が出る時刻
@@ -2753,20 +2737,14 @@
       // 名前の優先順（8/25）：結果に入っていれば最優先（自動取得済み・手で直した場合）
       // →出走表から車番で引く（★実運用の主経路＝手入力確定はnamesが空のため）→「○番車」
       var nm = (r.names && r.names[st.idx]) || fullNameOf(idp[0], idp[1], car) || (car + "番車");
-      var kim = (r.kimarite && r.kimarite[st.idx]) ? r.kimarite[st.idx] : "";
-      var head = "";
-      if (THX_VARIANT >= 2) {
-        // 並び＝着順→🚴→車番（8/25：チップの間に自転車の絵文字・8/23：着順が先）
-        head = '<div class="thx-head"><span class="thx-pos">' + posLabel[st.idx] + '</span>' +
-          '<span class="thx-bike">🚴</span>' +
-          '<i class="thx-car c' + car + '">' + car + '</i>' +
-          ((THX_VARIANT >= 3 && kim) ? '<span class="thx-kim">' + esc(kim) + '</span>' : '') +
-          '</div>';
-      }
+      // 並び＝着順→🚴→車番（8/25）。名前＝フルネーム均等（8/25確定・切替なし）
       cards.push('<div class="thx-card t' + st.tier + (st.tease ? " tease" : "") +
         '" style="--thx-bang:' + st.bang + 'ms;--thx-spin:' + st.spin + 'deg;--thx-lag:' +
-        thxLagOf(st) + 'ms">' + head +
-        '<div class="thx-name">' + thxNameHtml(nm) + '<span class="sfx">' + THX_SFX + '</span></div></div>');
+        thxLagOf(st) + 'ms">' +
+        '<div class="thx-head"><span class="thx-pos">' + posLabel[st.idx] + '</span>' +
+        '<span class="thx-bike">🚴</span>' +
+        '<i class="thx-car c' + car + '">' + car + '</i></div>' +
+        '<div class="thx-name">' + esc(nm) + '<span class="sfx">' + THX_SFX + '</span></div></div>');
     });
     // 的中！！＝回転なし。色は既存バッジと同じ区分（万車＝虹／note＝黄金／通常＝金）
     cards.push('<div class="thx-card kime ' +
