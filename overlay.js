@@ -7,7 +7,8 @@
      ?thxv=1|2|3                   … 選手リスペクト演出の表示（1:名前だけ／2:着順＋車番＋名前＝既定／3:2＋決まり手）
      ?thxn=1|2|3                   … 同・選手名の出し方（1:姓大・名小＝既定／2:フルネーム均等／3:姓だけ）
      ?fx=<演出キー>                 … 的中演出の抽選をやめて指定の演出を出す（検証用・本番URLには付けない）
-                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|thanks
+                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|thanks|auto
+                                      ⚠️テスト接続（?gas=）の既定はthanks固定（8/25）＝auto指定で抽選に戻る
    データ: GAS状態（5秒ポーリング＋BroadcastChannel即時反映）＋タイムテーブル（10分毎） */
 
 (function () {
@@ -2609,9 +2610,13 @@
        本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
        選んだ状態で強制すると「絵は別人・枠の色は選んだ人」という組み合わせになる（ラボ用途では想定内） */
   var FX_FORCE = params.get("fx") || "";
+  /* テスト接続（?gas=）の既定＝thanks固定（8/25 Naoto指示「テストなんだから必ず出るように」）。
+     URLに&fx=を足す運用はコピペ落ちで事故ったため廃止＝テストは何もしなくてもthanksが出る。
+     テストで他の演出を見たい時＝?fx=auto（通常の抽選）または ?fx=<キー>（従来どおり最優先） */
+  if (!FX_FORCE && window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) FX_FORCE = "thanks";
   function pickEffect(key) {
     var force = window.__FX_FORCE || FX_FORCE;
-    if (force) return force === "rain" ? "" : force;
+    if (force && force !== "auto") return force === "rain" ? "" : force;
     var c = MEMBER_FX[key] || {};
     var list = (c.effects && c.effects.length) ? c.effects : [c.effect || ""];
     // 選手リスペクトは全員共通＝色に紐づかないので、抽選に入れるときは全色へ1つ足す（8/23）
