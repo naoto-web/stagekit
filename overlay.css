@@ -1805,6 +1805,30 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes sambaMnote { 0% { opacity: 0; transform: translateY(0) scale(.7); } 20% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-90px) rotate(14deg); } }
 
+/* ══════════ ダンス＝赤メンバーの2つ目の個人演出（8/25 Naoto依頼・抽選未投入＝?fx=danceのみ）
+   クロールの腕回し（fx_dance.png＝4×4シート16コマ・コマ送りはJSがbackground-positionを差し替え）
+   →タメ→振り上げ→天指しキメ。登場ポップ・キメのズーム/フラッシュ/後光はサンバのキーフレームを流用
+   （samba側を直すとこちらも変わる＝意図した共通化） ══════════ */
+.fx-dance { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.fx-dance.out { transition: opacity .45s ease; opacity: 0; }
+.fx-dance-run { position: absolute; left: 50%; bottom: 1%; width: var(--dw); height: var(--dh);
+  z-index: 2; transform: translateX(-50%);
+  animation: sambaEnter .5s cubic-bezier(.25,1.45,.45,1) both; }
+.fx-dance-img { display: block; width: 100%; height: 100%;
+  background-image: url("fx_dance.png"); background-repeat: no-repeat;
+  background-size: 400% 400%; background-position: 0% 0%; }
+.fx-dance.kime .fx-dance-run { animation: sambaKime .5s cubic-bezier(.3,1.4,.5,1) forwards; }
+/* フラッシュ・後光＝サンバと同じ疑似要素方式 */
+.fx-dance.kime::after { content: ""; position: absolute; left: 50%; top: 38%; width: 150%;
+  aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0; z-index: 1;
+  background: repeating-conic-gradient(#ffd23e55 0 7deg, transparent 7deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 62%);
+  mask-image: radial-gradient(circle, #000 0%, transparent 62%);
+  animation: sambaRaysIn .5s ease-out forwards, sambaRaysSpin 7s linear infinite; }
+.fx-dance.kime::before { content: ""; position: absolute; inset: 0; z-index: 4;
+  background: radial-gradient(circle, #fff, #fff8 55%, transparent 80%);
+  opacity: 0; animation: sambaFlash .6s ease-out forwards; }
+
 /* ══════════ ピーターズ・アイ＝緑メンバーの2つ目の個人演出（8/25 Naoto案）
    ニコニコ(f1)登場→暗転＝シルエットで顔に寄る→閃光が左→右へピカーン＋集中線＋揺れ
    →「ピーターズ・アイ発動！！」→「これは、、、」→白フラッシュ明転＝キリッ(f2)

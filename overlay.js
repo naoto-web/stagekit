@@ -1787,6 +1787,8 @@
     green:  { effects: ["sumo", "peye"] }, // 相撲（8/9 FB86）／ピーターズ・アイ（8/25 Naoto案）＝的中のたびに抽選（アイコン走行は出さない）
     yellow: { effect: "pray" },       // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
     red:    { effect: "samba" }       // サンバ＝周りが踊って本人は腕組み→キメで「〇〇的中！！」（8/10 FB121・同上）
+                                      // ⚠️赤の2つ目「ダンス」(dance)は実装済み・抽選未投入（8/25テスト中＝?fx=danceでのみ出る）。
+                                      //   本番投入＝この行を effects: ["samba", "dance"] に変える（thanks込みで各1/3になる）
     // 例）purple: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
   };
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
@@ -1936,6 +1938,27 @@
     t.KIME = SAMBA_BASE.ENTER + SAMBA_BASE.DANCE; // キメ開始（文字・フラッシュ・後光）
     t.END  = t.KIME + SAMBA_BASE.KIME;            // 退場開始＝ここでバッジにバトンを渡す
     t.GONE = t.END + SAMBA_BASE.OUT;
+    return t;
+  }
+
+  /* ダンスの尺（8/25 Naoto依頼・赤メンバーの2つ目＝本人がクロール腕回しで踊る）
+     流れ＝①腕回しループ（12コマ＝クロールの交互回し・手のひらが進行方向・クロスステップ）を
+           LOOPS周 ②タメ→振り上げ→伸び上がり（3コマ）③キメ＝天指しポーズで静止
+           （ズーム＋フラッシュ＋後光はサンバのキメと同型）
+       STEP …ループ1コマms（12コマ×STEP＝1周1.2秒）／LOOPS…何周回すか
+       FSTEP…フィニッシュ3コマ（タメ・振り上げ・伸び上がり）の1コマms
+       HOLD …キメを見せる時間ms／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約6.1秒
+     ⚠️まだMEMBER_FXの抽選に入れていない＝本番では出ない（テスト＝?fx=dance でのみ発火）。
+        Naoto承認後に red を effects: ["samba", "dance"] へ変えて本番投入する */
+  var DANCE_BASE = { STEP: 100, LOOPS: 3, FSTEP: 170, HOLD: 2000, FADE: 450 };
+  var DANCE_AR = 446 / 500; // fx_dance.png の1コマ実寸比（横/縦）＝絵を差し替えたら素材加工/fx_dance_make.pyの出力で更新
+  var DANCE_LOOP_N = 12;    // 4×4シートの0..11＝腕回しループ／12タメ／13振り上げ／14伸び上がり／15キメ
+  function danceTimes() {
+    var t = { FIN: DANCE_BASE.STEP * DANCE_LOOP_N * DANCE_BASE.LOOPS }; // ループを回り切った時刻
+    t.POSE = t.FIN + DANCE_BASE.FSTEP * 3;   // キメ（天指し）が出る時刻
+    t.END  = t.POSE + DANCE_BASE.HOLD;       // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE = t.END + DANCE_BASE.FADE;
     return t;
   }
 
@@ -2695,10 +2718,55 @@
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
   }
 
+  /* ダンス（8/25 Naoto依頼・赤メンバーの2つ目）：クロールの腕回し（右腕と左腕が反対位相・
+     手のひらが進行方向）＋クロスステップのループ→タメ→振り上げ→天指しでキメ。
+     素材＝web/fx_dance.png（4×4シート16コマ・素材加工/fx_dance_make.py が生成）。
+     コマ送り＝background-positionの差し替えをsetInterval駆動＋box.isConnectedで自己停止
+     （rAFが来ないOBSの裏画面でも凍らない＝サンバFB121と同系）。 */
+  function spawnDance(cam, key) {
+    var old = cam.querySelector(".fx-dance");
+    if (old) old.parentNode.removeChild(old);
+    var T = danceTimes();
+    var ch = cam.clientHeight || 300;
+    var dh = Math.round(ch * 0.96), dw = Math.round(dh * DANCE_AR);
+    var box = document.createElement("div");
+    box.className = ["fx-dance", "m-" + key].join(" ");
+    box.style.setProperty("--dw", dw + "px");
+    box.style.setProperty("--dh", dh + "px");
+    box.innerHTML = '<div class="fx-dance-run"><i class="fx-dance-img"></i></div>';
+    cam.appendChild(box);
+    var img = box.querySelector(".fx-dance-img");
+    function setFrame(i) {   // 4×4シート＝背景位置は 0 / 33.33 / 66.67 / 100 %
+      img.style.backgroundPosition =
+        ((i % 4) * 100 / 3) + "% " + (Math.floor(i / 4) * 100 / 3) + "%";
+    }
+    setFrame(0);
+    var step = 0;
+    var flip = setInterval(function () {          // ループ＝0..11を回し続ける
+      if (!box.isConnected) { clearInterval(flip); return; }
+      step = (step + 1) % DANCE_LOOP_N;
+      setFrame(step);
+    }, DANCE_BASE.STEP);
+    [0, 1, 2].forEach(function (k) {              // フィニッシュ＝タメ→振り上げ→伸び上がり
+      setTimeout(function () {
+        if (k === 0) clearInterval(flip);
+        if (!box.isConnected) return;
+        setFrame(DANCE_LOOP_N + k);
+      }, T.FIN + DANCE_BASE.FSTEP * k);
+    });
+    setTimeout(function () {                      // キメ＝天指し＋ズーム＋フラッシュ＋後光
+      if (!box.isConnected) return;
+      setFrame(15);
+      box.classList.add("kime");
+    }, T.POSE);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
   /** その的中で出す専用演出を決める。effects（配列）があれば抽選＝1人で複数の演出を持てる（8/9 FB90）。
       ⚠️ここで1回だけ引く＝同じ的中の4シーン分のワイプで演出がバラバラにならない */
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
-       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba／peye
+       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba／dance／peye
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
        本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
        選んだ状態で強制すると「絵は別人・枠の色は選んだ人」という組み合わせになる（ラボ用途では想定内） */
@@ -2957,6 +3025,7 @@
       : eff === "pray" ? prayTimes().END
       : eff === "tea" ? teaTimes().END
       : eff === "samba" ? sambaTimes().END
+      : eff === "dance" ? danceTimes().END
       : eff === "adjust" ? adjTimes().END
       : eff === "peye" ? peyeTimes().END
       : eff === "thanks" ? thxTimes().END
@@ -2979,6 +3048,7 @@
       else if (eff === "pray") spawnPray(cam, key);
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
+      else if (eff === "dance") spawnDance(cam, key);   // ダンス（8/25・抽選未投入＝?fx=danceでのみ）
       else if (eff === "adjust") spawnAdjust(cam, key);
       else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
       else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）
