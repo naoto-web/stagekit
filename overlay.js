@@ -1786,9 +1786,7 @@
     pink:   { effect: "slot" },       // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
     green:  { effects: ["sumo", "peye"] }, // 相撲（8/9 FB86）／ピーターズ・アイ（8/25 Naoto案）＝的中のたびに抽選（アイコン走行は出さない）
     yellow: { effect: "pray" },       // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
-    red:    { effect: "samba" }       // サンバ＝周りが踊って本人は腕組み→キメで「〇〇的中！！」（8/10 FB121・同上）
-                                      // ⚠️赤の2つ目「ダンス」(dance)は実装済み・抽選未投入（8/25テスト中＝?fx=danceでのみ出る）。
-                                      //   本番投入＝この行を effects: ["samba", "dance"] に変える（thanks込みで各1/3になる）
+    red:    { effects: ["samba", "dance"] } // サンバ（8/10 FB121）／ダンス（8/25）＝的中のたびに抽選（アイコン走行は出さない）
     // 例）purple: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
   };
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
@@ -1949,8 +1947,7 @@
        FSTEP…フィニッシュ3コマ（タメ・振り上げ・伸び上がり）の1コマms
        HOLD …キメを見せる時間ms／FADE…退場ms
      ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約6.1秒
-     ⚠️まだMEMBER_FXの抽選に入れていない＝本番では出ない（テスト＝?fx=dance でのみ発火）。
-        Naoto承認後に red を effects: ["samba", "dance"] へ変えて本番投入する */
+     ✅8/25 Naoto承認で本番投入済み（red＝effects: ["samba", "dance"]＝thanks込みで各1/3） */
   var DANCE_BASE = { STEP: 100, LOOPS: 3, FSTEP: 170, HOLD: 2000, FADE: 450 };
   var DANCE_AR = 446 / 500; // fx_dance.png の1コマ実寸比（横/縦）＝絵を差し替えたら素材加工/fx_dance_make.pyの出力で更新
   var DANCE_LOOP_N = 12;    // 4×4シートの0..11＝腕回しループ／12タメ／13振り上げ／14伸び上がり／15キメ
@@ -3051,7 +3048,7 @@
       else if (eff === "pray") spawnPray(cam, key);
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
-      else if (eff === "dance") spawnDance(cam, key);   // ダンス（8/25・抽選未投入＝?fx=danceでのみ）
+      else if (eff === "dance") spawnDance(cam, key);   // ダンス（8/25・赤の2つ目）
       else if (eff === "adjust") spawnAdjust(cam, key);
       else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
       else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）

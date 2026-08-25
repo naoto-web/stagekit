@@ -1805,7 +1805,7 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes sambaMnote { 0% { opacity: 0; transform: translateY(0) scale(.7); } 20% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-90px) rotate(14deg); } }
 
-/* ══════════ ダンス＝赤メンバーの2つ目の個人演出（8/25 Naoto依頼・抽選未投入＝?fx=danceのみ）
+/* ══════════ ダンス＝赤メンバーの2つ目の個人演出（8/25 Naoto依頼・同日本番投入）
    クロールの腕回し（fx_dance.png＝4×4シート16コマ・コマ送りはJSがbackground-positionを差し替え）
    →タメ→振り上げ→天指しキメ。登場ポップ・キメのズーム/フラッシュ/後光はサンバのキーフレームを流用
    （samba側を直すとこちらも変わる＝意図した共通化） ══════════ */
