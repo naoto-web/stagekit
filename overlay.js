@@ -2838,8 +2838,10 @@
   var THX_STEPS = [
     { idx: 0, tier: 3, spin: 1440, hold: 3200, bang: 1350, lag: 500, don: 0.82, shk: 1.7, tease: true },
     { idx: 1, tier: 2, spin: 1080, hold: 2100, bang: 950,  lag: 450, don: 0.68, shk: 1.1 },
-    { idx: 2, tier: 1, spin: 720,  hold: 1900, bang: 950,  lag: 450, don: 0.68, shk: 0.8 }
+    { idx: 2, tier: 1, spin: 720,  hold: 2800, bang: 950,  lag: 450, don: 0.68, shk: 0.8 }
   ];
+  /* ⚠️最後の札（現在は3着）のholdが「おめざいます！！」までの間＝8/26 Naoto指示で1900→2800
+     （123順にした際、最後の札が1着hold3200→3着hold1900になりキメまでが駆け足になっていた） */
   /* 最後の「的中！！」。spinなし＝回転しない・前置きも無いのでlagなし。
      色は既存バッジの区分（通常/note/万車）に接続 */
   var THX_KIME_STEP = { hold: 3000, bang: 750, lag: 0, don: 0.22, shk: 2.0 };
@@ -2848,7 +2850,7 @@
   var THX_INTRO = "結果発表！！";
   var THX_INTRO_STEP = { hold: 1400, bang: 750, lag: 0, don: 0.22, shk: 1.2 };
   var THX_FADE = 520;   // 退場ms
-  /* ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝1400+1900+2100+3200+3000＝約11.6秒
+  /* ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝1400+3200+2100+2800+3000＝約12.5秒
      （最長だったアジャスト10.3秒を超える。長いと感じたら INTRO と KIME の hold から削る） */
   var THX_KIME = "おめざいます！！";   // 8/25 Naoto指定。⚠️誤字ではない＝この表記のまま（直さない）
   var THX_SFX  = "選手！";     // 名前の後ろに付ける敬称＋感嘆
