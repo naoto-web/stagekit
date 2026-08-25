@@ -1805,6 +1805,193 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes sambaMnote { 0% { opacity: 0; transform: translateY(0) scale(.7); } 20% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-90px) rotate(14deg); } }
 
+/* ══════════ ピーターズ・アイ＝緑メンバーの2つ目の個人演出（8/25 Naoto案）
+   ニコニコ(f1)登場→暗転＝シルエットで顔に寄る→閃光が左→右へピカーン＋集中線＋揺れ
+   →「ピーターズ・アイ発動！！」→「これは、、、」→白フラッシュ明転＝キリッ(f2)
+   →的中目を車番チップで「[1][2][3]だ！！」。文言は一つずつ＝次が出たら前は消える。
+   尺・段取りはJS側の PEYE_BASE / spawnPeye。ラボ原型＝検証ハーネス/peyetest.html（自己完結写し）。
+   状態クラス＝dk(暗転) burst(閃光) shake(揺れ) title(発動) mut(これは) lit(明転) combo(車番) out(退場)
+   ⚠️「目だけ明るく」案は8/25実見→Naoto判断で撤回済み＝再提案しない ══════════ */
+.fx-peye { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+/* 暗転幕＝目の位置（--ex/--ey）を中心に少しだけ明るい紺→外へ沈む（真っ黒より「夜の推理」トーン） */
+.fx-peye-dark { position: absolute; inset: 0; z-index: 1; opacity: 0;
+  background: radial-gradient(circle at var(--ex) var(--ey),
+    rgba(10, 16, 34, .78) 0%, rgba(4, 7, 18, .96) 78%);
+  transition: opacity .7s ease-in; }
+.fx-peye.dk .fx-peye-dark { opacity: 1; }
+.fx-peye.lit .fx-peye-dark { opacity: 0; transition: opacity .3s ease-out; }
+/* 集中線＝目の位置から放射。要素の中心を目に置いた正方形＝conic中心と脈動の中心が一致する。
+   aは太く疎・bは細く密の2層。寸法--lszはJSがcam実寸×2.6で入れる
+   （⚠️ラボ写しは260vmax固定＝OBSの1920px級で巨大テクスチャになるのを避けるため本番はpx指定。
+     マスクの%はその分ラボの倍率×2で刻んである＝見た目は同等） */
+.fx-peye-lines { position: absolute; z-index: 2; left: var(--ex); top: var(--ey);
+  width: var(--lsz); height: var(--lsz); transform: translate(-50%, -50%); opacity: 0;
+  --lc: rgba(255, 255, 255, .92); --lc2: rgba(255, 255, 255, .55); }
+.fx-peye-lines.a { background: repeating-conic-gradient(from 2deg,
+    var(--lc) 0deg .8deg, transparent 1.6deg 7.4deg, var(--lc2) 7.4deg 7.9deg, transparent 8.5deg 12deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 18%, #000 52%);
+          mask: radial-gradient(circle, transparent 0 18%, #000 52%); }
+.fx-peye-lines.b { background: repeating-conic-gradient(from 6.7deg,
+    var(--lc2) 0deg .35deg, transparent .8deg 4.9deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 26%, #000 68%);
+          mask: radial-gradient(circle, transparent 0 26%, #000 68%); }
+@keyframes peyeLines { /* バッと出て細かく震える（回転でなく脈で揺らす＝線が流れない） */
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
+  7% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  55% { opacity: .8; transform: translate(-50%, -50%) scale(1.012); }
+  100% { opacity: .92; transform: translate(-50%, -50%) scale(1); } }
+.fx-peye.burst .fx-peye-lines { animation: peyeLines .9s ease-out forwards; }
+.fx-peye.burst .fx-peye-lines.b { animation-delay: .06s; }
+/* 明転後＝ピーターカラーの緑線に切替・ゆっくり呼吸（キメの背景として残す） */
+.fx-peye.lit .fx-peye-lines { --lc: rgba(148, 255, 178, .8); --lc2: rgba(148, 255, 178, .38); }
+@keyframes peyeLinesCalm { 0%, 100% { opacity: .6; } 50% { opacity: .82; } }
+.fx-peye.lit .fx-peye-lines { animation: peyeLinesCalm 1.6s ease-in-out infinite; }
+/* 画面揺れ＝閃光と車番バッジの衝撃（幕・線・キャラごと揺らす） */
+.fx-peye-shake { position: absolute; inset: 0; }
+@keyframes peyeShake { 0% { transform: translate(0, 0); } 18% { transform: translate(7px, -5px); }
+  36% { transform: translate(-6px, 4px); } 54% { transform: translate(4px, -3px); }
+  72% { transform: translate(-3px, 2px); } 100% { transform: translate(0, 0); } }
+.fx-peye.shake .fx-peye-shake { animation: peyeShake .34s linear; }
+/* 寄り＝transform-originを目に置いてscaleだけで寄る（prayの寄りと同じ狙いを簡素化）。
+   所要1.6秒＝PEYE_BASEのDARK+TENSEと連動（⚠️変えたら両方直す） */
+.fx-peye-zoom { position: absolute; inset: 0; z-index: 3;
+  transform-origin: var(--ex) var(--ey);
+  transition: transform 1.6s ease-in; }
+.fx-peye.dk .fx-peye-zoom { transform: scale(2.1); }
+.fx-peye.lit .fx-peye-zoom { transform: scale(1.45);
+  transition: transform .45s cubic-bezier(.25, 1.4, .45, 1); }
+/* キャラ＝中央・下寄せ。f1＝ニコニコ（登場〜暗転）／f2＝キリッ（明転後） */
+.fx-peye-char { position: absolute; left: 50%; bottom: 2%; width: var(--pw); height: var(--ph);
+  margin-left: calc(var(--pw) / -2);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .45));
+  transition: filter .7s ease-in; }
+@keyframes peyeIn { from { opacity: 0; transform: translateY(4%) scale(.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); } }
+.fx-peye .fx-peye-char { animation: peyeIn .5s ease-out backwards; }
+/* 暗転＝シルエット化（明るさを落とすだけ＝輪郭とツヤはうっすら残る）＋緑のリムをひとすじ */
+.fx-peye.dk .fx-peye-char { filter: brightness(.13) saturate(.55)
+  drop-shadow(0 0 26px rgba(96, 255, 150, .3)); }
+.fx-peye.lit .fx-peye-char { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .45))
+  drop-shadow(0 0 30px rgba(96, 255, 150, .4));
+  transition: filter .3s ease-out; }
+.fx-peye-img { position: absolute; inset: 0; background-position: center bottom;
+  background-repeat: no-repeat; background-size: contain; }
+.fx-peye-img.f1 { background-image: url("fx_peye1.png"); }
+.fx-peye-img.f2 { background-image: url("fx_peye2.png"); opacity: 0; }
+.fx-peye.lit .fx-peye-img.f1 { opacity: 0; }
+.fx-peye.lit .fx-peye-img.f2 { opacity: 1; }
+/* 明転の一瞬だけキリッ顔が白く飛ぶ→スッと戻る（フラッシュから顔が現れる感触） */
+@keyframes peyeReveal { from { filter: brightness(2.2); } to { filter: brightness(1); } }
+.fx-peye.lit .fx-peye-img.f2 { animation: peyeReveal .4s ease-out; }
+/* 目の高さの演出層＝キャラと同じ箱をもう1枚。⚠️.fx-peye-charの子に入れるとシルエット化の
+   brightness(.13)で閃光まで暗くなる＝ラボで「全然見えない」事故（8/25）。フィルタの外に置くのが要 */
+.fx-peye-eyefx { position: absolute; left: 50%; bottom: 2%; width: var(--pw); height: var(--ph);
+  margin-left: calc(var(--pw) / -2); z-index: 4; }
+/* 閃光＝左から右へ一気に伸び切ってから消える（transform-origin: left＝左端が根元） */
+.fx-peye-beam { position: absolute; z-index: 2; left: -35%; width: 170%;
+  top: calc(var(--eyy) - var(--ph) * .045); height: calc(var(--ph) * .09);
+  opacity: 0; transform: scaleX(0); transform-origin: left center;
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, .5) 30%,
+    #fff 46%, #fff 54%, rgba(255, 255, 255, .5) 70%, transparent 100%);
+  filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 28px rgba(255, 255, 255, .95)); }
+@keyframes peyeBeam { 0% { opacity: 1; transform: scaleX(0); }
+  22% { opacity: 1; transform: scaleX(1); }     /* 左→右へ一気に伸び切る */
+  45% { opacity: 1; }
+  100% { opacity: 0; transform: scaleX(1); } }
+.fx-peye.burst .fx-peye-beam { animation: peyeBeam 1s cubic-bezier(.2, .7, .2, 1) forwards; }
+/* 両目の十字グリント＝prayの目ピカと同じ語彙・こちらは暗闇で光り、余韻がキメまで残る。
+   左右の位置＝fx_peye_make.py出力の白目実測（⚠️絵を差し替えたら貼り直す） */
+.fx-peye-glint { position: absolute; z-index: 3; width: calc(var(--ph) * .11); height: calc(var(--ph) * .11);
+  top: var(--eyy); opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(0deg);
+  background:
+    radial-gradient(circle, #fff 0 18%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(0deg, transparent 42%, #fff 47% 53%, transparent 58%),
+    linear-gradient(90deg, transparent 42%, #fff 47% 53%, transparent 58%);
+  filter: drop-shadow(0 0 10px #fff); }
+.fx-peye-glint.e-l { left: calc(var(--pw) * .2074); }
+.fx-peye-glint.e-r { left: calc(var(--pw) * .6313); }
+@keyframes peyeGlint { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-40deg); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.25) rotate(8deg); }
+  42% { opacity: .95; transform: translate(-50%, -50%) scale(.9) rotate(18deg); }
+  100% { opacity: .4; transform: translate(-50%, -50%) scale(.55) rotate(24deg); } }
+/* 遅延＝閃光の先端が各目を通る瞬間に合わせて弾ける（掃引220msの実測位置から逆算） */
+.fx-peye.burst .fx-peye-glint { animation: peyeGlint 1.4s ease-out forwards; }
+.fx-peye.burst .fx-peye-glint.e-l { animation-delay: .07s; }
+.fx-peye.burst .fx-peye-glint.e-r { animation-delay: .13s; }
+/* 明転＝グリントは即消し（fill: forwardsが残す余韻opacityをanimation: noneで断つ。
+   切り替えの一瞬は白フラッシュ（opacity 1）の裏なので見えない） */
+.fx-peye.lit .fx-peye-glint { animation: none; opacity: 0; }
+/* 白フラッシュ＝閃光時にチラッ（.35）・明転時にドン（1→0） */
+.fx-peye-flash { position: absolute; inset: 0; z-index: 6; background: #fff; opacity: 0; }
+@keyframes peyeFlashS { 0% { opacity: 0; } 30% { opacity: .35; } 100% { opacity: 0; } }
+.fx-peye.burst .fx-peye-flash { animation: peyeFlashS .3s ease-out; }
+@keyframes peyeFlashL { 0% { opacity: 1; } 100% { opacity: 0; } }
+.fx-peye.lit .fx-peye-flash { animation: peyeFlashL .5s ease-out; }
+/* ══ 文言は3つを一つずつ＝次が出たら前は消える（8/25 Naoto FB） ══ */
+@keyframes peyeTxtOut { from { opacity: 1; } to { opacity: 0; } }
+/* ①「これは、、、」＝発動！！の後、目のグリントが光る暗闇で覗き込む溜め（白×黒フチ・じわっ） */
+.fx-peye-mutter { position: absolute; z-index: 5; left: 0; right: 0; bottom: 14%; text-align: center; opacity: 0; }
+.fx-peye-mutter span { display: inline-block; white-space: nowrap;
+  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900;
+  font-size: var(--mfs); line-height: 1; letter-spacing: .08em; color: #e9f2ff;
+  --me: calc(var(--mfs) * .05);
+  text-shadow:
+    var(--me) 0 0 #05070f, calc(var(--me) * -1) 0 0 #05070f,
+    0 var(--me) 0 #05070f, 0 calc(var(--me) * -1) 0 #05070f,
+    0 calc(var(--me) * 2) calc(var(--me) * 3) rgba(0, 0, 0, .6); }
+@keyframes peyeMutter { from { opacity: 0; transform: translateY(14%); }
+  to { opacity: .96; transform: translateY(0); } }
+.fx-peye.mut .fx-peye-mutter { animation: peyeMutter .55s ease-out forwards; }
+.fx-peye.lit .fx-peye-mutter { animation: peyeTxtOut .12s ease-out forwards; }  /* 白フラッシュの裏で消す */
+/* ②「ピーターズ・アイ発動！！」＝緑グラデ×黒フチ（teaの金文字と同じ作りの緑版）。
+   デカく見せるため2行組（下段1.45倍）。⚠️入場アニメ（fill: forwards）が外側divのtransformを
+   握る＝傾きは内側ラッパー（-title-in）に置く（praytestで学んだfillの罠と同族） */
+.fx-peye-title { position: absolute; z-index: 5; left: 0; right: 0; top: 13%; text-align: center; opacity: 0; }
+.fx-peye-title-in { transform: rotate(-3deg); }
+.fx-peye-title .l1, .fx-peye-title .l2 { display: block; white-space: nowrap;
+  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900;
+  line-height: 1.08; letter-spacing: .01em;
+  background: linear-gradient(180deg, #eafff0 0%, #8dffab 42%, #1cba50 64%, #d7ffe3 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter:
+    drop-shadow(var(--ce) 0 0 #06140a) drop-shadow(calc(var(--ce) * -1) 0 0 #06140a)
+    drop-shadow(0 var(--ce) 0 #06140a) drop-shadow(0 calc(var(--ce) * -1) 0 #06140a)
+    drop-shadow(0 0 18px rgba(125, 255, 158, .6)); }
+.fx-peye-title .l1 { font-size: var(--tfs); --ce: calc(var(--tfs) * .055); }
+.fx-peye-title .l2 { font-size: calc(var(--tfs) * 1.45); --ce: calc(var(--tfs) * 1.45 * .055); }
+@keyframes peyeTitle { 0% { opacity: 0; transform: scale(2.3); filter: blur(6px); }
+  55% { opacity: 1; transform: scale(.95); filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); } }
+.fx-peye.title .fx-peye-title { animation: peyeTitle .32s cubic-bezier(.2, 1.2, .4, 1) forwards; }
+.fx-peye.mut .fx-peye-title { animation: peyeTxtOut .2s ease-out forwards; }  /* 「これは、、、」に主役を渡す */
+/* ③ 的中目＝車番チップ[1][2][3]＋「だ！！」。チップの色は既存 .car .c1〜.c9 に乗る
+   （⚠️競輪の実データ色＝染めない）＝ここでは寸法だけ--bfs基準に上書きする。
+   border-widthだけ上書き＝border色を触るとc2の白フチ（.c2のborder-color）を潰すため */
+.fx-peye-combo { position: absolute; z-index: 5; left: 0; right: 0; bottom: 9%; text-align: center; opacity: 0; }
+.fx-peye-combo-in { display: inline-flex; align-items: center; gap: calc(var(--bfs) * .1);
+  transform: rotate(2deg); }
+.fx-peye-car { width: var(--bfs); height: var(--bfs); border-radius: calc(var(--bfs) * .14);
+  border-width: calc(var(--bfs) * .035); font-size: calc(var(--bfs) * .62);
+  box-shadow: 0 calc(var(--bfs) * .06) calc(var(--bfs) * .18) rgba(0, 0, 0, .55); }
+.fx-peye-da { white-space: nowrap; font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif;
+  font-weight: 900; font-size: calc(var(--bfs) * .8); line-height: 1; color: #fff;
+  margin-left: calc(var(--bfs) * .1);
+  --ce2: calc(var(--bfs) * .045);
+  text-shadow:
+    var(--ce2) 0 0 #15803d, calc(var(--ce2) * -1) 0 0 #15803d,
+    0 var(--ce2) 0 #15803d, 0 calc(var(--ce2) * -1) 0 #15803d,
+    var(--ce2) var(--ce2) 0 #15803d, calc(var(--ce2) * -1) var(--ce2) 0 #15803d,
+    var(--ce2) calc(var(--ce2) * -1) 0 #15803d, calc(var(--ce2) * -1) calc(var(--ce2) * -1) 0 #15803d,
+    0 calc(var(--ce2) * 2.2) calc(var(--ce2) * 2.6) rgba(0, 0, 0, .55); }
+.fx-peye-da.solo { margin-left: 0; }
+@keyframes peyeCombo { 0% { opacity: 0; transform: scale(2.6); filter: blur(8px); }
+  55% { opacity: 1; transform: scale(.94); filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); } }
+.fx-peye.combo .fx-peye-combo { animation: peyeCombo .34s cubic-bezier(.2, 1.2, .4, 1) forwards; }
+/* 退場＝全体フェード（他演出と同じ・このあと的中バッジにバトンを渡す） */
+@keyframes peyeOut { to { opacity: 0; } }
+.fx-peye.out { animation: peyeOut .45s ease-in forwards; }
+
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
 .cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }
 @keyframes hitPulse {

@@ -5,7 +5,7 @@
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
      ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
      ?fx=<演出キー>                 … 的中演出の抽選をやめて指定の演出を出す（検証用・本番URLには付けない）
-                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|thanks|auto
+                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|peye|thanks|auto
                                       ⚠️テスト接続（?gas=）の既定はthanks固定（8/25）＝auto指定で抽選に戻る
    データ: GAS状態（5秒ポーリング＋BroadcastChannel即時反映）＋タイムテーブル（10分毎） */
 
@@ -1767,7 +1767,7 @@
              rainMs …走行の長さ＝バッジが出るまでの時間ms（既定4500）
              effect …アイコン走行の代わりに出す専用演出（"yakumono"＝役物合体／"slot"＝スロット
                       ／"sumo"＝相撲／"pray"＝念仏／"tea"＝お茶／"samba"＝サンバ
-                      ／"adjust"＝アジャスト／"thanks"＝選手リスペクト）。
+                      ／"adjust"＝アジャスト／"peye"＝ピーターズ・アイ／"thanks"＝選手リスペクト）。
                       ⚠️"thanks" だけは絵柄が人に紐づかない全員共通の演出（8/23）＝
                         誰に付けてもよいし、THX_IN_ROTATION=true で全色の抽選に一括で入る。
                       指定した色キーはアイコン走行を出さない＝二重演出にしない。尺は各演出側が決める
@@ -1784,7 +1784,7 @@
     orange: { fx: ["dust-xl"], effects: ["", "tea"] }, // 白いモクモクの砂埃（8/8 FB72）／お茶（8/9 FB90）
     blue:   { effects: ["yakumono", "adjust"] }, // 役物合体（8/8 FB82）／アジャスト（8/11 FB130）＝的中のたびに抽選（アイコン走行は出さない）
     pink:   { effect: "slot" },       // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
-    green:  { effect: "sumo" },       // 相撲＝張り手で迫って「ごっちゃんです！！」（8/9 FB86・同上）
+    green:  { effects: ["sumo", "peye"] }, // 相撲（8/9 FB86）／ピーターズ・アイ（8/25 Naoto案）＝的中のたびに抽選（アイコン走行は出さない）
     yellow: { effect: "pray" },       // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
     red:    { effect: "samba" }       // サンバ＝周りが踊って本人は腕組み→キメで「〇〇的中！！」（8/10 FB121・同上）
     // 例）purple: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
@@ -1964,6 +1964,35 @@
     return t;
   }
 
+  /* ピーターズ・アイの尺（8/25 Naoto案・緑メンバーの2つ目の演出）
+       由来＝ピーターの口癖「これはピーターズ・アイだと、、1-2-3だな！」（接戦の着順を見抜く目）。
+       流れ＝①ニコニコ(f1)登場②暗転＝シルエットで顔に寄る③閃光が左→右へピカーン＋集中線＋揺れ
+             ④「ピーターズ・アイ発動！！」⑤「これは、、、」（覗き込む溜め）⑥白フラッシュ明転＝キリッ(f2)
+             ⑦的中目を車番チップで「[1][2][3]だ！！」。文言は一つずつ＝次が出たら前は消える（Naoto FB）。
+       IN…①がふわっと出るms／CALM…いつもの顔で見せる間／DARK…暗転にかかるms
+       TENSE…暗闇の溜めms（⚠️DARKと合わせた1.6秒＝overlay.cssの.fx-peye-zoomの寄り所要と連動＝変えたら両方直す）
+       TITLE_LAG…閃光→「発動！！」の間／TITLE_HOLD…発動を見せる間（切れたら「これは、、、」へ）
+       MUT_HOLD…「これは、、、」で覗き込む間／COMBO_LAG…明転→車番バッジの間
+       HOLD…キメを見せる間／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約8.35秒（相撲8.3s・サンバ8.4sと同じ帯）
+     ラボ原型＝検証ハーネス/peyetest.html（自己完結写し）。素材＝素材加工/fx_peye_make.py
+     ⚠️「目だけ明るく」案は8/25実見→Naoto判断で撤回済み＝再提案しない */
+  var PEYE_BASE = { IN: 500, CALM: 800, DARK: 700, TENSE: 900, TITLE_LAG: 200,
+    TITLE_HOLD: 1300, MUT_HOLD: 1400, COMBO_LAG: 350, HOLD: 2200, FADE: 450 };
+  var PEYE_AR = 688 / 1000;  // fx_peye1..2.png の実寸比（fx_peye_make.pyが出力・絵を差し替えたら再実行して貼り直す）
+  var PEYE_EYE = { y: 0.4084, xc: 0.4193 }; // 目のライン／左右の目の中点（同上＝白目重心の実測。集中線・寄り・閃光の中心）
+  function peyeTimes() {
+    var t = { DK: PEYE_BASE.IN + PEYE_BASE.CALM };        // 暗転開始＝寄り開始
+    t.GLINT = t.DK + PEYE_BASE.DARK + PEYE_BASE.TENSE;    // 閃光ピカーン＋集中線＋揺れ
+    t.TITLE = t.GLINT + PEYE_BASE.TITLE_LAG;              // 「ピーターズ・アイ発動！！」
+    t.MUT = t.TITLE + PEYE_BASE.TITLE_HOLD;               // 「これは、、、」じわっ（＝発動消える）
+    t.REVEAL = t.MUT + PEYE_BASE.MUT_HOLD;                // 白フラッシュ＝明転・キリッに切替（＝これは消える）
+    t.COMBO = t.REVEAL + PEYE_BASE.COMBO_LAG;             // 車番チップ[1][2][3]＋「だ！！」
+    t.END = t.COMBO + PEYE_BASE.HOLD;                     // 退場開始＝バッジにバトンを渡す
+    t.GONE = t.END + PEYE_BASE.FADE;
+    return t;
+  }
+
   /** 的中の組合せ（comboLabel "1-3-5"）→ リールに出す車番配列。
       手動追加の的中はcomboLabelを持たない＝数字を作り話にしないため空配列を返す（呼び出し側で走行に落とす） */
   function slotCombo(hit) {
@@ -1985,6 +2014,9 @@
   });
   ["fx_adj1.png", "fx_adj2.png", "fx_adj3.png", "fx_adj4.png"].forEach(function (f) {
     var im = new Image(); im.src = f;   // アジャストも4コマ（8/11 FB130）＝同じく先読み
+  });
+  ["fx_peye1.png", "fx_peye2.png"].forEach(function (f) {
+    var im = new Image(); im.src = f;   // ピーターズ・アイは2コマ（8/25）＝明転の切替でコマ落ちしないよう先読み
   });
   ["fx_pray.png", "fx_pray_shut.png"].forEach(function (f) {         // 念仏は2枚重ね（8/9 FB88）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
@@ -2600,10 +2632,73 @@
     }
   }
 
+  /* ピーターズ・アイ（8/25 Naoto案・緑メンバーの2つ目）：段取りはPEYE_BASEのコメント参照。
+     的中目はピンクのスロットと同じ slotCombo(hit)＝comboLabel から取る（8/25 Naoto要件）。
+     無い的中（手動追加）は数字を作り話にせず「見えた！！」に差し替え＝スロットと違い走行へは落とさない
+     （8/25 Naoto承認済み）。
+     ⚠️閃光・グリントは -char の外（-eyefx）＝シルエット化のbrightness(.13)を浴びせない
+       （ラボで閃光が「全然見えない」事故になった要注意点） */
+  function spawnPeye(cam, key, hit) {
+    var old = cam.querySelector(".fx-peye");
+    if (old) old.parentNode.removeChild(old);
+    var T = peyeTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var ph = Math.round(ch * 0.92), pw = Math.round(ph * PEYE_AR);
+    // 目のcam座標＝暗転幕のグラデ中心・集中線の放射中心・寄りの原点の3役
+    var left = (cw - pw) / 2, top = ch - Math.round(ch * 0.02) - ph;
+    var ex = left + pw * PEYE_EYE.xc, ey = top + ph * PEYE_EYE.y;
+    var combo = slotCombo(hit);
+    var box = document.createElement("div");
+    box.className = ["fx-peye", "m-" + key].join(" ");
+    box.style.setProperty("--pw", pw + "px");
+    box.style.setProperty("--ph", ph + "px");
+    box.style.setProperty("--eyy", Math.round(ph * PEYE_EYE.y) + "px");
+    box.style.setProperty("--ex", ex.toFixed(1) + "px");
+    box.style.setProperty("--ey", ey.toFixed(1) + "px");
+    box.style.setProperty("--lsz", Math.round(Math.max(cw, ch) * 2.6) + "px"); // 集中線の一辺（ラボの260vmaxのpx版）
+    // 文字サイズ＝高さ基準とし、幅が狭いワイプ（544×404）では幅基準で頭打ち＝はみ出し防止
+    box.style.setProperty("--mfs", Math.round(Math.min(ch * 0.16, cw * 0.09)) + "px");   // これは、、、
+    box.style.setProperty("--tfs", Math.round(Math.min(ch * 0.18, cw * 0.104)) + "px");  // 発動1行目（2行目は1.45倍）
+    box.style.setProperty("--bfs", Math.round(Math.min(ch * 0.24, cw * 0.14)) + "px");   // 車番チップの一辺
+    var comboHtml = combo.length
+      ? combo.map(function (n) {
+          return '<i class="car c' + n + ' fx-peye-car">' + n + "</i>";
+        }).join("") + '<span class="fx-peye-da">だ！！</span>'
+      : '<span class="fx-peye-da solo">見えた！！</span>';
+    box.innerHTML =
+      '<div class="fx-peye-shake">' +
+        '<div class="fx-peye-dark"></div>' +
+        '<i class="fx-peye-lines a"></i><i class="fx-peye-lines b"></i>' +
+        '<div class="fx-peye-zoom">' +
+          '<div class="fx-peye-char"><i class="fx-peye-img f1"></i><i class="fx-peye-img f2"></i></div>' +
+          '<div class="fx-peye-eyefx">' +
+            '<i class="fx-peye-beam"></i><i class="fx-peye-glint e-l"></i><i class="fx-peye-glint e-r"></i>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fx-peye-mutter"><span>これは、、、</span></div>' +
+      '<div class="fx-peye-title"><div class="fx-peye-title-in">' +
+        '<span class="l1">ピーターズ・アイ</span><span class="l2">発動！！</span>' +
+      '</div></div>' +
+      '<div class="fx-peye-combo"><span class="fx-peye-combo-in">' + comboHtml + '</span></div>' +
+      '<div class="fx-peye-flash"></div>';
+    cam.appendChild(box);
+    setTimeout(function () { box.classList.add("dk"); }, T.DK);
+    setTimeout(function () { box.classList.add("burst", "shake"); }, T.GLINT);
+    setTimeout(function () { box.classList.remove("shake"); }, T.GLINT + 400);
+    setTimeout(function () { box.classList.add("title"); }, T.TITLE);
+    setTimeout(function () { box.classList.add("mut"); }, T.MUT);      // 発動消える＋「これは、、、」
+    setTimeout(function () { box.classList.remove("dk"); box.classList.add("lit"); }, T.REVEAL);
+    setTimeout(function () { box.classList.add("combo", "shake"); }, T.COMBO);
+    setTimeout(function () { box.classList.remove("shake"); }, T.COMBO + 400);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
   /** その的中で出す専用演出を決める。effects（配列）があれば抽選＝1人で複数の演出を持てる（8/9 FB90）。
       ⚠️ここで1回だけ引く＝同じ的中の4シーン分のワイプで演出がバラバラにならない */
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
-       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba
+       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba／peye
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
        本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
        選んだ状態で強制すると「絵は別人・枠の色は選んだ人」という組み合わせになる（ラボ用途では想定内） */
@@ -2826,7 +2921,7 @@
      自分の世代と違えば何もしない（止められないタイマーの空振り対策） */
   var fxGen = 0;
   var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea," +
-    " .fx-adj, .fx-samba, .fx-thx, .hit-fx-badge";
+    " .fx-adj, .fx-samba, .fx-peye, .fx-thx, .hit-fx-badge";
   function clearHitFx() {
     fxGen++;
     var nodes = document.querySelectorAll(FX_ROOTS);
@@ -2863,6 +2958,7 @@
       : eff === "tea" ? teaTimes().END
       : eff === "samba" ? sambaTimes().END
       : eff === "adjust" ? adjTimes().END
+      : eff === "peye" ? peyeTimes().END
       : eff === "thanks" ? thxTimes().END
       : (key ? fxConf(key).rainMs : 0);
     // ③レース展開でも発火させる（8/12・③結果・的中シーンを消したため。要件§11.2）
@@ -2884,6 +2980,7 @@
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
       else if (eff === "adjust") spawnAdjust(cam, key);
+      else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
       else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）
       else if (key) spawnRain(cam, key);
       // 掃除（clearHitFx）が挟まったらバッジは出さない＝消したのに後から出る事故を防ぐ
