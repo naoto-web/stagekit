@@ -2733,7 +2733,9 @@
     box.className = ["fx-dance", "m-" + key].join(" ");
     box.style.setProperty("--dw", dw + "px");
     box.style.setProperty("--dh", dh + "px");
-    box.innerHTML = '<div class="fx-dance-run"><i class="fx-dance-img"></i></div>';
+    // 前後ステップバウンス＝足が入れ替わる周期（6コマ）で1往復。コマ送りと同じSTEPから導出＝速度を変えてもズレない
+    box.style.setProperty("--dstep", (DANCE_BASE.STEP * 6 / 1000) + "s");
+    box.innerHTML = '<div class="fx-dance-run"><div class="fx-dance-body"><i class="fx-dance-img"></i></div></div>';
     cam.appendChild(box);
     var img = box.querySelector(".fx-dance-img");
     function setFrame(i) {   // 4×4シート＝背景位置は 0 / 33.33 / 66.67 / 100 %
@@ -2751,6 +2753,7 @@
       setTimeout(function () {
         if (k === 0) clearInterval(flip);
         if (!box.isConnected) return;
+        if (k === 0) box.classList.add("fin");    // ループ終了＝前後バウンスも停止
         setFrame(DANCE_LOOP_N + k);
       }, T.FIN + DANCE_BASE.FSTEP * k);
     });
