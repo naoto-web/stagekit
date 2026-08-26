@@ -217,7 +217,11 @@
 
   /* ②サブ予想の場（8/6 FB13→FB17で配信者ごとに選択）：レース観戦のワイプ左＝NEXT枠。
      raceSubBy[配信者id]＝場名。全員「なし」＝OFF＝従来レイアウト。
-     ⚠️ONにしたらOBS側でカメラ1/2の移動が必要（セットアップ手順の「②サブ予想モード」参照） */
+     ⚠️ONにしたらOBS側でカメラ1/2の移動が必要（セットアップ手順の「②サブ予想モード」参照）
+     ⚠️8/27 FB137で「▶ 次Rへ」ボタンを撤去（Naoto「押すタイミングが分からない・不要」）。
+        サブのR送りは本日設定「発走・②切替時に予想レースを自動で合わせる」（既定ON・Derive.alignToRace）
+        が担う＝発走のたびにサブは次に発走する場・レースへ自動で移る。
+        手で送りたい時は場ボタンでその場に切り替え→レースチップを押す（メインも動く点は従来どおり） */
   function renderRaceSubRow() {
     var el = $("race-sub-row");
     if (!el) return;
@@ -243,19 +247,11 @@
             return '<button class="vp' + (cur === v.name ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
               esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
           }).join("") +
-          // R送り＝メイン（放送）を切り替えずにその場を次レースへ
-          (cur ? '<button class="vp" data-rid="' + esc(rc.id) + '" data-nextsub="1">▶ 次Rへ</button>' : "") +
           "</div>";
       }).join("");
     el.querySelectorAll(".vp").forEach(function (b) {
       b.addEventListener("click", function () {
         var rid = b.getAttribute("data-rid");
-        if (b.getAttribute("data-nextsub")) {
-          var vn = state.raceSubBy[rid];
-          var next = vn ? nextRaceOf(vn) : null;
-          if (next) { state.currentRace[vn] = next.no; manualNav(); save(); renderAll(); }
-          return;
-        }
         var v = b.getAttribute("data-v") || null;
         if (v) state.raceSubBy[rid] = v; else delete state.raceSubBy[rid];
         manualNav(); // 手動のサブ変更＝発走直後の自動追従に上書きさせない（FB96）
