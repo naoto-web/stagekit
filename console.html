@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-063431">
+<link rel="stylesheet" href="console.css?v=20260827-064158">
 </head>
 <body>
 
@@ -96,14 +96,16 @@
        買い方は3連単が基本で、行の追加が要るのは他式別で買った時だけ（＝押した時だけ出す） -->
   <details class="exp">
     <summary>3連単以外の場合</summary>
-    <div class="hint">ワイド・2車複などで買った時だけ使います。式別と買目を指定して行を追加すると、
+    <div class="hint">ワイド・2車複などで買った時だけ使います。式別と買い目を指定して決定すると、
       あとは3連単と同じ＝その行に払戻を入れれば的中・回収の計算に入ります</div>
     <div class="row gap">
+      <!-- ⚠️3連単は選択肢に入れない（8/27 FB145）＝ここは「3連単以外」のための欄。
+           3連単の行は着順を入れれば自動で並ぶ（console.jsのsyncPayoutPresets） -->
       <select id="payout-add-type" class="inp slim">
-        <option>3連単</option><option>3連複</option><option>2車単</option><option>2車複</option><option>ワイド</option>
+        <option>3連複</option><option>2車単</option><option>2車複</option><option>ワイド</option>
       </select>
-      <input type="text" id="payout-add-combo" class="inp slim" placeholder="組合せ 1-9-2">
-      <button class="btn small" id="btn-payout-add">行を追加</button>
+      <input type="text" id="payout-add-combo" class="inp slim" placeholder="買い目 1-9-2">
+      <button class="btn small" id="btn-payout-add">決定</button>
     </div>
   </details>
 
@@ -201,11 +203,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-063431" data-au="banner"></script>
-<script src="config.js?v=20260827-063431"></script>
-<script src="keirin.js?v=20260827-063431"></script>
-<script src="derive.js?v=20260827-063431"></script>
-<script src="sync.js?v=20260827-063431"></script>
-<script src="console.js?v=20260827-063431"></script>
+<script src="autoupdate.js?v=20260827-064158" data-au="banner"></script>
+<script src="config.js?v=20260827-064158"></script>
+<script src="keirin.js?v=20260827-064158"></script>
+<script src="derive.js?v=20260827-064158"></script>
+<script src="sync.js?v=20260827-064158"></script>
+<script src="console.js?v=20260827-064158"></script>
 </body>
 </html>
