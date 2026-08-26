@@ -324,10 +324,18 @@
     var vr = $("pred-venue-row"), rg = $("pred-race-chips");
     if (!vr || !rg) return;
     if (!state.venues.length) { vr.innerHTML = ""; rg.innerHTML = ""; return; }
-    vr.innerHTML = '<button class="vbtn' + (!editVenue ? " active" : "") + '" data-v="">放送に追従</button>' +
+    /* 8/27 FB139（Naoto「放送に追従ボタンの意味が分かりづらい」）＝常設をやめ、固定中だけ出す。
+       ⚠️このボタンは固定を解除する唯一の手段（他は「固定先の場が本日の場から外れた時」と再読み込みだけ）
+       なので、無くすのではなく「固定した時だけ現れる」形にした。
+       追従中は放送中の場に .live の印を付ける＝ボタンが消えても「今どこに書いているか」が分かるように */
+    var liveVenue = activeVenueName();
+    vr.innerHTML =
+      (editVenue ? '<button class="vbtn unpin" data-v="" title="入力先の固定を外して放送に追従へ戻す">📌解除<small>放送に追従</small></button>' : "") +
       state.venues.map(function (v) {
         var rNo = (editVenue === v.name && editRace) ? editRace : state.currentRace[v.name];
-        return '<button class="vbtn' + (editVenue === v.name ? " active" : "") + '" data-v="' + esc(v.name) + '">' +
+        var isLive = !editVenue && v.name === liveVenue;
+        return '<button class="vbtn' + (editVenue === v.name ? " active" : (isLive ? " live" : "")) + '" data-v="' + esc(v.name) + '"' +
+          (isLive ? ' title="いま放送中の場＝追従中はここに書かれます"' : ' title="この場に入力先を固定する（放送の表示は変わりません）"') + '>' +
           esc(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "</small></button>";
       }).join("");
     vr.querySelectorAll(".vbtn").forEach(function (b) {
@@ -433,8 +441,14 @@
 
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
-    $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）") +
-      (editVenue ? "　📌入力先を固定中" : "");
+    // 固定中は「どこに固定しているか」＋「放送は今どこか」を出す（8/27 FB139）。
+    // 放送＝固定先が一致している間は括弧を出さない（同じ情報を2回言わない）
+    var pinNote = "";
+    if (editVenue) {
+      var liveKey = currentKey();
+      pinNote = "　📌固定中" + (liveKey && liveKey !== key ? "（放送は " + liveKey.replace("|", " ") + "R）" : "");
+    }
+    $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）") + pinNote;
     $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }

@@ -111,6 +111,11 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 }
 .vbtn.active { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
 .vbtn small { display: block; font-size: 11px; font-weight: 700; opacity: .8; }
+/* 予想入力の入力先だけの装飾（8/27 FB139）。⚠️.vbtnは上部の場切替と共用のため #pred-venue-row で閉じる。
+   .live＝追従中に「いま放送中の場」を示す控えめな枠（固定中の.active＝金の塗りとは別物）。
+   .unpin＝固定中だけ現れる解除ボタン（固定を外す唯一の手段） */
+#pred-venue-row .vbtn.live { border-color: #d9a441; box-shadow: inset 0 0 0 1px rgba(217, 164, 65, .35); }
+#pred-venue-row .vbtn.unpin { flex: 0 0 auto; background: #2a2118; border-color: #d9a441; color: #e8c98a; }
 
 .race-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .rc {
