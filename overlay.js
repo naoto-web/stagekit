@@ -1703,6 +1703,14 @@
   /* ---------- 的中演出（結果入力で的中が出たら当たった配信者のワイプに表示） ----------
      状態更新のたびに的中リストを前回と比較し、増えた的中だけ発火（リロード時は再生しない）。 */
   var seenHits = null; // null＝初回未初期化
+  /* 演出を出した的中ID（8/26 演出2連続再生の根治）。GAS応答の遅延・順序逆転でstateが一瞬
+     古い内容に巻き戻ると、seenHitsも巻き戻り、次の新鮮なstateで同じ的中が「新規」や
+     「auto→手動の置き換わり」に見えて演出が再発火していた（8/26朝 高知2R・スロット2連続で実測。
+     再発火は抽選も引き直す＝スロット→リスペクトの異種2連続も同根）。
+     このページの寿命内は「的中1件＝演出1回」をここで確定させる。
+     リロード後の再生はseenHits初回初期化が抑止する従来のまま。
+     fxlabは発火ごとにレース番号を進める＝IDが毎回変わるので連打に影響なし */
+  var firedFx = {};
   var HIT_FX_MS = 35000; // 8/6 FB46：12秒→20秒→8/7 FB62：27秒→8/10 FB121：35秒に延長（バッジ・買目チップ強調共通）
 
   /* 的中買目の車番強調（8/10 FB119・Naoto依頼「当たった買目の車番だけ強調」）＝
@@ -1740,6 +1748,8 @@
       if (prev && !(prev.resAuto && !h.resAuto)) return;
       // 自動確定由来は演出を出さない（8/6 FB47・手動の「結果を確定」の時だけ演出）＝記録だけ残す
       if (h.resAuto) return;
+      if (firedFx[id]) return; // 同じ的中で二度は鳴らさない（8/26根治・firedFxのコメント参照）
+      firedFx[id] = true;
       addHitGlow(h); // 予想帯の的中買目チップ強調（8/10 FB119・演出と同条件・同尺）
       glowAdded = true;
       var seats = seatMap();
@@ -3127,9 +3137,21 @@
   }
 
   /* ---------- 状態反映 ---------- */
+  /* maxSeenRev＝適用済みの最大rev（8/26 演出2連続再生の根治）。
+     従来の「今のstate.revと同一なら捨てる」だけでは古いrevを弾けず、遅れて届いた
+     古いポーリング応答（GASの302→404リトライ等で応答が追い越されることがある）が
+     適用されて状態が数秒だけ巻き戻り、的中演出の再発火の引き金になっていた。
+     ・楽観BC（revなし）は常に適用＝コンソールの最新の意図
+     ・巻き戻り2000以上だけはバックエンド初期化とみなして受け入れる
+       （revの進みは1日600前後＝遅延応答がそこまで古いことはあり得ない） */
+  var maxSeenRev = 0;
   function applyState(s, path) {
     if (!s) return;
-    if (s.rev && s.rev === state.rev) return;
+    if (s.rev) {
+      var back = maxSeenRev - s.rev;
+      if (back >= 0 && back < 2000) return; // 同一・古いrevの遅延応答は適用しない
+      maxSeenRev = s.rev;
+    }
     var base = window.Derive.defaultState(todayStr());
     var merged = Object.assign({}, base, s);
     merged.cfg = Object.assign({}, base.cfg, s.cfg || {});
