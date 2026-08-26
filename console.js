@@ -487,7 +487,10 @@
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
         '<input type="hidden" class="pf-type" value="3連単">' +
-        '<label class="lbl inline">投資額 <input type="number" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '" placeholder="実際に買った総額">円</label>' +
+        // 上下ボタンは1000円刻み（8/27 FB141・Naoto依頼）。⚠️stepはスピナーの刻みなので
+        // 端数（例3500）を手打ちするのは従来どおり可（フォーム送信が無いのでstep不一致でも保存に影響しない）。
+        // ⚠️回収・払戻は実額＝端数が当たり前なのでstepを付けない
+        '<label class="lbl inline">投資額 <input type="number" step="1000" min="0" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '" placeholder="実際に買った総額">円</label>' +
         "</div>" +
         '<div class="parse-total pf-total"></div>' +
         '<button class="btn small pf-save">この予想を保存</button>' +
