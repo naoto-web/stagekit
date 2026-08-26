@@ -636,17 +636,11 @@
     var existing = key ? state.results[key] : null;
     if (existing) {
       $("res-order").value = (existing.order || []).join("-");
-      for (var i = 0; i < 3; i++) {
-        $("res-name-" + (i + 1)).value = (existing.names && existing.names[i]) || "";
-      }
-      $("res-kim-1").value = (existing.kimarite && existing.kimarite[0]) || "";
-      $("res-kim-2").value = (existing.kimarite && existing.kimarite[1]) || "";
       payoutRows = (existing.payouts || []).map(function (p) {
         return { type: p.type, combo: p.combo.slice(), amount: p.amount };
       });
     } else {
       $("res-order").value = "";
-      ["res-name-1", "res-name-2", "res-name-3", "res-kim-1", "res-kim-2"].forEach(function (id) { $(id).value = ""; });
       payoutRows = [];
     }
     refundInputs = {};
@@ -703,12 +697,8 @@
     });
   }
 
-  // 着順・選手名・決まり手の手入力も「入力途中」として保護する（8/8 FB75）
+  // 着順の手入力も「入力途中」として保護する（8/8 FB75。選手名・決まり手の欄は8/27 FB143で撤去）
   $("res-order").addEventListener("input", function () { markResDirty(); syncPayoutPresets(); });
-  ["res-name-1", "res-name-2", "res-name-3", "res-kim-1", "res-kim-2"].forEach(function (id) {
-    var el = $(id);
-    if (el) el.addEventListener("input", markResDirty);
-  });
 
   $("btn-payout-add").addEventListener("click", function () {
     var type = $("payout-add-type").value;
@@ -799,10 +789,13 @@
     Object.keys(refundInputs).forEach(function (pid) {
       if (refundInputs[pid] > 0) refunds[pid] = refundInputs[pid];
     });
+    // 選手名・決まり手はコンソールで入力しない（8/27 FB143）＝DOMではなく自動取得／既存stateから
+    // 引き継ぐ（空で上書きすると③結果シーンとリスペクト演出が名前を失う）。判定はderive.jsの純関数
+    var meta = window.Derive.carryResultMeta(autoResults[key], state.results[key], order);
     state.results[key] = {
       order: order,
-      names: [$("res-name-1").value.trim(), $("res-name-2").value.trim(), $("res-name-3").value.trim()],
-      kimarite: [$("res-kim-1").value.trim(), $("res-kim-2").value.trim(), ""],
+      names: meta.names,
+      kimarite: meta.kimarite,
       payouts: payoutRows.filter(function (p) { return p.amount > 0; }),
       refunds: refunds,
       settledAt: new Date().toISOString(),
@@ -834,13 +827,11 @@
       else payoutRows.push({ type: type, combo: combo, amount: amount });
       filled.push(type + " " + fmtYen(amount));
     }
-    // 着順: 「1着 … 3」「2着 … 7」の車番＋任意の選手名
-    var ordRe = /([1-3])\s*着[^\d\n]{0,6}([1-9])[\s]*([^\s\d,，、][^\d\n]{1,12})?/g;
+    // 着順: 「1着 … 3」「2着 … 7」の車番（選手名の転記は8/27 FB143で廃止＝入力欄ごと撤去したため）
+    var ordRe = /([1-3])\s*着[^\d\n]{0,6}([1-9])/g;
     var order = [null, null, null];
     while ((m = ordRe.exec(text)) !== null) {
-      var pos = +m[1] - 1;
-      order[pos] = +m[2];
-      if (m[3]) $("res-name-" + (pos + 1)).value = m[3].trim();
+      order[+m[1] - 1] = +m[2];
     }
     if (order[0] && order[1]) {
       $("res-order").value = order.filter(Boolean).join("-");
@@ -1331,9 +1322,7 @@
     var r = autoResults[key];
     if (!r) return;
     $("res-order").value = r.order.join("-");
-    for (var i = 0; i < 3; i++) $("res-name-" + (i + 1)).value = (r.names && r.names[i]) || "";
-    $("res-kim-1").value = (r.kimarite && r.kimarite[0]) || "";
-    $("res-kim-2").value = (r.kimarite && r.kimarite[1]) || "";
+    // 選手名・決まり手はフォームに出さない（8/27 FB143）＝確定時にresultMeta()が自動取得から引き継ぐ
     payoutRows = keepPayouts(r.payouts).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
     markResDirty();      // プリフィルも「確定前の入力」＝再描画で消させない（8/8 FB75）
     syncPayoutPresets(); // 標準行の補完＋的中プレビュー再計算

@@ -361,6 +361,22 @@
     return changed;
   }
 
+  /** 確定時に選手名・決まり手をどこから引き継ぐか（8/27 FB143＝コンソールの手入力欄を撤去したため）。
+      戻り値は常に新しい配列（呼び出し側が持ち回っても元データを壊さない）。
+        ①自動取得の結果が「同じ着順」ならその names/kimarite を採用
+          ⚠️着順が違うのに採用すると2着の名前が1着に付くズレになるので一致を必須にする。
+             手入力が自動取得の前方一致（例：2車単だけ入れた 1-9 と 自動 1-9-2）は一致とみなす
+        ②既存の確定結果があれば維持（再確定・回収額の入れ直しで消さない）
+        ③どちらも無ければ空＝オーバーレイ側の既存フォールバック（出走表から車番で引く→「○番車」）が働く */
+  function carryResultMeta(auto, prev, order) {
+    if (auto && auto.order && order && order.length &&
+        auto.order.slice(0, order.length).join("-") === order.join("-")) {
+      return { names: (auto.names || []).slice(), kimarite: (auto.kimarite || []).slice() };
+    }
+    if (prev) return { names: (prev.names || []).slice(), kimarite: (prev.kimarite || []).slice() };
+    return { names: [], kimarite: [] };
+  }
+
   /** 旧形式（文字列名簿・枠ID）からの移行と、配信者への色引き当て */
   function normalizeState(state) {
     state.roster = (state.roster || []).map(function (r) {
@@ -409,6 +425,7 @@
     justStartedRace: justStartedRace,
     videoRaceAt: videoRaceAt,
     alignToRace: alignToRace,
+    carryResultMeta: carryResultMeta,
     nameKey: nameKey,
     nameHit: nameHit,
     matchRacer: matchRacer,

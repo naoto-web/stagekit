@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-060924">
+<link rel="stylesheet" href="console.css?v=20260827-062313">
 </head>
 <body>
 
@@ -85,16 +85,10 @@
   <label class="lbl">着順（例：1-9-2）</label>
   <input type="text" id="res-order" class="inp big" placeholder="1-9-2" inputmode="numeric">
 
-  <div class="grid3">
-    <input type="text" id="res-name-1" class="inp" placeholder="1着 選手名(任意)">
-    <input type="text" id="res-name-2" class="inp" placeholder="2着 選手名(任意)">
-    <input type="text" id="res-name-3" class="inp" placeholder="3着 選手名(任意)">
-  </div>
-  <div class="grid3">
-    <input type="text" id="res-kim-1" class="inp" placeholder="決まり手(任意)">
-    <input type="text" id="res-kim-2" class="inp" placeholder="上がり等(任意)">
-    <span></span>
-  </div>
+  <!-- 選手名（1〜3着）・決まり手・上がりの手入力欄は8/27 FB143で撤去（Naoto「手で入れない」）。
+       ⚠️データとしては残す＝自動取得の結果からstate.results[].names/kimariteに入り、
+       ③結果シーンとリスペクト演出が使う。確定時の引き継ぎはconsole.jsのresultMeta()が担当。
+       ここに欄を戻す必要はない（戻すならresultMeta側も直すこと） -->
 
   <label class="lbl">払戻（100円あたり・円）</label>
   <div id="payout-rows"></div>
@@ -207,11 +201,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-060924" data-au="banner"></script>
-<script src="config.js?v=20260827-060924"></script>
-<script src="keirin.js?v=20260827-060924"></script>
-<script src="derive.js?v=20260827-060924"></script>
-<script src="sync.js?v=20260827-060924"></script>
-<script src="console.js?v=20260827-060924"></script>
+<script src="autoupdate.js?v=20260827-062313" data-au="banner"></script>
+<script src="config.js?v=20260827-062313"></script>
+<script src="keirin.js?v=20260827-062313"></script>
+<script src="derive.js?v=20260827-062313"></script>
+<script src="sync.js?v=20260827-062313"></script>
+<script src="console.js?v=20260827-062313"></script>
 </body>
 </html>

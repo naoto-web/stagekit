@@ -74,7 +74,7 @@ details.card[open] summary { margin-bottom: 10px; }
 html:not(.admin-on) .admin-only { display: none; }
 .row { display: flex; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .row.gap { gap: 8px; }
-.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
+/* .grid3 は結果入力の選手名・決まり手欄専用だったため、欄の撤去（8/27 FB143）に伴い削除 */
 
 .inp {
   width: 100%; font: inherit; font-size: 14px; color: #e8e8ec;
