@@ -3077,6 +3077,9 @@
       : eff === "peye" ? peyeTimes().END
       : eff === "thanks" ? thxTimes().END
       : (key ? fxConf(key).rainMs : 0);
+    // 遠隔自動更新（autoupdate.js・要件§12）への「演出中」通知＝force時はこの時刻まで待つ。
+    // rainMs＝バッジが出るまで／HIT_FX_MS＝バッジ・買目強調の持続
+    window.__fxUntil = Math.max(window.__fxUntil || 0, Date.now() + rainMs + HIT_FX_MS);
     // ③レース展開でも発火させる（8/12・③結果・的中シーンを消したため。要件§11.2）
     ["np-talk-", "np-race-", "np-result-", "np-ad-", "np-tk-"].forEach(function (p) {
       var el = $(p + slot);
