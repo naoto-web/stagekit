@@ -1775,33 +1775,47 @@
              size   …[最小px, 最大px]（既定[80,180]・奥のレーンほど小さい）
              dur    …1体の走破秒[最小,最大]（既定[2.2,3.2]）
              rainMs …走行の長さ＝バッジが出るまでの時間ms（既定4500）
-             effect …アイコン走行の代わりに出す専用演出（"yakumono"＝役物合体／"slot"＝スロット
-                      ／"sumo"＝相撲／"pray"＝念仏／"tea"＝お茶／"samba"＝サンバ
-                      ／"adjust"＝アジャスト／"peye"＝ピーターズ・アイ／"thanks"＝選手リスペクト）。
-                      ⚠️"thanks" だけは絵柄が人に紐づかない全員共通の演出（8/23）＝
-                        誰に付けてもよいし、THX_IN_ROTATION=true で全色の抽選に一括で入る
-                        （出現率＝THX_RATE固定20%・残り80%は個人演出で等分・8/26）。
-                      指定した色キーはアイコン走行を出さない＝二重演出にしない。尺は各演出側が決める
-             effects…専用演出を複数持たせる場合の配列（8/9 FB90）＝**的中のたびに1つ抽選**する。
-                      ""（空文字）を混ぜると「既定のアイコン走行」も抽選対象にできる。
-                      ⚠️抽選は的中IDのハッシュで決定的（8/26）＝OBS全ソース・全シーンで同じ演出になる。
-                        配分＝thanks固定20%・残り80%を個人演出で等分（THX_RATE・8/26）
-     追加手順：①下の表に色キーの行を足す ②必要ならoverlay.cssに見た目を書く
-               ③検証ハーネス raintest.html?key=<色キー> で撮って確認
-                 （effect系は動きを見る演出なので 検証ハーネス/fxlab.html を実ブラウザで開く） */
+             effect / effects …❌8/27に廃止＝**どの演出をどの確率で出すかは下の MEMBER_RATES が正本**。
+                      MEMBER_FXは見た目の量だけを持つ（確率は書かない＝二重管理を作らない）
+     追加手順：①MEMBER_RATESに演出と%を書く ②見た目の量が要るならこの表にも色キーの行を足す
+               ③必要ならoverlay.cssに見た目を書く ④`node 検証ハーネス/fxdisttest.js` を通す
+               ⑤検証ハーネス raintest.html?key=<色キー> で撮って確認
+                 （動きを見る演出は 検証ハーネス/fxlab.html を実ブラウザで開く） */
   var COLOR_KEY = { "青": "blue", "緑": "green", "オレンジ": "orange", "橙": "orange",
     "赤": "red", "ピンク": "pink", "桃": "pink", "黄": "yellow", "黄色": "yellow" };
   var MEMBER_FX = {
-    // effects＝2つ以上ある人は的中のたびに抽選（8/9 FB90・""＝既定のアイコン走行）
-    orange: { fx: ["dust-xl"], effects: ["", "tea"] }, // 白いモクモクの砂埃（8/8 FB72）／お茶（8/9 FB90）
-    blue:   { effects: ["yakumono", "adjust"] }, // 役物合体（8/8 FB82）／アジャスト（8/11 FB130）＝的中のたびに抽選（アイコン走行は出さない）
-    pink:   { effect: "slot" },       // スロット＝当たり目の車番が揃う（8/8 FB83・アイコン走行は出さない）
-    green:  { effects: ["sumo", "peye"] }, // 相撲（8/9 FB86）／ピーターズ・アイ（8/25 Naoto案）＝的中のたびに抽選（アイコン走行は出さない）
-    yellow: { effect: "pray" },       // 念仏＝祈る→震える→カッと見開いて目がピカッ（8/9 FB88・同上）
-    red:    { effects: ["samba", "dance"] } // サンバ（8/10 FB121）／ダンス（8/25）＝的中のたびに抽選（アイコン走行は出さない）
+    // ⚠️確率はここに書かない（下のMEMBER_RATESが正本）。ここは「アイコン走行の見た目の量」だけ
+    orange: { fx: ["dust-xl"] },  // 白いモクモクの砂埃（8/8 FB72）＝走行が出たときの見た目
+    blue:   {},                   // 専用演出のみ（走行なし）＝見た目の量は不要
+    pink:   {},
+    green:  {},
+    yellow: {},
+    red:    {}
     // 例）purple: { fx: ["dust-xl"], count: 120, size: [90, 200], dur: [1.8, 2.6], rainMs: 5200 }
   };
   var RAIN_DEFAULT = { count: 80, size: [80, 180], dur: [2.2, 3.2], rainMs: 4500 };
+
+  /* ══════════ 演出の出現確率テーブル（8/27・確率の唯一の正本） ══════════
+     「誰のどの演出を何%で出すか」を**そのまま数字で書く場所**。計算で作らない＝
+     指示（例「40%40%20%にして」）とこの表を見比べるだけで、仕様どおりかを目で確認できる。
+     ⚠️確率を変える・演出を足すときは**この表だけ**を触る。抽選の仕組み（weightedPick）は触らない。
+       経緯＝8/26、20%を作るために抽選の計算方式ごと作り替えて事故った（場によって結果発表が
+       ほぼ0%/ほぼ100%になり、欠陥ビルドが本番配信に流出）。仕組みを固定して表だけ動かす形に
+       作り替えたのがこの表＝「%指定のたびに仕組みを触る」構造そのものを無くすのが目的。
+     書き方＝色キー: { 演出キー: %, … } で**合計100**（0.5等の小数も可・分解能0.01%）。
+       演出キー＝rain（既定のアイコン走行）／yakumono＝役物合体／slot＝スロット／sumo＝相撲
+                 ／pray＝念仏／tea＝お茶／samba＝サンバ／dance＝ダンス／adjust＝アジャスト
+                 ／peye＝ピーターズ・アイ／thanks＝選手リスペクト（結果発表・全員共通）
+     ⚠️合計100でない／演出名のタイプミスは起動時の自己検査（auditRates）で警告＋テストがFAILする */
+  var MEMBER_RATES = {
+    orange: { rain: 40, tea: 40, thanks: 20 },        // アイコン走行／お茶（8/9 FB90）
+    blue:   { yakumono: 40, adjust: 40, thanks: 20 }, // 役物合体（FB82）／アジャスト（FB130）
+    pink:   { slot: 80, thanks: 20 },                 // スロット（FB83）
+    green:  { sumo: 40, peye: 40, thanks: 20 },       // 相撲（FB86）／ピーターズ・アイ（8/25）
+    yellow: { pray: 80, thanks: 20 },                 // 念仏（FB88）
+    red:    { samba: 40, dance: 40, thanks: 20 }      // サンバ（FB121）／ダンス（8/25）
+    // 例）purple: { rain: 50, slot: 30, thanks: 20 }
+  };
 
   /* 役物合体の尺（8/8 FB82）。倍率kを掛けるのは「焦らし」の2つ（寄る・震える）だけ。
      ⚠️合体の一撃(CSS .fx-piece.lock の0.13秒)には掛けない：
@@ -1959,7 +1973,7 @@
        FSTEP…フィニッシュ3コマ（タメ・振り上げ・伸び上がり）の1コマms
        HOLD …キメを見せる時間ms／FADE…退場ms
      ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約6.1秒
-     ✅8/25 Naoto承認で本番投入済み（red＝effects: ["samba", "dance"]＝thanks込みで各1/3） */
+     ✅8/25 Naoto承認で本番投入済み（確率はMEMBER_RATES.red＝samba40/dance40/thanks20） */
   var DANCE_BASE = { STEP: 100, LOOPS: 3, FSTEP: 170, HOLD: 2000, FADE: 450 };
   var DANCE_AR = 446 / 500; // fx_dance.png の1コマ実寸比（横/縦）＝絵を差し替えたら素材加工/fx_dance_make.pyの出力で更新
   var DANCE_LOOP_N = 12;    // 4×4シートの0..11＝腕回しループ／12タメ／13振り上げ／14伸び上がり／15キメ
@@ -2806,22 +2820,54 @@
        戻すとき＝ FX_PIN = {} に戻して再publish＋OBS①②③キャッシュ更新。
        ?fx=強制（検証用）だけはこれより優先のまま。恒久機能ではなく一時運用のスイッチ */
   var FX_PIN = { red: "dance" }; // 赤＝ダンス100%（8/26〜・戻し指示待ち）
+
+  /* ══════════ 確率テーブルから1つ引く仕組み（8/27） ══════════
+     ⚠️ここは**仕組み**＝確率を変えるときに触る場所ではない（触るのはMEMBER_RATESの数字だけ）。
+     ・引き方＝ハッシュの**下の桁**（% RATE_SCALE）で整数の当たり枠に落とす。
+       ⚠️8/26の事故は上の桁（[0,1)正規化して帯で切る方式）を使ったのが原因＝上の桁は
+         似たID（同じ場名）でほとんど動かず場ごとに偏る。下の桁はR番号・買い目で激しく動く＝
+         一昨日から実績のある側。fxHashの仕上げ混ぜ（fmix32）と合わせて二重の保険。
+     ・10000枠のうち「40%なら4000枠」と**数えて割り当てる**＝配分は統計でなく算数で合う。
+     ・同じ的中IDなら常に同じ結果＝OBS全ソース・全シーンで同じ演出（8/26の決定性はここが担保）。
+       ⚠️キーの並び順が引く結果を決める＝表の行を並べ替えると出る演出が変わる（確率は不変） */
+  var RATE_SCALE = 10000; // 確率の分解能＝0.01%
+  function weightedPick(id, rates) {
+    var keys = Object.keys(rates), total = 0, i, w;
+    for (i = 0; i < keys.length; i++) { w = rates[keys[i]]; if (w > 0) total += w; }
+    if (!total) return "";
+    var r = fxHash(String(id)) % RATE_SCALE, acc = 0;
+    for (i = 0; i < keys.length; i++) {
+      w = rates[keys[i]];
+      acc += (w > 0 ? w : 0) / total * RATE_SCALE;
+      if (r < acc) return keys[i] === "rain" ? "" : keys[i];
+    }
+    var last = keys[keys.length - 1];         // 端数の保険＝合計が100でない表でも必ず1つ返す
+    return last === "rain" ? "" : last;
+  }
+  /* 表の自己検査（8/27）＝合計100か・演出名のタイプミスがないか。
+     ⚠️OBSではコンソールが見えない＝これは補助。本当の関門は公開前の fxdisttest.js */
+  var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, tea: 1,
+    samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1 };
+  function auditRates() {
+    Object.keys(MEMBER_RATES).forEach(function (k) {
+      var rates = MEMBER_RATES[k], sum = 0;
+      Object.keys(rates).forEach(function (e) {
+        sum += rates[e];
+        if (!FX_KNOWN[e]) console.warn("[FX] 未知の演出名 " + k + "." + e + "（タイプミス？）");
+      });
+      if (Math.abs(sum - 100) > 0.01) console.warn("[FX] " + k + " の合計が " + sum + "%（100にすること）");
+    });
+  }
+  auditRates();
+
   function pickEffect(key, hit) {
     var force = window.__FX_FORCE || FX_FORCE;
     if (force && force !== "auto") return force === "rain" ? "" : force;
     if (FX_PIN[key]) return FX_PIN[key]; // 今だけの固定枠（上のFX_PIN参照・戻し忘れ注意）
-    var c = MEMBER_FX[key] || {};
-    var list = (c.effects && c.effects.length) ? c.effects : [c.effect || ""];
-    // 抽選の乱数＝的中IDのハッシュを[0,1)へ正規化＝全ソースで同じ値→同じ演出（8/26）。
-    // IDが取れない経路（保険）だけ従来のMath.random。通常の的中は必ずid付き（derive.jsのhits）
-    var r = (hit && hit.id) ? fxHash(String(hit.id)) / 4294967296 : Math.random();
-    // 結果発表（選手リスペクトthanks）＝全員固定20%・残り80%を個人演出で等分（8/26 Naoto指定）
-    // ＝2個持ち40/40/20・1個持ち80/20。旧＝リストに1個足して等分（各1/3・各1/2）は廃止
-    if (THX_IN_ROTATION) {
-      if (r >= 1 - THX_RATE) return "thanks";
-      r = r / (1 - THX_RATE); // 残り80%の帯を[0,1)へ引き伸ばして個人演出の等分に使う
-    }
-    return list[Math.min(Math.floor(r * list.length), list.length - 1)];
+    var rates = MEMBER_RATES[key];
+    if (!rates) return "";               // 表に無い色＝名簿外＝既定のアイコン走行（従来動作）
+    // IDが取れない経路（保険）だけ乱数。通常の的中は必ずid付き（derive.jsのhits）
+    return weightedPick((hit && hit.id) ? hit.id : ("x" + Math.random()), rates);
   }
 
   /* ══════════ 選手リスペクト演出 "thanks"（8/23 Naoto案） ══════════
@@ -2835,8 +2881,8 @@
        ・出る場所＝cam（ワイプ）の中。尺の流儀も他と同じ＝ENDで的中バッジにバトンを渡す
        ・違いは絵柄が特定の人に紐づかないこと＝誰の的中でも出せる「全員共通」の演出
        ・寸法は①(752×423)と②(544×404)で変わるので、文字は --thx-h（＝ワイプの高さ）基準で組む
-     ✅8/25 本番の抽選に投入済み（THX_IN_ROTATION=true）。
-       ✅8/26 配分改定＝全員固定20%（THX_RATE）・残り80%は個人演出で等分（40/40/20・80/20）
+     ✅8/25 本番の抽選に投入済み。✅8/26 配分＝全員20%（40/40/20・80/20）
+       →✅8/27 確率はMEMBER_RATESに各色20%と明記（表方式・変えるならその数字だけ）
      ⚠️最後の札は8/25に「的中！！」→「おめざいます！！」へ変更（Naoto指定）。
        **誤字ではない**＝「おめでとうございます」に直さないこと。
        （副次効果＝hit-mainバッジ／ティッカー／サンバのキメ文字「的中」との文言重複も解消）
@@ -2896,14 +2942,9 @@
   /* 表示は1パターンに確定（8/25 Naoto実機確認）＝着順＋🚴＋車番＋フルネーム（均等）。
      旧・切替（?thxv＝名前だけ/決まり手・?thxn＝姓大名小/姓だけ）は撤去した＝
      URLパラメータの既定値で意図しないパターンが出る事故（テストで姓大が出た件）の根治 */
-  /* 全色の抽選に "thanks"（結果発表）を入れる＝誰が当てても出る全員共通の演出。
-     ✅8/25 Naoto承認で本番投入＝テスト環境で実レース確認済み。
-     確率＝✅8/26 Naoto指定に改定：thanksは全員固定20%（THX_RATE）・残り80%を個人演出で等分
-     ＝2個持ち（青・緑・橙・赤）40/40/20・1個持ち（桃・黄）80/20。
-     旧8/25方式（リストに1個足して等分＝2個持ち各1/3・1個持ち各1/2）は廃止。
-     切り戻し＝THX_IN_ROTATION=falseでthanks封印（個人演出のみ等分）→再publish */
-  var THX_IN_ROTATION = true;
-  var THX_RATE = 0.20; // 結果発表(thanks)の出現率＝全員固定20%（8/26 Naoto指定・変えるならここ）
+  /* thanks（結果発表）は全色共通の演出＝絵柄が人に紐づかないので誰の的中でも出せる（8/23）。
+     ✅8/25 Naoto承認で本番投入。**出現率はMEMBER_RATESに各色20%と明記**（8/26指定→8/27表方式へ）。
+     封印したいとき＝MEMBER_RATESから thanks の行を消し、その分を個人演出に振る（合計100を維持） */
   /** その札の前置き（着順チップ）→名前までの溜め。
       ⚠️CSSに渡す --thx-lag と揺れのタイミング計算の両方でこれを使う（片方だけだとズレる） */
   function thxLagOf(st) { return st.lag || 0; }
@@ -3044,7 +3085,8 @@
       if (nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
     }
     var cams = document.querySelectorAll(".cam");
-    var keys = Object.keys(MEMBER_FX);
+    // 掃除対象＝2つの表の色キーの合併（片方にしか無い色でも m-<色> を残さない・8/27）
+    var keys = Object.keys(MEMBER_FX).concat(Object.keys(MEMBER_RATES));
     for (var j = 0; j < cams.length; j++) {
       cams[j].classList.remove("hit-fx", "hit-fx-note", "hit-fx-manche");
       for (var k = 0; k < keys.length; k++) cams[j].classList.remove("m-" + keys[k]);
