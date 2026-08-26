@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-064158">
+<link rel="stylesheet" href="console.css?v=20260827-070401">
 </head>
 <body>
 
@@ -91,6 +91,10 @@
        ここに欄を戻す必要はない（戻すならcarryResultMeta側も直すこと） -->
 
   <label class="lbl">払戻（100円あたり・円）</label>
+  <!-- 8/27 FB146＝回収は「枚数」入力に変更したので、入れ方の説明をここに置く -->
+  <div class="hint">公式サイトの払戻（100円あたり）をそのまま入れます。
+    <b>回収は下のプレビューで「何枚買ったか」を入力</b>＝1枚100円で、
+    <b>回収額＝払戻×枚数を自動計算</b>します（金額の手入力は不要）</div>
   <div id="payout-rows"></div>
   <!-- 8/27 FB144：式別セレクタ＋組合せ＋行を追加は常時表示をやめ、この折りたたみの中へ。
        買い方は3連単が基本で、行の追加が要るのは他式別で買った時だけ（＝押した時だけ出す） -->
@@ -203,11 +207,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-064158" data-au="banner"></script>
-<script src="config.js?v=20260827-064158"></script>
-<script src="keirin.js?v=20260827-064158"></script>
-<script src="derive.js?v=20260827-064158"></script>
-<script src="sync.js?v=20260827-064158"></script>
-<script src="console.js?v=20260827-064158"></script>
+<script src="autoupdate.js?v=20260827-070401" data-au="banner"></script>
+<script src="config.js?v=20260827-070401"></script>
+<script src="keirin.js?v=20260827-070401"></script>
+<script src="derive.js?v=20260827-070401"></script>
+<script src="sync.js?v=20260827-070401"></script>
+<script src="console.js?v=20260827-070401"></script>
 </body>
 </html>

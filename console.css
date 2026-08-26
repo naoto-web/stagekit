@@ -149,6 +149,12 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .payout-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .payout-row .pr-label { flex: 0 0 auto; width: 110px; font-size: 13px; font-weight: 700; color: #9aa0ab; font-variant-numeric: tabular-nums; }
 .payout-row .inp { flex: 1; text-align: right; font-variant-numeric: tabular-nums; }
+/* 払戻は上下ボタンを出さない（8/27 FB146・金額は1円刻みで打つもの＝スピナーが邪魔）。
+   右に「円」を添える。⚠️回収（枚数）側はスピナーを残す＝1枚ずつ増減する使い方があるため */
+.payout-row .pr-amount::-webkit-outer-spin-button,
+.payout-row .pr-amount::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.payout-row .pr-amount { -moz-appearance: textfield; }
+.payout-row .pr-unit { flex: 0 0 auto; font-size: 13px; color: #9aa0ab; }
 .payout-row .pr-del { flex: 0 0 auto; cursor: pointer; color: #6d7480; background: none; border: none; font-size: 14px; }
 
 .settle-preview {
@@ -157,7 +163,10 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   font-size: 13px; line-height: 1.8; font-variant-numeric: tabular-nums;
 }
 .settle-preview .hit { color: #37d67a; font-weight: 900; }
-.settle-preview .sp-refund { width: 110px; display: inline-block; text-align: right; padding: 4px 8px; }
+/* 回収は枚数入力（8/27 FB146）。⚠️左詰め＝右詰めだと数字が上下ボタンと重なって読めない（Naoto指摘） */
+.settle-preview .sp-refund { width: 76px; display: inline-block; text-align: left; padding: 4px 8px; }
+.settle-preview .sp-unit { white-space: nowrap; }
+.settle-preview .sp-yen, .settle-preview .sp-total { color: #37d67a; font-weight: 900; }
 .settle-preview .manche { color: #ff4d4d; font-weight: 900; }
 .settle-preview .miss { color: #6d7480; }
 

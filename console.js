@@ -46,7 +46,11 @@
   var stateLoaded = false;  // GASから一度でも正しく読めたか。falseの間は保存を止める（空上書き防止）
   var timetable = null;
   var payoutRows = [];     // 結果入力中の払戻行（ローカル編集用）
-  var refundInputs = {};   // 配信者id→回収額（手入力・確定時にresults.refundsへ保存）
+  /* 回収は「枚数」で入れる（8/27 FB146・1枚＝100円）。金額は 払戻(100円あたり)×枚数 で自動計算。
+     キー＝配信者id + "|" + 式別 + " " + 買い目（＝1レースで複数の的中買目があっても取り違えない）。
+     ⚠️stateに保存するのは従来どおり回収「額」（results.refunds）＝derive/オーバーレイは無改修。
+        枚数は再編集用に results.refundUnits へ併記する */
+  var unitInputs = {};     // "配信者id|3連単 1-2-3" → 枚数
   var saveCount = 0;
   var savePending = false;
   var saveRunning = false;
@@ -643,10 +647,7 @@
       $("res-order").value = "";
       payoutRows = [];
     }
-    refundInputs = {};
-    if (existing && existing.refunds) {
-      Object.keys(existing.refunds).forEach(function (pid) { refundInputs[pid] = existing.refunds[pid]; });
-    }
+    unitInputs = {}; // 回収枚数はレースごと（別レースの枚数を持ち越さない・8/27 FB146）
     syncPayoutPresets();
     renderResultHint();
   }
@@ -679,6 +680,7 @@
       return '<div class="payout-row">' +
         '<span class="pr-label">' + esc(p.type) + " " + esc(window.Keirin.comboLabel(p.type, p.combo)) + "</span>" +
         '<input type="number" class="inp pr-amount" data-i="' + i + '" value="' + (p.amount || "") + '" placeholder="払戻">' +
+        '<span class="pr-unit">円</span>' + // 8/27 FB146＝単位を明示（上下ボタンはCSSで非表示）
         '<button class="pr-del" data-i="' + i + '">✕</button></div>';
     }).join("");
     el.querySelectorAll(".pr-amount").forEach(function (inp) {
@@ -710,6 +712,36 @@
     renderPayoutRows();
   });
 
+  /** 回収枚数の入力キー（配信者×的中買目） */
+  function unitKey(racerId, hit) { return racerId + "|" + hit.type + " " + hit.comboLabel; }
+
+  /** その配信者の回収額＝Σ（払戻100円あたり × 枚数）。8/27 FB146で実額手入力から移行 */
+  function refundOf(racerId, hits) {
+    var sum = 0;
+    (hits || []).forEach(function (h) {
+      if (h.amount > 0) sum += h.amount * (unitInputs[unitKey(racerId, h)] || 0);
+    });
+    return sum;
+  }
+
+  /* 旧データ（枚数が無く回収額だけ入っている確定済みレース）を枚数に読み替える。
+     ①確定時に併記した refundUnits があればそれ ②無ければ 回収額÷払戻 が割り切れる時だけ換算
+     （割り切れない＝端数のある手入力は換算せず0枚＝確定時に「回収枚数が未入力」で止まる＝黙って0円にしない） */
+  function seedUnitsFromSaved(key, racerId, hits) {
+    var saved = key ? state.results[key] : null;
+    if (!saved) return;
+    var units = (saved.refundUnits || {})[racerId];
+    var money = (saved.refunds || {})[racerId] || 0;
+    var moneyHits = (hits || []).filter(function (h) { return h.amount > 0; });
+    moneyHits.forEach(function (h) {
+      var uk = unitKey(racerId, h);
+      if (unitInputs[uk] !== undefined) return;
+      var hk = h.type + " " + h.comboLabel;
+      if (units && units[hk] != null) { unitInputs[uk] = units[hk]; return; }
+      if (moneyHits.length === 1 && money > 0 && h.amount > 0 && money % h.amount === 0) unitInputs[uk] = money / h.amount;
+    });
+  }
+
   function renderSettlePreview() {
     var key = resultKey(); // 結果フォームと同じレースを見る（固定中はそのレース・FB96）
     var el = $("settle-preview");
@@ -731,18 +763,51 @@
       }
       if (!rp.points && !oreHtml) return "<div>" + esc(rc.name) + "：予想なし</div>";
       if (!s.hits.length) return "<div>" + esc(rc.name) + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）" + oreHtml + "</div>";
-      var refund = refundInputs[rc.id];
-      return "<div>" + esc(rc.name) + "：" + s.hits.map(function (h) {
+      seedUnitsFromSaved(key, rc.id, s.hits);
+      var moneyHits = s.hits.filter(function (h) { return h.amount > 0; });
+      // 的中買目ごとに「何枚買ったか」を入れてもらう（複数式別が当たった時も取り違えない）。
+      // 通常＝的中1点なので「回収 [枚] 枚 ＝ ¥○○」の1行に収まる。金額はupdateRefundYen()が入れる
+      var unitHtml = moneyHits.map(function (h) {
+        var n = unitInputs[unitKey(rc.id, h)] || 0;
+        return '<span class="sp-unit">' +
+          (moneyHits.length > 1 ? esc(h.type + " " + h.comboLabel) + " " : "") + "回収 " +
+          '<input type="number" min="0" step="1" class="inp sp-refund" data-pay="' + h.amount +
+          '" data-uk="' + esc(unitKey(rc.id, h)) + '" value="' + (n > 0 ? n : "") + '" placeholder="枚数">枚' +
+          '<b class="sp-yen"></b></span>';
+      }).join("　");
+      return '<div class="sp-racer">' + esc(rc.name) + "：" + s.hits.map(function (h) {
         if (!h.amount) return '<span class="manche">🎯 ' + h.type + " " + h.comboLabel + " 払戻未入力</span>";
         return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + h.mult + "倍</span>";
-      }).join(" ") + oreHtml +
-        '　回収 <input type="number" class="inp sp-refund" data-racer="' + esc(rc.id) + '" value="' + (refund > 0 ? refund : "") + '" placeholder="実額">円</div>';
+      }).join(" ") + oreHtml + "　" + unitHtml + '<b class="sp-total"></b></div>';
     }).join("");
     el.querySelectorAll(".sp-refund").forEach(function (inp) {
       inp.addEventListener("input", function () {
-        refundInputs[inp.getAttribute("data-racer")] = +inp.value || 0;
+        unitInputs[inp.getAttribute("data-uk")] = Math.max(0, Math.floor(+inp.value || 0));
         markResDirty();
+        updateRefundYen(); // ⚠️ここで再描画しない＝打っている最中に入力欄が作り直されるとカーソルが飛ぶ（FB75）
       });
+    });
+    updateRefundYen();
+  }
+
+  /** 「＝ ¥○○」と合計だけを書き換える（入力欄には触らない＝フォーカス・カーソルを守る） */
+  function updateRefundYen() {
+    var el = $("settle-preview");
+    if (!el) return;
+    el.querySelectorAll(".sp-racer").forEach(function (row) {
+      var total = 0, n = 0;
+      row.querySelectorAll(".sp-unit").forEach(function (sp) {
+        var inp = sp.querySelector(".sp-refund");
+        var yen = sp.querySelector(".sp-yen");
+        if (!inp || !yen) return;
+        var pay = +inp.getAttribute("data-pay") || 0;
+        var units = Math.max(0, Math.floor(+inp.value || 0));
+        yen.textContent = (units > 0 && pay > 0) ? " ＝ " + fmtYen(pay * units) : "";
+        total += pay * units;
+        n++;
+      });
+      var tot = row.querySelector(".sp-total");
+      if (tot) tot.textContent = (n > 1 && total > 0) ? "　計 " + fmtYen(total) : "";
     });
   }
 
@@ -770,8 +835,8 @@
           if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
         });
       }
-      // 投資額が入っている予想が的中したのに回収額未入力→確定不可（回収¥0が画面に載る事故防止）
-      if (s.hits.length && rp.invest > 0 && !(refundInputs[rc.id] > 0)) missingRefund.push(rc.name);
+      // 投資額が入っている予想が的中したのに回収枚数未入力→確定不可（回収¥0が画面に載る事故防止）
+      if (s.hits.length && rp.invest > 0 && !(refundOf(rc.id, s.hits) > 0)) missingRefund.push(rc.name);
     });
     if (missing.length) {
       $("settle-preview").innerHTML = '<span class="manche">⚠ 的中買目の払戻が未入力：' + missing.map(esc).join(" / ") +
@@ -781,16 +846,28 @@
     if (missingRefund.length) {
       renderSettlePreview();
       $("settle-preview").insertAdjacentHTML("beforeend",
-        '<div class="manche">⚠ 回収額が未入力：' + missingRefund.map(esc).join(" / ") +
-        "　→ 投票サイトの的中金額をそのまま入力してください</div>");
+        '<div class="manche">⚠ 回収枚数が未入力：' + missingRefund.map(esc).join(" / ") +
+        "　→ 的中した買い目を何枚買ったかを入力してください（1枚＝100円）</div>");
       return;
     }
-    var refunds = {};
-    Object.keys(refundInputs).forEach(function (pid) {
-      if (refundInputs[pid] > 0) refunds[pid] = refundInputs[pid];
+    // 回収額＝払戻×枚数の自動計算（8/27 FB146）。stateには従来どおり「額」を保存し、
+    // 枚数は再編集用に refundUnits へ併記する（derive・オーバーレイは無改修のまま）
+    var refunds = {}, refundUnits = {};
+    state.racers.forEach(function (rc) {
+      var rp = window.Derive.resolvePred(state, key, rc.id);
+      var hits = window.Keirin.settle(rp.parsed, 0, order, validPayouts).hits;
+      var sum = refundOf(rc.id, hits);
+      if (sum > 0) refunds[rc.id] = sum;
+      hits.forEach(function (h) {
+        var n = unitInputs[unitKey(rc.id, h)] || 0;
+        if (h.amount > 0 && n > 0) {
+          if (!refundUnits[rc.id]) refundUnits[rc.id] = {};
+          refundUnits[rc.id][h.type + " " + h.comboLabel] = n;
+        }
+      });
     });
     // 選手名・決まり手はコンソールで入力しない（8/27 FB143）＝DOMではなく自動取得／既存stateから
-    // 引き継ぐ（空で上書きすると③結果シーンとリスペクト演出が名前を失う）。判定はderive.jsの純関数
+    // 引き継ぐ（空で上書きすると的中演出が名前を失う）。判定はderive.jsの純関数
     var meta = window.Derive.carryResultMeta(autoResults[key], state.results[key], order);
     state.results[key] = {
       order: order,
@@ -798,6 +875,7 @@
       kimarite: meta.kimarite,
       payouts: payoutRows.filter(function (p) { return p.amount > 0; }),
       refunds: refunds,
+      refundUnits: refundUnits,
       settledAt: new Date().toISOString(),
     };
     // ⚠️結果シーン（overlay.htmlのscene-result）は8/12の③レース展開新設で運用終了＝OBSに面が無い。
@@ -1062,7 +1140,7 @@
     // 前日の自動取得キャッシュを破棄（残すと自動確定が前日の結果を新しい日に書き戻す・8/6修正）
     autoResults = {};
     payoutRows = [];
-    refundInputs = {};
+    unitInputs = {};
     predDrafts = {};   // 前日の書きかけを持ち越さない（8/8 FB75）
     resDirty = false;
     resKeyShown = null;
@@ -1354,7 +1432,7 @@
     state.narabi = {};
     autoResults = {};
     payoutRows = [];
-    refundInputs = {};
+    unitInputs = {};
     dayResetArmed = false;
     $("btn-day-reset").textContent = "本日のデータをリセット";
     $("btn-day-reset").classList.remove("confirm");
