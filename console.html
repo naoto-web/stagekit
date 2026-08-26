@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-055745">
+<link rel="stylesheet" href="console.css?v=20260827-060924">
 </head>
 <body>
 
@@ -45,8 +45,11 @@
   </div>
   <div class="venue-row" id="venue-row"></div>
   <div class="race-chip-grid" id="race-chips"></div>
-  <div id="race-sub-row"></div>
+  <!-- 並び順＝シーン番号どおり①→②（8/27 FB142・Naoto指定）。
+       #sub-row＝①トークの表示場（最大3場）／#race-sub-row＝②レース観戦のサブ予想（NEXT枠）。
+       ⚠️入れ替えるだけでよい＝どちらもJSはid指定で描画・CSSに並び順の依存なし -->
   <div id="sub-row"></div>
+  <div id="race-sub-row"></div>
 </section>
 
 <!-- ══════════ 予想入力 ══════════ -->
@@ -204,11 +207,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-055745" data-au="banner"></script>
-<script src="config.js?v=20260827-055745"></script>
-<script src="keirin.js?v=20260827-055745"></script>
-<script src="derive.js?v=20260827-055745"></script>
-<script src="sync.js?v=20260827-055745"></script>
-<script src="console.js?v=20260827-055745"></script>
+<script src="autoupdate.js?v=20260827-060924" data-au="banner"></script>
+<script src="config.js?v=20260827-060924"></script>
+<script src="keirin.js?v=20260827-060924"></script>
+<script src="derive.js?v=20260827-060924"></script>
+<script src="sync.js?v=20260827-060924"></script>
+<script src="console.js?v=20260827-060924"></script>
 </body>
 </html>

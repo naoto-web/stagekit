@@ -179,18 +179,21 @@
       if (!state.venues.length || !state.racers.length) {
         sr.innerHTML = "";
       } else {
-        sr.innerHTML = state.racers.map(function (rc) {
-          var list = state.talkRaces[rc.id] || [];
-          return '<div class="row gap">' +
-            '<span class="lbl inline">' + esc(rc.name) + ' の表示（最大3場）</span>' +
-            state.venues.map(function (v) {
-              var idx = list.indexOf(v.name);
-              var rNo = state.currentRace[v.name];
-              return '<button class="vp' + (idx >= 0 ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
-                (idx >= 0 ? (idx + 1) + "." : "") + esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
-            }).join("") +
-            "</div>";
-        }).join("");
+        // 見出しは②サブ予想と揃える（8/27 FB142・①→②の並びにしたのに①側だけ無名だったため）。
+        // 「最大3場」は見出しに移したので行のラベルは名前だけ＝②と同じ形・狭いドックでの折返しも減る
+        sr.innerHTML = '<div class="lbl">①トーク（画面に出す場）：配信者ごとに最大3場（押した順＝表示順）</div>' +
+          state.racers.map(function (rc) {
+            var list = state.talkRaces[rc.id] || [];
+            return '<div class="row gap">' +
+              '<span class="lbl inline">' + esc(rc.name) + '</span>' +
+              state.venues.map(function (v) {
+                var idx = list.indexOf(v.name);
+                var rNo = state.currentRace[v.name];
+                return '<button class="vp' + (idx >= 0 ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
+                  (idx >= 0 ? (idx + 1) + "." : "") + esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
+              }).join("") +
+              "</div>";
+          }).join("");
         sr.querySelectorAll(".vp").forEach(function (b) {
           b.addEventListener("click", function () {
             var rid = b.getAttribute("data-rid");
