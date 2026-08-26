@@ -800,51 +800,17 @@
       refunds: refunds,
       settledAt: new Date().toISOString(),
     };
-    state.resultView = key; // ③結果シーンに即反映
+    // ⚠️結果シーン（overlay.htmlのscene-result）は8/12の③レース展開新設で運用終了＝OBSに面が無い。
+    // resultViewの更新はマークアップが残っているための保険（?scene=resultで直接開いた時だけ効く）
+    state.resultView = key;
     resDirty = false;       // 確定できた＝以後はstateの値が正（8/8 FB75）
     save();
     renderHitAdmin();
     renderSettlePreview();
   });
 
-  /* ---------- 貼り付け解析（実験的） ---------- */
-  $("btn-paste-parse").addEventListener("click", function () {
-    var text = $("res-paste").value;
-    var filled = [];
-    // 払戻: 「3連単 1-9-2 3,540円」のような並びを拾う
-    var payRe = /(3連単|三連単|3連複|三連複|2車単|二車単|2車複|二車複|ワイド)[^\d\n]{0,10}([1-9])[\s\-=－]+([1-9])(?:[\s\-=－]+([1-9]))?[^\d\n]{0,10}([\d,，]+)\s*円/g;
-    var m;
-    var typeNorm = { "三連単": "3連単", "三連複": "3連複", "二車単": "2車単", "二車複": "2車複" };
-    while ((m = payRe.exec(text)) !== null) {
-      var type = typeNorm[m[1]] || m[1];
-      var combo = [m[2], m[3], m[4]].filter(Boolean).map(Number);
-      var amount = +m[5].replace(/[,，]/g, "");
-      var row = null;
-      payoutRows.forEach(function (p) {
-        if (p.type === type && window.Keirin.comboLabel(p.type, p.combo) === window.Keirin.comboLabel(type, combo)) row = p;
-      });
-      if (row) row.amount = amount;
-      else payoutRows.push({ type: type, combo: combo, amount: amount });
-      filled.push(type + " " + fmtYen(amount));
-    }
-    // 着順: 「1着 … 3」「2着 … 7」の車番（選手名の転記は8/27 FB143で廃止＝入力欄ごと撤去したため）
-    var ordRe = /([1-3])\s*着[^\d\n]{0,6}([1-9])/g;
-    var order = [null, null, null];
-    while ((m = ordRe.exec(text)) !== null) {
-      order[+m[1] - 1] = +m[2];
-    }
-    if (order[0] && order[1]) {
-      $("res-order").value = order.filter(Boolean).join("-");
-      filled.push("着順 " + order.filter(Boolean).join("-"));
-      syncPayoutPresets();
-    }
-    if (filled.length) markResDirty(); // 貼り付けで入った値も確定前＝再描画で消させない（8/8 FB75）
-    renderPayoutRows();
-    renderSettlePreview();
-    $("paste-hint").textContent = filled.length
-      ? "転記: " + filled.join(" / ") + "　※内容を確認してから確定してください"
-      : "読み取れる形式が見つかりませんでした（手入力してください）";
-  });
+  /* 結果ページの貼り付け解析（7/29〜の実験機能）は8/27 FB144で撤去（Naoto「いらない」）。
+     結果はkeirin.jpからの自動取得が主経路になり、手入力も着順＋払戻だけで足りるため */
 
   /* ---------- 的中速報管理 ---------- */
   function renderHitAdmin() {
@@ -1312,7 +1278,7 @@
       addedKey = key;
     });
     if (addedKey) {
-      state.resultView = addedKey; // ③結果シーンに最新レースを表示
+      state.resultView = addedKey; // 結果シーンは運用終了（8/12）＝マークアップ残置ぶんの保険
       save();
       renderAll();
     }

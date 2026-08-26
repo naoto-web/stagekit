@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-062313">
+<link rel="stylesheet" href="console.css?v=20260827-063431">
 </head>
 <body>
 
@@ -87,24 +87,24 @@
 
   <!-- 選手名（1〜3着）・決まり手・上がりの手入力欄は8/27 FB143で撤去（Naoto「手で入れない」）。
        ⚠️データとしては残す＝自動取得の結果からstate.results[].names/kimariteに入り、
-       ③結果シーンとリスペクト演出が使う。確定時の引き継ぎはconsole.jsのresultMeta()が担当。
-       ここに欄を戻す必要はない（戻すならresultMeta側も直すこと） -->
+       的中演出（選手リスペクト）が名前に使う。確定時の引き継ぎはDerive.carryResultMetaが担当。
+       ここに欄を戻す必要はない（戻すならcarryResultMeta側も直すこと） -->
 
   <label class="lbl">払戻（100円あたり・円）</label>
   <div id="payout-rows"></div>
-  <div class="row gap">
-    <select id="payout-add-type" class="inp slim">
-      <option>3連単</option><option>3連複</option><option>2車単</option><option>2車複</option><option>ワイド</option>
-    </select>
-    <input type="text" id="payout-add-combo" class="inp slim" placeholder="組合せ 1-9-2">
-    <button class="btn small" id="btn-payout-add">行を追加</button>
-  </div>
-
+  <!-- 8/27 FB144：式別セレクタ＋組合せ＋行を追加は常時表示をやめ、この折りたたみの中へ。
+       買い方は3連単が基本で、行の追加が要るのは他式別で買った時だけ（＝押した時だけ出す） -->
   <details class="exp">
-    <summary>結果ページ貼り付け解析（実験的）</summary>
-    <textarea id="res-paste" class="inp" rows="4" placeholder="結果・払戻ページの文字列を貼り付け"></textarea>
-    <button class="btn small" id="btn-paste-parse">解析して転記</button>
-    <div class="hint" id="paste-hint"></div>
+    <summary>3連単以外の場合</summary>
+    <div class="hint">ワイド・2車複などで買った時だけ使います。式別と買目を指定して行を追加すると、
+      あとは3連単と同じ＝その行に払戻を入れれば的中・回収の計算に入ります</div>
+    <div class="row gap">
+      <select id="payout-add-type" class="inp slim">
+        <option>3連単</option><option>3連複</option><option>2車単</option><option>2車複</option><option>ワイド</option>
+      </select>
+      <input type="text" id="payout-add-combo" class="inp slim" placeholder="組合せ 1-9-2">
+      <button class="btn small" id="btn-payout-add">行を追加</button>
+    </div>
   </details>
 
   <div class="settle-preview" id="settle-preview"></div>
@@ -201,11 +201,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-062313" data-au="banner"></script>
-<script src="config.js?v=20260827-062313"></script>
-<script src="keirin.js?v=20260827-062313"></script>
-<script src="derive.js?v=20260827-062313"></script>
-<script src="sync.js?v=20260827-062313"></script>
-<script src="console.js?v=20260827-062313"></script>
+<script src="autoupdate.js?v=20260827-063431" data-au="banner"></script>
+<script src="config.js?v=20260827-063431"></script>
+<script src="keirin.js?v=20260827-063431"></script>
+<script src="derive.js?v=20260827-063431"></script>
+<script src="sync.js?v=20260827-063431"></script>
+<script src="console.js?v=20260827-063431"></script>
 </body>
 </html>
