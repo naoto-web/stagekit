@@ -1783,7 +1783,7 @@
                       指定した色キーはアイコン走行を出さない＝二重演出にしない。尺は各演出側が決める
              effects…専用演出を複数持たせる場合の配列（8/9 FB90）＝**的中のたびに1つ抽選**する。
                       ""（空文字）を混ぜると「既定のアイコン走行」も抽選対象にできる。
-                      ⚠️抽選は的中1件につき1回（4シーンのワイプで同じ演出になるようにするため）
+                      ⚠️抽選は的中IDのハッシュで決定的（8/26）＝OBS全ソース・全シーンで同じ演出になる
      追加手順：①下の表に色キーの行を足す ②必要ならoverlay.cssに見た目を書く
                ③検証ハーネス raintest.html?key=<色キー> で撮って確認
                  （effect系は動きを見る演出なので 検証ハーネス/fxlab.html を実ブラウザで開く） */
@@ -2774,7 +2774,10 @@
   }
 
   /** その的中で出す専用演出を決める。effects（配列）があれば抽選＝1人で複数の演出を持てる（8/9 FB90）。
-      ⚠️ここで1回だけ引く＝同じ的中の4シーン分のワイプで演出がバラバラにならない */
+      ⚠️抽選は「的中IDのハッシュ」で決める（8/26 FB付・乱数廃止）。
+        OBSの①トーク・②レース観戦・③は別ページで、非表示中も裏でそれぞれ発火している。
+        Math.random()だとソースごとに別の演出を引き、シーン切替で演出が変わって見える（8/26 Naoto報告）。
+        同じ的中IDなら全ソースが同じ計算＝どのシーンに切り替えても同じ絵になる。 */
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
        rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba／dance／peye
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
@@ -2785,14 +2788,21 @@
      URLに&fx=を足す運用はコピペ落ちで事故ったため廃止＝テストは何もしなくてもthanksが出る。
      テストで他の演出を見たい時＝?fx=auto（通常の抽選）または ?fx=<キー>（従来どおり最優先） */
   if (!FX_FORCE && window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) FX_FORCE = "thanks";
-  function pickEffect(key) {
+  function fxHash(s) { // 的中ID→抽選番号。全ソースで同じ値になることだけが役目（暗号用途ではない）
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return h;
+  }
+  function pickEffect(key, hit) {
     var force = window.__FX_FORCE || FX_FORCE;
     if (force && force !== "auto") return force === "rain" ? "" : force;
     var c = MEMBER_FX[key] || {};
     var list = (c.effects && c.effects.length) ? c.effects : [c.effect || ""];
     // 選手リスペクトは全員共通＝色に紐づかないので、抽選に入れるときは全色へ1つ足す（8/23）
     if (THX_IN_ROTATION) list = list.concat("thanks");
-    return list[Math.floor(Math.random() * list.length)];
+    // IDが取れない経路（保険）だけ従来の乱数。通常の的中は必ずid付き（derive.jsのhits）
+    if (!(hit && hit.id)) return list[Math.floor(Math.random() * list.length)];
+    return list[fxHash(String(hit.id)) % list.length];
   }
 
   /* ══════════ 選手リスペクト演出 "thanks"（8/23 Naoto案） ══════════
@@ -3025,7 +3035,7 @@
 
   function fireHitFx(slot, hit, rc) {
     var key = memberKey(rc);
-    var eff = key ? pickEffect(key) : "";
+    var eff = key ? pickEffect(key, hit) : "";
     var gen = fxGen;
     // スロットは当たり目の数字そのものを見せる演出。車番が取れない的中（手動追加）では
     // 数字を作り話にせず、既定のアイコン走行に落とす
