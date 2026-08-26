@@ -2790,14 +2790,26 @@
      URLに&fx=を足す運用はコピペ落ちで事故ったため廃止＝テストは何もしなくてもthanksが出る。
      テストで他の演出を見たい時＝?fx=auto（通常の抽選）または ?fx=<キー>（従来どおり最優先） */
   if (!FX_FORCE && window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) FX_FORCE = "thanks";
-  function fxHash(s) { // 的中ID→抽選番号。全ソースで同じ値になることだけが役目（暗号用途ではない）
+  function fxHash(s) { // 的中ID→抽選値。全ソースで同じ値になることだけが役目（暗号用途ではない）
     var h = 5381;
     for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-    return h;
+    // ⚠️仕上げ混ぜ（murmur3のfmix32）＝必須。これが無いと上位ビットの混ざりが弱く、
+    //   [0,1)正規化の帯判定で似たID（同じ場名・同じ長さ）が同じ帯に固まり、
+    //   「結果発表20%」が場によってほぼ0%/偏出になる（8/26実測＝高知84IDでthanks0回）
+    h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0;
+    h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0;
+    h ^= h >>> 16;
+    return h >>> 0;
   }
+  /* ⚠️今だけの固定枠（8/26 Naoto指示「また指示したら元に戻す」）＝
+       色キーを書くと、その人の的中は必ずこの演出（個人演出の抽選も結果発表20%も出ない）。
+       戻すとき＝ FX_PIN = {} に戻して再publish＋OBS①②③キャッシュ更新。
+       ?fx=強制（検証用）だけはこれより優先のまま。恒久機能ではなく一時運用のスイッチ */
+  var FX_PIN = { red: "dance" }; // 赤＝ダンス100%（8/26〜・戻し指示待ち）
   function pickEffect(key, hit) {
     var force = window.__FX_FORCE || FX_FORCE;
     if (force && force !== "auto") return force === "rain" ? "" : force;
+    if (FX_PIN[key]) return FX_PIN[key]; // 今だけの固定枠（上のFX_PIN参照・戻し忘れ注意）
     var c = MEMBER_FX[key] || {};
     var list = (c.effects && c.effects.length) ? c.effects : [c.effect || ""];
     // 抽選の乱数＝的中IDのハッシュを[0,1)へ正規化＝全ソースで同じ値→同じ演出（8/26）。
