@@ -102,11 +102,9 @@
     });
     return maxNo >= 2 ? maxNo : 9;
   }
-  /** 実効車数＝手動上書き（carsFix）＞自動判定（8/6 FB45） */
-  function effCars(key) {
-    var p = key ? state.preds[key] : null;
-    return (p && p.carsFix) ? p.carsFix : autoCars(key);
-  }
+  /* ⚠️8/27 FB138で「車数」セレクタ（手動上書き＝旧carsFix・旧effCars）を撤去（Naoto「自動でOK」）。
+     以後は車数＝この自動判定のみ。上書きが必要な事態（keirin.jpの出走表が壊れている等）が
+     起きたら、まずautoCarsの判定側を直す。旧stateにcarsFixが残っていても読まない＝無害 */
 
   function nextRaceOf(name) {
     var now = nowSec();
@@ -400,7 +398,7 @@
      含まれるか。俺たち目が空・読めない行のときは対象外＝普通に保存 */
   function oreMissingInBuys(key, text, ore) {
     if (!ore || !String(ore).trim()) return null;
-    var cars = effCars(key);
+    var cars = autoCars(key);
     var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(ore), "3連単", cars);
     var oreL = op.lines && op.lines[0];
     if (!oreL || !oreL.ok || !oreL.combos.length) return null;
@@ -435,9 +433,8 @@
 
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
-    $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + effCars(key) + "車）" : "（場・レース未選択）") +
+    $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）") +
       (editVenue ? "　📌入力先を固定中" : "");
-    $("pred-cars").value = (key && state.preds[key] && state.preds[key].carsFix) ? String(state.preds[key].carsFix) : "";
     $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }
@@ -511,7 +508,7 @@
         entry.investInput = inv > 0 ? inv : null;
         entry.oreTachi = form.querySelector(".pf-ore").value.trim();
         entry.isNote = form.querySelector(".pf-note").checked;
-        state.preds[key].cars = effCars(key);
+        state.preds[key].cars = autoCars(key);
         delete predDrafts[draftKey(key, racerId)]; // 保存できたので下書きは破棄
         save();
         renderSettlePreview();
@@ -539,7 +536,7 @@
   }
 
   function updatePredInfo(form, key) {
-    var cars = effCars(key); // 手動上書きがあれば優先（8/6 FB45）
+    var cars = autoCars(key); // 出走表の最大車番から自動判定（手動上書きは8/27 FB138で廃止）
     var type = form.querySelector(".pf-type").value;
     var parsed = window.Keirin.parsePrediction(form.querySelector(".pf-text").value, type, cars);
     form.querySelector(".pf-info").innerHTML = parsed.lines.map(function (l) {
@@ -979,17 +976,6 @@
     save();
     renderAll();
   }
-  // 車数の手動上書き（8/6 FB45）：選んだ瞬間に保存＝「全」の展開・点数が即その車数基準になる
-  $("pred-cars").addEventListener("change", function () {
-    var key = predKey();
-    if (!key) return;
-    if (!state.preds[key]) state.preds[key] = { cars: 9, byRacer: {} };
-    state.preds[key].carsFix = +$("pred-cars").value || null;
-    state.preds[key].cars = effCars(key);
-    save();
-    renderPredForms();
-  });
-
   $("btn-save-settings").addEventListener("click", saveSettings);
   // 席替え：席1⇄席2を入れ替えて即保存（座り位置の変更に1タップで追従）
   $("btn-seat-swap").addEventListener("click", function () {
