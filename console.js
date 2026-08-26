@@ -480,7 +480,8 @@
         '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
-        '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '" placeholder="無料公開の1点（例 1-2-3）"></label>' +
+        // プレースホルダーは例だけ（8/27 FB140・Naoto指定）。「123」はoreNormalizeが1-2-3へ正規化＝1点
+        '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '" placeholder="（例　123）"></label>' +
         '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (vNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
         "</div>" +
         '<div class="pred-opts">' +
