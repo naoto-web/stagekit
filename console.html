@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-224428">
+<link rel="stylesheet" href="console.css?v=20260827-225452">
 </head>
 <body>
 
@@ -196,24 +196,13 @@
   <button class="btn" id="btn-save-settings">設定を保存</button>
 </details>
 
-<!-- ══════════ 画面素材（広告・待機） ══════════ -->
-<details class="card">
-  <summary><h2>広告・待機シーン</h2></summary>
-  <label class="lbl">⑤広告：タイトル</label>
-  <input type="text" id="ad-title" class="inp">
-  <label class="lbl">内容（1行1項目）</label>
-  <textarea id="ad-lines" class="inp" rows="3"></textarea>
-  <div class="row gap">
-    <label class="lbl inline"><input type="checkbox" id="ad-show-progress"> 進捗バー</label>
-    <input type="text" id="ad-goal" class="inp slim" placeholder="ラベル(応募状況)">
-    <input type="number" id="ad-cur" class="inp tiny" placeholder="現在">
-    <input type="number" id="ad-max" class="inp tiny" placeholder="目標">
-    <input type="text" id="ad-unit" class="inp tiny" placeholder="単位(名)">
-  </div>
-  <label class="lbl">④待機メッセージ</label>
-  <input type="text" id="brb-msg" class="inp">
-  <button class="btn" id="btn-save-assets">保存</button>
-</details>
+<!-- 「広告・待機シーン」カードは撤去（8/27 Naoto「シーン削除済み」）。
+     ④待機・⑤広告は8/12にOBSから削除済み＝編集する画面が存在しない。
+     ⚠️本日設定の名簿・締切と違い、専用の保存ボタン（btn-save-assets）で完結していた欄＝
+     他の save() が読み戻さないのでDOMごと消して問題ない（console.js側の renderAssets と
+     ハンドラも同時に削除。片方だけ消すと $("ad-title") が null で落ちる）。
+     state.ad / state.brbMsg と overlay.html の④⑤マークアップは残置＝②結果シーンと同じ扱い
+     （シーンを復活させるときは console 側のカードを書き戻すだけで戻る） -->
 
 <!-- ══════════ 接続・診断 ══════════ -->
 <details class="card">
@@ -233,11 +222,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-224428" data-au="banner"></script>
-<script src="config.js?v=20260827-224428"></script>
-<script src="keirin.js?v=20260827-224428"></script>
-<script src="derive.js?v=20260827-224428"></script>
-<script src="sync.js?v=20260827-224428"></script>
-<script src="console.js?v=20260827-224428"></script>
+<script src="autoupdate.js?v=20260827-225452" data-au="banner"></script>
+<script src="config.js?v=20260827-225452"></script>
+<script src="keirin.js?v=20260827-225452"></script>
+<script src="derive.js?v=20260827-225452"></script>
+<script src="sync.js?v=20260827-225452"></script>
+<script src="console.js?v=20260827-225452"></script>
 </body>
 </html>

@@ -1176,30 +1176,13 @@
   $("btn-camp-plus").addEventListener("click", function () { campQuickAdd(1); });
   $("btn-camp-minus").addEventListener("click", function () { campQuickAdd(-1); });
 
-  /* ---------- 広告・待機 ---------- */
-  function renderAssets() {
-    $("ad-title").value = state.ad.title || "";
-    $("ad-lines").value = (state.ad.lines || []).join("\n");
-    $("ad-show-progress").checked = !!state.ad.showProgress;
-    $("ad-goal").value = state.ad.goalLabel || "";
-    $("ad-cur").value = state.ad.cur || "";
-    $("ad-max").value = state.ad.max || "";
-    $("ad-unit").value = state.ad.unit || "";
-    $("brb-msg").value = state.brbMsg || "";
-  }
-  $("btn-save-assets").addEventListener("click", function () {
-    state.ad = {
-      title: $("ad-title").value.trim(),
-      lines: $("ad-lines").value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean),
-      showProgress: $("ad-show-progress").checked,
-      goalLabel: $("ad-goal").value.trim() || "応募状況",
-      cur: +$("ad-cur").value || 0,
-      max: +$("ad-max").value || 0,
-      unit: $("ad-unit").value.trim(),
-    };
-    state.brbMsg = $("brb-msg").value.trim() || "まもなく再開します";
-    save();
-  });
+  /* ---------- 広告・待機 ----------
+     8/27にコンソールのカードごと撤去（④待機・⑤広告は8/12にOBSから削除済み＝編集先が無い）。
+     renderAssets と btn-save-assets のハンドラもここにあったが、DOMを消した以上
+     残すと $("ad-title") が null で落ちるので同時に削除した。
+     ⚠️state.ad / state.brbMsg 自体は残す（normalizeの既定値・リセット時のkeep対象・
+     overlay.js側の④⑤描画がまだ読む）。シーンを復活させるならこの節とconsole.htmlのカードを
+     書き戻すだけでよい。※overlay.html にも同じ id の #brb-msg があるが別ドキュメント＝無関係 */
 
   /* ---------- 新しい日 ---------- */
   function checkNewDay() {
@@ -1604,7 +1587,6 @@
     renderResultForm();
     renderHitAdmin();
     renderSettings();
-    renderAssets();
     renderDiag();
     checkNewDay();
     checkRefundGaps();
