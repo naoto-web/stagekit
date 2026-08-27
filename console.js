@@ -1070,11 +1070,14 @@
     }).join("\n");
     $("cfg-close").value = state.cfg.closeMin;
     $("cfg-netclose").value = state.cfg.netCloseMin;
-    $("cfg-autoresults").checked = !!state.cfg.autoResults;
-    // 自動シーン切替（8/9 FB95）と予想レースの自動追従（8/9 FB96）は常時ON運用に確定したので
-    // UIから隠した（8/27 Naoto要望・console.html参照）。非adminでは表示値ではなくONを入れ直す＝
-    // 隠した後に save() が走っても必ずtrueで上書きされ、古いstateにOFFが残っていても自己修復する。
+    // 3つとも運用が固定したのでUIから隠した（8/27 Naoto判断・console.html参照）。
+    // 非adminでは表示値ではなく固定値を入れ直す＝隠した後に save() が走っても必ず上書きされ、
+    // 古いstateに逆の値が残っていても自己修復する（UIが無い＝人が直せないため）。
+    // 3つとも本番の実運用に合わせてON固定＝結果の自動確定（8/4）・自動シーン切替（8/9 FB95）・
+    // 自動追従（8/9 FB96）。⚠️自動確定は「隠すならOFF」で進みかけたが、本番stateが true で
+    // 実際に当日33レース中28件が自動確定だったため現状維持に決定（8/27 Naoto判断）
     var adminOn = document.documentElement.classList.contains("admin-on");
+    $("cfg-autoresults").checked = adminOn ? !!state.cfg.autoResults : true;
     $("cfg-autoscene").checked = adminOn ? state.cfg.autoScene !== false : true;
     $("cfg-autoalign").checked = adminOn ? state.cfg.autoAlign !== false : true;
     $("note-races").value = state.noteRaces || "";

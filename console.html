@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-221719">
+<link rel="stylesheet" href="console.css?v=20260827-224428">
 </head>
 <body>
 
@@ -172,10 +172,15 @@
   <label class="lbl admin-only">配信者の名簿（1行に1人：名前 チームカラー。色＝青/緑/オレンジ/赤/ピンク/黄色 か #RRGGBB。カメラ枠・ネームプレートに反映）</label>
   <textarea id="roster" class="inp admin-only" rows="6"></textarea>
 
-  <div class="row gap">
+  <!-- 8/27にrowごとadmin-only化＝結果の自動確定もOFF固定で隠したため、この行は非adminでは丸ごと消える
+       （残すと中身が空の行だけが余白として残る） -->
+  <div class="row gap admin-only">
     <label class="lbl inline admin-only">公式締切 発走−<input type="number" id="cfg-close" class="inp tiny">分</label>
     <label class="lbl inline admin-only">民間締切 発走−<input type="number" id="cfg-netclose" class="inp tiny">分</label>
-    <label class="lbl inline"><input type="checkbox" id="cfg-autoresults"> 結果の自動確定（取得したら人の確認なしで即反映）</label>
+    <!-- 結果の自動確定＝**ON固定**で隠した（8/27 Naoto判断）。本番stateが true で当日33レース中28件が
+         自動確定＝実運用がこれに乗っているため現状維持。ONの間は的中演出が「回収を入れて手で再確定した
+         瞬間」に出る（resAuto→手動の置き換わりで発火・FB47）＝演出が消えるわけではない -->
+    <label class="lbl inline admin-only"><input type="checkbox" id="cfg-autoresults"> 結果の自動確定（取得したら人の確認なしで即反映）</label>
   </div>
   <!-- 自動切替・自動追従は「外すことはない」ので常時ONとして隠した（8/27 Naoto要望）。
        ⚠️同じくDOMからは消さない＝save()がここを読み戻すため。非adminでは console.js が
@@ -228,11 +233,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-221719" data-au="banner"></script>
-<script src="config.js?v=20260827-221719"></script>
-<script src="keirin.js?v=20260827-221719"></script>
-<script src="derive.js?v=20260827-221719"></script>
-<script src="sync.js?v=20260827-221719"></script>
-<script src="console.js?v=20260827-221719"></script>
+<script src="autoupdate.js?v=20260827-224428" data-au="banner"></script>
+<script src="config.js?v=20260827-224428"></script>
+<script src="keirin.js?v=20260827-224428"></script>
+<script src="derive.js?v=20260827-224428"></script>
+<script src="sync.js?v=20260827-224428"></script>
+<script src="console.js?v=20260827-224428"></script>
 </body>
 </html>
