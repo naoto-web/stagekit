@@ -8,7 +8,7 @@
      3-7 折り返し     … 2車単の裏表（「折返し」「裏」「ウラ」も可）
      1=2=3 / 123BOX  … ボックス
      3連複 1-2-9     … 行頭・行中の式別キーワードで型指定
-     1-9-全          … 全流し（車数ぶん展開・デフォルト9車）
+     1-9-全          … 全流し（呼び出し側が渡した車数ぶん展開・未指定時のみ9車）
    パースできない行はメモ行（コメント）として扱い、点数に入れない。 */
 
 (function (root, factory) {
@@ -52,7 +52,7 @@
   /**
    * @param {string} raw 1行の生テキスト
    * @param {string} defaultType 式別未指定時の型（省略時 3連単）
-   * @param {number} carCount 車数（全流し展開用・省略時9）
+   * @param {number} carCount 車数（全流し展開用・2〜9をそのまま使う。範囲外・未指定は9）
    * @return {ok:boolean, memo?:string, type?:string, combos?:number[][], points?:number, raw:string}
    */
   function parseLine(raw, defaultType, carCount) {
@@ -77,7 +77,11 @@
     // 数字・区切り以外が残る行はメモ行
     if (!/^[0-9全=\- ]+$/.test(s) || !/[0-9]/.test(s)) return fail(out, ex.type);
 
-    var cars = carCount === 7 ? 7 : 9;
+    /* ⚠️渡された車数をそのまま使う。7/9の二択に丸めない（8/27 FB147）。
+       車数の判定は console.js の autoCars（出走表の最大車番）が持っていて、6車立てなら6を返す。
+       ここで「7以外は9」に丸めていたため6車→9車扱いになり、「全」が7・8・9番車まで展開され
+       点数・表示・的中母数がすべてズレていた（例 6車の 1-2-全＝4点が7点に化ける） */
+    var cars = (carCount >= 2 && carCount <= 9) ? Math.floor(carCount) : 9;
 
     // セグメント分解： "-" 区切り。 "=" は隣接セグメントの入替可マーク
     // 例 "1=9-2357" → segs [{set:[1]},{set:[9]},{set:[2,3,5,7]}], swap[0]=true
