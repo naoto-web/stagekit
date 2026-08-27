@@ -628,11 +628,17 @@
   /** hlCombo（8/10 FB119）＝的中した組合せ [1,2,4]。渡された行では該当車番チップに hit-glow を付ける。
       ポジション厳密照合は「-」区切りの素直な並びのときだけ（1-23-45で1-2-4なら1・2・4だけ光る）。
       ＝（折返し）・BOX・区切りなしは順序が入れ替わり得るので「組合せに含まれる車番」を光らせる。
-      「全」チップは行が的中していれば光らせる（当たり車番がその裏に居るため） */
+      「全」チップは行が的中していれば光らせる（当たり車番がその裏に居るため）
+      ⚠️8/27 FB148＝**組合せは複数渡せる**（[[5,2,3],[5,3,2]] の形）。同着で1行が2つの目に当たったとき、
+        片方しか光らないと「両方持っているのに1つしか光らない」になる＝どちらかに当たる車番を全部光らせる */
   function lineChips(raw, small, hlCombo) {
     var toks = window.Keirin.displayTokens(raw);
+    // 単一の [5,2,3] でも複数の [[5,2,3],[5,3,2]] でも受ける
+    var hls = !hlCombo || !hlCombo.length ? null
+      : (Array.isArray(hlCombo[0]) ? hlCombo.filter(function (c) { return c && c.length; }) : [hlCombo]);
+    if (hls && !hls.length) hls = null;
     var strict = false;
-    if (hlCombo) {
+    if (hls) {
       var seps = toks.filter(function (t) { return t.t === "sep"; });
       strict = seps.length > 0 &&
         seps.every(function (t) { return t.v === "-"; }) &&
@@ -642,12 +648,14 @@
     return toks.map(function (tk) {
       switch (tk.t) {
         case "car": {
-          var glow = hlCombo && (strict ? hlCombo[pos] === tk.v : hlCombo.indexOf(tk.v) >= 0);
+          var glow = !!hls && hls.some(function (c) {
+            return strict ? c[pos] === tk.v : c.indexOf(tk.v) >= 0;
+          });
           return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + (glow ? " hit-glow" : "") + '">' + tk.v + "</i>";
         }
         case "sep": pos++; return '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
         case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
-        case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hlCombo ? " hit-glow" : "") + '">全</span>';
+        case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hls ? " hit-glow" : "") + '">全</span>';
         case "box": return '<span class="pl-box' + (small ? " sm" : "") + '">BOX</span>';
         case "gap": return '<span class="pl-gap"></span>';
         default: return '<span class="pl-txt">' + esc(tk.v) + "</span>";
@@ -717,9 +725,11 @@
     }
     // 的中買目の車番強調（8/10 FB119）＝このレース×この配信者に有効な的中があれば、
     // 該当する行（式別＋組合せ一致）にだけ当たり組合せを渡してチップを光らせる
+    // ⚠️8/27 FB148＝的中は同時に複数立ち得る（同着で並びが2通り／複数式別）。
+    // 「最初の1件だけ」を光らせると、両方持っていても片方しか光らない
     var glows = rc && k ? glowsFor(k, rc.id) : [];
-    var oreGlow = null;
-    glows.forEach(function (g) { if (!oreGlow && g.type === "俺たち目") oreGlow = g.combo; });
+    var oreGlow = [];
+    glows.forEach(function (g) { if (g.type === "俺たち目") oreGlow.push(g.combo); });
     return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small, oreGlow) + "</div>" : "") +
       okLines.map(function (l) {
         // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
@@ -728,14 +738,13 @@
           return '<div class="pred-line chips cut-line"><span class="pl-cut' + (small ? " sm" : "") + '">切り目</span>' +
             lineChips(/全/.test(l.rawRest || "") ? l.rawRest : (l.disp || l.rawRest || l.raw), small) + "</div>";
         }
-        var g = null;
+        var g = [];
         glows.forEach(function (gl) {
-          if (g) return;
           // 俺たち目の的中＝FB53の重複排除でhitsは俺たち目名義だけになるが、同じ目を持つ
           // 買目行も同じように光らせる（8/11 FB127・Naoto「普通の買目の方も同じように強調して」）
           if (gl.type !== l.type && gl.type !== "俺たち目") return;
           l.combos.forEach(function (c) {
-            if (!g && window.Keirin.comboLabel(l.type, c) === gl.comboLabel) g = gl.combo;
+            if (window.Keirin.comboLabel(l.type, c) === gl.comboLabel) g.push(gl.combo);
           });
         });
         var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
@@ -1603,7 +1612,7 @@
       var parts = viewKey.split("|");
       var r = state.results[viewKey];
       $("result-title").textContent = "レース結果　" + parts[0] + " " + parts[1] + "R";
-      var posLabel = ["1着", "2着", "3着"];
+      var posLabel = thxPosLabels(r); // 同着なら「1着・2着・2着」等（8/27 FB148）
       $("result-rows").innerHTML = (r.order || []).slice(0, 3).map(function (car, i) {
         var name = (r.names && r.names[i]) ? r.names[i] : car + "番車";
         var kim = (r.kimarite && r.kimarite[i]) ? r.kimarite[i] : "";
@@ -1736,11 +1745,35 @@
     var alive = hitGlows.filter(function (g) { return g.until > now; });
     if (alive.length !== hitGlows.length) { hitGlows = alive; renderPreds(); }
   }
+  /** 同時に立った複数の的中を1回の発火にまとめる（8/27 FB148）。
+      同着（並びが2通り）や複数式別では、同じ人の的中が同じタイミングで2件以上立つ。
+      ⚠️1件ずつfireHitFxすると**演出が同時に2つ走り、バッジは後勝ちで片方の倍率しか残らない**。
+      代表＝いちばん高い倍率（演出の抽選・スロットの出目・バッジの見出しはこれを使う）。
+      倍率は全部バッジに並べる。万車・noteはどれか1件でも該当すれば立てる＝大きい方のニュースを優先。
+      買目チップの強調はまとめない＝的中1件ごとに付ける（両方の並びが光る） */
+  function mergeHits(list) {
+    if (list.length === 1) return list[0];
+    var sorted = list.slice().sort(function (a, b) { return (b.mult || 0) - (a.mult || 0); });
+    var top = sorted[0];
+    var merged = {};
+    Object.keys(top).forEach(function (k) { merged[k] = top[k]; });
+    merged.mults = sorted.map(function (h) { return h.mult; }).filter(function (m) { return m > 0; });
+    merged.manche = sorted.some(function (h) { return h.manche; });
+    merged.note = sorted.some(function (h) { return h.note; });
+    // 式別が混ざったら式別ラベルは出さない（片方だけ出すと嘘になる）。type自体は代表のまま
+    // ＝演出側（スロットの出目など）が見るのは代表の的中なので整合する
+    merged.mixedType = !sorted.every(function (h) { return h.type === top.type; });
+    // 3連単が2件以上＝同着（通常レースで3連単の当たりは1通りしかない）
+    merged.deadHeat = !merged.mixedType && top.type === "3連単" && sorted.length > 1;
+    return merged;
+  }
+
   function checkNewHits() {
     var ids = {};
     var glowAdded = false; // FB119：この呼び出しで買目強調が追加されたか
     derived.hits.forEach(function (h) { ids[h.id] = h; });
     if (seenHits === null) { seenHits = ids; return; }
+    var groups = {}, groupOrder = []; // 「同じレース×同じ人」の同時的中をまとめる（8/27 FB148）
     Object.keys(ids).forEach(function (id) {
       var h = ids[id];
       var prev = seenHits[id];
@@ -1752,7 +1785,13 @@
       firedFx[id] = true;
       addHitGlow(h); // 予想帯の的中買目チップ強調（8/10 FB119・演出と同条件・同尺）
       glowAdded = true;
-      var seats = seatMap();
+      var gk = h.place + "|" + h.racerName;
+      if (!groups[gk]) { groups[gk] = []; groupOrder.push(gk); }
+      groups[gk].push(h);
+    });
+    var seats = seatMap();
+    groupOrder.forEach(function (gk) {
+      var h = mergeHits(groups[gk]);
       ["a", "b"].forEach(function (slot) {
         if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h, seats[slot]);
       });
@@ -2969,6 +3008,22 @@
     return r;
   }
 
+  /** 着順札のラベル（8/27 FB148）。同着＝結果に orders（並び2通り）があるとき、
+      同着になった着位は同じ数字を2枚出す（2着同着なら「1着・2着・2着」＝そのレースに3着は存在しない）。
+      判定＝2本の並びのどこが入れ替わっているか。
+      ⚠️3着同着（1着5・2着2・3着が3と4）は札が3枚しかなく同着の相手を出す枠が無い＝ラベルは通常のまま
+        （出るのは orders[0] 側の1人）。ここを変えるなら札を4枚にする設計変更が要る */
+  function thxPosLabels(r) {
+    var base = ["1着", "2着", "3着"];
+    var os = r && r.orders;
+    if (!os || os.length < 2 || !os[0] || !os[1]) return base;
+    var a = os[0], b = os[1];
+    if (a.length < 3 || b.length < 3) return base;
+    if (a[0] !== b[0] && a[1] !== b[1] && a[2] === b[2]) return ["1着", "1着", "3着"]; // 1着同着
+    if (a[0] === b[0] && a[1] !== b[1] && a[2] !== b[2]) return ["1着", "2着", "2着"]; // 2着同着
+    return base;
+  }
+
   function spawnThanks(cam, key, hit) {
     var old = cam.querySelector(".fx-thx");
     if (old) old.parentNode.removeChild(old);
@@ -2981,7 +3036,7 @@
        ⚠️display:none で隠さない：幅が測れなくなって fitThxNames が効かない
        尺と回転は札ごとに違うので、インライン style で各札に持たせる
        （あとから付けると .on を足した瞬間のアニメに間に合わないことがある） */
-    var posLabel = ["1着", "2着", "3着"];
+    var posLabel = thxPosLabels(r); // 同着なら「1着・2着・2着」等（8/27 FB148）
     // 先頭＝結果発表！！（8/25）。class kime＝的中！！と同じ登場（回転なしの一撃）を使い回す。
     // k-* は付けない＝色は基本の金のまま（虹・黄金は本物の的中！！だけの格）
     var cards = ['<div class="thx-card kime" style="--thx-bang:' + THX_INTRO_STEP.bang + 'ms">' +
@@ -3155,12 +3210,16 @@
     var badge = document.createElement("div");
     badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "") +
       (key ? " m-" + key : "");
-    var typeLabel = hit.type && hit.type !== "3連単" ? " " + hit.type : "";
-    var multLabel = hit.mult ? " " + hit.mult + "倍" : "";
+    // 式別が混ざった同時的中ではラベルを出さない（片方だけ出すと嘘になる・8/27 FB148）
+    var typeLabel = (!hit.mixedType && hit.type && hit.type !== "3連単") ? " " + hit.type : "";
+    // 同時に複数当たったら倍率を全部並べる（同着で両方の並びを持っていた時など・8/27 FB148）。
+    // 高い方が先＝見出しになる
+    var mults = (hit.mults && hit.mults.length ? hit.mults : [hit.mult]).filter(Boolean);
+    var multLabel = mults.length ? " " + mults.map(function (m) { return m + "倍"; }).join("＋") : "";
     // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
     badge.textContent = hit.manche
       ? "🌈 万車的中！" + (hit.note ? " note" : "") + multLabel
-      : (hit.note ? "🔥 note的中！" : "🎯 的中！") + typeLabel + multLabel;
+      : (hit.note ? "🔥 note的中！" : hit.deadHeat ? "🎯 同着ダブル的中！" : "🎯 的中！") + typeLabel + multLabel;
     cam.appendChild(badge);
     fitHitBadge(badge, cam); // ワイプ幅いっぱいの最大サイズ（はみ出す時だけ段階縮小・8/7 FB59）
     setTimeout(function () {
