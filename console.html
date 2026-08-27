@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-211756">
+<link rel="stylesheet" href="console.css?v=20260827-221719">
 </head>
 <body>
 
@@ -177,11 +177,15 @@
     <label class="lbl inline admin-only">民間締切 発走−<input type="number" id="cfg-netclose" class="inp tiny">分</label>
     <label class="lbl inline"><input type="checkbox" id="cfg-autoresults"> 結果の自動確定（取得したら人の確認なしで即反映）</label>
   </div>
-  <div class="row gap">
+  <!-- 自動切替・自動追従は「外すことはない」ので常時ONとして隠した（8/27 Naoto要望）。
+       ⚠️同じくDOMからは消さない＝save()がここを読み戻すため。非adminでは console.js が
+       常にONを入れ直すので、古いstateにOFFが残っていても勝手に直る。
+       OFFに戻したいときだけ URL に &admin=1 を付けて開く -->
+  <div class="row gap admin-only">
     <label class="lbl inline"><input type="checkbox" id="cfg-autoscene"> 発走時刻に②レース観戦へ自動切替（切替忘れ防止。①トーク・③レース展開の表示中のみ・④⑤からは切り替えない）</label>
   </div>
-  <div class="hint">※自動切替はOBS側の設定が1回だけ必要：ソース「オーバーレイ①トーク」「オーバーレイ③レース展開」のプロパティ→「ページの権限」→「OBSへの高度なアクセス」</div>
-  <div class="row gap">
+  <div class="hint admin-only">※自動切替はOBS側の設定が1回だけ必要：ソース「オーバーレイ①トーク」「オーバーレイ③レース展開」のプロパティ→「ページの権限」→「OBSへの高度なアクセス」</div>
+  <div class="row gap admin-only">
     <label class="lbl inline"><input type="checkbox" id="cfg-autoalign"> 発走・②切替時に予想レースを自動で合わせる（メイン＝映像のレース／サブ＝次のレース。その後の手動変更は自由）</label>
   </div>
   <button class="btn" id="btn-save-settings">設定を保存</button>
@@ -224,11 +228,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-211756" data-au="banner"></script>
-<script src="config.js?v=20260827-211756"></script>
-<script src="keirin.js?v=20260827-211756"></script>
-<script src="derive.js?v=20260827-211756"></script>
-<script src="sync.js?v=20260827-211756"></script>
-<script src="console.js?v=20260827-211756"></script>
+<script src="autoupdate.js?v=20260827-221719" data-au="banner"></script>
+<script src="config.js?v=20260827-221719"></script>
+<script src="keirin.js?v=20260827-221719"></script>
+<script src="derive.js?v=20260827-221719"></script>
+<script src="sync.js?v=20260827-221719"></script>
+<script src="console.js?v=20260827-221719"></script>
 </body>
 </html>

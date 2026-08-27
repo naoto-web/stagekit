@@ -1071,8 +1071,12 @@
     $("cfg-close").value = state.cfg.closeMin;
     $("cfg-netclose").value = state.cfg.netCloseMin;
     $("cfg-autoresults").checked = !!state.cfg.autoResults;
-    $("cfg-autoscene").checked = state.cfg.autoScene !== false; // 発走時刻の自動シーン切替（8/9 FB95・既定ON）
-    $("cfg-autoalign").checked = state.cfg.autoAlign !== false; // 予想レースの自動追従（8/9 FB96・既定ON）
+    // 自動シーン切替（8/9 FB95）と予想レースの自動追従（8/9 FB96）は常時ON運用に確定したので
+    // UIから隠した（8/27 Naoto要望・console.html参照）。非adminでは表示値ではなくONを入れ直す＝
+    // 隠した後に save() が走っても必ずtrueで上書きされ、古いstateにOFFが残っていても自己修復する。
+    var adminOn = document.documentElement.classList.contains("admin-on");
+    $("cfg-autoscene").checked = adminOn ? state.cfg.autoScene !== false : true;
+    $("cfg-autoalign").checked = adminOn ? state.cfg.autoAlign !== false : true;
     $("note-races").value = state.noteRaces || "";
     $("campaign-count").value = (state.campaignCount === null || state.campaignCount === undefined) ? "" : state.campaignCount;
   }
