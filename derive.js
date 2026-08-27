@@ -182,12 +182,17 @@
       ＝シフト交代後でも前半配信者の的中・回収が本人名義のまま残る */
   function settleRace(state, key) {
     var result = state.results[key];
-    if (!result || !result.order || result.order.length < 2) return null;
+    if (!result) return null;
+    // 同着＝着順2本（8/27 FB148）。orders があればそれ、無ければ従来どおり order の1本。
+    // ⚠️keirin.js だけ古いキャッシュが残った状態でも例外で画面ごと落とさない（的中が出ないだけに留める）
+    var norm = K.normalizeOrders || function (o) { return o && o.length ? (Array.isArray(o[0]) ? o : [o]) : []; };
+    var orders = norm(result.orders && result.orders.length ? result.orders : result.order);
+    if (!orders.length) return null;
     var byRacer = {};
     var br = (state.preds[key] || {}).byRacer || {};
     Object.keys(br).forEach(function (pid) {
       var rp = resolvePred(state, key, pid);
-      var s = K.settle(rp.parsed, 0, result.order, result.payouts || []);
+      var s = K.settle(rp.parsed, 0, orders, result.payouts || []);
       s.invest = rp.invest;
       s.refund = (result.refunds || {})[pid] || 0; // 回収＝手入力の実額
       s.isNote = !!rp.entry.isNote; // note予想レースの的中表示用（8/6 FB53）
@@ -195,7 +200,7 @@
       s.oreHits = [];
       if (rp.entry.oreTachi) {
         var op = K.parsePrediction(K.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
-        s.oreHits = K.settle(op, 0, result.order, result.payouts || []).hits;
+        s.oreHits = K.settle(op, 0, orders, result.payouts || []).hits;
       }
       byRacer[pid] = s;
     });

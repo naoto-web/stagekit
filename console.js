@@ -604,14 +604,39 @@
   }
 
   /* ---------- 結果入力 ---------- */
-  function parseOrderInput() {
-    var raw = window.Keirin.normalize($("res-order").value).replace(/[^0-9]/g, "");
+  /** 着順1本ぶん。同じ車番は捨てて先頭3つ */
+  function parseOneOrder(text) {
+    var raw = window.Keirin.normalize(text || "").replace(/[^0-9]/g, "");
     var order = [];
     for (var i = 0; i < raw.length && order.length < 3; i++) {
       var n = +raw[i];
       if (n >= 1 && n <= 9 && order.indexOf(n) < 0) order.push(n);
     }
     return order.length >= 2 ? order : null;
+  }
+
+  /* 同着モード（8/27 FB148）＝着順欄が2本になる。
+     同着だと当たりの並びが2通り＝公式の3連単払戻も2本出るので、両方を的中・回収に載せる */
+  var deadHeat = false;
+
+  /** 着順（同着なら2本）。1本目が読めなければ null。戻り値は常に array-of-array */
+  function parseOrdersInput() {
+    var a = parseOneOrder($("res-order").value);
+    if (!a) return null;
+    var out = [a];
+    if (deadHeat) {
+      var b = parseOneOrder($("res-order2").value);
+      if (b && b.join("-") !== a.join("-")) out.push(b);
+    }
+    return out;
+  }
+
+  /** 同着欄の開け閉め（見た目だけ・stateやプリセットには触らない） */
+  function setDeadHeatUI(on) {
+    deadHeat = !!on;
+    $("deadheat-wrap").classList.toggle("hidden", !deadHeat);
+    $("btn-deadheat").classList.toggle("on", deadHeat);
+    $("btn-deadheat").textContent = deadHeat ? "⚖ 同着（解除）" : "⚖ 同着";
   }
 
   /* 結果入力も買い目と同じ事故が起きる（8/8 FB75）：着順・払戻を打っている途中に別操作で
@@ -639,12 +664,19 @@
     }
     var existing = key ? state.results[key] : null;
     if (existing) {
-      $("res-order").value = (existing.order || []).join("-");
+      // 確定済みが同着（orders 2本）なら同着欄を開いた状態で復元する（8/27 FB148）
+      var ex = window.Keirin.normalizeOrders(
+        existing.orders && existing.orders.length ? existing.orders : existing.order);
+      $("res-order").value = (ex[0] || []).join("-");
+      $("res-order2").value = ex.length > 1 ? ex[1].join("-") : "";
+      setDeadHeatUI(ex.length > 1);
       payoutRows = (existing.payouts || []).map(function (p) {
         return { type: p.type, combo: p.combo.slice(), amount: p.amount };
       });
     } else {
       $("res-order").value = "";
+      $("res-order2").value = "";
+      setDeadHeatUI(false);
       payoutRows = [];
     }
     unitInputs = {}; // 回収枚数はレースごと（別レースの枚数を持ち越さない・8/27 FB146）
@@ -657,17 +689,27 @@
     return (payouts || []).filter(function (p) { return p.type === "3連単"; });
   }
 
-  /** 着順から標準の払戻行を用意（入力済み金額は保持） */
+  /** 着順から標準の払戻行を用意（入力済み金額は保持）。
+      同着なら着順2本ぶん＝3連単の行が2本出る（公式の払戻も2本ある・8/27 FB148） */
   function syncPayoutPresets() {
-    var order = parseOrderInput();
-    if (order && order.length >= 2) {
+    var orders = parseOrdersInput();
+    if (orders) {
       // プリセット行は3連単のみ（買い目が3連単運用のため・8/4）。他形式は「行を追加」か自動取得で入る
-      window.Keirin.standardCombos(order).filter(function (sc) { return sc.type === "3連単"; }).forEach(function (sc) {
+      var want = {};
+      window.Keirin.standardCombos(orders).forEach(function (sc) {
+        if (sc.type !== "3連単") return;
+        var label = window.Keirin.comboLabel(sc.type, sc.combo);
+        want[label] = true;
         var exists = payoutRows.some(function (p) {
-          return p.type === sc.type &&
-            window.Keirin.comboLabel(p.type, p.combo) === window.Keirin.comboLabel(sc.type, sc.combo);
+          return p.type === sc.type && window.Keirin.comboLabel(p.type, p.combo) === label;
         });
         if (!exists) payoutRows.push({ type: sc.type, combo: sc.combo, amount: 0 });
+      });
+      // 着順を打ち直した・同着を解除した時に、前の並びの空行が残らないよう掃除する（8/27 FB148）。
+      // ⚠️金額を入れた行は消さない＝打った数字を勝手に捨てない。他式別（手動追加）にも触らない
+      payoutRows = payoutRows.filter(function (p) {
+        if (p.type !== "3連単" || p.amount > 0) return true;
+        return !!want[window.Keirin.comboLabel(p.type, p.combo)];
       });
     }
     renderPayoutRows();
@@ -701,6 +743,25 @@
 
   // 着順の手入力も「入力途中」として保護する（8/8 FB75。選手名・決まり手の欄は8/27 FB143で撤去）
   $("res-order").addEventListener("input", function () { markResDirty(); syncPayoutPresets(); });
+  $("res-order2").addEventListener("input", function () { markResDirty(); syncPayoutPresets(); });
+
+  /* 同着ボタン（8/27 FB148）。開くとき2本目が空なら「2着と3着を入れ替えた並び」を下書きする
+     ＝2着同着（1着5・2着が2と3 → 5-2-3 と 5-3-2）ならそのまま使える。
+     1着同着・3着同着は下書きを直して使う。⚠️下書きは当て推量なので、
+     払戻欄に並ぶ2本のラベルが公式の払戻2本と一致しているかで必ず答え合わせすること */
+  $("btn-deadheat").addEventListener("click", function () {
+    setDeadHeatUI(!deadHeat);
+    if (deadHeat) {
+      if (!$("res-order2").value) {
+        var a = parseOneOrder($("res-order").value);
+        if (a && a.length === 3) $("res-order2").value = [a[0], a[2], a[1]].join("-");
+      }
+    } else {
+      $("res-order2").value = "";
+    }
+    markResDirty();
+    syncPayoutPresets();
+  });
 
   $("btn-payout-add").addEventListener("click", function () {
     var type = $("payout-add-type").value;
@@ -745,16 +806,21 @@
   function renderSettlePreview() {
     var key = resultKey(); // 結果フォームと同じレースを見る（固定中はそのレース・FB96）
     var el = $("settle-preview");
-    var order = parseOrderInput();
-    if (!key || !order) { el.innerHTML = '<span class="miss">着順を入力すると的中・回収のプレビューが出ます</span>'; return; }
+    var orders = parseOrdersInput();
+    if (!key || !orders) { el.innerHTML = '<span class="miss">着順を入力すると的中・回収のプレビューが出ます</span>'; return; }
     var payouts = payoutRows.filter(function (p) { return p.amount > 0; });
-    el.innerHTML = state.racers.map(function (rc) {
+    // 同着は「何通りで判定しているか」を必ず見せる＝入れ間違いに気づけるように（8/27 FB148）
+    var head = orders.length > 1
+      ? '<div class="dh-badge">⚖ 同着：' + orders.map(function (o) { return esc(o.join("-")); }).join(" ／ ") +
+        " の2通りで判定しています</div>"
+      : "";
+    el.innerHTML = head + state.racers.map(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
-      var s = window.Keirin.settle(rp.parsed, 0, order, payouts);
+      var s = window.Keirin.settle(rp.parsed, 0, orders, payouts);
       var oreHtml = "";
       if (rp.entry.oreTachi) {
         var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
-        var oh = window.Keirin.settle(op, 0, order, payouts).hits;
+        var oh = window.Keirin.settle(op, 0, orders, payouts).hits;
         if (oh.length) {
           oreHtml = oh[0].amount
             ? ' <span class="hit">🎯 俺たち目 ' + oh[0].comboLabel + " " + oh[0].mult + "倍</span>"
@@ -814,15 +880,19 @@
   $("btn-settle").addEventListener("click", function () {
     var key = resultKey(); // フォームに出ているレースを確定する（固定中でも取り違えない・FB96）
     if (!key) return;
-    var order = parseOrderInput();
-    if (!order) { $("settle-preview").innerHTML = '<span class="manche">着順が読めません（例：1-9-2）</span>'; return; }
+    var orders = parseOrdersInput(); // 同着なら2本（8/27 FB148）
+    if (!orders) { $("settle-preview").innerHTML = '<span class="manche">着順が読めません（例：1-9-2）</span>'; return; }
+    if (deadHeat && orders.length < 2) {
+      $("settle-preview").innerHTML = '<span class="manche">⚖ 同着モードですが、もう一方の着順が読めません（例：5-3-2）　→ 解除するなら「同着（解除）」を押してください</span>';
+      return;
+    }
     // 的中しているのに払戻が未入力なら確定させない（0倍の的中速報が画面に載る事故防止）
     var validPayouts = payoutRows.filter(function (p) { return p.amount > 0; });
     var missing = [];
     var missingRefund = [];
     state.racers.forEach(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
-      var s = window.Keirin.settle(rp.parsed, 0, order, validPayouts);
+      var s = window.Keirin.settle(rp.parsed, 0, orders, validPayouts);
       s.hits.forEach(function (h) {
         var label = h.type + " " + h.comboLabel;
         if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
@@ -830,7 +900,7 @@
       // 俺たち目の的中も払戻必須（0倍でティッカーに載る事故防止）
       if (rp.entry.oreTachi) {
         var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
-        window.Keirin.settle(op, 0, order, validPayouts).hits.forEach(function (h) {
+        window.Keirin.settle(op, 0, orders, validPayouts).hits.forEach(function (h) {
           var label = h.type + " " + h.comboLabel + "（俺たち目）";
           if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
         });
@@ -855,7 +925,7 @@
     var refunds = {}, refundUnits = {};
     state.racers.forEach(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
-      var hits = window.Keirin.settle(rp.parsed, 0, order, validPayouts).hits;
+      var hits = window.Keirin.settle(rp.parsed, 0, orders, validPayouts).hits;
       var sum = refundOf(rc.id, hits);
       if (sum > 0) refunds[rc.id] = sum;
       hits.forEach(function (h) {
@@ -868,9 +938,9 @@
     });
     // 選手名・決まり手はコンソールで入力しない（8/27 FB143）＝DOMではなく自動取得／既存stateから
     // 引き継ぐ（空で上書きすると的中演出が名前を失う）。判定はderive.jsの純関数
-    var meta = window.Derive.carryResultMeta(autoResults[key], state.results[key], order);
-    state.results[key] = {
-      order: order,
+    var meta = window.Derive.carryResultMeta(autoResults[key], state.results[key], orders[0]);
+    var rec = {
+      order: orders[0], // 従来どおり1本＝表示・的中演出（選手リスペクト）はこれを見る
       names: meta.names,
       kimarite: meta.kimarite,
       payouts: payoutRows.filter(function (p) { return p.amount > 0; }),
@@ -878,6 +948,9 @@
       refundUnits: refundUnits,
       settledAt: new Date().toISOString(),
     };
+    // 同着のときだけ着順2本を持つ（8/27 FB148）。旧データ・通常レースは order だけのまま＝読み手は無改修
+    if (orders.length > 1) rec.orders = orders.map(function (o) { return o.slice(); });
+    state.results[key] = rec;
     // ⚠️結果シーン（overlay.htmlのscene-result）は8/12の③レース展開新設で運用終了＝OBSに面が無い。
     // resultViewの更新はマークアップが残っているための保険（?scene=resultで直接開いた時だけ効く）
     state.resultView = key;
@@ -1345,14 +1418,26 @@
       if (state.results[key]) return; // 手入力済み・確定済みは触らない
       var r = autoResults[key];
       if (!r.order || r.order.length < 2 || !r.payouts || !r.payouts.length) return;
-      state.results[key] = {
-        order: r.order.slice(),
-        names: (r.names || []).slice(),
-        kimarite: (r.kimarite || []).slice(),
-        payouts: keepPayouts(r.payouts).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; }),
+      var pays = keepPayouts(r.payouts);
+      // 同着＝3連単の払戻が2本＝当たりの並びが2通り（8/27 FB148）。
+      // ⚠️自動取得の着順は着位ごとに先頭1人しか入っていない（2着同着だと「5-2」で3着が欠ける＝
+      //   3連単の的中が1件も出ない）ので、着順は払戻から組み直したものを正とする
+      var ords = window.Keirin.ordersFromPayouts(pays);
+      var base = ords.length ? ords[0] : r.order.slice();
+      if (base.length < 2) return;
+      // 選手名は着順と並びが一致するときだけ引き継ぐ（ズレたまま名前を付けない）。
+      // 落ちた場合はオーバーレイ側が出走表から車番で引く＝表示は正しいまま
+      var aligned = base.slice(0, r.order.length).join("-") === r.order.join("-");
+      var rec = {
+        order: base,
+        names: aligned ? (r.names || []).slice() : [],
+        kimarite: aligned ? (r.kimarite || []).slice() : [],
+        payouts: pays.map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; }),
         settledAt: new Date().toISOString(),
         auto: true,
       };
+      if (ords.length > 1) rec.orders = ords.map(function (o) { return o.slice(); });
+      state.results[key] = rec;
       addedKey = key;
     });
     if (addedKey) {
@@ -1365,9 +1450,14 @@
   function applyAutoToForm(key) {
     var r = autoResults[key];
     if (!r) return;
-    $("res-order").value = r.order.join("-");
+    var pays = keepPayouts(r.payouts);
+    // 同着なら3連単の払戻が2本＝当たりの並びが2通り（8/27 FB148）。同着欄を自動で開いて両方入れる
+    var ords = window.Keirin.ordersFromPayouts(pays);
+    $("res-order").value = (ords.length ? ords[0] : (r.order || [])).join("-");
+    $("res-order2").value = ords.length > 1 ? ords[1].join("-") : "";
+    setDeadHeatUI(ords.length > 1);
     // 選手名・決まり手はフォームに出さない（8/27 FB143）＝確定時にresultMeta()が自動取得から引き継ぐ
-    payoutRows = keepPayouts(r.payouts).map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
+    payoutRows = pays.map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
     markResDirty();      // プリフィルも「確定前の入力」＝再描画で消させない（8/8 FB75）
     syncPayoutPresets(); // 標準行の補完＋的中プレビュー再計算
   }
@@ -1382,10 +1472,17 @@
       el.innerHTML = "";
       return;
     }
-    var p3 = (r.payouts || []).filter(function (p) { return p.type === "3連単"; })[0];
+    var p3 = (r.payouts || []).filter(function (p) { return p.type === "3連単"; });
+    // 3連単の払戻が2本＝同着（8/27 FB148）。着順は払戻から組み直して見せる
+    // （自動取得の着順は同着だと3着が欠けるため、そのまま出すと「5-2」になって混乱する）
+    var ords = window.Keirin.ordersFromPayouts(p3);
+    var disp = (ords.length ? ords : [r.order || []]).map(function (o) { return o.join("-"); }).join(" ／ ");
     el.classList.remove("hidden");
-    el.innerHTML = "⚡ 結果を自動取得済み：着順 " + r.order.join("-") +
-      (p3 ? "（3連単 " + p3.amount.toLocaleString("ja-JP") + "円）" : "") +
+    el.innerHTML = "⚡ 結果を自動取得済み：着順 " + esc(disp) +
+      (p3.length ? "（3連単 " + p3.map(function (p) {
+        return esc(window.Keirin.comboLabel(p.type, p.combo)) + " " + p.amount.toLocaleString("ja-JP") + "円";
+      }).join(" ／ ") + "）" : "") +
+      (ords.length > 1 ? ' <b class="dh-badge">⚖ 同着</b>' : "") +
       '　<button class="btn small" id="btn-auto-fill">フォームに反映</button>';
     var btn = $("btn-auto-fill");
     if (btn) btn.addEventListener("click", function () { applyAutoToForm(key); });

@@ -101,6 +101,13 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .btn.primary:hover { background: #e5b455; }
 .btn.danger { background: #6e2424; border-color: #a33; color: #ffd6d6; }
 .btn.confirm { background: #a33; border-color: #ff5d5d; color: #fff; }
+/* トグル中のボタン（8/27 FB148＝同着）。押しっぱなしの状態が一目で分かる色 */
+.btn.on { background: #3d3320; border-color: #d9a441; color: #f5d99a; }
+
+/* ---------- 同着（8/27 FB148） ---------- */
+.dh-row { margin-top: 6px; align-items: center; }
+.dh-note { margin-top: 0; }
+.dh-badge { color: #d9a441; font-weight: 900; }
 
 /* ---------- 場・レース ---------- */
 .venue-row { display: flex; gap: 8px; }

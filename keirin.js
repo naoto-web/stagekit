@@ -332,24 +332,67 @@
     return out;
   }
 
+  /* ---------- 着順（同着＝複数本） ---------- */
+  /** 着順を常に array-of-array に揃える（8/27 FB148）。
+      同着は「勝ちの並びが2通りになる」だけの話なので、着順を2本持てば的中判定はそのまま使える。
+        2着同着（1着5・2着が2と3）→ [[5,2,3],[5,3,2]]
+        1着同着（1着が5と2・3着3）→ [[5,2,3],[2,5,3]]
+        3着同着（1着5・2着2・3着が3と4）→ [[5,2,3],[5,2,4]]
+      単一の [5,2,3] を渡す既存の呼び出しはそのまま動く（1本の配列に包むだけ）。 */
+  function normalizeOrders(order) {
+    if (!order || !order.length) return [];
+    var list = Array.isArray(order[0]) ? order : [order];
+    var seen = {}, out = [];
+    list.forEach(function (o) {
+      if (!o || o.length < 2) return;
+      var k = o.join("-");
+      if (seen[k]) return;
+      seen[k] = true;
+      out.push(o.slice());
+    });
+    return out;
+  }
+
+  /** 公式の3連単払戻から着順を組み直す（8/27 FB148）。
+      同着だと払戻が2本返ってくる＝その2本がそのまま勝ちの並び2通り。
+      ⚠️自動取得の着順（scraper.gs）は着位ごとに先頭1人しか拾っていないので、
+      2着同着だと「5-2」で3着が欠ける＝3連単の的中が1件も出なくなる。払戻から組む方が確実。 */
+  function ordersFromPayouts(payouts) {
+    var out = [];
+    (payouts || []).forEach(function (p) {
+      if (!p || p.type !== "3連単" || !p.combo || p.combo.length < 3) return;
+      out.push(p.combo.slice(0, 3).map(Number));
+    });
+    return normalizeOrders(out);
+  }
+
   /* ---------- 的中判定 ---------- */
-  /** order=[1着,2着,3着]の車番。該当する的中組合せの配列を返す（ワイドは複数あり得る） */
+  /** order=[1着,2着,3着]の車番。同着は着順を複数本（array-of-array）渡す。
+      該当する的中組合せの配列を返す（ワイド・同着では複数あり得る） */
   function hitCombos(parsedLine, order) {
     if (!parsedLine.ok) return [];
-    var f = order[0], s = order[1], t = order[2];
-    var hits = [];
-    parsedLine.combos.forEach(function (c) {
-      var hit = false;
-      switch (parsedLine.type) {
-        case "3連単": hit = c[0] === f && c[1] === s && c[2] === t; break;
-        case "3連複": hit = sameSet(c, [f, s, t]); break;
-        case "2車単": hit = c[0] === f && c[1] === s; break;
-        case "2車複": hit = sameSet(c, [f, s]); break;
-        case "ワイド":
-          hit = sameSet(c, [f, s]) || sameSet(c, [f, t]) || sameSet(c, [s, t]);
-          break;
-      }
-      if (hit) hits.push(c);
+    var hits = [], seen = {};
+    normalizeOrders(order).forEach(function (o) {
+      var f = o[0], s = o[1], t = o[2];
+      parsedLine.combos.forEach(function (c) {
+        var hit = false;
+        switch (parsedLine.type) {
+          case "3連単": hit = c[0] === f && c[1] === s && c[2] === t; break;
+          case "3連複": hit = sameSet(c, [f, s, t]); break;
+          case "2車単": hit = c[0] === f && c[1] === s; break;
+          case "2車複": hit = sameSet(c, [f, s]); break;
+          case "ワイド":
+            hit = sameSet(c, [f, s]) || sameSet(c, [f, t]) || sameSet(c, [s, t]);
+            break;
+        }
+        if (!hit) return;
+        // 同着＝着順を2本続けて見るので、同じ組合せが両方に当たることがある
+        // （3連複・ワイド・2車単など順序が効かない／欠けている式別）。払戻は1つなので1件に畳む＝二重計上しない
+        var k = normalizedComboKey(parsedLine.type, c);
+        if (seen[k]) return;
+        seen[k] = true;
+        hits.push(c);
+      });
     });
     return hits;
   }
@@ -366,11 +409,12 @@
      return: { hits:[{type, combo, amount, mult, refund}], refund, invest } */
   function settle(prediction, unit, order, payouts) {
     var res = { hits: [], refund: 0, invest: prediction.points * (unit || 0) };
-    if (!order || order.length < 2) return res;
+    var orders = normalizeOrders(order); // 同着は着順2本（8/27 FB148）
+    if (!orders.length) return res;
     prediction.lines.forEach(function (line) {
       if (!line.ok) return;
       if (line.cut) return; // 切り目行＝買っていない目＝的中判定外（8/10 FB122）
-      hitCombos(line, order).forEach(function (combo) {
+      hitCombos(line, orders).forEach(function (combo) {
         var pay = findPayout(payouts, line.type, combo);
         var amount = pay ? pay.amount : 0;
         var refund = amount * (unit || 0) / 100;
@@ -407,18 +451,28 @@
     return c.join("-");
   }
 
-  /* 着順から標準4式別の該当組合せ（払戻入力のプリセット用） */
+  /* 着順から標準4式別の該当組合せ（払戻入力のプリセット用）。
+     同着は着順2本ぶんを並べる＝3連単の行が2本出る（公式の払戻も2本ある・8/27 FB148）。
+     同じ組合せは1行に畳む（3連複・ワイドは同着でも1本にしかならない） */
   function standardCombos(order) {
-    var f = order[0], s = order[1], t = order[2];
-    var rows = [];
-    if (f && s && t) {
-      rows.push({ type: "3連単", combo: [f, s, t] });
-      rows.push({ type: "3連複", combo: [f, s, t].slice().sort() });
-    }
-    if (f && s) rows.push({ type: "2車単", combo: [f, s] });
-    if (f && s) rows.push({ type: "ワイド", combo: [f, s].slice().sort() });
-    if (f && t) rows.push({ type: "ワイド", combo: [f, t].slice().sort() });
-    if (s && t) rows.push({ type: "ワイド", combo: [s, t].slice().sort() });
+    var rows = [], seen = {};
+    normalizeOrders(order).forEach(function (o) {
+      var f = o[0], s = o[1], t = o[2];
+      var add = function (type, combo) {
+        var k = type + "|" + normalizedComboKey(type, combo);
+        if (seen[k]) return;
+        seen[k] = true;
+        rows.push({ type: type, combo: combo });
+      };
+      if (f && s && t) {
+        add("3連単", [f, s, t]);
+        add("3連複", [f, s, t].slice().sort());
+      }
+      if (f && s) add("2車単", [f, s]);
+      if (f && s) add("ワイド", [f, s].slice().sort());
+      if (f && t) add("ワイド", [f, t].slice().sort());
+      if (s && t) add("ワイド", [s, t].slice().sort());
+    });
     return rows;
   }
 
@@ -465,6 +519,8 @@
     parseLine: parseLine,
     parsePrediction: parsePrediction,
     cutHasMultiTargets: cutHasMultiTargets, // 8/11 FB134（テスト・将来の別UIから使えるように）
+    normalizeOrders: normalizeOrders,       // 8/27 FB148（同着＝着順2本）
+    ordersFromPayouts: ordersFromPayouts,   // 8/27 FB148
     hitCombos: hitCombos,
     settle: settle,
     standardCombos: standardCombos,

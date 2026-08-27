@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-171628">
+<link rel="stylesheet" href="console.css?v=20260827-203148">
 </head>
 <body>
 
@@ -84,6 +84,21 @@
 
   <label class="lbl">着順（例：1-9-2）</label>
   <input type="text" id="res-order" class="inp big" placeholder="1-9-2" inputmode="numeric">
+
+  <!-- 同着（8/27 FB148）＝勝ちの並びが2通りになり、公式の3連単払戻も2本出る。
+       着順を2本持って両方を的中・回収に載せる。既定は閉じたまま＝通常レースの邪魔をしない。
+       自動取得が同着（3連単の払戻が2本）を拾ったときは「フォームに反映」で自動的に開く -->
+  <div class="row gap dh-row">
+    <button class="btn small" id="btn-deadheat">⚖ 同着</button>
+    <span class="hint dh-note">写真判定で同着になったレースはこれ（着順が2通りになります）</span>
+  </div>
+  <div class="hidden" id="deadheat-wrap">
+    <label class="lbl">もう一方の着順（同着）</label>
+    <input type="text" id="res-order2" class="inp big" placeholder="1-2-9" inputmode="numeric">
+    <div class="hint">例）1着5・2着が2と3の同着 → <b>5-2-3</b> と <b>5-3-2</b> の2通りが当たり。
+      下の払戻欄に<b>2本とも</b>公式の金額を入れると、両方が的中・回収に載ります
+      （それぞれ別に「何枚買ったか」を入れられます）</div>
+  </div>
 
   <!-- 選手名（1〜3着）・決まり手・上がりの手入力欄は8/27 FB143で撤去（Naoto「手で入れない」）。
        ⚠️データとしては残す＝自動取得の結果からstate.results[].names/kimariteに入り、
@@ -207,11 +222,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-171628" data-au="banner"></script>
-<script src="config.js?v=20260827-171628"></script>
-<script src="keirin.js?v=20260827-171628"></script>
-<script src="derive.js?v=20260827-171628"></script>
-<script src="sync.js?v=20260827-171628"></script>
-<script src="console.js?v=20260827-171628"></script>
+<script src="autoupdate.js?v=20260827-203148" data-au="banner"></script>
+<script src="config.js?v=20260827-203148"></script>
+<script src="keirin.js?v=20260827-203148"></script>
+<script src="derive.js?v=20260827-203148"></script>
+<script src="sync.js?v=20260827-203148"></script>
+<script src="console.js?v=20260827-203148"></script>
 </body>
 </html>
