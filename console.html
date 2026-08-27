@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260827-204713">
+<link rel="stylesheet" href="console.css?v=20260827-211756">
 </head>
 <body>
 
@@ -93,10 +93,12 @@
     <span class="hint dh-note">写真判定で同着になったレースはこれ（着順が2通りになります）</span>
   </div>
   <div class="hidden" id="deadheat-wrap">
-    <label class="lbl">もう一方の着順（同着）</label>
-    <input type="text" id="res-order2" class="inp big" placeholder="1-2-9" inputmode="numeric">
+    <label class="lbl">同着の他の着順（1行に1つ）</label>
+    <!-- ⚠️1行入力ではなく複数行にしてある（8/27）＝1着同着と3着同着が重なると当たりが4通りになる
+         実例＝2026/5/25 静岡3R（4-7-1／4-7-6／7-4-1／7-4-6）。1行固定だと取りこぼす -->
+    <textarea id="res-order2" class="inp big" rows="1" placeholder="5-3-2"></textarea>
     <div class="hint">例）1着5・2着が2と3の同着 → <b>5-2-3</b> と <b>5-3-2</b> の2通りが当たり。
-      下の払戻欄に<b>2本とも</b>公式の金額を入れると、両方が的中・回収に載ります
+      下の払戻欄に<b>公式の金額を全部</b>入れると、当たり全部が的中・回収に載ります
       （それぞれ別に「何枚買ったか」を入れられます）</div>
   </div>
 
@@ -222,11 +224,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260827-204713" data-au="banner"></script>
-<script src="config.js?v=20260827-204713"></script>
-<script src="keirin.js?v=20260827-204713"></script>
-<script src="derive.js?v=20260827-204713"></script>
-<script src="sync.js?v=20260827-204713"></script>
-<script src="console.js?v=20260827-204713"></script>
+<script src="autoupdate.js?v=20260827-211756" data-au="banner"></script>
+<script src="config.js?v=20260827-211756"></script>
+<script src="keirin.js?v=20260827-211756"></script>
+<script src="derive.js?v=20260827-211756"></script>
+<script src="sync.js?v=20260827-211756"></script>
+<script src="console.js?v=20260827-211756"></script>
 </body>
 </html>

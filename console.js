@@ -619,14 +619,20 @@
      同着だと当たりの並びが2通り＝公式の3連単払戻も2本出るので、両方を的中・回収に載せる */
   var deadHeat = false;
 
-  /** 着順（同着なら2本）。1本目が読めなければ null。戻り値は常に array-of-array */
+  /** 着順（同着なら複数本）。1本目が読めなければ null。戻り値は常に array-of-array。
+      同着欄は1行に1つ＝1着同着と3着同着が重なると当たりが4通りになるため（実例＝2026/5/25 静岡3R） */
   function parseOrdersInput() {
     var a = parseOneOrder($("res-order").value);
     if (!a) return null;
-    var out = [a];
+    var out = [a], seen = {};
+    seen[a.join("-")] = true;
     if (deadHeat) {
-      var b = parseOneOrder($("res-order2").value);
-      if (b && b.join("-") !== a.join("-")) out.push(b);
+      String($("res-order2").value || "").split(/\r?\n/).forEach(function (line) {
+        var b = parseOneOrder(line);
+        if (!b || seen[b.join("-")]) return;
+        seen[b.join("-")] = true;
+        out.push(b);
+      });
     }
     return out;
   }
@@ -668,7 +674,7 @@
       var ex = window.Keirin.normalizeOrders(
         existing.orders && existing.orders.length ? existing.orders : existing.order);
       $("res-order").value = (ex[0] || []).join("-");
-      $("res-order2").value = ex.length > 1 ? ex[1].join("-") : "";
+      $("res-order2").value = ex.slice(1).map(function (o) { return o.join("-"); }).join("\n");
       setDeadHeatUI(ex.length > 1);
       payoutRows = (existing.payouts || []).map(function (p) {
         return { type: p.type, combo: p.combo.slice(), amount: p.amount };
@@ -812,7 +818,7 @@
     // 同着は「何通りで判定しているか」を必ず見せる＝入れ間違いに気づけるように（8/27 FB148）
     var head = orders.length > 1
       ? '<div class="dh-badge">⚖ 同着：' + orders.map(function (o) { return esc(o.join("-")); }).join(" ／ ") +
-        " の2通りで判定しています</div>"
+        " の" + orders.length + "通りで判定しています</div>"
       : "";
     el.innerHTML = head + state.racers.map(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
@@ -883,7 +889,7 @@
     var orders = parseOrdersInput(); // 同着なら2本（8/27 FB148）
     if (!orders) { $("settle-preview").innerHTML = '<span class="manche">着順が読めません（例：1-9-2）</span>'; return; }
     if (deadHeat && orders.length < 2) {
-      $("settle-preview").innerHTML = '<span class="manche">⚖ 同着モードですが、もう一方の着順が読めません（例：5-3-2）　→ 解除するなら「同着（解除）」を押してください</span>';
+      $("settle-preview").innerHTML = '<span class="manche">⚖ 同着モードですが、他の着順が読めません（例：5-3-2／複数あるときは1行に1つ）　→ 解除するなら「同着（解除）」を押してください</span>';
       return;
     }
     // 的中しているのに払戻が未入力なら確定させない（0倍の的中速報が画面に載る事故防止）
@@ -1454,7 +1460,8 @@
     // 同着なら3連単の払戻が2本＝当たりの並びが2通り（8/27 FB148）。同着欄を自動で開いて両方入れる
     var ords = window.Keirin.ordersFromPayouts(pays);
     $("res-order").value = (ords.length ? ords[0] : (r.order || [])).join("-");
-    $("res-order2").value = ords.length > 1 ? ords[1].join("-") : "";
+    // 当たりが3通り以上（1着同着×3着同着など）でも全部入れる＝1行に1つ
+    $("res-order2").value = ords.slice(1).map(function (o) { return o.join("-"); }).join("\n");
     setDeadHeatUI(ords.length > 1);
     // 選手名・決まり手はフォームに出さない（8/27 FB143）＝確定時にresultMeta()が自動取得から引き継ぐ
     payoutRows = pays.map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });
