@@ -1679,6 +1679,10 @@ body.race-sub-on .race-sub { display: flex; }
    個人演出と違い色キーに紐づかない（絵が特定の2人のもの）＝m-* のセレクタは持たない ══════════ */
 .fx-ht { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
 .ht-stage { position: absolute; inset: 0; }
+/* ⚠️2階建てにしてある：stage＝揺れ／world＝席順に合わせた左右反転。
+   1つの要素に両方のtransformを書くと後勝ちで片方が消える */
+.ht-world { position: absolute; inset: 0; transform-origin: var(--bx, 50%) 50%; }
+.fx-ht.mirror .ht-world { transform: scaleX(-1); }
 
 /* 歩く2人。run＝画面外→定位置の移動／body＝歩調の上下（お茶と同じ2階建てtransform） */
 .ht-run { position: absolute; }
@@ -1761,11 +1765,17 @@ body.race-sub-on .race-sub { display: flex; }
 /* 「W的中！！」＝お茶のキメ文字と同じ組み（--cfs はfitTeaCapが実測して入れる）。
    ⚠️フチは -webkit-text-stroke ではなく drop-shadow 4方向＝お茶・サンバと同じやり方。
      text-strokeは字の内側を削るので、この太さだと画数の多い「的」が潰れる */
-.ht-cap { position: absolute; left: 50%; top: 74%; transform: translate(-50%, -50%); opacity: 0; }
+/* ⚠️位置も寄せ方もJSが渡す。またぎのときは**境目の線を挟んで左右に分けて置く**＝
+   左のワイプに「ダブル」を右寄せ（--cap-tx:-100%）／右のワイプに「的中！！」を左寄せ（0%）。
+   初版は1本の文字を境目の真上に置いていたが、**枠線が「中」を割った**（8/28 Naoto指摘）。
+   ⚠️出るのは飛び出すポップなので、伸び始めの原点（--cap-o）も境目側に寄せる＝線から外へ開く */
+.ht-cap { position: absolute; left: var(--cap-x, 50%); top: var(--cap-y, 74%);
+  transform: translate(var(--cap-tx, -50%), -50%);
+  transform-origin: var(--cap-o, 50% 50%); opacity: 0; }
 @keyframes htCapIn {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.72); }
-  62%  { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  0%   { opacity: 0; transform: translate(var(--cap-tx, -50%), -50%) scale(.72); }
+  62%  { opacity: 1; transform: translate(var(--cap-tx, -50%), -50%) scale(1.06); }
+  100% { opacity: 1; transform: translate(var(--cap-tx, -50%), -50%) scale(1); }
 }
 .fx-ht.capin .ht-cap { animation: htCapIn var(--capin, .7s) cubic-bezier(.2, 1.5, .4, 1) forwards; }
 .ht-cap span { display: block; white-space: nowrap;
