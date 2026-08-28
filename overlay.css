@@ -1670,6 +1670,41 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes teaOut { to { opacity: 0; } }
 .fx-tea.out { animation: teaOut .45s ease-in forwards; }
 
+/* ══════════ ニチャー＝橙メンバーの3つ目の個人演出（8/29・Naoto案）
+   お茶の派生。**中央に着くまではお茶と同じ**（上の .fx-tea 一式をそのまま使う＝
+   歩行2コマも尺も共有）。中央に着いたあとが違う＝湯呑みを掲げずに、
+   立ち姿が**ニチャー顔にじわっと入れ替わり**、「ニチャ～」が出て、**顔がどんどん寄っていく**。
+   ⚠️絵（fx_nicha.png）は fx_tea_stand.png と**同じ構図・同じポーズの別表情版**。
+      素材加工/fx_nicha_make.py が実測比を出し、JSが位置と大きさを計算して
+      CSS変数で渡す（--nw/--nh/--nl/--nox/--noy/--zx/--zy/--zs…）。**ここに座標を直書きしない**。
+      重なりの検算＝素材加工/out_check/nicha_align.png（顔だけが二重＝正しい）
+   ⚠️ズームはこの1枚にだけ掛ける。.fx-tea-run（右から中央への移動）／.fx-tea-body（歩調）と
+      transformが二階建てになっているので、そこへ3つ目を足すと後勝ちでどれかが消える ══════════ */
+.fx-nicha-img { position: absolute; left: var(--nl, 0); bottom: 0;
+  width: var(--nw, 0); height: var(--nh, 0); opacity: 0;
+  background: url("fx_nicha.png") center bottom / contain no-repeat;
+  transform-origin: var(--nox, 50%) var(--noy, 27%);
+  will-change: transform;   /* ⚠️寄り切った大きさで描いてもらうため（付けないと拡大でぼける） */
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); }
+/* 入れ替え＝クロスフェード。下の立ち姿を同じ時間で消して、上のニチャー顔を出す
+   （＝体は動かず表情だけが変わって見える。叩きつけない＝「マテニチャー」と同じ語彙） */
+@keyframes nichaIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nichaOut { from { opacity: 1; } to { opacity: 0; } }
+.fx-tea.nicha .fx-nicha-img { animation:
+  nichaIn var(--morph, .42s) ease-out forwards,
+  nichaZoom var(--zoom, 3.6s) linear var(--zoomlag, .24s) forwards; }
+.fx-tea.nicha .fx-tea-img.stand { animation: nichaOut var(--morph, .42s) ease-out forwards; }
+/* 顔へ寄る＝原点は顔の中心（--nox/--noy）。倍率は**等比**で刻む（3.6^0.25/0.5/0.75）＝
+   均等割りだと最初だけ速く見える。translateは顔をワイプ中央へ寄せる量（JSがpxで計算）。
+   ⚠️書き順は translate → scale：右から効くのでtranslateの量は倍率で拡大されない */
+@keyframes nichaZoom {
+  0%   { transform: translate(0, 0) scale(1); }
+  25%  { transform: translate(calc(var(--zx, 0px) * .25), calc(var(--zy, 0px) * .25)) scale(var(--zs1, 1.38)); }
+  50%  { transform: translate(calc(var(--zx, 0px) * .5),  calc(var(--zy, 0px) * .5))  scale(var(--zs2, 1.90)); }
+  75%  { transform: translate(calc(var(--zx, 0px) * .75), calc(var(--zy, 0px) * .75)) scale(var(--zs3, 2.61)); }
+  100% { transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 3.6)); }
+}
+
 /* ══════════ ハイタッチ＝ダブル的中の共演演出（8/28 Naoto案）
    2人が左右のワイプからてくてく歩いてきて、ワイプとワイプの境目で手を合わせる。
    パチン！＝白閃光＋衝撃波＋揺れ の瞬間に歩きからハイタッチのポーズへ差し替え → キメ文字。

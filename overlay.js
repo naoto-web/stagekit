@@ -1895,11 +1895,12 @@
        作り替えたのがこの表＝「%指定のたびに仕組みを触る」構造そのものを無くすのが目的。
      書き方＝色キー: { 演出キー: %, … } で**合計100**（0.5等の小数も可・分解能0.01%）。
        演出キー＝rain（既定のアイコン走行）／yakumono＝役物合体／slot＝スロット／sumo＝相撲
-                 ／pray＝念仏／tea＝お茶／samba＝サンバ／dance＝ダンス／adjust＝アジャスト
-                 ／peye＝ピーターズ・アイ／thanks＝選手リスペクト（結果発表・全員共通）
+                 ／pray＝念仏／tea＝お茶／nicha＝ニチャー／samba＝サンバ／dance＝ダンス
+                 ／adjust＝アジャスト／peye＝ピーターズ・アイ／thanks＝選手リスペクト（結果発表・全員共通）
      ⚠️合計100でない／演出名のタイプミスは起動時の自己検査（auditRates）で警告＋テストがFAILする */
   var MEMBER_RATES = {
-    orange: { rain: 40, tea: 40, thanks: 20 },        // アイコン走行／お茶（8/9 FB90）
+    // 橙は個人演出が3つ＝結果発表20%を除いた80%を等分（8/26の等分ルール。端数0.01%だけ調整して合計100）
+    orange: { rain: 26.67, tea: 26.67, nicha: 26.66, thanks: 20 }, // 走行／お茶（FB90）／ニチャー（8/29）
     blue:   { yakumono: 40, adjust: 40, thanks: 20 }, // 役物合体（FB82）／アジャスト（FB130）
     pink:   { slot: 80, thanks: 20 },                 // スロット（FB83）
     green:  { sumo: 40, peye: 40, thanks: 20 },       // 相撲（FB86）／ピーターズ・アイ（8/25）
@@ -2055,6 +2056,48 @@
     t.CAP   = t.RAISE + TEA_BASE.CAP_LAG;            // 文字がじわっと出はじめる
     t.END   = t.CAP + TEA_BASE.CAP_IN + TEA_BASE.HOLD; // 退場開始＝ここでバッジにバトンを渡す
     t.GONE  = t.END + TEA_BASE.FADE;
+    return t;
+  }
+  /* ⚠️CSSの .fx-tea-run { bottom: 6% } と対の値（足元のライン＝ワイプ高に対する比）。
+     ニチャーのズーム原点をpxで計算するのに要る＝片方だけ直すと寄る先が顔からずれる */
+  var TEA_BOTTOM = 0.06;
+
+  /* ══════════ ニチャーの尺（8/29 Naoto案・橙メンバーの3つ目の演出） ══════════
+     お茶（FB90）の派生。**中央に着くまでは完全にお茶と同じ**（同じ歩行2コマ・同じ尺を共有＝
+     TEA_BASE.WALK/STEP/SETTLEをそのまま使う。Naoto指定「歩いてくるまでは一緒」）。
+     そこから先が違う＝湯呑みを掲げずに、**立ち姿がニチャー顔に入れ替わり**、「ニチャ～」が
+     じわっと出て、**顔がどんどんズームアップ**していく。
+       MORPH_LAG …中央で一拍おいてから入れ替わりが始まるまでms（＝お茶が掲げ始めるのと同じ間）
+       MORPH  …じわっと入れ替わる時間ms（クロスフェード）
+       ZOOM_LAG…入れ替わってからカメラが寄り始めるまでms（ニチャー顔を一度見せる間）
+       CAP_LAG…入れ替わりから「ニチャ～」が出はじめるまでms／CAP_IN…じわっと出る時間ms
+       HOLD   …文字を見せる時間ms／FADE…退場ms
+     ⚠️ズームの長さは定数で持たない＝**END−ZOOM**（退場の瞬間まで寄り続ける＝「どんどん」の担保）。
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝7560ms＝**お茶と同じ**。
+        意図的に揃えてある（同じ橙の人の演出で前奏の長さが変わらない） */
+  var NICHA_BASE = { MORPH: 420, ZOOM_LAG: 240, CAP_LAG: 700, CAP_IN: 800, HOLD: 2400, FADE: 450 };
+  /* 素材の実測値（⚠️**素材加工/fx_nicha_make.py が出力したものを丸ごと貼る**・手で書き換えない。
+     絵を差し替えたら再実行して貼り直す）
+       NICHA_AR …fx_nicha.png の実寸比（横/縦）
+       NICHA_FX/FY …顔の中心（幅・高さに対する比）＝**ズームの原点**。目は閉じ絵なので
+                    白目基準（peye方式）は使えず、上半身の肌の重心で測っている＝鼻〜口元に落ちる
+       NICHA_SX …衣装（橙）の重心x＝**お茶の立ち姿と横位置を合わせる目印**。
+                  ⚠️アルファの中央は使わない：湯呑み・やかんに引っ張られる
+       TEA_SX   …同じ測り方をした fx_tea_stand.png 側の値（お茶の枠は4コマの合併なので
+                  絵の中心と枠の中心が一致しない＝この2つを突き合わせて初めて重なる） */
+  var NICHA_AR = 613 / 1300;
+  var NICHA_FX = 0.5077, NICHA_FY = 0.2704;
+  var NICHA_SX = 0.5238, TEA_SX = 0.5814;
+  var NICHA_ZOOM = 3.6;    // 最終倍率＝顔が枠の高さの9割になる寄り（実測で決めた値）
+  var NICHA_AIM_Y = 0.45;  // 寄り切ったとき顔の中心を置くワイプ内の高さ（比）
+  var NICHA_CAP = "ニチャ～";
+  function nichaTimes() {
+    var t = { STOP: TEA_BASE.WALK };                    // 中央で止まる（ここまでお茶と同一）
+    t.MORPH = t.STOP + TEA_BASE.SETTLE;                 // じわっと入れ替わり始め
+    t.ZOOM  = t.MORPH + NICHA_BASE.ZOOM_LAG;            // 顔へ寄り始める
+    t.CAP   = t.MORPH + NICHA_BASE.CAP_LAG;             // 文字がじわっと出はじめる
+    t.END   = t.CAP + NICHA_BASE.CAP_IN + NICHA_BASE.HOLD; // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE  = t.END + NICHA_BASE.FADE;
     return t;
   }
 
@@ -2245,6 +2288,8 @@
   ["fx_tea_w1.png", "fx_tea_w2.png", "fx_tea_stand.png", "fx_tea_up.png"].forEach(function (f) {
     var im = new Image(); im.src = f;   // お茶は4コマ（8/9 FB90）＝歩き出しでコマ落ちしないよう先読み
   });
+  (function () { var im = new Image(); im.src = "fx_nicha.png"; })(); // ニチャー（8/29・橙の3つ目）＝
+  // ⚠️先読み必須：入れ替えはクロスフェード＝読み込みが遅れると「立ち姿が消えて空白」の瞬間ができる
   ["fx_adj1.png", "fx_adj2.png", "fx_adj3.png", "fx_adj4.png"].forEach(function (f) {
     var im = new Image(); im.src = f;   // アジャストも4コマ（8/11 FB130）＝同じく先読み
   });
@@ -2656,19 +2701,25 @@
   /* お茶（8/9 FB90・橙メンバーの2つ目）：画面右からてくてく歩いてきて、中央で止まり、湯呑みを掲げる。
      歩行は足違いの2コマ（w1/w2）をsteps(1)で交互に出す本物のコマ送り。
      ⚠️4コマは共通の枠で切り出してあるので、重ねても体がズレない（素材の作り方が肝＝要件定義 §10 FB89） */
-  function spawnTea(cam, key) {
+  /* ⚠️variant="nicha"（8/29）＝**同じ関数の分岐**にしてある（別関数に写さない）。
+       Naoto指定「中央まで歩いてくるところは一緒」＝歩きのDOM・尺・素材を共有していれば
+       お茶側を直したときにニチャーが置いていかれることが構造的に起きない。
+       分かれるのは中央に着いたあとだけ＝お茶は掲げる（raised/beam）／ニチャーは
+       立ち姿をニチャー顔へ入れ替えて（nicha）顔へ寄る。 */
+  function spawnTea(cam, key, variant) {
     var old = cam.querySelector(".fx-tea");
     if (old) old.parentNode.removeChild(old);
-    var T = teaTimes();
+    var nicha = variant === "nicha";
+    var T = nicha ? nichaTimes() : teaTimes();
     var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
     var th = Math.round(ch * 0.78), tw = Math.round(th * TEA_AR);
     var box = document.createElement("div");
-    box.className = ["fx-tea", "m-" + key].join(" ");
+    box.className = ["fx-tea", "m-" + key].concat(nicha ? ["v-nicha"] : []).join(" ");
     box.style.setProperty("--tw", tw + "px");
     box.style.setProperty("--th", th + "px");
     box.style.setProperty("--walk", (TEA_BASE.WALK / 1000) + "s");
     box.style.setProperty("--step", (TEA_BASE.STEP / 1000) + "s");
-    box.style.setProperty("--capin", (TEA_BASE.CAP_IN / 1000) + "s");
+    box.style.setProperty("--capin", (nicha ? NICHA_BASE.CAP_IN : TEA_BASE.CAP_IN) / 1000 + "s");
     // 出発点＝枠の外（右）。中央までの距離＝枠の半分＋体の半分
     box.style.setProperty("--x0", Math.round(cw / 2 + tw / 2) + "px");
     box.innerHTML =
@@ -2682,19 +2733,57 @@
           '<i class="fx-tea-beam bl"></i><i class="fx-tea-beam br"></i><i class="fx-tea-glint"></i>' +
         "</div>" +
         '<i class="fx-tea-dust d1"></i><i class="fx-tea-dust d2"></i>' +
+        (nicha ? '<i class="fx-nicha-img"></i>' : "") +
       "</div>" +
       '<div class="fx-tea-cap"><span></span></div>';
-    box.querySelector(".fx-tea-cap span").textContent = TEA_CAP;
+    box.querySelector(".fx-tea-cap span").textContent = nicha ? NICHA_CAP : TEA_CAP;
+    if (nicha) setNichaVars(box, cw, ch, tw, th, T);
     cam.appendChild(box);
     fitTeaCap(box.querySelector(".fx-tea-cap span"), cw);
 
     box.classList.add("walking");
     setTimeout(function () { box.classList.remove("walking"); box.classList.add("standing"); }, T.STOP);
-    setTimeout(function () { box.classList.remove("standing"); box.classList.add("raised"); }, T.RAISE);
-    setTimeout(function () { box.classList.add("beam"); }, T.BEAM);
+    if (nicha) {
+      // standingは付けたまま＝下の立ち姿をCSSがフェードアウトさせ、上のニチャー顔が
+      // 同じ時間でフェードインする（＝クロスフェード）。
+      // ⚠️ここでstandingを外すと下の絵が先に消えて「一瞬いなくなる」
+      setTimeout(function () { box.classList.add("nicha"); }, T.MORPH);
+    } else {
+      setTimeout(function () { box.classList.remove("standing"); box.classList.add("raised"); }, T.RAISE);
+      setTimeout(function () { box.classList.add("beam"); }, T.BEAM);
+    }
     setTimeout(function () { box.classList.add("capin"); }, T.CAP);
     setTimeout(function () { box.classList.add("out"); }, T.END);
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
+  /** ニチャーの絵の置き方とズームをCSS変数で渡す（8/29）。
+      ⚠️**座標をCSSに直書きしない**＝ワイプの寸法で全部変わる（①752×423／②544×404）。
+      ・置き方＝背丈はお茶の立ち姿と同じ（NICHA_HKに相当する係数は1.0＝定数を置いていない）、
+        横は**衣装の重心どうし**を合わせる。2枚は同じ構図の別表情版なので、これで顔だけが変わる
+      ・ズーム＝原点は顔の中心。倍率は等比で刻む（3.6^t）＝寄る速さが一定に見える。
+        translateは「顔をワイプの中央へ寄せる量」＝**px**で渡す
+        （transformは translate→scale の順に書く＝scaleが先に効くのでtranslateは拡大されない） */
+  function setNichaVars(box, cw, ch, tw, th, T) {
+    var nh = th, nw = Math.round(nh * NICHA_AR);
+    var nl = Math.round(tw * TEA_SX - nw * NICHA_SX);
+    box.style.setProperty("--nw", nw + "px");
+    box.style.setProperty("--nh", nh + "px");
+    box.style.setProperty("--nl", nl + "px");
+    box.style.setProperty("--nox", (NICHA_FX * 100).toFixed(2) + "%");
+    box.style.setProperty("--noy", (NICHA_FY * 100).toFixed(2) + "%");
+    box.style.setProperty("--morph", (NICHA_BASE.MORPH / 1000) + "s");
+    box.style.setProperty("--zoomlag", (NICHA_BASE.ZOOM_LAG / 1000) + "s");
+    box.style.setProperty("--zoom", ((T.END - T.ZOOM) / 1000) + "s");
+    // 顔の中心が今どこにあるか（ワイプ座標・px）
+    var faceX = (cw - tw) / 2 + nl + nw * NICHA_FX;
+    var faceY = ch * (1 - TEA_BOTTOM) - nh * (1 - NICHA_FY);
+    box.style.setProperty("--zx", Math.round(cw / 2 - faceX) + "px");
+    box.style.setProperty("--zy", Math.round(ch * NICHA_AIM_Y - faceY) + "px");
+    box.style.setProperty("--zs", String(NICHA_ZOOM));
+    for (var i = 1; i <= 3; i++) {                       // 等比の中間点（25/50/75%）
+      box.style.setProperty("--zs" + i, Math.pow(NICHA_ZOOM, i / 4).toFixed(4));
+    }
   }
 
   /** 「マテニチャー」を枠いっぱいに（はみ出す時だけ段階縮小＝的中バッジと同じ手法・8/9 FB91） */
@@ -3171,7 +3260,7 @@
         Math.random()だとソースごとに別の演出を引き、シーン切替で演出が変わって見える（8/26 Naoto報告）。
         同じ的中IDなら全ソースが同じ計算＝どのシーンに切り替えても同じ絵になる。 */
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
-       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba／dance／peye
+       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／nicha／samba／dance／peye
        ／hitouch＝ダブル的中の共演（⚠️本来は2人揃わないと出ない＝これで単独確認できる）
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
        本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
@@ -3226,7 +3315,7 @@
   /* ⚠️ここに hitouch（ダブル的中の共演）は**入れない**。あれは2人揃って初めて成立する演出で、
      MEMBER_RATESに書いても「1人の的中で出る」ようにはならない（正しい置き場はPAIR_FX）。
      入れないでおくと、間違ってこの表に書いたときに未知の演出名として警告が出る＝安全弁 */
-  var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, tea: 1,
+  var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, tea: 1, nicha: 1,
     samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1 };
   function auditRates() {
     Object.keys(MEMBER_RATES).forEach(function (k) {
@@ -3514,6 +3603,7 @@
       : eff === "sumo" ? sumoTimes().END
       : eff === "pray" ? prayTimes().END
       : eff === "tea" ? teaTimes().END
+      : eff === "nicha" ? nichaTimes().END
       : eff === "samba" ? sambaTimes().END
       : eff === "dance" ? danceTimes().END
       : eff === "adjust" ? adjTimes().END
@@ -3541,6 +3631,7 @@
       else if (eff === "sumo") spawnSumo(cam, key, hit);
       else if (eff === "pray") spawnPray(cam, key);
       else if (eff === "tea") spawnTea(cam, key);
+      else if (eff === "nicha") spawnTea(cam, key, "nicha");  // ニチャー（8/29・お茶の派生＝歩きは共通）
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
       else if (eff === "dance") spawnDance(cam, key);   // ダンス（8/25・赤の2つ目）
       else if (eff === "adjust") spawnAdjust(cam, key);
