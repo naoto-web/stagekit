@@ -487,18 +487,61 @@
     autoSwitched[k] = true;
     switchToRaceScene();
   }
-  function switchToRaceScene() {
+  /* 切替先のシーンは**実機から名前を検出**する（頭の丸数字→キーワード→固定名の順）。
+     ⚠️FB95（②へ）とFB149（①へ）で同じ手口なので**1つの表と1つの関数**にしてある。
+        写して2本持つと、片方だけ直したときに「②は追従するのに①はしない」が起きる。
+       param…OBS側だけで上書きしたいとき用のURLパラメータ（シーン名を大きく変えた場合の保険） */
+  var SCENE_TARGETS = {
+    race: { param: "racescene", head: "②", word: "レース", name: "②レース観戦" },
+    talk: { param: "talkscene", head: "①", word: "トーク", name: "①トーク" }
+  };
+  function switchToScene(kind) {
+    var t = SCENE_TARGETS[kind];
     var go = function (name) { try { window.obsstudio.setCurrentScene(name); } catch (e) {} };
-    var fixed = params.get("racescene");
+    var fixed = params.get(t.param);
     if (fixed) return go(fixed);
-    try { // シーン名は改名に備えて実機から検出（②で始まる→「レース」を含む→固定名の順）
+    try { // シーン名は改名に備えて実機から検出（頭の丸数字→キーワードを含む→固定名の順）
       window.obsstudio.getScenes(function (list) {
         var target = null;
-        (list || []).forEach(function (n) { if (!target && n.charAt(0) === "②") target = n; });
-        (list || []).forEach(function (n) { if (!target && n.indexOf("レース") >= 0) target = n; });
-        go(target || "②レース観戦");
+        (list || []).forEach(function (n) { if (!target && n.charAt(0) === t.head) target = n; });
+        (list || []).forEach(function (n) { if (!target && n.indexOf(t.word) >= 0) target = n; });
+        go(target || t.name);
       });
-    } catch (e) { go("②レース観戦"); }
+    } catch (e) { go(t.name); }
+  }
+  function switchToRaceScene() { switchToScene("race"); }
+
+  /* ---------- 的中演出はトーク画面で見せる（8/29 FB149・Naoto依頼） ----------
+     「的中演出はトークの大きいワイプで見てほしい」＝**②レース観戦・③レース展開を映している
+     ときに的中演出が出たら、OBSのシーンを①トークへ自動で切り替える**。FB95（発走10秒前に②へ）
+     のちょうど裏返しで、仕組み・注意点も同じ：
+       実行者＝「いま表示されているソース」（Page Visibility・FB60）＝②③（旧③結果）だけ。
+         ①自身は切替不要。**⑤広告・④待機は対象外**＝案件の表示義務がある画面／無人区間を
+         自動で中断しない（FB95と同じ判断・§2-3の審査設計）。
+       権限＝OBS側でそのソースの「ページの権限」が「OBSへの高度なアクセス」のときだけ効く。
+         ⚠️**FB95では①と③にだけ設定してあれば足りていたが、これは②のソースにも要る**
+         （②を映しているときに切り替えるのは②のページ自身だから）。未設定なら何も起きない＝安全側。
+       トリガ＝`fireHitFx`＝**的中演出が出る瞬間そのもの**。だから「結果を確定した瞬間」と
+         自動的に一致する（FB47＝自動確定由来では演出が出ない、も自動的に引き継ぐ）。
+         リロード後に過去の的中で切り替わることもない（既存のseenHitsが再発火を止めている）。
+       発火は**1レース1回**（FB95と同じ考え方）＝同じレースを2人が当てても1回。
+         手で②へ戻した直後に、同じレースの遅れて来た的中で引き戻されない。
+     ON/OFF＝FB95と同じ `state.cfg.autoScene`（既定ON・コンソールでは非表示＝常時ON）。
+       OBS側だけで止めたいときは①②③のURLに `&hitscene=0`（緊急用の逃げ道）。 */
+  var HITSW = SCENE === "race" || SCENE === "tenkai" || SCENE === "result";
+  var HITSW_OFF = params.get("hitscene") === "0";
+  var hitSwitched = {};   // 日付|場|R → 済（キーは日付込み＝FB71の教訓）
+  function hitSceneSwitch(hit) {
+    if (!HITSW || HITSW_OFF) return;
+    if (!window.obsstudio || typeof window.obsstudio.setCurrentScene !== "function") return;
+    if (state && state.cfg && state.cfg.autoScene === false) return;
+    if (document.visibilityState !== "visible") return; // 表示中のソースだけが切り替える（FB60）
+    // 的中IDは 場|R|配信者|式別|買い目（derive.jsのhitId）＝頭2つがレース。
+    // 手動追加（manual-0等）はその文字列ごとキーにする＝レース単位に畳めないが二重発火は防げる
+    var k = todayStr() + "|" + String((hit && hit.id) || "?").split("|").slice(0, 2).join("|");
+    if (hitSwitched[k]) return;
+    hitSwitched[k] = true;
+    switchToScene("talk");
   }
   /* ②が表示された瞬間をコンソールへ通知（FB96＝予想レースの自動追従のトリガー）。
      OBS内のソースだけが送る＝通常ブラウザで閲覧しているだけのタブが盤面を動かさないように */
@@ -3587,6 +3630,7 @@
   window.__clearHitFx = clearHitFx;   // 検証ハーネス（fxlab）から叩く
 
   function fireHitFx(slot, hit, rc, pairFx) {
+    hitSceneSwitch(hit);   // 的中演出はトークの大きいワイプで見せる（8/29 FB149）
     var key = memberKey(rc);
     // ⚠️pairFxは色キーが無い人には立たない（pairFxForが両者の色キーを要求する）＝keyなしでも安全
     var eff = pickEffect(key, hit, pairFx);
