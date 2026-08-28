@@ -1670,6 +1670,119 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes teaOut { to { opacity: 0; } }
 .fx-tea.out { animation: teaOut .45s ease-in forwards; }
 
+/* ══════════ ハイタッチ＝ダブル的中の共演演出（8/28 Naoto案）
+   橙が左から・緑が右からてくてく歩いてきて中央で止まり、パチン！＝白閃光＋衝撃波＋揺れ
+   の瞬間に「2人が手を合わせた1枚絵」へ差し替え → 「W的中！！」。
+   ⚠️歩き（2体バラバラ）→キメ（2体で1枚）の差し替えなので、位置と大きさはJS側が
+     実測比（HT_*）で計算してCSS変数で渡す。ここに座標を直書きしない。
+   ⚠️差し替えは閃光の下＝.ht-flash が最大の瞬間に .clap が付く。閃光を弱めると乗り換えが見える
+   個人演出と違い色キーに紐づかない（絵が特定の2人のもの）＝m-* のセレクタは持たない ══════════ */
+.fx-ht { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.ht-stage { position: absolute; inset: 0; }
+
+/* 歩く2人。run＝画面外→定位置の移動／body＝歩調の上下（お茶と同じ2階建てtransform） */
+.ht-run { position: absolute; }
+.ht-run.o { left: var(--o-l); top: var(--o-t); width: var(--o-w); height: var(--o-h); }
+.ht-run.g { left: var(--g-l); top: var(--g-t); width: var(--g-w); height: var(--g-h); }
+@keyframes htWalkO { from { transform: translateX(var(--o-x0)); } to { transform: translateX(0); } }
+@keyframes htWalkG { from { transform: translateX(var(--g-x0)); } to { transform: translateX(0); } }
+.fx-ht.walking .ht-run.o { animation: htWalkO var(--walk, 2.6s) linear forwards; }
+.fx-ht.walking .ht-run.g { animation: htWalkG var(--walk, 2.6s) linear forwards; }
+.ht-body { position: absolute; inset: 0; }
+@keyframes htBob {   /* 一歩ごとの上下＝コマ送り2枚で1周期 */
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.2%); }
+}
+.fx-ht.walking .ht-run.o .ht-body { animation: htBob calc(var(--o-step, .25s) * 2) ease-in-out infinite; }
+.fx-ht.walking .ht-run.g .ht-body { animation: htBob calc(var(--g-step, .25s) * 2) ease-in-out infinite; }
+.ht-img { position: absolute; inset: 0; opacity: 0;
+  background-repeat: no-repeat; background-position: center bottom; background-size: contain; }
+.ht-run.o .ht-img.w1 { background-image: url("fx_ht_o1.png"); }
+.ht-run.o .ht-img.w2 { background-image: url("fx_ht_o2.png"); }
+.ht-run.g .ht-img.w1 { background-image: url("fx_ht_g1.png"); }
+.ht-run.g .ht-img.w2 { background-image: url("fx_ht_g2.png"); }
+/* コマ送り＝steps(1)で2枚を交互に。⚠️止まったら .standing で w1 に固定（足を開いたまま止めない） */
+@keyframes htStepA { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes htStepB { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
+.fx-ht.walking .ht-run.o .ht-img.w1 { animation: htStepA var(--o-step, .25s) steps(1, end) infinite; }
+.fx-ht.walking .ht-run.o .ht-img.w2 { animation: htStepB var(--o-step, .25s) steps(1, end) infinite; }
+.fx-ht.walking .ht-run.g .ht-img.w1 { animation: htStepA var(--g-step, .25s) steps(1, end) infinite; }
+.fx-ht.walking .ht-run.g .ht-img.w2 { animation: htStepB var(--g-step, .25s) steps(1, end) infinite; }
+.fx-ht.standing .ht-img.w1 { opacity: 1; }
+.fx-ht.clap .ht-run { opacity: 0; }   /* 差し替え＝歩きを消してキメ絵に渡す（閃光の下で起きる） */
+
+/* キメ絵＝2人が手を合わせた1枚。パチンの瞬間だけ軽く迫る（ドン！の当たり） */
+.ht-kime { position: absolute; left: var(--k-l); top: var(--k-t);
+  width: var(--k-w); height: var(--k-h); opacity: 0;
+  background: url("fx_ht_kime.png") no-repeat center bottom / contain;
+  /* ⚠️寄りの原点＝手が触れる点。--tx/--ty はワイプ座標なのでここでは使えない
+     （この要素の中での位置＝%指定の --k-tx/--k-ty をJSが渡す） */
+  transform-origin: var(--k-tx, 50%) var(--k-ty, 25%); }
+@keyframes htKimePunch {
+  0%   { opacity: 1; transform: scale(1.10); }
+  38%  { opacity: 1; transform: scale(.985); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.fx-ht.clap .ht-kime { opacity: 1; animation: htKimePunch .42s cubic-bezier(.2, 1.4, .35, 1) forwards; }
+
+/* 揺れ＝パチンの一発だけ（結果発表のthxShakeと同じ思想＝短く・減衰させる） */
+@keyframes htShake {
+  0%   { transform: translate(0, 0); }
+  18%  { transform: translate(-1.8%, 1.4%); }
+  36%  { transform: translate(1.5%, -1.1%); }
+  54%  { transform: translate(-1%, .7%); }
+  72%  { transform: translate(.6%, -.4%); }
+  100% { transform: translate(0, 0); }
+}
+.fx-ht.clap .ht-stage { animation: htShake .46s ease-out; }
+
+/* 白閃光＝手が触れた点から広がる。⚠️これが差し替えの目隠し＝薄くしない */
+.ht-flash { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(circle at var(--tx) var(--ty),
+    rgba(255,255,255,.98) 0%, rgba(255,255,255,.9) 18%, rgba(255,255,255,0) 62%); }
+@keyframes htFlash {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+.fx-ht.clap .ht-flash { animation: htFlash .5s ease-out; }
+
+/* 衝撃波＝触れた点から抜ける1本のリング。太さはワイプ寸法に追従（vh＝ソース全体基準なので使わない） */
+.ht-ring { position: absolute; left: var(--tx); top: var(--ty); width: 0; height: 0; opacity: 0;
+  border-radius: 50%; border: solid rgba(255, 236, 170, .95);
+  box-shadow: 0 0 calc(var(--ring) * .035) rgba(255, 214, 92, .8);
+  transform: translate(-50%, -50%); }
+@keyframes htRing {
+  0%   { width: 0; height: 0; opacity: 1; border-width: calc(var(--ring) * .012); }
+  100% { width: var(--ring); height: var(--ring); opacity: 0; border-width: calc(var(--ring) * .001); }
+}
+.fx-ht.clap .ht-ring { animation: htRing .62s cubic-bezier(.15, .75, .3, 1); }
+
+/* 「W的中！！」＝お茶のキメ文字と同じ組み（--cfs はfitTeaCapが実測して入れる）。
+   ⚠️フチは -webkit-text-stroke ではなく drop-shadow 4方向＝お茶・サンバと同じやり方。
+     text-strokeは字の内側を削るので、この太さだと画数の多い「的」が潰れる */
+.ht-cap { position: absolute; left: 50%; top: 74%; transform: translate(-50%, -50%); opacity: 0; }
+@keyframes htCapIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.72); }
+  62%  { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.fx-ht.capin .ht-cap { animation: htCapIn var(--capin, .7s) cubic-bezier(.2, 1.5, .4, 1) forwards; }
+.ht-cap span { display: block; white-space: nowrap;
+  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900;
+  font-size: var(--cfs, 48px); line-height: 1.05; letter-spacing: .04em;
+  --ce: calc(var(--cfs, 48px) * .05);
+  /* 橙→白→緑＝2人の色をひとつの文字に通す（この演出だけの見た目＝共演の合図） */
+  background: linear-gradient(100deg, #ff9430 0%, #ffd98a 26%, #fffdf4 50%, #b6f0a8 74%, #35d07f 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter:
+    drop-shadow(var(--ce) 0 0 #14100a) drop-shadow(calc(var(--ce) * -1) 0 0 #14100a)
+    drop-shadow(0 var(--ce) 0 #14100a) drop-shadow(0 calc(var(--ce) * -1) 0 #14100a)
+    drop-shadow(0 calc(var(--ce) * 1.4) calc(var(--ce) * 1.8) rgba(0,0,0,.55)); }
+
+@keyframes htOut { to { opacity: 0; } }
+.fx-ht.out { animation: htOut .45s ease-in forwards; }
+
 /* ══════════ アジャスト＝青メンバーの2つ目の個人演出（8/11 FB130・Naoto案）
    「アジャ・・」が右から左へ流れる（まばら→どんどん密に）→本人が右からてくてく歩いて
    中央で止まる→一拍→しゃがんで溜める→バッ！とダブルバイセップス＝「アジャストー！！」。

@@ -20,14 +20,14 @@
      ロールバック＝ソースURLに &v2=0（旧レイアウトへ即復帰・デプロイ不要）。
      &ln=0 … 車番チップの下の苗字だけ消す（ラインと枠はそのまま） */
   var V2 = params.get("v2") !== "0";
-  /* ②サブ予想枠を常時確保するか（8/28・§10項86＝8/27夜の空白事故の対策）。
-     true＝ワイプ穴を常に362pxに固定する。**枠の有無はレイアウト＝OBSのカメラ座標と噛み合う幾何**
-     なので、サブ場の選択状態（人・場リスト・日付リセットで勝手に変わる）に連動させてはいけない。
-     福岡のカメラがサブ用座標(1550・362幅)でも通常座標(1368・544幅)でも、どちらでも空白は出ない
-     ＝前者はぴったり埋まり、後者はカメラの左182pxが枠の下に隠れるだけ（画角確認済み・Naoto 8/28）。
-     ⚠️falseへ戻してよいのは、OBSのカメラが1368・544幅だと実機で確認できた時だけ。
-        一時的に外して見たい時はソースURLに &subfix=0（デプロイ不要） */
-  var SUB_FIXED = params.get("subfix") !== "0";
+  /* ②サブ予想枠を常時確保するか（8/28・§10項86）＝非常用スイッチ。既定OFF。
+     ONにすると枠を畳まず、ワイプ穴を常に362pxへ固定する。
+     ⚠️これが要るのは「OBSのカメラがサブ用座標(1550・362幅)に置かれている」時だけ。
+        その状態で枠を畳むと、穴だけ544へ広がってカメラの無い左182pxが空白になる（8/27夜の事故）。
+     現在の福岡は 1368・544幅（8/28に日中配信の実測で確認＝サブOFFでカメラが全幅に出ていた。
+     カメラソースは配信者ごとに分けていない＝全ペア共通）なので、畳んでも空白は出ない＝既定OFFでよい。
+     再発時の緊急手当＝ここの既定を true にして再デプロイ（ソースURLの &subfix=1 は福岡の操作が要る） */
+  var SUB_FIXED = params.get("subfix") === "1";
   /* 苗字は既定ON（8/13 Naoto判断）。出すにはヘッダー行を82pxまで広げる必要があり、
      その差分（約30px）は買い目エリアから借りている＝トレードオフを承知のうえでの選択。
      レース映像に重ねる案は映像利用の条件で不可・予想帯208pxは伸ばせないため他に置き場がない。
@@ -1157,6 +1157,10 @@
     var subVenueOf = function (rc) {
       if (!rc) return null;
       var vn = (state.raceSubBy || {})[rc.id] || state.raceSubVenue;
+      // メインと同じ場＝丸かぶり → 「なし」と同じ扱いにして枠ごと畳む（8/28 Naoto指定）。
+      // currentRaceは場単位なので「場が同じ＝レースも必ず同じ」＝場名の比較だけで判定できる。
+      // 1場運用に落ちた日（もう一方が本日終了で場リストから外れる）に必ず起きる
+      if (vn && vn === mainName) return null;
       return vn && state.venues.some(function (v) { return v.name === vn; }) ? vn : null;
     };
     // 枠の有無はレイアウト＝OBSのカメラ座標と噛み合う幾何なので、SUB_FIXED中は選択状態で切り替えない。
@@ -1781,12 +1785,40 @@
     return merged;
   }
 
+  /** ダブル的中（8/28）＝この回のパスで**席aと席bが同じレースを的中させたか**。
+      成立したらペア表（PAIR_FX）を引いて共演演出のキーを返す。出なければ ""。
+      ⚠️「同じレース」に限る理由＝結果を確定した瞬間、そのレースの全員分の的中が同じ1回の
+        パスで同時に立つ（derive.jsのhitsは結果×買い目から毎回まとめて計算される）。
+        だから発火**前**に「2人揃ったか」を判定できる＝先に出た演出を後から上書きせずに済む。
+      ⚠️別レース同士・手動追加の的中・結果確定後に相方の買い目を入れた場合は別パスになる＝
+        ダブル不成立（いつもどおり個人演出）。ここは割り切り（8/28 Naoto了承）
+      ⚠️席に座っている2人だけが対象＝画面に映っていない人とのハイタッチは出さない */
+  function pairFxFor(seats, fresh) {
+    if (!seats.a || !seats.b) return "";
+    var ka = memberKey(seats.a), kb = memberKey(seats.b);
+    if (!ka || !kb || ka === kb) return "";
+    var eff = PAIR_FX[[ka, kb].sort().join("|")];  // ⚠️キーはアルファベット順（席の左右に依存させない）
+    if (!eff) return "";
+    var byRace = {};
+    for (var i = 0; i < fresh.length; i++) {
+      var p = String(fresh[i].id).split("|");       // id＝場|R|配信者|式別|組合せ
+      if (p.length < 5) continue;                   // 手動追加（manual-N）はレースが特定できない
+      var rk = p[0] + "|" + p[1];
+      if (!byRace[rk]) byRace[rk] = {};
+      if (fresh[i].racerName === seats.a.name) byRace[rk].a = true;
+      if (fresh[i].racerName === seats.b.name) byRace[rk].b = true;
+      if (byRace[rk].a && byRace[rk].b) return eff;
+    }
+    return "";
+  }
+
   function checkNewHits() {
     var ids = {};
     var glowAdded = false; // FB119：この呼び出しで買目強調が追加されたか
     derived.hits.forEach(function (h) { ids[h.id] = h; });
     if (seenHits === null) { seenHits = ids; return; }
     var groups = {}, groupOrder = []; // 「同じレース×同じ人」の同時的中をまとめる（8/27 FB148）
+    var fresh = [];                   // この回の新規的中（ダブル判定に使う・8/28）
     Object.keys(ids).forEach(function (id) {
       var h = ids[id];
       var prev = seenHits[id];
@@ -1798,15 +1830,18 @@
       firedFx[id] = true;
       addHitGlow(h); // 予想帯の的中買目チップ強調（8/10 FB119・演出と同条件・同尺）
       glowAdded = true;
+      fresh.push(h);
       var gk = h.place + "|" + h.racerName;
       if (!groups[gk]) { groups[gk] = []; groupOrder.push(gk); }
       groups[gk].push(h);
     });
     var seats = seatMap();
+    // ダブル成立なら2人とも共演演出に差し替える（個人演出・結果発表は出さない・8/28）
+    var pairFx = pairFxFor(seats, fresh);
     groupOrder.forEach(function (gk) {
       var h = mergeHits(groups[gk]);
       ["a", "b"].forEach(function (slot) {
-        if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h, seats[slot]);
+        if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h, seats[slot], pairFx);
       });
     });
     seenHits = ids;
@@ -1867,6 +1902,20 @@
     yellow: { pray: 80, thanks: 20 },                 // 念仏（FB88）
     red:    { samba: 40, dance: 40, thanks: 20 }      // サンバ（FB121）／ダンス（8/25）
     // 例）purple: { rain: 50, slot: 30, thanks: 20 }
+  };
+
+  /* ══════════ ダブル的中の共演演出（8/28 Naoto案・新しい軸） ══════════
+     ここまでの演出は全部「**誰が**当てたか」で決まる。この表はもう一つの軸＝
+     「**2人が同じレースを当てたか**」で決まる演出を持つ。成立したら個人演出も結果発表も出さず、
+     両方のワイプに**同じ絵**が同期して出る（＝2画面で1つの出来事が起きているように見せる）。
+     書き方＝ "色キー|色キー": "演出キー"。⚠️**キーはアルファベット順**（green|orange・
+       red|blue ではなく blue|red）。席の左右で表を引き分けないための決まり
+     ⚠️絵が特定の2人に紐づくので、表に無いペアは何も起きない＝いつもどおり個人演出に落ちる。
+       新しいペアを足すときは演出キーも絵も新規に要る（この表に1行足すだけでは出ない）
+     成立条件＝**同じレース**を席aと席bの両方が的中（→ pairFxFor）。
+       同じレースなら「結果を確定」1回で両方の的中が同時に立つので、押しズレは起きない */
+  var PAIR_FX = {
+    "green|orange": "hitouch"   // 橙×緑＝ハイタッチ（8/28・素材＝fx_ht_*.png）
   };
 
   /* 役物合体の尺（8/8 FB82）。倍率kを掛けるのは「焦らし」の2つ（寄る・震える）だけ。
@@ -1997,6 +2046,52 @@
     t.CAP   = t.RAISE + TEA_BASE.CAP_LAG;            // 文字がじわっと出はじめる
     t.END   = t.CAP + TEA_BASE.CAP_IN + TEA_BASE.HOLD; // 退場開始＝ここでバッジにバトンを渡す
     t.GONE  = t.END + TEA_BASE.FADE;
+    return t;
+  }
+
+  /* ══════════ ハイタッチの尺（8/28・ダブル的中＝橙×緑の共演） ══════════
+     流れ＝①左右の画面外から2人がてくてく歩いてくる ②中央手前で止まって一拍おく
+           ③パチン！＝白閃光＋衝撃波＋揺れの瞬間に**キメ絵へ差し替え** ④「W的中！！」⑤退場
+       WALK   …画面外から止まる位置までのms（お茶と同じテンポ感＝Naoto指定「てくてく歩き」）
+       STRIDE …1コマで背丈の何倍進むか＝**コマ送り間隔はここから逆算する**（spawnHitouchのstepMs）。
+              ⚠️お茶FB91の教訓「歩く速さだけ変えると足の回転が合わず滑って見える」への答え。
+                お茶は距離も間隔も固定値だったが、この演出は歩く距離がワイプ幅で変わる
+                （①752px／②544px）ので、間隔を固定にすると狭い②で必ず滑る。実測値＝お茶の
+                歩き（1コマ34px／背丈330px）から 0.104
+       STEP_MIN/MAX …逆算した間隔の上下限ms（極端なワイプ比でパラパラ/ヌルヌルになるのを防ぐ）
+       SETTLE …止まってから手を合わせるまでの間ms（一拍おく＝「せーの」の溜め）
+       CAP_LAG…パチンから「W的中！！」が出はじめるまでms／CAP_IN…出る時間ms
+       HOLD   …文字を見せる時間ms／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約6.9秒。
+        歩き→キメの差し替えは**閃光の下で行う**（8/28設計）。素材の縮尺は実測定数で合わせて
+        あるが完全一致ではないので、閃光が消えてから切り替えると乗り換えが見える */
+  var HT_BASE = { WALK: 2600, STRIDE: 0.104, STEP_MIN: 200, STEP_MAX: 360, SETTLE: 300,
+    CAP_LAG: 700, CAP_IN: 700, HOLD: 2600, FADE: 450 };
+  var HT_H = 0.78;      // 橙キャラの背丈＝ワイプ高に対する比（お茶と同じ）
+  var HT_BOTTOM = 0.96; // 足元のライン＝ワイプ高に対する比（1.0で下端）
+  /* ⚠️ここから下は **素材加工/fx_hitouch_make.py が出力した実測値**。
+     絵を差し替えたらスクリプトを再実行して丸ごと貼り直す（手で書き換えない）。
+     歩きとキメ絵で「キャラの大きさ・立ち位置」を繋ぐための数字なので、
+     1つでも古いままだとパチンの瞬間にキャラが瞬間移動する */
+  var HT_AR_O   = 0.6020;  // fx_ht_o1/o2.png の横/縦
+  var HT_AR_G   = 0.5300;  // fx_ht_g1/g2.png の横/縦
+  var HT_AR_K   = 1.3600;  // fx_ht_kime.png の横/縦
+  var HT_G_REL  = 1.0107;  // 緑の背丈 ÷ 橙の背丈（キメ絵での比＝歩きもこの比で描く）
+  var HT_K_REL  = 1.0107;  // キメ絵の高さ ÷ キメ絵の中の橙の背丈
+  var HT_K_OX   = 0.2378;  // キメ絵の中の橙の衣装色重心x（キメ絵幅に対する比）
+  var HT_K_GX   = 0.7491;  // 同・緑
+  var HT_K_OFY  = 0.9988;  // キメ絵の中の橙の足元y（キメ絵高に対する比）
+  var HT_W_OX   = 0.5277;  // 歩行素材の中の橙の衣装色重心x（素材幅に対する比）
+  var HT_W_GX   = 0.4503;  // 同・緑
+  var HT_K_TX   = 0.4901;  // ✋手が触れる点x（キメ絵幅に対する比）＝閃光・衝撃波の発生源
+  var HT_K_TY   = 0.2313;  // 同・y（キメ絵高に対する比）
+  var HT_CAP = "W的中！！";   // 8/28 Naoto指定
+  function htTimes() {
+    var t = { STOP: HT_BASE.WALK };                    // 2人が止まる
+    t.CLAP = t.STOP + HT_BASE.SETTLE;                  // パチン！＝閃光・衝撃波・揺れ・キメ絵へ差し替え
+    t.CAP  = t.CLAP + HT_BASE.CAP_LAG;                 // 文字が出はじめる
+    t.END  = t.CAP + HT_BASE.CAP_IN + HT_BASE.HOLD;    // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE = t.END + HT_BASE.FADE;
     return t;
   }
 
@@ -2575,6 +2670,90 @@
     span.parentNode.style.setProperty("--cfs", fs + "px");
   }
 
+  /* ══════════ ハイタッチ（8/28・ダブル的中＝橙×緑の共演） ══════════
+     他の演出と決定的に違う点＝**個人ではなくペアに紐づく**（PAIR_FX参照）。
+     両方のワイプに同じ絵を出すので、2画面で1つの出来事が起きているように見える。
+
+     ⚠️設計の肝＝「歩き（2体バラバラの素材）」から「キメ（2体が1枚に描かれた素材）」への差し替え。
+       素材ごとに元の描かれ方（スケール・立ち位置）が違うので、fx_hitouch_make.py が出した
+       実測比（HT_*）で**歩き終わりの位置と大きさをキメ絵の中の立ち位置に合わせて**おく。
+       そのうえで**差し替えは白閃光の下で行う**＝残る微差は閃光が隠す（二重の保険）。
+     ⚠️歩く距離はワイプの幅で決まる（①752px／②544px）ため、コマ送り間隔を固定にすると
+       狭い②で足が滑る。**間隔は距離から逆算**（HT_BASE.STRIDE＝1コマあたり背丈の何倍進むか）。
+       ⚠️尺そのもの（WALK等のms）は固定＝①②が必ず同時に進む（「同期して出る」の担保）。
+         ここを距離依存にすると2つのワイプでパチンの瞬間がズレる */
+  function spawnHitouch(cam) {
+    var old = cam.querySelector(".fx-ht");
+    if (old) old.parentNode.removeChild(old);
+    var T = htTimes();
+    var gen = fxGen;
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+
+    // 橙の背丈を基準に、緑とキメ絵の寸法を実測比で決める＝歩きとキメで大きさが繋がる
+    var oh = Math.round(ch * HT_H),        ow = Math.round(oh * HT_AR_O);
+    var gh = Math.round(oh * HT_G_REL),    gw = Math.round(gh * HT_AR_G);
+    var kh = Math.round(oh * HT_K_REL),    kw = Math.round(kh * HT_AR_K);
+    var baseY = Math.round(ch * HT_BOTTOM);            // 足元のライン（2人ともここに立つ）
+    var kLeft = Math.round((cw - kw) / 2);
+    var kTop  = Math.round(baseY - HT_K_OFY * kh);
+    // 止まる位置＝キメ絵の中の自分の立ち位置。衣装色の重心どうしを重ねる（＝差し替えで動かない）
+    var oLeft = Math.round(kLeft + HT_K_OX * kw - HT_W_OX * ow);
+    var gLeft = Math.round(kLeft + HT_K_GX * kw - HT_W_GX * gw);
+    var oFrom = -ow - 8, gFrom = cw + 8;               // 出発点＝それぞれの画面外
+    /* コマ送り間隔＝歩く距離から逆算（滑り防止）。⚠️極端なワイプ比でも破綻しないよう上下限で挟む */
+    function stepMs(dist, h) {
+      return Math.round(Math.min(HT_BASE.STEP_MAX, Math.max(HT_BASE.STEP_MIN,
+        HT_BASE.WALK * HT_BASE.STRIDE * h / Math.max(1, dist))));
+    }
+
+    var box = document.createElement("div");
+    box.className = "fx-ht";
+    var v = {
+      "--o-w": ow + "px", "--o-h": oh + "px", "--o-l": oLeft + "px", "--o-t": (baseY - oh) + "px",
+      "--o-x0": (oFrom - oLeft) + "px", "--o-step": (stepMs(oLeft - oFrom, oh) / 1000) + "s",
+      "--g-w": gw + "px", "--g-h": gh + "px", "--g-l": gLeft + "px", "--g-t": (baseY - gh) + "px",
+      "--g-x0": (gFrom - gLeft) + "px", "--g-step": (stepMs(gFrom - gLeft, gh) / 1000) + "s",
+      "--k-w": kw + "px", "--k-h": kh + "px", "--k-l": kLeft + "px", "--k-t": kTop + "px",
+      "--walk": (HT_BASE.WALK / 1000) + "s", "--capin": (HT_BASE.CAP_IN / 1000) + "s",
+      // ✋手が触れる点＝閃光と衝撃波の中心（ワイプ座標）。リングは枠の対角ぶん広がれば抜け切る
+      "--tx": Math.round(kLeft + HT_K_TX * kw) + "px",
+      "--ty": Math.round(kTop + HT_K_TY * kh) + "px",
+      // 同じ点をキメ絵の中での%でも渡す＝キメ絵が「寄る」ときの原点（transform-originは要素内座標）
+      "--k-tx": (HT_K_TX * 100).toFixed(2) + "%",
+      "--k-ty": (HT_K_TY * 100).toFixed(2) + "%",
+      "--ring": Math.round(Math.max(cw, ch) * 1.5) + "px"
+    };
+    Object.keys(v).forEach(function (k) { box.style.setProperty(k, v[k]); });
+    box.innerHTML =
+      '<div class="ht-stage">' +
+        '<div class="ht-run o"><div class="ht-body">' +
+          '<i class="ht-img w1"></i><i class="ht-img w2"></i></div></div>' +
+        '<div class="ht-run g"><div class="ht-body">' +
+          '<i class="ht-img w1"></i><i class="ht-img w2"></i></div></div>' +
+        '<i class="ht-kime"></i>' +
+      "</div>" +
+      '<i class="ht-ring"></i><i class="ht-flash"></i>' +
+      '<div class="ht-cap"><span></span></div>';
+    box.querySelector(".ht-cap span").textContent = HT_CAP;
+    cam.appendChild(box);
+    fitTeaCap(box.querySelector(".ht-cap span"), cw);   // キメ文字のフィット＝お茶と同手法
+
+    box.classList.add("walking");
+    setTimeout(function () {
+      if (gen !== fxGen || !box.parentNode) return;
+      box.classList.remove("walking");                  // 止まる＝コマ送りを切ってw1で固定
+      box.classList.add("standing");
+    }, T.STOP);
+    setTimeout(function () {
+      if (gen !== fxGen || !box.parentNode) return;
+      box.classList.remove("standing");
+      box.classList.add("clap");                        // パチン！＝閃光の下でキメ絵へ差し替え
+    }, T.CLAP);
+    setTimeout(function () { if (gen === fxGen) box.classList.add("capin"); }, T.CAP);
+    setTimeout(function () { if (gen === fxGen) box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
   /* アジャスト（8/11 FB130・青メンバーの2つ目＝Naoto案）：「アジャ・・」が右から左へ流れる
      （まばら→どんどん密に）→一通り流れたら本人が右からてくてく歩いて中央で止まる→一拍→
      しゃがんで溜める→バッ！とダブルバイセップス＝「アジャストー！！」がドン。
@@ -2848,6 +3027,7 @@
         同じ的中IDなら全ソースが同じ計算＝どのシーンに切り替えても同じ絵になる。 */
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
        rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／samba／dance／peye
+       ／hitouch＝ダブル的中の共演（⚠️本来は2人揃わないと出ない＝これで単独確認できる）
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
        本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
        選んだ状態で強制すると「絵は別人・枠の色は選んだ人」という組み合わせになる（ラボ用途では想定内） */
@@ -2898,6 +3078,9 @@
   }
   /* 表の自己検査（8/27）＝合計100か・演出名のタイプミスがないか。
      ⚠️OBSではコンソールが見えない＝これは補助。本当の関門は公開前の fxdisttest.js */
+  /* ⚠️ここに hitouch（ダブル的中の共演）は**入れない**。あれは2人揃って初めて成立する演出で、
+     MEMBER_RATESに書いても「1人の的中で出る」ようにはならない（正しい置き場はPAIR_FX）。
+     入れないでおくと、間違ってこの表に書いたときに未知の演出名として警告が出る＝安全弁 */
   var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, tea: 1,
     samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1 };
   function auditRates() {
@@ -2912,9 +3095,13 @@
   }
   auditRates();
 
-  function pickEffect(key, hit) {
+  function pickEffect(key, hit, pairFx) {
     var force = window.__FX_FORCE || FX_FORCE;
     if (force && force !== "auto") return force === "rain" ? "" : force;
+    /* ダブル的中の共演演出（8/28）＝**一時固定（FX_PIN）より優先**。
+       理由＝ダブルは滅多に出ない特別枠なのに、戻し忘れた固定が生きていると黙って消える。
+       「今だけ○○固定」の期間にたまたまダブルが出たら、そっちを見せたい（Naoto確認済み） */
+    if (pairFx) return pairFx;
     if (FX_PIN[key]) return FX_PIN[key]; // 今だけの固定枠（上のFX_PIN参照・戻し忘れ注意）
     var rates = MEMBER_RATES[key];
     if (!rates) return "";               // 表に無い色＝名簿外＝既定のアイコン走行（従来動作）
@@ -3145,7 +3332,7 @@
      自分の世代と違えば何もしない（止められないタイマーの空振り対策） */
   var fxGen = 0;
   var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea," +
-    " .fx-adj, .fx-samba, .fx-peye, .fx-thx, .hit-fx-badge";
+    " .fx-adj, .fx-samba, .fx-peye, .fx-thx, .fx-ht, .hit-fx-badge";
   function clearHitFx() {
     fxGen++;
     var nodes = document.querySelectorAll(FX_ROOTS);
@@ -3165,9 +3352,10 @@
   }
   window.__clearHitFx = clearHitFx;   // 検証ハーネス（fxlab）から叩く
 
-  function fireHitFx(slot, hit, rc) {
+  function fireHitFx(slot, hit, rc, pairFx) {
     var key = memberKey(rc);
-    var eff = key ? pickEffect(key, hit) : "";
+    // ⚠️pairFxは色キーが無い人には立たない（pairFxForが両者の色キーを要求する）＝keyなしでも安全
+    var eff = pickEffect(key, hit, pairFx);
     var gen = fxGen;
     // スロットは当たり目の数字そのものを見せる演出。車番が取れない的中（手動追加）では
     // 数字を作り話にせず、既定のアイコン走行に落とす
@@ -3186,6 +3374,7 @@
       : eff === "adjust" ? adjTimes().END
       : eff === "peye" ? peyeTimes().END
       : eff === "thanks" ? thxTimes().END
+      : eff === "hitouch" ? htTimes().END
       : (key ? fxConf(key).rainMs : 0);
     // 遠隔自動更新（autoupdate.js・要件§12）への「演出中」通知＝force時はこの時刻まで待つ。
     // rainMs＝バッジが出るまで／HIT_FX_MS＝バッジ・買目強調の持続
@@ -3212,6 +3401,7 @@
       else if (eff === "adjust") spawnAdjust(cam, key);
       else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
       else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）
+      else if (eff === "hitouch") spawnHitouch(cam);           // ダブル的中の共演＝ペア表（8/28）
       else if (key) spawnRain(cam, key);
       // 掃除（clearHitFx）が挟まったらバッジは出さない＝消したのに後から出る事故を防ぐ
       setTimeout(function () { if (gen === fxGen) showHitBadge(cam, hit, key); }, rainMs);
