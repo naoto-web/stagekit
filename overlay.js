@@ -20,6 +20,14 @@
      ロールバック＝ソースURLに &v2=0（旧レイアウトへ即復帰・デプロイ不要）。
      &ln=0 … 車番チップの下の苗字だけ消す（ラインと枠はそのまま） */
   var V2 = params.get("v2") !== "0";
+  /* ②サブ予想枠を常時確保するか（8/28・§10項86＝8/27夜の空白事故の対策）。
+     true＝ワイプ穴を常に362pxに固定する。**枠の有無はレイアウト＝OBSのカメラ座標と噛み合う幾何**
+     なので、サブ場の選択状態（人・場リスト・日付リセットで勝手に変わる）に連動させてはいけない。
+     福岡のカメラがサブ用座標(1550・362幅)でも通常座標(1368・544幅)でも、どちらでも空白は出ない
+     ＝前者はぴったり埋まり、後者はカメラの左182pxが枠の下に隠れるだけ（画角確認済み・Naoto 8/28）。
+     ⚠️falseへ戻してよいのは、OBSのカメラが1368・544幅だと実機で確認できた時だけ。
+        一時的に外して見たい時はソースURLに &subfix=0（デプロイ不要） */
+  var SUB_FIXED = params.get("subfix") !== "0";
   /* 苗字は既定ON（8/13 Naoto判断）。出すにはヘッダー行を82pxまで広げる必要があり、
      その差分（約30px）は買い目エリアから借りている＝トレードオフを承知のうえでの選択。
      レース映像に重ねる案は映像利用の条件で不可・予想帯208pxは伸ばせないため他に置き場がない。
@@ -1151,7 +1159,10 @@
       var vn = (state.raceSubBy || {})[rc.id] || state.raceSubVenue;
       return vn && state.venues.some(function (v) { return v.name === vn; }) ? vn : null;
     };
-    document.body.classList.toggle("race-sub-on", !!(subVenueOf(seats.a) || subVenueOf(seats.b)));
+    // 枠の有無はレイアウト＝OBSのカメラ座標と噛み合う幾何なので、SUB_FIXED中は選択状態で切り替えない。
+    // （旧＝サブ場が1人でも有効なら枠を出す。この連動が8/27夜の空白事故の直接原因・§10項86）
+    document.body.classList.toggle("race-sub-on",
+      SUB_FIXED || !!(subVenueOf(seats.a) || subVenueOf(seats.b)));
     ["a", "b"].forEach(function (slot) {
       var rc = seats[slot];
       var name = rc ? rc.name : "";
@@ -1269,7 +1280,9 @@
       if (sHead) {
         var svn = subVenueOf(rc);
         var sPanel = sHead.parentElement;
-        if (sPanel) sPanel.style.display = (rc && svn) ? "" : "none";
+        // SUB_FIXED中は席に人が居れば枠ごと出す（サブ場が未選択・無効でもヘッダーだけ残す）。
+        // 畳むと182pxの列が素通しになり、その下のカメラ／背景が覗く（＝空白に見える）
+        if (sPanel) sPanel.style.display = (rc && (svn || SUB_FIXED)) ? "" : "none";
         var sName = $("sband-name-" + slot);
         if (sName) {
           // 「予想（NEXT）」は添え字（.sub-sfx＝0.62em）に分離＝同サイズで並べると

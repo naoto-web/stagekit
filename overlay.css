@@ -724,9 +724,13 @@ body.debug #scene-tenkai .slist:empty::after {
 .race-wipes .cam { flex: 1 1 0; }
 /* ②サブ予想（8/6 FB13）：タイマー1枚目の区切り線を下へ延長した位置（左182px）に別場の予想を縦2段。
    既定OFF＝従来レイアウト（ワイプ544幅のまま）。ONはコンソール「②サブ予想の場」で場選択。
-   ⚠️ON運用はOBS側でカメラ1/2を x1550・バウンディング362×404へ移動（戻す時＝x1368・544×404） */
+   ⚠️OBSのカメラ1/2は常に x1368・544×404 固定＝モードで動かさない（8/28・§10項86）。ONのときは
+      カメラの左182pxがこの枠の下に隠れるだけ。動かす運用だと、サブがOFFに転んだ瞬間に穴だけ544へ
+      広がり、カメラの無い左182pxが空白になる（8/27夜の放送事故）。
+   ⚠️背景を不透明にしておくこと＝この枠の下にカメラが来る運用になったため。--panel は 94% なので
+      パネルだけでは6%透ける（枠自体に --bg2 を敷いて素通しを塞ぐ） */
 .race-sub { display: none; width: 182px; flex: 0 0 182px; flex-direction: column;
-  border-right: 1.5px solid var(--panel-line); }
+  background: var(--bg2); border-right: 1.5px solid var(--panel-line); }
 body.race-sub-on .race-sub { display: flex; }
 .sub-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
 .sub-head { font-size: 18px; padding: 5px 7px; white-space: nowrap; overflow: hidden; } /* 折返し禁止＝JSが幅に合わせて縮小（8/6 FB18）・左右paddingは8/13 FBで10→7に詰めて文字幅を稼いだ */
