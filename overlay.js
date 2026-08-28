@@ -1801,7 +1801,7 @@
     if (!seats.a || !seats.b) return "";
     var ka = memberKey(seats.a), kb = memberKey(seats.b);
     if (!ka || !kb || ka === kb) return "";
-    var eff = PAIR_FX[[ka, kb].sort().join("|")];  // ⚠️キーはアルファベット順（席の左右に依存させない）
+    var eff = pairEffectOf(ka, kb);
     if (!eff) return "";
     var byRace = {};
     for (var i = 0; i < fresh.length; i++) {
@@ -1912,19 +1912,20 @@
      ここまでの演出は全部「**誰が**当てたか」で決まる。この表はもう一つの軸＝
      「**2人が同じレースを当てたか**」で決まる演出を持つ。成立したら個人演出も結果発表も出さず、
      両方のワイプに**同じ絵**が同期して出る（＝2画面で1つの出来事が起きているように見せる）。
-     書き方＝ "色キー|色キー": "演出キー"。⚠️**キーはアルファベット順**（green|orange・
-       red|blue ではなく blue|red）。席の左右で表を引き分けないための決まり
-     ⚠️絵が特定の2人に紐づくので、表に無いペアは何も起きない＝いつもどおり個人演出に落ちる。
-       新しいペアを足すときは演出キーも絵も新規に要る（この表に1行足すだけでは出ない）
      成立条件＝**同じレース**を席aと席bの両方が的中（→ pairFxFor）。
-       同じレースなら「結果を確定」1回で両方の的中が同時に立つので、押しズレは起きない */
-  var PAIR_FX = {
-    "green|orange": "hitouch"   // 橙×緑＝ハイタッチ（8/28・素材＝fx_ht_*.png）
-  };
-  /* 検証ハーネス（fxlab）専用の窓口＝「いま選んでいる演出はペア演出か／相手は誰か」を引くため。
-     ⚠️ラボは的中を1人ぶんしか作らないので、これが無いと**またぎ表示で片方のワイプが空になる**
-       （8/28実見）。本番の動作には一切関与しない（__clearHitFx と同じ立ち位置） */
-  window.__PAIR_FX = PAIR_FX;
+       同じレースなら「結果を確定」1回で両方の的中が同時に立つので、押しズレは起きない。
+     ⚠️**ペアの一覧表は持たない**（8/28改訂）。ハイタッチは1色ずつの部品（歩行＋ポーズ）から
+       実行時に合成するので、**素材がある色どうしなら全部の組み合わせで成立する**＝
+       HT_CHARSに色を1行足すだけで、その色を含む組み合わせが全部増える。
+       （ペアごとにキメ絵を用意する方式だと、色が増えるたびに組み合わせの数＝2乗で絵が要った） */
+  function pairEffectOf(ka, kb) {
+    if (HT_CHARS[ka] && HT_CHARS[kb]) return "hitouch";
+    return "";   // 別のペア演出を足すときはここに条件を並べる
+  }
+  /* ⚠️ラボ用の公開（window.__HT_COLORS）は **HT_CHARS の宣言の直後** に置いてある。
+     ここに書いてはいけない：varは巻き上げられるので**この時点では中身がundefined**で、
+     `window.__HT_COLORS = HT_CHARS` が空になる（8/28に実際にやって、fxlabで相方のワイプが
+     空のままになった）。関数の中で参照するぶんには呼び出し時に解決されるので問題ない。 */
 
   /* 役物合体の尺（8/8 FB82）。倍率kを掛けるのは「焦らし」の2つ（寄る・震える）だけ。
      ⚠️合体の一撃(CSS .fx-piece.lock の0.13秒)には掛けない：
@@ -2075,32 +2076,48 @@
         あるが完全一致ではないので、閃光が消えてから切り替えると乗り換えが見える */
   var HT_BASE = { WALK: 4200, STRIDE: 0.104, STEP_MIN: 180, STEP_MAX: 620, SETTLE: 300,
     CAP_LAG: 620, CAP_IN: 700, HOLD: 2400, FADE: 450 };
-  var HT_H = 0.78;      // 橙キャラの背丈＝ワイプ高に対する比（お茶と同じ）
+  /* ⚠️大きさの基準は「背丈」ではなく**手の高さ**（8/28・合成方式への作り替えで変更）。
+     絵によって腕を上げる高さが違うので、背丈を揃えると**手が合わない**。手を揃えると
+     別の絵から来た2人に数%の身長差が出るが、そちらのほうが自然（＝身長差のある2人に見える）。
+     0.469＝4色の平均の背丈がワイプ高の約76%になる値（実測の pHY から逆算）。
+     ⚠️素材加工/fx_hitouch_make.py の検算画像も同じ数字を使っている＝変えたら両方直す */
+  var HT_HANDH = 0.469; // 手を合わせる高さ＝足元のラインから上へ・ワイプ高に対する比
   var HT_BOTTOM = 0.96; // 足元のライン＝ワイプ高に対する比（1.0で下端）
   var HT_CAP_Y = 0.74;  // キメ文字の高さ＝ワイプ高に対する比
-  var HT_CAP_H = 0.17;  // 同・文字の大きさ＝ワイプ高に対する比（幅に収まらなければ自動で縮む）
-  var HT_CAP_GAP = 0.008; // またぎのとき、境目から文字を離す量＝ワイプ幅に対する比（枠線に触れさせない）
-  /* ⚠️キメ絵は「橙が左・緑が右」で描かれている。またぎ表示のときだけ、緑の人が左の席にいると
-     **橙のキャラが緑の人のカメラに出てしまう**ので演出ごと左右反転して席順に合わせる。
-     反転すると髪の分け目・リボン・羽根の向きが逆になる＝そちらが気になるなら false に戻す */
-  var HT_LEFT_KEY = "orange", HT_RIGHT_KEY = "green";
-  var HT_MIRROR_TO_SEAT = true;
-  /* ⚠️ここから下は **素材加工/fx_hitouch_make.py が出力した実測値**。
-     絵を差し替えたらスクリプトを再実行して丸ごと貼り直す（手で書き換えない）。
-     歩きとキメ絵で「キャラの大きさ・立ち位置」を繋ぐための数字なので、
-     1つでも古いままだとパチンの瞬間にキャラが瞬間移動する */
-  var HT_AR_O   = 0.6020;  // fx_ht_o1/o2.png の横/縦
-  var HT_AR_G   = 0.5300;  // fx_ht_g1/g2.png の横/縦
-  var HT_AR_K   = 1.3610;  // fx_ht_kime.png の横/縦
-  var HT_G_REL  = 1.0107;  // 緑の背丈 ÷ 橙の背丈（キメ絵での比＝歩きもこの比で描く）
-  var HT_K_REL  = 1.0107;  // キメ絵の高さ ÷ キメ絵の中の橙の背丈
-  var HT_K_OX   = 0.2378;  // キメ絵の中の橙の衣装色重心x（キメ絵幅に対する比）
-  var HT_K_GX   = 0.7472;  // 同・緑
-  var HT_K_OFY  = 1.0000;  // キメ絵の中の橙の足元y（キメ絵高に対する比）
-  var HT_W_OX   = 0.5277;  // 歩行素材の中の橙の衣装色重心x（素材幅に対する比）
-  var HT_W_GX   = 0.4503;  // 同・緑
-  var HT_K_TX   = 0.4892;  // ✋手が触れる点x（キメ絵幅に対する比）＝閃光・衝撃波の発生源
-  var HT_K_TY   = 0.2312;  // 同・y（キメ絵高に対する比）
+  /* 文字の大きさ＝ワイプ高に対する比（幅に収まらなければ自動で縮む）。
+     8/29 Naoto「もっと大きく」で 0.17→0.26。またぎのときは**それぞれのワイプの中央**に置くので
+     （境目に寄せていた頃と違い）幅に余裕があり、この大きさでも収まる */
+  var HT_CAP_H = 0.26;
+  /* ══════════ 色ごとの素材の実測値（8/28・合成方式） ══════════
+     ⚠️**素材加工/fx_hitouch_make.py が出力したものを丸ごと貼る**（手で書き換えない）。
+       絵を差し替えたら再実行して貼り直す。1つでも古いとパチンの瞬間にキャラが瞬間移動する。
+     w*＝歩行素材／p*＝ハイタッチのポーズ素材
+       AR   …横/縦
+       SX   …衣装色の重心x（幅に対する比）＝歩き→ポーズで体を横に動かさないための目印
+       pHX/pHY …手の接点（幅・高さに対する比）。**ここを相手の手と重ねる**
+       Face …その絵がどちらを向いているか（"r"＝右向き／"l"＝左向き）。
+              左に立つ人は右向きが要る＝違えば実行時に左右反転する
+     ⚠️**この表に色を1行足すと、その色を含む組み合わせが全部増える**（ペアの表は持たない）。
+       CSSにも3行（w1/w2/ポーズの画像指定）を足すこと＝overlay.cssの .ht-img.c-〇〇 の並び */
+  var HT_CHARS = {
+    orange: { wAR: 0.5990, wSX: 0.5350, wFace: "r",
+              pAR: 0.6720, pSX: 0.4981, pHX: 0.9982, pHY: 0.3645, pFace: "r" },
+    green:  { wAR: 0.5320, wSX: 0.4483, wFace: "l",
+              pAR: 0.6960, pSX: 0.5055, pHX: 0.0000, pHY: 0.3718, pFace: "l" },
+    blue:   { wAR: 0.5920, wSX: 0.4483, wFace: "l",
+              pAR: 0.6600, pSX: 0.4809, pHX: 0.0000, pHY: 0.4038, pFace: "l" },
+    pink:   { wAR: 0.5730, wSX: 0.5182, wFace: "l",
+              pAR: 0.6590, pSX: 0.4579, pHX: 0.9982, pHY: 0.3890, pFace: "r" },
+    yellow: { wAR: 0.5860, wSX: 0.5028, wFace: "l",
+              pAR: 0.6950, pSX: 0.4367, pHX: 0.9983, pHY: 0.3938, pFace: "r" },
+    red:    { wAR: 0.5980, wSX: 0.5252, wFace: "l",
+              pAR: 0.6600, pSX: 0.5263, pHX: 0.0000, pHY: 0.3952, pFace: "l" }
+  };
+  /* 検証ハーネス（fxlab）専用の窓口＝ラボが「ペアになれる色」を知るため。
+     ⚠️**必ずHT_CHARSの宣言より後に置く**（varの巻き上げでundefinedが入る・8/28に踏んだ）。
+       これが空だとラボは的中を1人ぶんしか作れず、**またぎ表示で片方のワイプが空になる**。
+       本番の動作には一切関与しない（__clearHitFx と同じ立ち位置） */
+  window.__HT_COLORS = HT_CHARS;
   /* キメ文字（8/28 Naoto指定→同日改定）。
      ⚠️またぎ表示では**境目の線が文字を割る**（初版は「W的中！！」を境目の真上に1本置いたので
        「中」の真ん中を枠線が通った＝Naoto指摘）。**意味の切れ目で2枚に分け、線を挟んで並べる**＝
@@ -2761,85 +2778,110 @@
       if (straddle) pw = partner.clientWidth || cw;
     }
 
-    // 橙の背丈を基準に、緑とキメ絵の寸法を実測比で決める＝歩きとキメで大きさが繋がる
-    var oh = Math.round(ch * HT_H),        ow = Math.round(oh * HT_AR_O);
-    var gh = Math.round(oh * HT_G_REL),    gw = Math.round(gh * HT_AR_G);
-    var kh = Math.round(oh * HT_K_REL),    kw = Math.round(kh * HT_AR_K);
-    var baseY = Math.round(ch * HT_BOTTOM);            // 足元のライン（2人ともここに立つ）
+    /* ══ 誰と誰か＝**席順そのまま**（左のワイプ＝席a・右のワイプ＝席b） ══
+       合成方式では**どちらの色でも左右どちらにも立てる**（向きが合わなければ絵を反転する）ので、
+       「絵に合わせて人を入れ替える」必要がない＝席順に素直に従える（8/28の作り替えで解消）。
+       ⚠️?fx=hitouch で無理やり出したときなど、素材の無い色が席にいたら表の先頭2色で代用する */
+    var seats = seatMap();
+    var ka = memberKey(seats.a), kb = memberKey(seats.b);
+    if (!HT_CHARS[ka] || !HT_CHARS[kb] || ka === kb) {
+      var ks = Object.keys(HT_CHARS);
+      ka = ks[0]; kb = ks[1];
+    }
+
+    var baseY = Math.round(ch * HT_BOTTOM);          // 足元のライン（2人ともここに立つ）
+    var handY = Math.round(baseY - ch * HT_HANDH);   // 手を合わせる高さ（2人ともここで合わせる）
     /* 「世界」＝2枚のワイプをつないだ座標（原点＝自分のワイプの左上）。
        またぎのときは**両方のワイプが同じ世界を描き**、はみ出しはワイプのoverflow:hiddenが切る＝
        2枚の絵が境目でぴたりと繋がる（各ワイプは自分の担当キャラだけが見える結果になる）。 */
     var worldL = straddle ? (partnerRight ? 0 : -pw) : 0;
     var worldR = straddle ? (partnerRight ? cw + pw : cw) : cw;
     var bx = straddle ? (partnerRight ? cw : 0) : cw / 2;   // ハイタッチが起きるx（境目／単独なら中央）
-    var kLeft = Math.round(bx - kw / 2);
-    var kTop  = Math.round(baseY - HT_K_OFY * kh);
-    // 止まる位置＝キメ絵の中の自分の立ち位置。衣装色の重心どうしを重ねる（＝差し替えで動かない）
-    var oLeft = Math.round(kLeft + HT_K_OX * kw - HT_W_OX * ow);
-    var gLeft = Math.round(kLeft + HT_K_GX * kw - HT_W_GX * gw);
-    var oFrom = Math.round(worldL - ow - 8), gFrom = Math.round(worldR + 8); // 出発点＝世界の外側
-    /* ⚠️席順に合わせた左右反転（またぎのときだけ）。絵は「橙が左・緑が右」で描かれているので、
-       緑の人が左の席にいると**橙のキャラが緑の人のカメラに出る**＝事故に見える。
-       反転すると髪の分け目・リボン・羽根の向きが逆になるが、人とキャラが入れ替わるよりマシと判断。
-       固定に戻したいときは HT_MIRROR_TO_SEAT を false にする（1か所） */
-    var seats = seatMap();
-    var mirror = straddle && HT_MIRROR_TO_SEAT && memberKey(seats.a) === HT_RIGHT_KEY;
+
+    /* 1人ぶんの寸法と位置を組む。
+       ・ポーズ＝**手の高さで正規化**（手から足元までの比で割る）＝どの絵でも手が同じ高さに来る
+       ・歩き  ＝**胴の高さをポーズに合わせる**＝パチンで体の大きさが変わらない
+       ・横位置＝ポーズは手を境目に、歩きはポーズの衣装色重心に合わせる＝差し替えで横に動かない
+       ・向き  ＝必要な向きと違う絵は左右反転（反転すると比率 x は 1-x になる） */
+    function layout(key, isLeft) {
+      var C = HT_CHARS[key], need = isLeft ? "r" : "l";
+      var pFlip = C.pFace !== need, wFlip = C.wFace !== need;
+      var ph = (baseY - handY) / (1 - C.pHY), pw2 = ph * C.pAR;
+      var pHX = pFlip ? (1 - C.pHX) : C.pHX;
+      var pLeft = bx - pHX * pw2;
+      /* 歩きの背丈＝ポーズと同じ（8/29 Naoto「赤が歩いてくるとき大きい」で変更）。
+         ⚠️どちらの素材も**頭のてっぺんから足元まで**で切ってあるので、枠の高さ＝背丈。
+           以前は胴（衣装色）の高さを合わせていたが、衣装色の採れ方が絵ごとに微妙に違い
+           （赤は6%ぶん歩きが大きくなっていた）、パチンで体の大きさが変わって見えた。
+         ⚠️前提＝ポーズで**上げた手が頭より上に出ていない**こと（現素材はすべて眉〜目の高さ）。
+           手が頭を越える絵を足したら、その絵だけ枠が伸びるのでここに補正が要る */
+      var wh = ph, ww = wh * C.wAR;
+      var wLeft = (pLeft + (pFlip ? (1 - C.pSX) : C.pSX) * pw2) - (wFlip ? (1 - C.wSX) : C.wSX) * ww;
+      var from = isLeft ? (worldL - ww - 8) : (worldR + 8);   // 出発点＝世界の外側
+      return { key: key, pFlip: pFlip, wFlip: wFlip,
+        pw: Math.round(pw2), ph: Math.round(ph), pl: Math.round(pLeft), pt: Math.round(baseY - ph),
+        ww: Math.round(ww), wh: Math.round(wh), wl: Math.round(wLeft), wt: Math.round(baseY - wh),
+        x0: Math.round(from - wLeft), dist: Math.abs(wLeft - from) };
+    }
+    var A = layout(ka, true), B = layout(kb, false);
+
     /* コマ送り間隔＝歩く距離から逆算（滑り防止）。⚠️極端なワイプ比でも破綻しないよう上下限で挟む。
-       ⚠️またぎ（歩く距離736px級）と単独（256px級）で距離が3倍違う＝同じ間隔にすると必ず片方が滑る。
+       ⚠️またぎ（歩く距離700px級）と単独（250px級）で距離が3倍違う＝同じ間隔にすると必ず片方が滑る。
          上下限を広めに取って**どちらも足が地面と合う**ようにしてある（単独側はゆっくり歩きになる） */
     function stepMs(dist, h) {
       return Math.round(Math.min(HT_BASE.STEP_MAX, Math.max(HT_BASE.STEP_MIN,
         HT_BASE.WALK * HT_BASE.STRIDE * h / Math.max(1, dist))));
     }
-    // ✋手が触れる点（世界座標）＝閃光と衝撃波の中心。反転時は境目を軸に折り返す
-    var tx = kLeft + HT_K_TX * kw;
-    if (mirror) tx = 2 * bx - tx;
-    var ty = kTop + HT_K_TY * kh;
-    // リングは「触れる点から見て最も遠い角」まで届けば画面を抜け切る（境目＝枠の端が中心になるため）
+    // ✋手が触れる点＝閃光・衝撃波・キラッの中心。リングは最も遠い角まで届けば画面を抜け切る
+    var tx = bx, ty = handY;
     function far(x, y) { return Math.sqrt(x * x + y * y); }
     var reach = Math.max(far(tx, ty), far(cw - tx, ty), far(tx, ch - ty), far(cw - tx, ch - ty));
-    // キメ文字＝またぎなら境目を挟んで左右に分ける（線が字を割らないように少しだけ離す）
-    var capGap = Math.round(cw * HT_CAP_GAP);
+    /* キメ文字＝またぎなら**それぞれのワイプの中央**に1語ずつ（8/29 Naoto指示）。
+       ⚠️8/28は境目を挟んで寄せていたが、字を大きくすると境目付近が窮屈になるため中央へ。
+         左のワイプに「ダブル」・右のワイプに「的中！！」＝2枚並べて1つのフレーズに読める */
     var capText = straddle ? (partnerRight ? HT_CAP_L : HT_CAP_R) : HT_CAP;
     var capAll  = straddle ? [HT_CAP_L, HT_CAP_R] : [HT_CAP];   // 大きさは長いほうに合わせる
 
     var box = document.createElement("div");
-    box.className = "fx-ht" + (mirror ? " mirror" : "") + (straddle ? " straddle" : "");
+    box.className = "fx-ht" + (straddle ? " straddle" : "");
     var v = {
-      "--o-w": ow + "px", "--o-h": oh + "px", "--o-l": oLeft + "px", "--o-t": (baseY - oh) + "px",
-      "--o-x0": (oFrom - oLeft) + "px", "--o-step": (stepMs(oLeft - oFrom, oh) / 1000) + "s",
-      "--g-w": gw + "px", "--g-h": gh + "px", "--g-l": gLeft + "px", "--g-t": (baseY - gh) + "px",
-      "--g-x0": (gFrom - gLeft) + "px", "--g-step": (stepMs(gFrom - gLeft, gh) / 1000) + "s",
-      "--k-w": kw + "px", "--k-h": kh + "px", "--k-l": kLeft + "px", "--k-t": kTop + "px",
+      "--a-ww": A.ww + "px", "--a-wh": A.wh + "px", "--a-wl": A.wl + "px", "--a-wt": A.wt + "px",
+      "--a-x0": A.x0 + "px", "--a-step": (stepMs(A.dist, A.wh) / 1000) + "s",
+      "--a-pw": A.pw + "px", "--a-ph": A.ph + "px", "--a-pl": A.pl + "px", "--a-pt": A.pt + "px",
+      "--a-wf": A.wFlip ? "-1" : "1", "--a-pf": A.pFlip ? "-1" : "1",
+      "--b-ww": B.ww + "px", "--b-wh": B.wh + "px", "--b-wl": B.wl + "px", "--b-wt": B.wt + "px",
+      "--b-x0": B.x0 + "px", "--b-step": (stepMs(B.dist, B.wh) / 1000) + "s",
+      "--b-pw": B.pw + "px", "--b-ph": B.ph + "px", "--b-pl": B.pl + "px", "--b-pt": B.pt + "px",
+      "--b-wf": B.wFlip ? "-1" : "1", "--b-pf": B.pFlip ? "-1" : "1",
       "--walk": (HT_BASE.WALK / 1000) + "s", "--capin": (HT_BASE.CAP_IN / 1000) + "s",
-      "--bx": Math.round(bx) + "px",                       // 反転の軸＝境目
       "--tx": Math.round(tx) + "px", "--ty": Math.round(ty) + "px",
-      // 同じ点をキメ絵の中での%でも渡す＝キメ絵が「寄る」ときの原点（transform-originは要素内座標）
-      "--k-tx": (HT_K_TX * 100).toFixed(2) + "%",
-      "--k-ty": (HT_K_TY * 100).toFixed(2) + "%",
       "--ring": Math.round(reach * 2.1) + "px",
-      /* キメ文字。またぎのときは**境目の線を挟んで左右に分けて置く**（線が字を割らないように）。
-         左のワイプ＝境目に右寄せ／右のワイプ＝境目に左寄せ。単独のときは中央に1本 */
-      "--cap-x": Math.round(straddle ? (partnerRight ? bx - capGap : bx + capGap) : cw / 2) + "px",
+      "--spark": Math.round(ch * 0.16) + "px",           // パチンのキラッの大きさ
+      // キメ文字＝またぎでも単独でも**自分のワイプの中央**に置く（8/29）
+      "--cap-x": Math.round(cw / 2) + "px",
       "--cap-y": Math.round(ch * HT_CAP_Y) + "px",
-      "--cap-tx": straddle ? (partnerRight ? "-100%" : "0%") : "-50%",
-      "--cap-o": straddle ? (partnerRight ? "100% 50%" : "0% 50%") : "50% 50%"
+      "--cap-tx": "-50%", "--cap-o": "50% 50%"
     };
     Object.keys(v).forEach(function (k) { box.style.setProperty(k, v[k]); });
+    /* ⚠️絵のURLは**CSS側**に持つ（`.ht-img.c-<色>`）＝相対URLがCSSの位置で解決される。
+       JSで背景画像を入れると、ページの位置で解決されて検証ハーネスから404になる（既存の教訓） */
+    function walkHtml(slot, key) {
+      return '<div class="ht-run ' + slot + '"><div class="ht-body"><div class="ht-flip">' +
+        '<i class="ht-img w1 c-' + key + '"></i><i class="ht-img w2 c-' + key + '"></i>' +
+        "</div></div></div>";
+    }
     box.innerHTML =
       '<div class="ht-stage"><div class="ht-world">' +
-        '<div class="ht-run o"><div class="ht-body">' +
-          '<i class="ht-img w1"></i><i class="ht-img w2"></i></div></div>' +
-        '<div class="ht-run g"><div class="ht-body">' +
-          '<i class="ht-img w1"></i><i class="ht-img w2"></i></div></div>' +
-        '<i class="ht-kime"></i>' +
+        walkHtml("a", A.key) + walkHtml("b", B.key) +
+        '<div class="ht-pw a"><i class="ht-pose c-' + A.key + '"></i></div>' +
+        '<div class="ht-pw b"><i class="ht-pose c-' + B.key + '"></i></div>' +
       "</div></div>" +
-      '<i class="ht-ring"></i><i class="ht-flash"></i>' +
+      '<i class="ht-ring"></i><i class="ht-spark"><b></b></i><i class="ht-flash"></i>' +
       '<div class="ht-cap"><span></span></div>';
     box.querySelector(".ht-cap span").textContent = capText;
     cam.appendChild(box);
     // 文字の大きさはワイプの高さ基準。⚠️使える幅は**自分のワイプの中だけ**（またぎでも世界の幅ではない）
-    fitHtCap(box.querySelector(".ht-cap span"), cw - capGap, ch, capAll);
+    fitHtCap(box.querySelector(".ht-cap span"), cw, ch, capAll);
 
     box.classList.add("walking");
     setTimeout(function () {

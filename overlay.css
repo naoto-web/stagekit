@@ -1671,63 +1671,110 @@ body.race-sub-on .race-sub { display: flex; }
 .fx-tea.out { animation: teaOut .45s ease-in forwards; }
 
 /* ══════════ ハイタッチ＝ダブル的中の共演演出（8/28 Naoto案）
-   橙が左から・緑が右からてくてく歩いてきて中央で止まり、パチン！＝白閃光＋衝撃波＋揺れ
-   の瞬間に「2人が手を合わせた1枚絵」へ差し替え → 「W的中！！」。
-   ⚠️歩き（2体バラバラ）→キメ（2体で1枚）の差し替えなので、位置と大きさはJS側が
-     実測比（HT_*）で計算してCSS変数で渡す。ここに座標を直書きしない。
+   2人が左右のワイプからてくてく歩いてきて、ワイプとワイプの境目で手を合わせる。
+   パチン！＝白閃光＋衝撃波＋揺れ の瞬間に歩きからハイタッチのポーズへ差し替え → キメ文字。
+   ⚠️**1色ずつの部品（歩行2コマ＋ポーズ1枚）から実行時に合成する**（8/28改訂）＝
+     どの2人の組み合わせでも出せる。位置・大きさ・左右反転はJS側が実測値から計算して
+     CSS変数で渡す。**ここに座標を直書きしない**。
    ⚠️差し替えは閃光の下＝.ht-flash が最大の瞬間に .clap が付く。閃光を弱めると乗り換えが見える
-   個人演出と違い色キーに紐づかない（絵が特定の2人のもの）＝m-* のセレクタは持たない ══════════ */
+   ⚠️絵のURLはここ（CSS）に持つ＝相対URLがCSSの位置で解決される。JSで背景画像を入れると
+     ページの位置で解決されて検証ハーネスから404になる ══════════ */
 .fx-ht { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
-.ht-stage { position: absolute; inset: 0; }
-/* ⚠️2階建てにしてある：stage＝揺れ／world＝席順に合わせた左右反転。
-   1つの要素に両方のtransformを書くと後勝ちで片方が消える */
-.ht-world { position: absolute; inset: 0; transform-origin: var(--bx, 50%) 50%; }
-.fx-ht.mirror .ht-world { transform: scaleX(-1); }
+.ht-stage { position: absolute; inset: 0; }   /* 揺れ */
+.ht-world { position: absolute; inset: 0; }   /* 2枚のワイプをつないだ「世界」 */
 
-/* 歩く2人。run＝画面外→定位置の移動／body＝歩調の上下（お茶と同じ2階建てtransform） */
+/* ⚠️transformは1要素に1つずつ（重ねて書くと後勝ちで片方が消える）＝役割ごとに階層を分ける：
+   run＝画面外→定位置の移動／body＝歩調の上下／flip＝左右反転 */
 .ht-run { position: absolute; }
-.ht-run.o { left: var(--o-l); top: var(--o-t); width: var(--o-w); height: var(--o-h); }
-.ht-run.g { left: var(--g-l); top: var(--g-t); width: var(--g-w); height: var(--g-h); }
-@keyframes htWalkO { from { transform: translateX(var(--o-x0)); } to { transform: translateX(0); } }
-@keyframes htWalkG { from { transform: translateX(var(--g-x0)); } to { transform: translateX(0); } }
-.fx-ht.walking .ht-run.o { animation: htWalkO var(--walk, 2.6s) linear forwards; }
-.fx-ht.walking .ht-run.g { animation: htWalkG var(--walk, 2.6s) linear forwards; }
+.ht-run.a { left: var(--a-wl); top: var(--a-wt); width: var(--a-ww); height: var(--a-wh); }
+.ht-run.b { left: var(--b-wl); top: var(--b-wt); width: var(--b-ww); height: var(--b-wh); }
+@keyframes htWalkA { from { transform: translateX(var(--a-x0)); } to { transform: translateX(0); } }
+@keyframes htWalkB { from { transform: translateX(var(--b-x0)); } to { transform: translateX(0); } }
+.fx-ht.walking .ht-run.a { animation: htWalkA var(--walk, 4.2s) linear forwards; }
+.fx-ht.walking .ht-run.b { animation: htWalkB var(--walk, 4.2s) linear forwards; }
 .ht-body { position: absolute; inset: 0; }
+.ht-flip { position: absolute; inset: 0; }
+.ht-run.a .ht-flip { transform: scaleX(var(--a-wf, 1)); }
+.ht-run.b .ht-flip { transform: scaleX(var(--b-wf, 1)); }
 @keyframes htBob {   /* 一歩ごとの上下＝コマ送り2枚で1周期 */
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-2.2%); }
 }
-.fx-ht.walking .ht-run.o .ht-body { animation: htBob calc(var(--o-step, .25s) * 2) ease-in-out infinite; }
-.fx-ht.walking .ht-run.g .ht-body { animation: htBob calc(var(--g-step, .25s) * 2) ease-in-out infinite; }
+.fx-ht.walking .ht-run.a .ht-body { animation: htBob calc(var(--a-step, .25s) * 2) ease-in-out infinite; }
+.fx-ht.walking .ht-run.b .ht-body { animation: htBob calc(var(--b-step, .25s) * 2) ease-in-out infinite; }
 .ht-img { position: absolute; inset: 0; opacity: 0;
   background-repeat: no-repeat; background-position: center bottom; background-size: contain; }
-.ht-run.o .ht-img.w1 { background-image: url("fx_ht_o1.png"); }
-.ht-run.o .ht-img.w2 { background-image: url("fx_ht_o2.png"); }
-.ht-run.g .ht-img.w1 { background-image: url("fx_ht_g1.png"); }
-.ht-run.g .ht-img.w2 { background-image: url("fx_ht_g2.png"); }
 /* コマ送り＝steps(1)で2枚を交互に。⚠️止まったら .standing で w1 に固定（足を開いたまま止めない） */
 @keyframes htStepA { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes htStepB { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
-.fx-ht.walking .ht-run.o .ht-img.w1 { animation: htStepA var(--o-step, .25s) steps(1, end) infinite; }
-.fx-ht.walking .ht-run.o .ht-img.w2 { animation: htStepB var(--o-step, .25s) steps(1, end) infinite; }
-.fx-ht.walking .ht-run.g .ht-img.w1 { animation: htStepA var(--g-step, .25s) steps(1, end) infinite; }
-.fx-ht.walking .ht-run.g .ht-img.w2 { animation: htStepB var(--g-step, .25s) steps(1, end) infinite; }
+.fx-ht.walking .ht-run.a .ht-img.w1 { animation: htStepA var(--a-step, .25s) steps(1, end) infinite; }
+.fx-ht.walking .ht-run.a .ht-img.w2 { animation: htStepB var(--a-step, .25s) steps(1, end) infinite; }
+.fx-ht.walking .ht-run.b .ht-img.w1 { animation: htStepA var(--b-step, .25s) steps(1, end) infinite; }
+.fx-ht.walking .ht-run.b .ht-img.w2 { animation: htStepB var(--b-step, .25s) steps(1, end) infinite; }
 .fx-ht.standing .ht-img.w1 { opacity: 1; }
-.fx-ht.clap .ht-run { opacity: 0; }   /* 差し替え＝歩きを消してキメ絵に渡す（閃光の下で起きる） */
+.fx-ht.clap .ht-run { opacity: 0; }   /* 差し替え＝歩きを消してポーズに渡す（閃光の下で起きる） */
 
-/* キメ絵＝2人が手を合わせた1枚。パチンの瞬間だけ軽く迫る（ドン！の当たり） */
-.ht-kime { position: absolute; left: var(--k-l); top: var(--k-t);
-  width: var(--k-w); height: var(--k-h); opacity: 0;
-  background: url("fx_ht_kime.png") no-repeat center bottom / contain;
-  /* ⚠️寄りの原点＝手が触れる点。--tx/--ty はワイプ座標なのでここでは使えない
-     （この要素の中での位置＝%指定の --k-tx/--k-ty をJSが渡す） */
-  transform-origin: var(--k-tx, 50%) var(--k-ty, 25%); }
-@keyframes htKimePunch {
-  0%   { opacity: 1; transform: scale(1.10); }
-  38%  { opacity: 1; transform: scale(.985); }
+/* ⚠️**色を1つ足すときはここに3行**（歩行2コマ＋ポーズ）。overlay.jsのHT_CHARSと対で増やす。
+   ファイル名は 素材加工/fx_hitouch_make.py の出力そのまま */
+.ht-img.c-orange.w1 { background-image: url("fx_ht_orange_w1.png"); }
+.ht-img.c-orange.w2 { background-image: url("fx_ht_orange_w2.png"); }
+.ht-pose.c-orange   { background-image: url("fx_ht_orange_p.png"); }
+.ht-img.c-green.w1  { background-image: url("fx_ht_green_w1.png"); }
+.ht-img.c-green.w2  { background-image: url("fx_ht_green_w2.png"); }
+.ht-pose.c-green    { background-image: url("fx_ht_green_p.png"); }
+.ht-img.c-blue.w1   { background-image: url("fx_ht_blue_w1.png"); }
+.ht-img.c-blue.w2   { background-image: url("fx_ht_blue_w2.png"); }
+.ht-pose.c-blue     { background-image: url("fx_ht_blue_p.png"); }
+.ht-img.c-pink.w1   { background-image: url("fx_ht_pink_w1.png"); }
+.ht-img.c-pink.w2   { background-image: url("fx_ht_pink_w2.png"); }
+.ht-pose.c-pink     { background-image: url("fx_ht_pink_p.png"); }
+.ht-img.c-yellow.w1 { background-image: url("fx_ht_yellow_w1.png"); }
+.ht-img.c-yellow.w2 { background-image: url("fx_ht_yellow_w2.png"); }
+.ht-pose.c-yellow   { background-image: url("fx_ht_yellow_p.png"); }
+.ht-img.c-red.w1    { background-image: url("fx_ht_red_w1.png"); }
+.ht-img.c-red.w2    { background-image: url("fx_ht_red_w2.png"); }
+.ht-pose.c-red      { background-image: url("fx_ht_red_p.png"); }
+
+/* ハイタッチのポーズ＝1人ずつ。境目で手が合うようJSが位置と大きさを決める。
+   ⚠️pw＝寸法と「ドン！の当たり」（寄り）／pose＝左右反転と絵。transformを分けるため2階建て */
+.ht-pw { position: absolute; opacity: 0; }
+.ht-pw.a { left: var(--a-pl); top: var(--a-pt); width: var(--a-pw); height: var(--a-ph);
+  transform-origin: right center; }
+.ht-pw.b { left: var(--b-pl); top: var(--b-pt); width: var(--b-pw); height: var(--b-ph);
+  transform-origin: left center; }
+.ht-pose { position: absolute; inset: 0;
+  background-repeat: no-repeat; background-position: center bottom; background-size: contain; }
+.ht-pw.a .ht-pose { transform: scaleX(var(--a-pf, 1)); }
+.ht-pw.b .ht-pose { transform: scaleX(var(--b-pf, 1)); }
+@keyframes htPosePunch {   /* 寄りの原点＝手の側＝2人が「押し合う」方向に縮む */
+  0%   { opacity: 1; transform: scale(1.06); }
+  38%  { opacity: 1; transform: scale(.992); }
   100% { opacity: 1; transform: scale(1); }
 }
-.fx-ht.clap .ht-kime { opacity: 1; animation: htKimePunch .42s cubic-bezier(.2, 1.4, .35, 1) forwards; }
+.fx-ht.clap .ht-pw { opacity: 1; animation: htPosePunch .42s cubic-bezier(.2, 1.4, .35, 1) forwards; }
+
+/* パチンのキラッ＝3本の光条。⚠️元絵の黄色い効果線は素材から消してある（組み合わせで
+   本数・位置が食い違うため）＝ここで描くことでどの2人でも同じ見た目になる */
+.ht-spark { position: absolute; left: var(--tx); top: var(--ty);
+  width: var(--spark, 48px); height: var(--spark, 48px); opacity: 0;
+  transform: translate(-50%, -115%); }
+.ht-spark::before, .ht-spark::after, .ht-spark { --sk: #ffc42e; }
+.ht-spark::before, .ht-spark::after {
+  content: ""; position: absolute; left: 50%; bottom: 0;
+  width: 11%; height: 62%; border-radius: 40%; background: var(--sk);
+  box-shadow: 0 0 .6em rgba(255, 210, 90, .9); }
+.ht-spark::before { transform: translateX(-50%) rotate(-26deg) translateY(-14%); }
+.ht-spark::after  { transform: translateX(-50%) rotate(26deg) translateY(-14%); }
+.ht-spark > b { position: absolute; left: 50%; bottom: 6%; width: 11%; height: 72%;
+  border-radius: 40%; background: var(--sk); transform: translateX(-50%);
+  box-shadow: 0 0 .6em rgba(255, 210, 90, .9); }
+@keyframes htSpark {
+  0%   { opacity: 0; transform: translate(-50%, -100%) scale(.4); }
+  22%  { opacity: 1; transform: translate(-50%, -118%) scale(1.12); }
+  60%  { opacity: 1; transform: translate(-50%, -115%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -128%) scale(.92); }
+}
+.fx-ht.clap .ht-spark { animation: htSpark 1.1s ease-out forwards; }
 
 /* 揺れ＝パチンの一発だけ（結果発表のthxShakeと同じ思想＝短く・減衰させる） */
 @keyframes htShake {
