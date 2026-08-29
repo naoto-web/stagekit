@@ -47,15 +47,28 @@ body {
   background: #24272e; border: 1px solid #363a43;
 }
 .card h2 { font-size: 15px; color: #d9a441; margin-bottom: 10px; display: inline-block; }
-/* 見出し行に常設ボタンを置く（8/8 FB74・席替えのクイックボタン） */
+/* 見出し行に常設ボタンを置く（8/8 FB74＝席替え／8/9 FB98＝応募人数）。
+   ※席替えは8/29 FB150で見出し行から出して全幅ボタンにした（下） */
 /* 幅が足りないドックではボタンを次の行へ落とす（右端で見切れさせない） */
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .card-head h2 { margin-bottom: 10px; }
-.btn.seat-swap { flex: none; white-space: nowrap; }
 /* 応募人数のクイック増減（8/9 FB98）＝見出し行に現在人数＋「＋1/−1」を常設 */
 .camp-quick { display: inline-flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
 .camp-quick-num { font-size: 13px; font-weight: 900; color: #d6d9de; white-space: nowrap; }
-.btn.seat-swap.done { background: #2f5d3a; border-color: #4c8b5e; color: #d8f5e0; }
+
+/* 席替え＝カード先頭の全幅ボタン（8/29 FB150・Naoto「席替えし忘れる人が結構いる」）。
+   ⚠️色は金を使わない＝金の塗りはこのカードで「選択中の場・レース」を意味する（.vbtn.active/.rc.cur）ので、
+   同じ塗りだと状態表示と読み違える。全幅の塗りボタン＝押すもの、は .btn.primary で既に通っている語彙。
+   押した直後だけ緑（.done）に振れて2秒で戻る＝押せたことが色で分かる */
+.btn.seat-swap {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  width: 100%; margin-bottom: 10px; padding: 11px 12px; line-height: 1.25;
+  background: #29c7d6; border: 1px solid #29c7d6; border-radius: 10px; color: #04181b;
+}
+.btn.seat-swap:hover { background: #45d6e3; }
+.btn.seat-swap .ss-main { font-size: 19px; font-weight: 900; letter-spacing: .06em; }
+.btn.seat-swap .ss-sub { font-size: 11px; font-weight: 700; opacity: .72; }
+.btn.seat-swap.done { background: #37d67a; border-color: #37d67a; color: #06240f; }
 .h-sub { font-size: 12px; color: #9aa0ab; font-weight: 700; margin-left: 6px; }
 details.card summary { cursor: pointer; list-style: none; }
 details.card summary h2 { margin-bottom: 0; }
@@ -230,6 +243,9 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   .btn { font-size: 15px; padding: 9px 16px; }
   .btn.small { font-size: 13px; padding: 6px 12px; }
   .btn.primary { font-size: 17px; padding: 14px; }
+  .btn.seat-swap { padding: 13px 14px; }
+  .btn.seat-swap .ss-main { font-size: 21px; }
+  .btn.seat-swap .ss-sub { font-size: 12px; }
 
   .vbtn { font-size: 18px; padding: 12px; }
   .vbtn small { font-size: 12px; }

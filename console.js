@@ -1129,12 +1129,25 @@
   });
   /* 席替えのクイックボタン（8/8 FB74）：本日設定を開かずに1タップで入替＋確定。
      本日設定のフォームは読まない＝編集途中の未保存項目を巻き込んで保存しないため。
-     席は a(左カメラ)⇄b(右カメラ) の入替のみ＝もう一度押せば元に戻る（1人配信は席の移動になる） */
+     席は a(左カメラ)⇄b(右カメラ) の入替のみ＝もう一度押せば元に戻る（1人配信は席の移動になる）。
+     8/29 FB150＝ボタンが2行（大見出し＋説明）になったので、文言は必ずこの2つのspanに書く。
+     ⚠️btn.textContent に直接書くと中のspanごと消えて以後ラベルが戻らなくなる */
+  var seatSwapTimer = null;
+  function setSeatSwapLabel(main, sub) {
+    $("seat-swap-label").textContent = main;
+    $("seat-swap-sub").textContent = sub;
+  }
+  function resetSeatSwapLabel() {
+    $("btn-seat-swap-quick").classList.remove("done");
+    setSeatSwapLabel("⇄　席替え", "左右のカメラを入れ替える");
+  }
   $("btn-seat-swap-quick").addEventListener("click", function () {
     var btn = this;
+    // 連打で戻しタイマーが重なると、後から来た戻しが次の表示を消す
+    if (seatSwapTimer) { clearTimeout(seatSwapTimer); seatSwapTimer = null; }
     if (!(state.racers || []).length) { // 誰も選ばれていない＝入れ替える席がない
-      btn.textContent = "本日設定で配信者を選択";
-      setTimeout(function () { btn.textContent = "⇄ 席替え"; }, 2000);
+      setSeatSwapLabel("本日設定で配信者を選択", "席が両方とも空です");
+      seatSwapTimer = setTimeout(resetSeatSwapLabel, 2000);
       return;
     }
     (state.racers || []).forEach(function (r, i) {
@@ -1144,8 +1157,8 @@
     save();
     renderAll();
     btn.classList.add("done");
-    btn.textContent = "⇄ 入替えました";
-    setTimeout(function () { btn.classList.remove("done"); btn.textContent = "⇄ 席替え"; }, 2000);
+    setSeatSwapLabel("⇄　入替えました", "左右のカメラが入れ替わりました");
+    seatSwapTimer = setTimeout(resetSeatSwapLabel, 2000);
   });
 
   /* キャンペーン応募人数のクイック増減（8/9 FB98）：配信中に応募が入るたび更新する運用のため、

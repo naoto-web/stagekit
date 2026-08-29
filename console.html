@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260829-101401">
+<link rel="stylesheet" href="console.css?v=20260829-181930">
 </head>
 <body>
 
@@ -40,9 +40,14 @@
       <button class="btn small" id="btn-camp-minus">−1</button>
       <button class="btn small" id="btn-camp-plus">＋1</button>
     </span>
-    <!-- 席替えは配信中に使う操作＝本日設定の中だけでなく常時見える位置にも置く（8/8 FB74・押すと即確定） -->
-    <button class="btn seat-swap" id="btn-seat-swap-quick" title="席1と席2を入れ替えて即保存（もう一度押すと元に戻る）">⇄ 席替え</button>
   </div>
+  <!-- 席替えは配信中に使う操作＝本日設定の中だけでなく常時見える位置にも置く（8/8 FB74・押すと即確定）。
+       8/29 FB150＝見出し行の小さなボタンでは押し忘れる（休憩明けの席交代が発生源）ため、
+       カード先頭の全幅ボタンへ格上げ。⚠️idは変えない（検証ハーネスがidで叩く） -->
+  <button class="btn seat-swap" id="btn-seat-swap-quick" title="席1（左カメラ）と席2（右カメラ）を入れ替えて即保存（もう一度押すと元に戻る）">
+    <span class="ss-main" id="seat-swap-label">⇄　席替え</span>
+    <span class="ss-sub" id="seat-swap-sub">左右のカメラを入れ替える</span>
+  </button>
   <div class="venue-row" id="venue-row"></div>
   <div class="race-chip-grid" id="race-chips"></div>
   <!-- 並び順＝シーン番号どおり①→②（8/27 FB142・Naoto指定）。
@@ -222,11 +227,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260829-101401" data-au="banner"></script>
-<script src="config.js?v=20260829-101401"></script>
-<script src="keirin.js?v=20260829-101401"></script>
-<script src="derive.js?v=20260829-101401"></script>
-<script src="sync.js?v=20260829-101401"></script>
-<script src="console.js?v=20260829-101401"></script>
+<script src="autoupdate.js?v=20260829-181930" data-au="banner"></script>
+<script src="config.js?v=20260829-181930"></script>
+<script src="keirin.js?v=20260829-181930"></script>
+<script src="derive.js?v=20260829-181930"></script>
+<script src="sync.js?v=20260829-181930"></script>
+<script src="console.js?v=20260829-181930"></script>
 </body>
 </html>
