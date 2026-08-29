@@ -1039,6 +1039,14 @@ body.race-sub-on .race-sub { display: flex; }
    体数・サイズ・尺を変えたい場合だけ overlay.js の MEMBER_FX に書く。
    下の dust-xl のように「効果に名前を付けたクラス」は複数メンバーで使い回せる */
 
+/* ---------- 軽量版（8/30）＝箱が大きいときだけ付く .lite（overlay.jsの fxLite が判定） ----------
+   ⚠️**本番のワイプでは絶対に付かない**（閾値600,000px＞本番最大318,096px）＝本番の見た目は不変。
+   狙いは per要素のフィルタを消すこと：走行は1体につき「drop-shadowのimg」＋「blurの砂埃」が
+   無限ループするので、80体で240回のフィルタパスが毎フレーム走る。塗り面積が6.5倍の全画面では
+   これが効いてカクつく（8/30 Naoto実見）。影を捨てると絵は少し平たくなるが、動きが返ってくる。 */
+.hit-rain.lite .hit-rain-ic { filter: none; }
+.hit-rain.lite .dust { filter: none; }
+
 /* 白いモクモク＝橙メンバー専用の個人演出（8/8 FB72）。
    FB68で全員に入れた大型雲を、この色キーのときだけに限定した（他メンバーは上の既定パフのまま）。
    3つのradial-gradientで凸凹の雲シルエット。blurは廃止（大型化とのGPU負荷トレード） */
@@ -1056,6 +1064,21 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes dustPuffXL {
   0% { transform: translate(0, 0) scale(.3); opacity: .9; }
   100% { transform: translate(.4em, -.4em) scale(2.2); opacity: 0; }
+}
+/* 軽量版（8/30・大きさ追従×全画面のちらつき対策）：ちらつきの正体＝**雲の合成面積**。
+   雲はem基準なので、大きさ追従（scale約2.55）だと1枚が最大約1500×1060pxまで育つ×80枚
+   ＝毎フレーム約34MP（画面16枚ぶん）の半透明合成になり、フィルレートが尽きてフレームが
+   飛ぶ＝ストロボ状に見える。アイコン本体は約8MPで軽い＝**削るのは雲だけ**でよい：
+     ①雲を一回り小さく（1.5→1.1em）＋育ちの上限を2.2→1.5倍＝面積比で約1/4
+     ②雲は1体おき（偶数番の走者は雲なし）＝さらに半分。80体の群れでは目で追えない
+   合計＝雲の合成が約1/8（34MP→約4.5MP）。走り方・体数・アイコンの大きさは一切変えない。
+   ⚠️animation-nameだけの上書き（titleの8/30バグと同型の競合に注意）＝dustには後段の
+     フェード系ルールが無いので安全。尺(.8s)・delayはカスケードのまま引き継ぐ */
+.hit-rain.lite.dust-xl .dust { width: 1.1em; height: .8em; animation-name: dustPuffXLLite; }
+.hit-rain.lite .hit-runner:nth-child(even) .dust { display: none; }
+@keyframes dustPuffXLLite {
+  0% { transform: translate(0, 0) scale(.3); opacity: .9; }
+  100% { transform: translate(.4em, -.4em) scale(1.5); opacity: 0; }
 }
 
 /* ══════════ 役物合体＝青メンバー専用の個人演出（8/8 FB82・Naoto案／ラボfxlabで詰めて本番化）
@@ -1293,8 +1316,23 @@ body.race-sub-on .race-sub { display: flex; }
   8%   { opacity: 1; }
   74%  { transform: scale(var(--s)) translate(var(--dx), var(--dy)); opacity: 1; }
   88%  { opacity: 1; }
-  100% { transform: scale(calc(var(--s) * 2.6)) translate(var(--dx), var(--dy)); opacity: 0; }
+  /* 通過倍率＝var化（8/30）。既定2.6＝**本番のワイプは今までと同一**（--passを立てるのは.liteだけ）。
+     ⚠️フォールバック(, 2.6)を消すと本番でscaleが不成立＝アニメごと壊れる */
+  100% { transform: scale(calc(var(--s) * var(--pass, 2.6))) translate(var(--dx), var(--dy)); opacity: 0; }
 }
+/* 軽量版（8/30・全画面ホストで「背景が黒くなったりする」＝Naoto報告への回答）：
+   黒の正体＝GPUのテクスチャ落ち。全画面では力士1体の最大ラスタが 2142×3146＝約27MB×15体
+   ＝VRAMが尽きて間引かれた面が黒く出る（ワイプでは1体約4MB＝だから今まで平気だった。
+   上のキーフレームの警告「2.6倍で止める」はワイプ寸法を前提にした上限だった）。
+     ①通過倍率 2.6→1.7＝最大ラスタ面積が約6割減。全画面では体がもともと画面高の112%
+       あるので、1.7倍でも「目の前を通り過ぎる」印象は変わらない
+     ②boom/dodonで初めて表示される3点（白フラッシュ1920×1080・集中線・金文字＝影5連の
+       220px級）をopacity .001でプリウォーム＝初描画を迫りの静かな間に済ませる
+       （⚠️.001が仕様＝0だと塗りが省略される。peyeのプリウォームと同じ理屈） */
+.fx-sumo.lite { --pass: 1.7; }
+.fx-sumo.lite .fx-sumo-flash { opacity: .001; }
+.fx-sumo.lite .fx-gotchan-burst { opacity: .001; }
+.fx-sumo.lite .fx-gotchan { opacity: .001; will-change: transform, opacity; }
 .fx-sumo-run.charge {
   animation: fxSumoCharge var(--t, 3.2s) cubic-bezier(.42, 0, .78, .52) var(--d, 0s) both; }
 /* 絵は<img>でなくbackground-imageで持つ＝CSSからの相対パスで解決されるので
@@ -1378,6 +1416,27 @@ body.race-sub-on .race-sub { display: flex; }
 .fx-sumo.dodon2 .fx-gotchan {
   animation: fxDodon2 .3s cubic-bezier(.25, 1.7, .45, 1) forwards,
              fxGotchanGlow 1.2s ease-in-out .3s infinite; }
+/* ══ 軽量版（8/30・Naoto「ごっちゃんです！！の文字の表示がまだちょっとラグる」）══
+   全画面だと字は約160px・箱で約1440px幅。そこへ **fxDodon1 が scale(2.7) から始まる**＝
+   最初のコマの実ラスタは約3900×430。ここにフチの drop-shadow が**5連鎖**掛かる＝
+   1コマで約8MPぶんのフィルタ処理が要り、しかも倍率が動くたび描き直される。
+   さらに余韻の `fxGotchanGlow` が **filter: brightness を無限アニメ**＝毎フレーム
+   フィルタ鎖ごと再描画し続ける。この2つが「文字が出る瞬間だけ引っかかる」の実体。
+
+   対策3点。**3点はセットで意味を持つ**：
+     ①will-change: transform, opacity（上の行）＝自前レイヤーに固定して、
+       scale 2.7→1 の変化を**再ラスタでなく合成**で済ませる
+     ②フチ5連鎖→3連（同径のソフト影2枚＋落ち影）＝1コマあたりのフィルタパスを4割減
+     ③余韻の明滅を filter: brightness → **opacity** へ＝合成だけで済む
+   ⚠️③を戻すと①が丸ごと無駄になる（filterのアニメが1つでも残れば毎フレーム再描画が起き、
+     レイヤー化の得が消える）。「brightnessのほうが自然」と戻したくなるが、戻すならセットで。
+   ⚠️animation-name は**2つとも並べる**＝本体の2値プロパティ（尺.3s/1.2s・delay 0/.3s・
+     forwards/infinite）が1対1で対応する。1つに削ると2本目の尺と遅延が丸ごとズレる。 */
+.fx-sumo.lite .fx-gotchan span {
+  filter: drop-shadow(0 0 var(--ge) #14100a) drop-shadow(0 0 var(--ge) #14100a)
+          drop-shadow(0 calc(var(--ge) * 1.4) calc(var(--ge) * 1.8) rgba(0,0,0,.55)); }
+@keyframes fxGotchanGlowLite { 0%, 100% { opacity: 1; } 50% { opacity: .84; } }
+.fx-sumo.lite.dodon2 .fx-gotchan { animation-name: fxDodon2, fxGotchanGlowLite; }
 @keyframes fxSumoOut { to { opacity: 0; } }
 .fx-sumo.out { animation: fxSumoOut .45s ease-in forwards; }
 
@@ -2064,8 +2123,13 @@ body.race-sub-on .race-sub { display: flex; }
    aは太く疎・bは細く密の2層。寸法--lszはJSがcam実寸×2.6で入れる
    （⚠️ラボ写しは260vmax固定＝OBSの1920px級で巨大テクスチャになるのを避けるため本番はpx指定。
      マスクの%はその分ラボの倍率×2で刻んである＝見た目は同等） */
+/* ⚠️--lsc（8/30）＝JSが「実寸で持ちきれなかった倍率」を入れる拡大係数（既定1＝等倍）。
+   放射線は中心から拡大しても線の見た目が変わらないので、巨大な箱でもテクスチャは
+   PEYE_LINES_MAX で頭打ちにして、足りない分をここで伸ばす。**scaleを書くところ全部に掛ける**こと
+   （1か所でも素の数字のままだと、その瞬間だけ線が縮んでガクッと跳ねる） */
 .fx-peye-lines { position: absolute; z-index: 2; left: var(--ex); top: var(--ey);
-  width: var(--lsz); height: var(--lsz); transform: translate(-50%, -50%); opacity: 0;
+  width: var(--lsz); height: var(--lsz);
+  transform: translate(-50%, -50%) scale(var(--lsc, 1)); opacity: 0;
   --lc: rgba(255, 255, 255, .92); --lc2: rgba(255, 255, 255, .55); }
 .fx-peye-lines.a { background: repeating-conic-gradient(from 2deg,
     var(--lc) 0deg .8deg, transparent 1.6deg 7.4deg, var(--lc2) 7.4deg 7.9deg, transparent 8.5deg 12deg);
@@ -2076,16 +2140,48 @@ body.race-sub-on .race-sub { display: flex; }
   -webkit-mask: radial-gradient(circle, transparent 0 26%, #000 68%);
           mask: radial-gradient(circle, transparent 0 26%, #000 68%); }
 @keyframes peyeLines { /* バッと出て細かく震える（回転でなく脈で揺らす＝線が流れない） */
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
-  7% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  55% { opacity: .8; transform: translate(-50%, -50%) scale(1.012); }
-  100% { opacity: .92; transform: translate(-50%, -50%) scale(1); } }
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(calc(1.25 * var(--lsc, 1))); }
+  7% { opacity: 1; transform: translate(-50%, -50%) scale(var(--lsc, 1)); }
+  55% { opacity: .8; transform: translate(-50%, -50%) scale(calc(1.012 * var(--lsc, 1))); }
+  100% { opacity: .92; transform: translate(-50%, -50%) scale(var(--lsc, 1)); } }
 .fx-peye.burst .fx-peye-lines { animation: peyeLines .9s ease-out forwards; }
 .fx-peye.burst .fx-peye-lines.b { animation-delay: .06s; }
 /* 明転後＝ピーターカラーの緑線に切替・ゆっくり呼吸（キメの背景として残す） */
 .fx-peye.lit .fx-peye-lines { --lc: rgba(148, 255, 178, .8); --lc2: rgba(148, 255, 178, .38); }
 @keyframes peyeLinesCalm { 0%, 100% { opacity: .6; } 50% { opacity: .82; } }
 .fx-peye.lit .fx-peye-lines { animation: peyeLinesCalm 1.6s ease-in-out infinite; }
+/* 軽量版（8/30・fxLiteが .lite を付ける／本番のワイプでは付かない）：
+   集中線は「大きい・ずっと動く・色が変わる」の三拍子で、全画面では塗り直しが効いてカクつく。
+   自前レイヤーに固定して、脈と明滅を**塗り直しでなく合成**で済ませる。
+   ⚠️will-changeはレイヤーを常駐させる＝小さい箱で付けると得より損。だから .lite にだけ付ける
+     （テクスチャの一辺はJS側が PEYE_LINES_LITE=1400px に落としている＝2枚で3.9MP）
+
+   ══ プリウォーム（8/30夜・Naoto「キラッ→発動！！で毎回重くなる」への回答）══
+   それでも残ったスパイクの正体＝burst/titleの瞬間に**初めて表示される部品**
+   （集中線2枚・白フラッシュ・閃光・約280pxの文字）の**初回ラスタライズとレイヤー昇格**が、
+   いちばん動きの多いコマに全部集中すること。つまり請求書が一括で来ていた。対策2点セット：
+     ① opacity .001（目には見えない）で最初から「表示」しておく
+        ＝挿入直後＝キャラ入場の静かな間に塗り終わり、burstではアニメのopacityが上書きするだけ
+     ② will-changeで最初から自前レイヤーに住まわせる
+        ＝アニメ開始時のレイヤー昇格（＝そのための再塗り）が起きない
+   ⚠️0でなく **.001** が要＝0はブラウザが「描くものなし」と判断して塗りを省略できる。
+   ⚠️beamは transform: scaleX(1) も要る＝scaleX(0)のままだと面積0で塗るものがない
+     （アニメが始まればキーフレームのscaleXが勝つ＝見た目は従来と同一）。 */
+.fx-peye.lite .fx-peye-lines { will-change: transform, opacity; opacity: .001; }
+.fx-peye.lite .fx-peye-dark { will-change: opacity; }
+.fx-peye.lite .fx-peye-flash { will-change: opacity; opacity: .001; }
+.fx-peye.lite .fx-peye-beam { will-change: transform, opacity; opacity: .001; transform: scaleX(1);
+  /* 閃光の多重drop-shadowは1枚に（全画面では幅170%＝3,264pxに掛かる） */
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, .95)); }
+.fx-peye.lite .fx-peye-title { will-change: transform, opacity; opacity: .001; }
+.fx-peye.lite .fx-peye-mutter { opacity: .001; }
+.fx-peye.lite .fx-peye-combo { opacity: .001; }
+/* キャラの影も落とす＝寄り(scale2.1)の最中ずっとdrop-shadowが再計算される一番高い1枚 */
+.fx-peye.lite .fx-peye-char { filter: none; }
+/* 明転後の二重リムは1枚に。⚠️上のfilter:noneは**後ろにある**.lit/.dkの指定に同特異度で負ける＝
+   ここは4クラスで勝たせる。暗転のシルエット（brightness .13）はliteでも変えない＝絵の要 */
+.fx-peye.lite.lit .fx-peye-char { filter: drop-shadow(0 0 30px rgba(96, 255, 150, .4)); }
+
 /* 画面揺れ＝閃光と車番バッジの衝撃（幕・線・キャラごと揺らす） */
 .fx-peye-shake { position: absolute; inset: 0; }
 @keyframes peyeShake { 0% { transform: translate(0, 0); } 18% { transform: translate(7px, -5px); }
@@ -2204,6 +2300,25 @@ body.race-sub-on .race-sub { display: flex; }
   100% { opacity: 1; transform: scale(1); } }
 .fx-peye.title .fx-peye-title { animation: peyeTitle .32s cubic-bezier(.2, 1.2, .4, 1) forwards; }
 .fx-peye.mut .fx-peye-title { animation: peyeTxtOut .2s ease-out forwards; }  /* 「これは、、、」に主役を渡す */
+/* 軽量版（8/30）＝発動！！の文字。黒フチ4方向＋緑グローのdrop-shadow5連鎖を、全画面級の
+   約280px文字（--tfs×1.45）に掛けると、それだけで1フレーム数十msの塗りになる。
+   liteではフチを同径2枚のソフト影＋グローの3連に減らし、入場のblur(6px→0)もやめる
+   （blurは毎フレーム値が変わる＝0.32秒間ずっと文字全体を塗り直す＝発動！！の瞬間の主犯）。
+   フチがわずかに柔らかくなる以外、ポップの動き（scale＋opacity）は従来と同じ。
+   ⚠️animation-nameだけ上書き＝尺・カーブ・fillは本体のショートハンドを引き継ぐ */
+.fx-peye.lite .fx-peye-title .l1, .fx-peye.lite .fx-peye-title .l2 {
+  filter: drop-shadow(0 0 calc(var(--ce) * 1.4) #06140a)
+          drop-shadow(0 0 calc(var(--ce) * 1.4) #06140a)
+          drop-shadow(0 0 18px rgba(125, 255, 158, .6)); }
+@keyframes peyeTitleLite { 0% { opacity: 0; transform: scale(2.3); }
+  55% { opacity: 1; transform: scale(.95); } 100% { opacity: 1; transform: scale(1); } }
+.fx-peye.lite.title .fx-peye-title { animation-name: peyeTitleLite; }
+/* ⚠️上の4クラス指定は、**後段の .mut のフェードアウト（3クラス）にも競り勝ってしまう**＝
+   発動！！が消えずに残る（8/30実見・全画面のみ／titleクラスは外れないためmut後も競合が続く）。
+   mutが付いたら同じ4クラスで名前を返す＝ワイプ内と同じタイミングで「これは、、、」に主役を渡す。
+   ⚠️この行は .fx-peye.lite.title の行より**後ろ**に置くこと（同特異度＝順序で勝敗が決まる。
+     hosttestが順序ごと検査している） */
+.fx-peye.lite.mut .fx-peye-title { animation-name: peyeTxtOut; }
 /* ③ 的中目＝車番チップ[1][2][3]＋「だ！！」。チップの色は既存 .car .c1〜.c9 に乗る
    （⚠️競輪の実データ色＝染めない）＝ここでは寸法だけ--bfs基準に上書きする。
    border-widthだけ上書き＝border色を触るとc2の白フチ（.c2のborder-color）を潰すため */
@@ -2228,9 +2343,24 @@ body.race-sub-on .race-sub { display: flex; }
   55% { opacity: 1; transform: scale(.94); filter: blur(0); }
   100% { opacity: 1; transform: scale(1); } }
 .fx-peye.combo .fx-peye-combo { animation: peyeCombo .34s cubic-bezier(.2, 1.2, .4, 1) forwards; }
+/* 軽量版（8/30）＝車番チップの入場も同型のblur入り＝発動！！と同じ理由でblurなし版に差し替え */
+@keyframes peyeComboLite { 0% { opacity: 0; transform: scale(2.6); }
+  55% { opacity: 1; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+.fx-peye.lite.combo .fx-peye-combo { animation-name: peyeComboLite; }
 /* 退場＝全体フェード（他演出と同じ・このあと的中バッジにバトンを渡す） */
 @keyframes peyeOut { to { opacity: 0; } }
 .fx-peye.out { animation: peyeOut .45s ease-in forwards; }
+
+/* ---------- 演出の大きい箱（8/30・overlay.js の protoHost が作る） ----------
+   出番は2つ：**本番＝万車的中の前奏**（fxStageHost・⑤広告④待機は除外・&fsfx=0で停止）と、
+   ラボ（fxlab）の出し先セレクタ。透明・枠線なし・pointer-events無効＝前奏が終われば何も見えない。
+   バッジ・枠パルスはここには来ない（8/30 Naoto決定「前奏だけ全画面」＝常にワイプ側）。
+   `.cam` を継承する箱なので、演出のspawn系・fxLite（軽量版）が本番と同じ経路で走る。 */
+.fx-proto-host {
+  position: absolute; border: 0 !important; background: transparent !important;
+  z-index: 60;          /* .gbar(10) と .scene(1) の上＝ヘッダーもレース映像も覆う */
+  pointer-events: none;
+}
 
 /* ---------- 的中演出（当たった配信者のワイプに20秒表示・8/6 FB46で強化） ---------- */
 .cam.hit-fx { animation: hitPulse .8s ease-in-out infinite; }

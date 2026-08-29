@@ -2305,6 +2305,15 @@
     TITLE_HOLD: 1300, MUT_HOLD: 1400, COMBO_LAG: 350, HOLD: 2200, FADE: 450 };
   var PEYE_AR = 688 / 1000;  // fx_peye1..2.png の実寸比（fx_peye_make.pyが出力・絵を差し替えたら再実行して貼り直す）
   var PEYE_EYE = { y: 0.4084, xc: 0.4193 }; // 目のライン／左右の目の中点（同上＝白目重心の実測。集中線・寄り・閃光の中心）
+  /* 集中線を実寸で持つ上限px（8/30）。超えたぶんはCSSのscale（--lsc）で伸ばす＝spawnPeyeのコメント参照。
+     ⚠️本番のワイプは①1,955px／②1,414pxで**どちらもこの下**＝本番の見た目は一切変わらない。
+       下げると全画面のマスク輪郭が甘くなり、上げると塗り面積が二乗で増える（2,200²×2枚＝9.7MP） */
+  var PEYE_LINES_MAX = 2200;
+  /* 軽量版（fxLite＝大きい箱）でのさらに小さい上限。全画面(1920)なら本来4,992px角＝a・b2枚で49.8MP
+     ＝画面24枚ぶんを塗る。1,400pxまで落とすと2枚で3.9MP＝**約1/13**。
+     ⚠️本番は fxLite が立たないので常に PEYE_LINES_MAX(2200) 側＝今までと同一。
+     ⚠️MAXより小さいこと自体をhosttestが見ている（逆転させると軽量版のほうが重くなる） */
+  var PEYE_LINES_LITE = 1400;
   function peyeTimes() {
     var t = { DK: PEYE_BASE.IN + PEYE_BASE.CALM };        // 暗転開始＝寄り開始
     t.GLINT = t.DK + PEYE_BASE.DARK + PEYE_BASE.TENSE;    // 閃光ピカーン＋集中線＋揺れ
@@ -2355,6 +2364,36 @@
   });
   /** メンバーカラー→色キー（未登録の色は個人演出なし＝アイコンも雨も出ない従来動作） */
   function memberKey(rc) { return rc && COLOR_KEY[rc.color] ? COLOR_KEY[rc.color] : ""; }
+  /* ══════════ 大きい箱のときだけ落とす「軽量版」の判定（8/30）══════════
+     演出を全画面に出す試作（§出し先）で、アイコン走行とピーターズ・アイが実測でカクついた。
+     真因は要素数ではなく**塗る面積**＝箱が6.5倍になれば、体数を増やさなくても
+     1体が2.55倍になるので総ピクセルは6.5倍のまま。そこで面積で効く部品を落とす：
+       ・per要素のフィルタ（drop-shadow／blur）＝要素ごとに別パスが走る
+       ・砂埃の雲＝1.5em×1.05emをscale2.2まで育てる＝いちばん塗る部品
+       ・集中線のテクスチャ＝下の PEYE_LINES_LITE でさらに小さく持つ
+
+     ⚠️閾値は**本番のワイプがどれも絶対に届かない**値にしてある（本番最大＝①トーク752×423＝318,096px。
+       ②544×404＝219,776／④480×270＝129,600／⑤560×315＝176,400）。
+       つまり本番の**ワイプ**の見た目は変わらない＝hosttest.js が4種すべてを検算している。
+       全画面ホスト（＝万車の前奏・8/30に本番機能へ昇格）では**意図して**掛かる＝そのための軽量版。
+     ⚠️ここを下げると本番のワイプにも掛かる（＝影が消える・砂埃が半分になる）。下げるなら必ずNaotoに確認。 */
+  var FX_LITE_AREA = 600000;
+  function fxLite(cam) {
+    return (cam.clientWidth || 0) * (cam.clientHeight || 0) > FX_LITE_AREA;
+  }
+
+  /* 大きい箱（fx-proto-host）に出すときの拡大率＝ホスト面積÷そのシーンのワイプ面積の**平方根**
+     （線形比）。走行の1体をこれで伸ばすと、体数80のまま見た目の密度が変わらない（「大きさで追従」・
+     8/30決定）。ワイプに出すときは必ず1＝本番のワイプの見た目は不変。
+     ラボ（fxlab）は __FX_SCALE で明示上書きできる（spawnRain側が先に見る・「そのまま」比較用） */
+  function fxScale(cam) {
+    if (!cam.classList || !cam.classList.contains("fx-proto-host")) return 1;
+    var wipe = document.querySelector("#scene-" + SCENE + " .cam");
+    var a = wipe ? wipe.clientWidth * wipe.clientHeight : 0;
+    var m = (cam.clientWidth || 0) * (cam.clientHeight || 0);
+    return a > 0 && m > 0 ? Math.sqrt(m / a) : 1;
+  }
+
   function fxConf(key) {
     var c = MEMBER_FX[key] || {};
     return { fx: c.fx || [], count: c.count || RAIN_DEFAULT.count, size: c.size || RAIN_DEFAULT.size,
@@ -2368,15 +2407,24 @@
     if (old) old.parentNode.removeChild(old);
     var conf = fxConf(key);
     var box = document.createElement("div");
-    box.className = ["hit-rain", "m-" + key].concat(conf.fx).join(" ");
+    var lite = fxLite(cam);
+    box.className = ["hit-rain", "m-" + key].concat(conf.fx).join(" ") + (lite ? " lite" : "");
     var w = cam.clientWidth || 400, h = cam.clientHeight || 400;
+    /* 箱を広げたときの1体の大きさ＝「大きさで追従」（8/30決定・fxScaleのコメント参照）。
+       ラボ（fxlab）だけが __FX_SCALE で明示上書き（「そのまま」との見比べ用）。
+       本番＝ワイプなら fxScale が1を返す＝従来どおり／万車の全画面ホストなら線形比で伸びる。
+       ⚠️体数を面積比ぶん増やす案（80→521体）は8/30に実測でカクついて**廃止**（Naoto判断）。
+         なお「大きさで追従なら軽い」わけではない＝**塗る面積は結局6.5倍のまま**（体数を減らしても
+         1体が大きくなる）。効いているのはフィルタと雲の塗りなので、そこは lite が落とす。 */
+    var scale = window.__FX_SCALE || fxScale(cam);
     // FB66：既定は数80・1体2.2〜3.2秒・群れ全体で約4.5秒（中央ゆっくりのS字＝CSS側）
     // FB67：右→左の真横走行＋砂埃。laneT＝奥行き（下のレーンほど大きく手前・前面に）
     for (var i = 0; i < conf.count; i++) {
       var run = document.createElement("span");
       run.className = "hit-runner";
       var laneT = Math.random();
-      var size = Math.round(conf.size[0] + laneT * (conf.size[1] - conf.size[0])); // 手前ほど大きい
+      // 手前ほど大きい（砂埃は親のfont-size基準のemなので、この1か所を倍率で伸ばせば全部ついてくる）
+      var size = Math.round((conf.size[0] + laneT * (conf.size[1] - conf.size[0])) * scale);
       run.style.top = Math.round(h * 0.06 + laneT * h * 0.60) + "px";
       run.style.left = "100%";
       run.style.fontSize = size + "px"; // 砂埃のサイズをキャラに連動させる基準（em）
@@ -2390,9 +2438,13 @@
       im.style.height = size + "px";
       run.appendChild(im);
       var d1 = document.createElement("i"); d1.className = "dust";
-      var d2 = document.createElement("i"); d2.className = "dust d2";
       run.appendChild(d1);
-      run.appendChild(d2);
+      // 砂埃の2枚目は lite では出さない＝**塗り面積のいちばん大きい部品**（雲は1.5em×1.05emを
+      // scale2.2まで育てる＝1枚で1体ぶんの数倍）。大きい箱では1枚でも見た目の密度は足りる
+      if (!lite) {
+        var d2 = document.createElement("i"); d2.className = "dust d2";
+        run.appendChild(d2);
+      }
       box.appendChild(run);
     }
     cam.appendChild(box);
@@ -2632,13 +2684,19 @@
     if (old) old.parentNode.removeChild(old);
     var T = sumoTimes();
     var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var lite = fxLite(cam);   // 全画面ホスト＝通過倍率とテクスチャを抑える（overlay.cssの.fx-sumo.lite参照）
     // 手前まで来たとき（scale 1）＝枠の縦を少しはみ出す大きさ＝「デカい」印象を作る
     var sh = Math.round(ch * 1.12), sw = Math.round(sh * SUMO_AR);
     var box = document.createElement("div");
-    box.className = ["fx-sumo", "m-" + key].join(" ");
+    box.className = ["fx-sumo", "m-" + key].join(" ") + (lite ? " lite" : "");
     box.style.setProperty("--sw", sw + "px");
     box.style.setProperty("--sh", sh + "px");
-    box.style.setProperty("--burst", Math.round(Math.max(cw, ch) * 1.6) + "px");
+    /* どどんの集中線＝peyeの集中線と同じ理屈でテクスチャに上限（liteのみ・全画面だと3072px角
+       ＝9.4MPをdodonの瞬間に初描画していた）。maskで内側が抜けたドーナツなので、
+       多少小さくても文字の後光としての役は変わらない */
+    var burst = Math.round(Math.max(cw, ch) * 1.6);
+    if (lite) burst = Math.min(burst, 2200);
+    box.style.setProperty("--burst", burst + "px");
     /* 群れ（8/9 FB87）：先頭は中央・ど真ん中を通す。以降は左右交互に振り分けて
        だんだん外側＆小さめ（＝奥のレーン）にする。横位置はscaleの内側で効くので
        奥では中央の一点に集まり、近づくにつれて扇状に広がる */
@@ -3207,14 +3265,26 @@
     var left = (cw - pw) / 2, top = ch - Math.round(ch * 0.02) - ph;
     var ex = left + pw * PEYE_EYE.xc, ey = top + ph * PEYE_EYE.y;
     var combo = slotCombo(hit);
+    var lite = fxLite(cam);   // 大きい箱＝塗りで効く部品を落とす（fxLiteのコメント参照）
     var box = document.createElement("div");
-    box.className = ["fx-peye", "m-" + key].join(" ");
+    box.className = ["fx-peye", "m-" + key].join(" ") + (lite ? " lite" : "");
     box.style.setProperty("--pw", pw + "px");
     box.style.setProperty("--ph", ph + "px");
     box.style.setProperty("--eyy", Math.round(ph * PEYE_EYE.y) + "px");
     box.style.setProperty("--ex", ex.toFixed(1) + "px");
     box.style.setProperty("--ey", ey.toFixed(1) + "px");
-    box.style.setProperty("--lsz", Math.round(Math.max(cw, ch) * 2.6) + "px"); // 集中線の一辺（ラボの260vmaxのpx版）
+    /* 集中線の一辺（ラボの260vmaxのpx版）。⚠️実寸で持つのは PEYE_LINES_MAX まで＝それ以上は
+       テクスチャを頭打ちにして、足りない分は transform: scale（--lsc）で伸ばす。
+       **放射線は中心から拡大しても線の見た目が変わらない**（線が中心を通る＝拡大しても線幅の比が同じ）
+       ので、実寸を捨てても絵はほぼ同じ。マスクの輪郭だけが倍率ぶん甘くなる。
+       8/30＝全画面の試作でカクついた実測から入れた。1枚 max(cw,ch)×2.6 角を**a・bの2枚**持つので、
+       ワイプ(752)なら1,955px角＝7.6MPだが、全画面(1920)だと4,992px角＝**49.8MP＝画面24枚ぶん**になり、
+       しかも `.fx-peye.lit` で線の色（--lc/--lc2）が変わる＝その全面が塗り直される。
+       ⚠️本番のワイプは①752→1,955／②544→1,414＝どちらも上限に触らない＝`--lsc`は1.0＝**今までと同一**。 */
+    var lwant = Math.round(Math.max(cw, ch) * 2.6);
+    var lsz = Math.min(lwant, lite ? PEYE_LINES_LITE : PEYE_LINES_MAX);
+    box.style.setProperty("--lsz", lsz + "px");
+    box.style.setProperty("--lsc", (lwant / lsz).toFixed(4));   // CSSのscaleに掛かる（既定1）
     // 文字サイズ＝高さ基準とし、幅が狭いワイプ（544×404）では幅基準で頭打ち＝はみ出し防止
     box.style.setProperty("--mfs", Math.round(Math.min(ch * 0.16, cw * 0.09)) + "px");   // これは、、、
     box.style.setProperty("--tfs", Math.round(Math.min(ch * 0.18, cw * 0.104)) + "px");  // 発動1行目（2行目は1.45倍）
@@ -3620,7 +3690,7 @@
      自分の世代と違えば何もしない（止められないタイマーの空振り対策） */
   var fxGen = 0;
   var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea," +
-    " .fx-adj, .fx-samba, .fx-peye, .fx-thx, .fx-ht, .hit-fx-badge";
+    " .fx-adj, .fx-samba, .fx-peye, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
   function clearHitFx() {
     fxGen++;
     var nodes = document.querySelectorAll(FX_ROOTS);
@@ -3639,6 +3709,66 @@
     if (hitGlows.length) { hitGlows = []; renderPreds(); }
   }
   window.__clearHitFx = clearHitFx;   // 検証ハーネス（fxlab）から叩く
+
+  /* ══════════ 演出の出し先（8/30・試作→万車の本番機能に昇格）══════════
+     バッジ・枠パルス＝**常にワイプ**（fxWipes）。前奏（走行・専用演出）だけが出し先を選べる：
+       本番＝**万車的中のとき全画面ホスト**（fxStageHost・8/30 Naoto決定「前奏だけ全画面」＝
+             放送画面を長く覆わない。35秒残るバッジ・虹パルスは従来どおりワイプ側）
+       ラボ＝window.__FX_HOST で任意に上書き（fxlabだけが立てる・""＝ワイプを明示）
+     ⚠️undefined と "" を区別する＝undefined「ラボ外（＝本番）」／""「ラボがワイプを指定」。
+       truthy判定に書き換えると、ラボで万車×ワイプの見比べができなくなる。 */
+  function fxWipes(slot) {
+    var out = [];
+    // ③レース展開でも発火させる（8/12・③結果・的中シーンを消したため。要件§11.2）
+    ["np-talk-", "np-race-", "np-result-", "np-ad-", "np-tk-"].forEach(function (p) {
+      var el = $(p + slot);
+      if (!el) return;
+      var cam = el.closest(".cam");
+      if (cam) out.push(cam);
+    });
+    return out;
+  }
+
+  /* 万車＝全画面の対象シーン。**⑤広告・④待機は除外＝FB149と同じ判断**
+     （案件表示義務のある画面を覆わない・無人画面の挙動を変えない）→従来どおりワイプへ。
+     &fsfx=0 ＝OBS側だけで止める緊急の逃げ道（&hitscene=0 と同型・コンソール設定は作らない） */
+  var FSFX_OFF = params.get("fsfx") === "0";
+  var FSFX_SCENES = { talk: 1, race: 1, result: 1, tenkai: 1 };
+  function fxStageHost(hit) {
+    var mode = window.__FX_HOST !== undefined
+      ? window.__FX_HOST
+      : (hit && hit.manche && !FSFX_OFF && FSFX_SCENES[SCENE] ? "full" : "");
+    return mode ? protoHost(mode) : null;
+  }
+
+  /* ステージ直下に「大きなワイプ」を1枚作り、そこへ**本番と同じ spawn 系**を撃たせる。
+     演出はどれも cam.clientWidth/clientHeight から寸法を逆算しているので、箱を大きくすれば
+     絵も文字も**引き伸ばしではなくネイティブに大きく**なる（transform拡大ではない＝ボケない）。
+       full … 1920×1080（全画面）＝**本番の万車はこれ**
+     ⚠️8/30に「帯（1920×756・ヘッダーと下段を残す案）」も並べて見比べたが、Naoto確認の結果
+       **全画面で問題なし→帯は不要**と判断して削除した。**復活させない**（hosttestが行数を固定）。
+     ⚠️箱を**全幅**にしてあるのは、横に歩いて入る演出（走行・お茶・相撲・サンバ）が
+       `.cam`のoverflow:hiddenで切られるため。中央寄せの狭い箱だと、キャラが画面の途中から
+       湧いて出たように見えて、案そのものより先に違和感が立つ。
+     箱には class="cam" を付ける＝バッジのフィット等が本番と同じ経路で走る。 */
+  var PROTO_SIZES = { full: [1920, 1080] };
+  function protoHost(mode) {
+    var sz = PROTO_SIZES[mode];
+    var stage = $("stage");
+    if (!sz || !stage) return null;
+    var el = document.getElementById("fx-proto-host");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "fx-proto-host";
+      el.className = "cam fx-proto-host";   // camクラス＝枠パルス等を本番と同じCSSで受ける
+      stage.appendChild(el);
+    }
+    el.style.width = sz[0] + "px";
+    el.style.height = sz[1] + "px";
+    el.style.left = Math.round((1920 - sz[0]) / 2) + "px";
+    el.style.top = Math.round((1080 - sz[1]) / 2) + "px";
+    return el;
+  }
 
   function fireHitFx(slot, hit, rc, pairFx) {
     hitSceneSwitch(hit);   // 的中演出はトークの大きいワイプで見せる（8/29 FB149）
@@ -3669,18 +3799,22 @@
     // 遠隔自動更新（autoupdate.js・要件§12）への「演出中」通知＝force時はこの時刻まで待つ。
     // rainMs＝バッジが出るまで／HIT_FX_MS＝バッジ・買目強調の持続
     window.__fxUntil = Math.max(window.__fxUntil || 0, Date.now() + rainMs + HIT_FX_MS);
-    // ③レース展開でも発火させる（8/12・③結果・的中シーンを消したため。要件§11.2）
-    ["np-talk-", "np-race-", "np-result-", "np-ad-", "np-tk-"].forEach(function (p) {
-      var el = $(p + slot);
-      if (!el) return;
-      var cam = el.closest(".cam");
-      if (!cam) return;
+    var wipes = fxWipes(slot);
+    var stage = fxStageHost(hit);
+    /* バッジ・枠パルス＝**常にワイプ**（8/30 Naoto決定「前奏だけ全画面」＝35秒残るのはこちら側
+       だけ。全画面ホストには前奏が終わったあと何も残らない） */
+    wipes.forEach(function (cam) {
       cam.classList.add("hit-fx");
       if (key) cam.classList.add("m-" + key);             // 個人演出のフック（8/8 FB73）
       if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
       if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
-      // 前奏＝アイコンの走行（8/7 FB65）／専用演出のメンバーは走行を出さない
-      // （役物FB82・スロットFB83・相撲FB86・念仏FB88）
+      // 掃除（clearHitFx）が挟まったらバッジは出さない＝消したのに後から出る事故を防ぐ
+      setTimeout(function () { if (gen === fxGen) showHitBadge(cam, hit, key); }, rainMs);
+    });
+    /* 前奏＝アイコンの走行（8/7 FB65）／専用演出のメンバーは走行を出さない
+       （役物FB82・スロットFB83・相撲FB86・念仏FB88）。
+       万車＝全画面ホスト**1枚だけ**に出す（5シーンぶん撒かない・fxStageHostのコメント参照） */
+    (stage ? [stage] : wipes).forEach(function (cam) {
       if (eff === "yakumono") spawnYakumono(cam, key);
       else if (eff === "slot") spawnSlot(cam, key, hit, combo);
       else if (eff === "sumo") spawnSumo(cam, key, hit);
@@ -3694,8 +3828,6 @@
       else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）
       else if (eff === "hitouch") spawnHitouch(cam);           // ダブル的中の共演＝ペア表（8/28）
       else if (key) spawnRain(cam, key);
-      // 掃除（clearHitFx）が挟まったらバッジは出さない＝消したのに後から出る事故を防ぐ
-      setTimeout(function () { if (gen === fxGen) showHitBadge(cam, hit, key); }, rainMs);
     });
   }
   function showHitBadge(cam, hit, key) {
