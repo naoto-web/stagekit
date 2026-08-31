@@ -1507,6 +1507,11 @@ body.race-sub-on .race-sub { display: flex; }
   filter: drop-shadow(0 10px 22px rgba(0,0,0,.45)); }
 .fx-pray-lid { position: absolute; inset: 0;
   background: url("fx_pray_shut.png") center center / contain no-repeat; }
+/* 眼鏡なしバージョン（8/31 Naoto指示＝あり/なし50%ずつ・抽選はMEMBER_RATESのpray_ng）。
+   絵の差し替えだけ＝目の位置は現行絵と1%未満の一致（素材加工/fx_pray_ng_make.pyが実測）なので
+   --eye-*系の座標・閃光・寄りはそのまま共有する。素材を差し替えたら同スクリプトで座標を確認すること */
+.fx-pray.ng .fx-pray-art { background-image: url("fx_pray_ng.png"); }
+.fx-pray.ng .fx-pray-lid { background-image: url("fx_pray_shut_ng.png"); }
 @keyframes fxPrayLidOff { to { opacity: 0; } }
 .fx-pray.open .fx-pray-lid { animation: fxPrayLidOff .05s linear forwards; }
 /* 目の閃光＝白い核＋金の輪。left/topは素材内の目の中心。

@@ -1936,7 +1936,8 @@
        作り替えたのがこの表＝「%指定のたびに仕組みを触る」構造そのものを無くすのが目的。
      書き方＝色キー: { 演出キー: %, … } で**合計100**（0.5等の小数も可・分解能0.01%）。
        演出キー＝rain（既定のアイコン走行）／yakumono＝役物合体／slot＝スロット／sumo＝相撲
-                 ／pray＝念仏／tea＝お茶／nicha＝ニチャー／samba＝サンバ／dance＝ダンス
+                 ／pray＝念仏／pray_ng＝念仏の眼鏡なし（8/31・絵違いだけ＝尺と動きはprayと共通）
+                 ／tea＝お茶／nicha＝ニチャー／samba＝サンバ／dance＝ダンス
                  ／adjust＝アジャスト／peye＝ピーターズ・アイ／thanks＝選手リスペクト（結果発表・全員共通）
      ⚠️合計100でない／演出名のタイプミスは起動時の自己検査（auditRates）で警告＋テストがFAILする */
   /* ⚠️🚴選手リスペクト（thanks）は**8/29から全色0%＝いったん封印中**（Naoto指示・「みんなの反応が微妙だった」）。
@@ -1949,7 +1950,7 @@
     blue:   { yakumono: 50, adjust: 50, thanks: 0 },  // 役物合体（FB82）／アジャスト（FB130）
     pink:   { slot: 100, thanks: 0 },                 // スロット（FB83）
     green:  { sumo: 50, peye: 50, thanks: 0 },        // 相撲（FB86）／ピーターズ・アイ（8/25）
-    yellow: { pray: 100, thanks: 0 },                 // 念仏（FB88）
+    yellow: { pray: 50, pray_ng: 50, thanks: 0 },     // 念仏＝眼鏡あり/なし50%ずつ（FB88→8/31 Naoto指示）
     red:    { samba: 50, dance: 50, thanks: 0 }       // サンバ（FB121）／ダンス（8/25）
     // 例）purple: { rain: 50, slot: 30, thanks: 20 }
   };
@@ -2350,7 +2351,8 @@
   ["fx_peye1.png", "fx_peye2.png"].forEach(function (f) {
     var im = new Image(); im.src = f;   // ピーターズ・アイは2コマ（8/25）＝明転の切替でコマ落ちしないよう先読み
   });
-  ["fx_pray.png", "fx_pray_shut.png"].forEach(function (f) {         // 念仏は2枚重ね（8/9 FB88）
+  ["fx_pray.png", "fx_pray_shut.png",
+   "fx_pray_ng.png", "fx_pray_shut_ng.png"].forEach(function (f) {   // 念仏は2枚重ね（8/9 FB88）＋眼鏡なし版（8/31）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
   });
   ["fx_samba1.png", "fx_samba2.png", "fx_samba3.png"].forEach(function (f) {
@@ -2751,7 +2753,11 @@
      カッと見開いて目がピカッ＋金の後光。このメンバーはアイコン走行を出さない（fireHitFx側で分岐）。
      ⚠️見開きは「閉じ目レイヤー(fx_pray_shut.png)を消す」だけ＝元絵の開き目がそのまま出る。
         絵を差し替えているわけではないので、2枚がズレる余地が構造的にない */
-  function spawnPray(cam, key) {
+  /* ⚠️ng=true（8/31）＝眼鏡なしバージョン（pray_ng）。ニチャー（spawnTeaのvariant）と同じ
+       「同じ関数の分岐」方式＝絵の差し替え（CSSの .fx-pray.ng）だけで、尺・動き・目の閃光は共通。
+       素材＝fx_pray_ng.png / fx_pray_shut_ng.png（作り方＝素材加工/fx_pray_ng_make.py・
+       目の座標は現行絵と1%未満の一致＝--eye-*系のCSS変数を共有できる） */
+  function spawnPray(cam, key, ng) {
     var old = cam.querySelector(".fx-pray");
     if (old) old.parentNode.removeChild(old);
     var T = prayTimes();
@@ -2759,7 +2765,7 @@
     // 全身が枠に収まる大きさで登場し、寄りで顔が枠いっぱいになる
     var ph = Math.round(ch * 0.92), pw = Math.round(ph * PRAY_AR);
     var box = document.createElement("div");
-    box.className = ["fx-pray", "m-" + key].join(" ");
+    box.className = ["fx-pray", "m-" + key].concat(ng ? ["ng"] : []).join(" ");
     box.style.setProperty("--pw", pw + "px");
     box.style.setProperty("--ph", ph + "px");
     box.style.setProperty("--z", String(PRAY_ZOOM));
@@ -3433,7 +3439,7 @@
   /* ⚠️ここに hitouch（ダブル的中の共演）は**入れない**。あれは2人揃って初めて成立する演出で、
      MEMBER_RATESに書いても「1人の的中で出る」ようにはならない（正しい置き場はPAIR_FX）。
      入れないでおくと、間違ってこの表に書いたときに未知の演出名として警告が出る＝安全弁 */
-  var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, tea: 1, nicha: 1,
+  var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, pray_ng: 1, tea: 1, nicha: 1,
     samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1 };
   function auditRates() {
     Object.keys(MEMBER_RATES).forEach(function (k) {
@@ -3823,7 +3829,7 @@
       if (eff === "yakumono") spawnYakumono(cam, key);
       else if (eff === "slot") spawnSlot(cam, key, hit, combo);
       else if (eff === "sumo") spawnSumo(cam, key, hit);
-      else if (eff === "pray") spawnPray(cam, key);
+      else if (eff === "pray" || eff === "pray_ng") spawnPray(cam, key, eff === "pray_ng");
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "nicha") spawnTea(cam, key, "nicha");  // ニチャー（8/29・お茶の派生＝歩きは共通）
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
