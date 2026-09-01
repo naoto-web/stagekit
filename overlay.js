@@ -2098,7 +2098,9 @@
        RAISE＝岩の前で振りかぶる間 → SWING間隔で3打（DOWNMS＝振り下ろしを見せる時間）
        CRACK＝3打目から岩が割れるまで → GEMRISE＝鉱石がせり上がる → KIME＝キメポーズ＋タイトル
        HOLD＝キメの余韻（END＝バッジへバトン） */
-  var ORI_BASE = { IN: 60, WALK: 1500, STEP: 200, RAISE: 380, SWING: 500, DOWNMS: 190,
+  // 9/2 Naoto FB「歩きが速い」＝WALK 1500→2600（⚠️STEPも同率で200→350＝
+  // 移動だけ遅くすると足が滑って見える・お茶の教訓。バッジ約6.9→8.0秒）
+  var ORI_BASE = { IN: 60, WALK: 2600, STEP: 350, RAISE: 380, SWING: 500, DOWNMS: 190,
                    CRACK: 90, GEMRISE: 520, KIME: 700, HOLD: 2600, FADE: 450 };
   /* 実寸比と体の重心x比＝素材加工/fx_ori_make.py の出力（絵を差し替えたら再実行して貼り直す） */
   var ORI_AR_W = 0.7310, ORI_CX_W = 0.5382; // 歩行（w1/w2共通枠・体の重心x比）
@@ -3023,7 +3025,9 @@
       var c = document.createElement("span");
       c.className = "fx-ori-chip";
       c.textContent = n;
-      c.style.setProperty("--tx", Math.round((i - (combo.length - 1) / 2) * cs * 1.3) + "px");
+      // 横＝岩の中心から**1枚ぶん右へ寄せた列**（9/2 FB＝キメポーズのツルハシが
+      // 左端のチップに被った。キメの絵は体の右上にツルハシが伸びる＝列ごと右へ逃がす）
+      c.style.setProperty("--tx", Math.round((i - (combo.length - 1) / 2) * cs * 1.3 + cs * 1.05) + "px");
       // 高さ＝鉱石の先端の高さに並ぶ（タイトルと十分離す・初版はタイトルに接触した）
       c.style.setProperty("--ty", -Math.round(rh * 0.42 + gh * 0.62) + "px");
       rockbox.appendChild(c);
