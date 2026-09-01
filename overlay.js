@@ -2987,7 +2987,7 @@
     var kh = Math.round(ch * 0.60), kw = Math.round(kh * ORI_AR_K);
     var rh = Math.round(ch * 0.32), rw = Math.round(rh * ORI_AR_R);
     var gh = Math.round(ch * 0.38), gw = Math.round(gh * ORI_AR_G);
-    var rockL = Math.round(cw * 0.95 - rw);       // 岩＝右寄り
+    var rockL = Math.round((cw - rw) / 2);        // 岩＝中央（9/2 Naoto FB・初版は右寄り）
     /* 体のアンカーx＝**振り下ろしのツルハシ先端が岩の左肩（左から30%）に当たる**逆算位置。
        振り枠の右端≒ツルハシ先端なので、先端までの距離＝sw×(1-体の重心x比)。
        体を岩の位置に置くと重なって埋まる（初版の実写で確認） */
@@ -3014,24 +3014,27 @@
       "</div>" +
       '<div class="fx-ori-sweep"></div>' +
       '<div class="fx-ori-cap"><span>オリハルコンレース！！</span></div>';
-    // 当たり目チップ＝岩の中から飛び出す（数はcomboに追従＝2連単なら2枚）
+    // 当たり目チップ＝**彫るごとに1枚ずつ**岩から飛び出す（9/2 Naoto FB・初版はパカッで一斉）。
+    // 数はcomboに追従＝2連単なら2枚（3打目はパカッ担当）。出す合図はJSが打撃時刻に.onを付ける
     var combo = slotCombo(hit);
     var rockbox = box.querySelector(".fx-ori-rockbox");
     var cs = Math.round(ch * 0.145);
-    combo.forEach(function (n, i) {
+    var chips = combo.map(function (n, i) {
       var c = document.createElement("span");
       c.className = "fx-ori-chip";
       c.textContent = n;
       c.style.setProperty("--tx", Math.round((i - (combo.length - 1) / 2) * cs * 1.3) + "px");
-      // 高さ＝鉱石の先端の少し上（タイトルとぶつからない範囲・初版0.85は上すぎて接触した）
-      c.style.setProperty("--ty", -Math.round(rh * 0.50 + gh * 0.72) + "px");
-      c.style.setProperty("--cd", (i * 0.12) + "s");
+      // 高さ＝鉱石の先端の高さに並ぶ（タイトルと十分離す・初版はタイトルに接触した）
+      c.style.setProperty("--ty", -Math.round(rh * 0.42 + gh * 0.62) + "px");
       rockbox.appendChild(c);
+      return c;
     });
     cam.appendChild(box);
     fitMoroCap(box.querySelector(".fx-ori-cap"), cw * 0.92, ch * 0.16);
 
-    // 打撃の光と擬音（3打目＝大）。要素はアニメ終わりに自分で消える
+    /* 打撃の光と擬音（3打目＝大きい光のみ）。要素はアニメ終わりに自分で消える。
+       ⚠️「カチーン！」の文字は**出さない**（9/2 Naoto FB＝タイトルと被った）＝
+         擬音は1・2打目の小さい「カチッ！」だけ（0.62秒で消える＝タイトルより先にいなくなる） */
     function strike(big) {
       if (!box.isConnected) return;
       var hitFx = document.createElement("i");
@@ -3039,22 +3042,29 @@
       hitFx.style.left = (rockL + rw * 0.20) + "px";
       hitFx.style.bottom = Math.round(ch * 0.045 + rh * 0.78) + "px";
       box.appendChild(hitFx);
-      var se = document.createElement("span");
-      se.className = "fx-ori-se" + (big ? " big" : "");
-      se.textContent = big ? "カチーン！" : "カチッ！";
-      se.style.right = (cw - rockL - rw * 0.5) + "px";
-      se.style.top = Math.round(ch * (big ? 0.10 : 0.16 + Math.random() * 0.08)) + "px";
-      box.appendChild(se);
+      var se = null;
+      if (!big) {
+        se = document.createElement("span");
+        se.className = "fx-ori-se";
+        se.textContent = "カチッ！";
+        se.style.right = (cw - rockL - rw * 0.5) + "px";
+        se.style.top = Math.round(ch * (0.14 + Math.random() * 0.08)) + "px";
+        box.appendChild(se);
+      }
       setTimeout(function () {
         if (hitFx.parentNode) hitFx.parentNode.removeChild(hitFx);
-        if (se.parentNode && !big) se.parentNode.removeChild(se); // 大の擬音はキメまで残す
-      }, big ? 460 : 620);
+        if (se && se.parentNode) se.parentNode.removeChild(se);
+      }, 620);
       if (big) box.classList.add("quake");
     }
     box.classList.add("walking");
     setTimeout(function () { box.classList.remove("walking"); box.classList.add("ready"); }, T.ARRIVE);
     [T.S1, T.S2, T.S3].forEach(function (ts, i) {
-      setTimeout(function () { box.classList.add("dn"); strike(i === 2); }, ts);
+      setTimeout(function () {
+        box.classList.add("dn");
+        strike(i === 2);
+        if (chips[i]) chips[i].classList.add("on");  // 彫るごとに当たり目が1枚ずつ飛び出す
+      }, ts);
       if (i < 2) setTimeout(function () { box.classList.remove("dn"); }, ts + ORI_BASE.DOWNMS + 120);
     });
     setTimeout(function () { box.classList.add("cracked"); }, T.CRACK);

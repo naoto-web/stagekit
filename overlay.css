@@ -1746,8 +1746,9 @@ body.race-sub-on .race-sub { display: flex; }
   55%  { opacity: 1; transform: translate(var(--tx), calc(var(--ty) - var(--cs) * .4)) scale(1.14); }
   100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
 }
-.fx-ori.cracked .fx-ori-chip { animation: oriChipPop .55s cubic-bezier(.2, 1.15, .4, 1) forwards;
-  animation-delay: var(--cd, 0s); }
+/* 出す合図＝.on（JSが**打撃のたび**に1枚ずつ付ける＝「彫るごとに出てくる」9/2 Naoto FB。
+   .crackedで一斉に出す方式から変更） */
+.fx-ori-chip.on { animation: oriChipPop .55s cubic-bezier(.2, 1.15, .4, 1) forwards; }
 /* 打撃の光と擬音（JSが打つたび生成・自分で消える） */
 .fx-ori-hitfx { position: absolute; width: calc(var(--rh) * .8); height: calc(var(--rh) * .8);
   margin: 0 0 calc(var(--rh) * -.4) calc(var(--rh) * -.4);
