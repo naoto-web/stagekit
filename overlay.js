@@ -5,7 +5,7 @@
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
      ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
      ?fx=<演出キー>                 … 的中演出の抽選をやめて指定の演出を出す（検証用・本番URLには付けない）
-                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|peye|thanks|morotade|auto
+                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|peye|thanks|morotade|ori|auto
                                       ⚠️テスト接続（?gas=）も**本番と同じ抽選**（8/29〜・旧＝thanks固定8/25）
    データ: GAS状態（5秒ポーリング＋BroadcastChannel即時反映）＋タイムテーブル（10分毎） */
 
@@ -2092,6 +2092,32 @@
        FADE …退場フェードms */
   // 9/2 Naoto FB「間をもうちょっと伸ばして」＝B1 700→1100・B2 1050→1600（バッジ約5.0→5.9秒）
   var MORO_BASE = { IN: 60, POP: 480, B1: 1100, B2: 1600, HOLD: 2700, FADE: 450 };
+
+  /* オリハルコンレースの尺（9/2・橙の低倍率限定演出・Y依頼）
+       IN→WALK＝ツルハシを担いで左から歩いてくる（STEP＝歩行2コマの切替間隔）
+       RAISE＝岩の前で振りかぶる間 → SWING間隔で3打（DOWNMS＝振り下ろしを見せる時間）
+       CRACK＝3打目から岩が割れるまで → GEMRISE＝鉱石がせり上がる → KIME＝キメポーズ＋タイトル
+       HOLD＝キメの余韻（END＝バッジへバトン） */
+  var ORI_BASE = { IN: 60, WALK: 1500, STEP: 200, RAISE: 380, SWING: 500, DOWNMS: 190,
+                   CRACK: 90, GEMRISE: 520, KIME: 700, HOLD: 2600, FADE: 450 };
+  /* 実寸比と体の重心x比＝素材加工/fx_ori_make.py の出力（絵を差し替えたら再実行して貼り直す） */
+  var ORI_AR_W = 0.7310, ORI_CX_W = 0.5382; // 歩行（w1/w2共通枠・体の重心x比）
+  var ORI_AR_S = 1.0280, ORI_CX_S = 0.4744; // 振り（up/dn共通枠）
+  var ORI_AR_K = 0.8810, ORI_CX_K = 0.4432; // キメ
+  var ORI_AR_R = 0.9570;                    // 岩（rock1/rock2共通枠）
+  var ORI_AR_G = 1.0200;                    // 鉱石
+  function oriTimes() {
+    var t = { IN: ORI_BASE.IN };
+    t.ARRIVE = t.IN + ORI_BASE.WALK;             // 歩き終わり＝振りかぶりへ
+    t.S1 = t.ARRIVE + ORI_BASE.RAISE;            // 1打目（カチッ！）
+    t.S2 = t.S1 + ORI_BASE.SWING;                // 2打目（カチッ！）
+    t.S3 = t.S2 + ORI_BASE.SWING;                // 3打目（カチーン！＝大）
+    t.CRACK = t.S3 + ORI_BASE.CRACK;             // 岩パカッ＝鉱石＋当たり目チップ
+    t.KIME = t.CRACK + ORI_BASE.GEMRISE + ORI_BASE.KIME; // キメポーズ＋タイトル
+    t.END = t.KIME + ORI_BASE.HOLD;              // 退場開始＝バッジにバトンを渡す
+    t.GONE = t.END + ORI_BASE.FADE;
+    return t;
+  }
   var MORO_AR = 892 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する・9/2素材差し替えで799→892）
   function moroTimes() {
     var t = { IN: MORO_BASE.IN };
@@ -2416,6 +2442,10 @@
   });
   (function () { var im = new Image(); im.src = "fx_moro.png"; })(); // もろたで（9/1・黄の3つ目）＝
   // 登場ポップと同時に絵が要る＝先読みしないと初回だけ「吹き出しが無人に出る」
+  ["fx_ori_w1.png", "fx_ori_w2.png", "fx_ori_up.png", "fx_ori_dn.png",
+   "fx_ori_kime.png", "fx_ori_rock1.png", "fx_ori_rock2.png", "fx_ori_gem.png"].forEach(function (f) {
+    var im = new Image(); im.src = f;  // オリハルコン8枚（9/2）＝歩行コマ落ち・岩パカッの入れ替え対策
+  });
   ["fx_samba1.png", "fx_samba2.png", "fx_samba3.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // サンバは3コマ（8/10 FB121）＝初回的中でコマ落ちしないよう先読み
   });
@@ -2936,6 +2966,104 @@
     while (wide() > availW && fs > 12 && guard < 40) {
       fs -= 2; bubble.style.setProperty("--bfs", fs + "px"); guard++;
     }
+  }
+
+  /* オリハルコンレース（9/2 Y依頼・橙の**低倍率限定**演出）：3倍未満の的中＝カチカチの固いレース。
+     ちびキャラ（Naoto支給シート→素材加工/fx_ori_make.py）がツルハシを担いで左から歩いてくる →
+     岩の前で振りかぶり「カチッ！」×2＋「カチーン！」の大振り → 岩がパカッと割れて
+     オリハルコン鉱石＋**金属化した当たり目チップ**が飛び出す → キメポーズ＋金属光沢タイトル。
+     発動はMEMBER_RATESでなく LOWODDS_FX（100%・pickEffect参照）。
+     ⚠️当たり目チップ＝slotComboが取れた時だけ（手動追加等は鉱石だけ＝数字の作り話をしない・スロットと同じ）
+     ⚠️体の見た目の大きさ＝**枠の高さをフェーズごとに変えて**揃える（歩き枠は体がほぼ全高だが、
+        振り・キメ枠はツルハシが頭上に伸びる分だけ枠が高い＝同じ高さで置くと体が縮んで見える）。
+        横は各フェーズの「体の重心x比」（ORI_CX_*）でアンカーに合わせる＝入れ替えで体が跳ばない */
+  function spawnOri(cam, key, hit) {
+    var old = cam.querySelector(".fx-ori");
+    if (old) old.parentNode.removeChild(old);
+    var T = oriTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var wh = Math.round(ch * 0.56), ww = Math.round(wh * ORI_AR_W);
+    var sh = Math.round(ch * 0.62), sw = Math.round(sh * ORI_AR_S);
+    var kh = Math.round(ch * 0.60), kw = Math.round(kh * ORI_AR_K);
+    var rh = Math.round(ch * 0.32), rw = Math.round(rh * ORI_AR_R);
+    var gh = Math.round(ch * 0.38), gw = Math.round(gh * ORI_AR_G);
+    var rockL = Math.round(cw * 0.95 - rw);       // 岩＝右寄り
+    /* 体のアンカーx＝**振り下ろしのツルハシ先端が岩の左肩（左から30%）に当たる**逆算位置。
+       振り枠の右端≒ツルハシ先端なので、先端までの距離＝sw×(1-体の重心x比)。
+       体を岩の位置に置くと重なって埋まる（初版の実写で確認） */
+    var manX = Math.round(rockL + rw * 0.30 - sw * (1 - ORI_CX_S));
+    var box = document.createElement("div");
+    box.className = "fx-ori m-" + key;
+    var v = { "--walk": (ORI_BASE.WALK / 1000) + "s", "--step": (ORI_BASE.STEP / 1000) + "s",
+      "--mx": manX + "px", "--x0": -(manX + sw) + "px",
+      "--ww": ww + "px", "--wh": wh + "px", "--wl": -Math.round(ORI_CX_W * ww) + "px",
+      "--sw": sw + "px", "--sh": sh + "px", "--sl": -Math.round(ORI_CX_S * sw) + "px",
+      "--kw": kw + "px", "--kh": kh + "px", "--kl": -Math.round(ORI_CX_K * kw) + "px",
+      "--rx": rockL + "px", "--rw": rw + "px", "--rh": rh + "px",
+      "--gw": gw + "px", "--gh": gh + "px", "--cs": Math.round(ch * 0.145) + "px" };
+    Object.keys(v).forEach(function (k) { box.style.setProperty(k, v[k]); });
+    box.innerHTML =
+      '<div class="fx-ori-rockbox">' +
+        '<i class="fx-ori-rock r1"></i><i class="fx-ori-rock r2"></i>' +
+        '<i class="fx-ori-gem"></i>' +
+      "</div>" +
+      '<div class="fx-ori-man">' +
+        '<i class="fx-ori-img w1"></i><i class="fx-ori-img w2"></i>' +
+        '<i class="fx-ori-img up"></i><i class="fx-ori-img dn"></i>' +
+        '<i class="fx-ori-img kime"></i>' +
+      "</div>" +
+      '<div class="fx-ori-sweep"></div>' +
+      '<div class="fx-ori-cap"><span>オリハルコンレース！！</span></div>';
+    // 当たり目チップ＝岩の中から飛び出す（数はcomboに追従＝2連単なら2枚）
+    var combo = slotCombo(hit);
+    var rockbox = box.querySelector(".fx-ori-rockbox");
+    var cs = Math.round(ch * 0.145);
+    combo.forEach(function (n, i) {
+      var c = document.createElement("span");
+      c.className = "fx-ori-chip";
+      c.textContent = n;
+      c.style.setProperty("--tx", Math.round((i - (combo.length - 1) / 2) * cs * 1.3) + "px");
+      // 高さ＝鉱石の先端の少し上（タイトルとぶつからない範囲・初版0.85は上すぎて接触した）
+      c.style.setProperty("--ty", -Math.round(rh * 0.50 + gh * 0.72) + "px");
+      c.style.setProperty("--cd", (i * 0.12) + "s");
+      rockbox.appendChild(c);
+    });
+    cam.appendChild(box);
+    fitMoroCap(box.querySelector(".fx-ori-cap"), cw * 0.92, ch * 0.16);
+
+    // 打撃の光と擬音（3打目＝大）。要素はアニメ終わりに自分で消える
+    function strike(big) {
+      if (!box.isConnected) return;
+      var hitFx = document.createElement("i");
+      hitFx.className = "fx-ori-hitfx" + (big ? " big" : "");
+      hitFx.style.left = (rockL + rw * 0.20) + "px";
+      hitFx.style.bottom = Math.round(ch * 0.045 + rh * 0.78) + "px";
+      box.appendChild(hitFx);
+      var se = document.createElement("span");
+      se.className = "fx-ori-se" + (big ? " big" : "");
+      se.textContent = big ? "カチーン！" : "カチッ！";
+      se.style.right = (cw - rockL - rw * 0.5) + "px";
+      se.style.top = Math.round(ch * (big ? 0.10 : 0.16 + Math.random() * 0.08)) + "px";
+      box.appendChild(se);
+      setTimeout(function () {
+        if (hitFx.parentNode) hitFx.parentNode.removeChild(hitFx);
+        if (se.parentNode && !big) se.parentNode.removeChild(se); // 大の擬音はキメまで残す
+      }, big ? 460 : 620);
+      if (big) box.classList.add("quake");
+    }
+    box.classList.add("walking");
+    setTimeout(function () { box.classList.remove("walking"); box.classList.add("ready"); }, T.ARRIVE);
+    [T.S1, T.S2, T.S3].forEach(function (ts, i) {
+      setTimeout(function () { box.classList.add("dn"); strike(i === 2); }, ts);
+      if (i < 2) setTimeout(function () { box.classList.remove("dn"); }, ts + ORI_BASE.DOWNMS + 120);
+    });
+    setTimeout(function () { box.classList.add("cracked"); }, T.CRACK);
+    setTimeout(function () {   // キメ＝振りのコマを畳んでキメポーズ＋タイトル
+      box.classList.remove("ready", "dn");
+      box.classList.add("kime");
+    }, T.KIME);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
   }
 
   /* お茶（8/9 FB90・橙メンバーの2つ目）：画面右からてくてく歩いてきて、中央で止まり、湯呑みを掲げる。
@@ -3569,6 +3697,24 @@
     return girls;
   }
 
+  /* ══════════ 低倍率レース限定演出（9/2 Y依頼＝⛏オリハルコンレース） ══════════
+     ギャル神と同じ「限定枠」の流儀＝色キーを書くと、その人が**3倍未満の倍率**を的中させたとき
+     必ずこの演出（100%・抽選なし・9/2 Naoto決定＝ギャル神方式）。
+     「オリハルコン＝カチカチに固い伝説の鉱物」＝ガチガチの本命レースだった、の意。
+     優先順位＝?fx=強制 > ダブル的中の共演 > FX_PIN > ギャル神 > **この表** > MEMBER_RATESの抽選。
+     ⚠️MEMBER_RATESにもFX_KNOWNにも書かない（書くと通常倍率でも出る・galgod/hitouchと同じ安全弁） */
+  var LOWODDS_FX = { orange: "ori" }; // 橙＝⛏オリハルコンレース
+  var LOWODDS_MAX = 3;                // 「3倍未満」＝この値**未満**（3.0ちょうどは対象外・Y指定）
+  /* 倍率判定＝的中の倍率（同着で複数持つ時は**一番高い方**）がLOWODDS_MAX未満か。
+     一番高い方で見る理由＝並びのどれかが固かっただけでは「カチカチのレース」とは言えない。
+     倍率が取れない的中（手動追加等）＝判定不能→通常の抽選に落ちる（安全側・ギャル神と同じ） */
+  function isLowOddsHit(hit) {
+    var ms = ((hit && hit.mults && hit.mults.length) ? hit.mults : [hit && hit.mult])
+      .filter(function (m) { return typeof m === "number" && m > 0; });
+    if (!ms.length) return false;
+    return Math.max.apply(null, ms) < LOWODDS_MAX;
+  }
+
   /* ══════════ 確率テーブルから1つ引く仕組み（8/27） ══════════
      ⚠️ここは**仕組み**＝確率を変えるときに触る場所ではない（触るのはMEMBER_RATESの数字だけ）。
      ・引き方＝ハッシュの**下の桁**（% RATE_SCALE）で整数の当たり枠に落とす。
@@ -3598,7 +3744,8 @@
      MEMBER_RATESに書いても「1人の的中で出る」ようにはならない（正しい置き場はPAIR_FX）。
      入れないでおくと、間違ってこの表に書いたときに未知の演出名として警告が出る＝安全弁
      ⚠️galgod（ギャル神・9/1）も同じ理由で**入れない**＝ガールズレース限定（正しい置き場はGIRLS_FX）。
-     MEMBER_RATESに書くと通常レースでも出てしまう */
+     MEMBER_RATESに書くと通常レースでも出てしまう
+     ⚠️ori（オリハルコンレース・9/2）も同じ理由で**入れない**＝低倍率限定（正しい置き場はLOWODDS_FX） */
   var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, pray_ng: 1, tea: 1, nicha: 1,
     samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1, morotade: 1 };
   function auditRates() {
@@ -3622,6 +3769,7 @@
     if (pairFx) return pairFx;
     if (FX_PIN[key]) return FX_PIN[key]; // 今だけの固定枠（上のFX_PIN参照・戻し忘れ注意）
     if (GIRLS_FX[key] && isGirlsHit(hit)) return GIRLS_FX[key]; // ガールズ限定枠＝ギャル神（9/1）
+    if (LOWODDS_FX[key] && isLowOddsHit(hit)) return LOWODDS_FX[key]; // 低倍率限定枠＝オリハルコン（9/2）
     var rates = MEMBER_RATES[key];
     if (!rates) return "";               // 表に無い色＝名簿外＝既定のアイコン走行（従来動作）
     // IDが取れない経路（保険）だけ乱数。通常の的中は必ずid付き（derive.jsのhits）
@@ -3945,7 +4093,7 @@
 
   var fxGen = 0;
   var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea, .fx-moro," +
-    " .fx-adj, .fx-samba, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
+    " .fx-ori, .fx-adj, .fx-samba, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
   function clearHitFx() {
     fxGen++;
     var nodes = document.querySelectorAll(FX_ROOTS);
@@ -4053,6 +4201,7 @@
       //    約1.4秒早く（既定の4500msで）出ていた＝もろたで追加のついでに修正
       : eff === "pray" || eff === "pray_ng" ? prayTimes().END
       : eff === "morotade" ? moroTimes().END
+      : eff === "ori" ? oriTimes().END
       : eff === "tea" ? teaTimes().END
       : eff === "nicha" ? nichaTimes().END
       : eff === "samba" ? sambaTimes().END
@@ -4087,6 +4236,7 @@
       else if (eff === "sumo") spawnSumo(cam, key, hit);
       else if (eff === "pray" || eff === "pray_ng") spawnPray(cam, key, eff === "pray_ng");
       else if (eff === "morotade") spawnMorotade(cam, key, rc);  // もろたで（9/1・黄の3つ目＝相方の名前入り）
+      else if (eff === "ori") spawnOri(cam, key, hit);           // オリハルコン（9/2・橙の低倍率限定）
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "nicha") spawnTea(cam, key, "nicha");  // ニチャー（8/29・お茶の派生＝歩きは共通）
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
