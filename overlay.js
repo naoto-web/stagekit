@@ -3014,6 +3014,7 @@
         '<i class="fx-ori-img up"></i><i class="fx-ori-img dn"></i>' +
         '<i class="fx-ori-img kime"></i>' +
       "</div>" +
+      '<i class="fx-ori-flash"></i>' +
       '<div class="fx-ori-sweep"></div>' +
       '<div class="fx-ori-cap"><span>オリハルコンレース！！</span></div>';
     // 当たり目チップ＝**彫るごとに1枚ずつ**岩から飛び出す（9/2 Naoto FB・初版はパカッで一斉）。
@@ -3023,7 +3024,9 @@
     var cs = Math.round(ch * 0.145);
     var chips = combo.map(function (n, i) {
       var c = document.createElement("span");
-      c.className = "fx-ori-chip";
+      // 色＝**競輪標準の車番9色**（既存の.c1〜.c9に乗る・9/2 Naoto FB「車番の色表示した方がいい」）。
+      // オリハルコン感は青緑の縁と光で持つ（選手リスペクトの「寸法だけ変えて色は.cNに乗る」と同じ流儀）
+      c.className = "fx-ori-chip c" + n;
       c.textContent = n;
       // 横＝岩の中心から**1枚ぶん右へ寄せた列**（9/2 FB＝キメポーズのツルハシが
       // 左端のチップに被った。キメの絵は体の右上にツルハシが伸びる＝列ごと右へ逃がす）
