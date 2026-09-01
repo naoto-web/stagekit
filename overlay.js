@@ -2091,7 +2091,7 @@
        HOLD …②が出てから退場開始までのms（①②とも出したまま＝両方残す・9/1 Naoto指定）
        FADE …退場フェードms */
   var MORO_BASE = { IN: 60, POP: 480, B1: 700, B2: 1050, HOLD: 2700, FADE: 450 };
-  var MORO_AR = 799 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する）
+  var MORO_AR = 892 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する・9/2素材差し替えで799→892）
   function moroTimes() {
     var t = { IN: MORO_BASE.IN };
     t.B1 = t.IN + MORO_BASE.POP + MORO_BASE.B1;   // 吹き出し①（キャラの右上）
