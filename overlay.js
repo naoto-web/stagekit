@@ -5,7 +5,7 @@
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
      ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
      ?fx=<演出キー>                 … 的中演出の抽選をやめて指定の演出を出す（検証用・本番URLには付けない）
-                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|peye|thanks|auto
+                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|peye|thanks|morotade|auto
                                       ⚠️テスト接続（?gas=）も**本番と同じ抽選**（8/29〜・旧＝thanks固定8/25）
    データ: GAS状態（5秒ポーリング＋BroadcastChannel即時反映）＋タイムテーブル（10分毎） */
 
@@ -1939,6 +1939,7 @@
                  ／pray＝念仏／pray_ng＝念仏の眼鏡なし（8/31・絵違いだけ＝尺と動きはprayと共通）
                  ／tea＝お茶／nicha＝ニチャー／samba＝サンバ／dance＝ダンス
                  ／adjust＝アジャスト／peye＝ピーターズ・アイ／thanks＝選手リスペクト（結果発表・全員共通）
+                 ／morotade＝もろたで（9/1・黄の3つ目＝吹き出し2つ・相方の名前入り）
      ⚠️合計100でない／演出名のタイプミスは起動時の自己検査（auditRates）で警告＋テストがFAILする */
   /* ⚠️🚴選手リスペクト（thanks）は**8/29から全色0%＝いったん封印中**（Naoto指示・「みんなの反応が微妙だった」）。
        演出そのものは消していない＝`?fx=thanks`・テスト接続（?gas=）では今までどおり出る。抽選から外しただけ。
@@ -1952,7 +1953,7 @@
     //   ギャル神はこの表に書かない＝書くと通常レースでも出てしまう（安全弁はFX_KNOWN側）
     pink:   { slot: 100, thanks: 0 },                 // スロット（FB83）
     green:  { sumo: 50, peye: 50, thanks: 0 },        // 相撲（FB86）／ピーターズ・アイ（8/25）
-    yellow: { pray: 50, pray_ng: 50, thanks: 0 },     // 念仏＝眼鏡あり/なし50%ずつ（FB88→8/31 Naoto指示）
+    yellow: { pray: 34, pray_ng: 33, morotade: 33, thanks: 0 }, // 念仏あり/なし/もろたで＝ほぼ均等（9/1 Naoto指示）
     red:    { samba: 50, dance: 50, thanks: 0 }       // サンバ（FB121）／ダンス（8/25）
     // 例）purple: { rain: 50, slot: 30, thanks: 20 }
   };
@@ -2079,6 +2080,24 @@
     t.HALO = t.OPEN + PRAY_BASE.HALO;
     t.END  = t.OPEN + PRAY_BASE.HOLD;                             // 退場開始＝ここでバッジにバトンを渡す
     t.GONE = t.END + PRAY_BASE.FADE;
+    return t;
+  }
+
+  /* もろたでの尺（9/1・黄の3つ目の演出）
+       IN   …発火から登場ポップまでの間ms
+       POP  …キャラのポップイン（跳ねて着地）のms
+       B1   …着地から吹き出し①「このレース、」までの間ms
+       B2   …①から吹き出し②「もろたで〇〇!!!」までの間ms（＝漫画の「一拍」）
+       HOLD …②が出てから退場開始までのms（①②とも出したまま＝両方残す・9/1 Naoto指定）
+       FADE …退場フェードms */
+  var MORO_BASE = { IN: 60, POP: 480, B1: 700, B2: 1050, HOLD: 2700, FADE: 450 };
+  var MORO_AR = 799 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する）
+  function moroTimes() {
+    var t = { IN: MORO_BASE.IN };
+    t.B1 = t.IN + MORO_BASE.POP + MORO_BASE.B1;   // 吹き出し①（キャラの右上）
+    t.B2 = t.B1 + MORO_BASE.B2;                   // 吹き出し②（キャラの左）＝①は消さない
+    t.END = t.B2 + MORO_BASE.HOLD;                // 退場開始＝バッジにバトンを渡す
+    t.GONE = t.END + MORO_BASE.FADE;
     return t;
   }
 
@@ -2391,6 +2410,8 @@
    "fx_pray_ng.png", "fx_pray_shut_ng.png"].forEach(function (f) {   // 念仏は2枚重ね（8/9 FB88）＋眼鏡なし版（8/31）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
   });
+  (function () { var im = new Image(); im.src = "fx_moro.png"; })(); // もろたで（9/1・黄の3つ目）＝
+  // 登場ポップと同時に絵が要る＝先読みしないと初回だけ「吹き出しが無人に出る」
   ["fx_samba1.png", "fx_samba2.png", "fx_samba3.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // サンバは3コマ（8/10 FB121）＝初回的中でコマ落ちしないよう先読み
   });
@@ -2846,6 +2867,69 @@
     setTimeout(function () { box.classList.add("halo"); }, T.HALO);
     setTimeout(function () { box.classList.add("out"); }, T.END);
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
+  /* もろたで（9/1 Naoto案・黄の3つ目）：キャラ（もろたで①.jpgの右の1体＝素材加工/fx_moro_make.py）が
+     右下にドンとポップイン → キャラの右上に吹き出し①「このレース、」→ 一拍おいて
+     キャラの左に吹き出し②「もろたで〇〇!!!」（①は消さず両方残す＝漫画のコマ）。
+     〇〇＝**その日の相方（もう片方の席）の名簿の名前**＝人名をコードに書かない方針の維持
+     （サンバのキメ文字と同じ考え方・色の割当を変えても自動で追従）。一人配信＝「もろたで!!!」だけ。
+     ⚠️素材は上・右・下が見切れた絵（元絵がそう）＝キャラは枠の右下に**少しはみ出して**置き、
+        切れた縁を枠の外に隠す（縮めて中に置くと頭とワイプの間に「平らな切り口」が見える） */
+  function spawnMorotade(cam, key, rc) {
+    var old = cam.querySelector(".fx-moro");
+    if (old) old.parentNode.removeChild(old);
+    var T = moroTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var mh = Math.round(ch * 1.06), mw = Math.round(mh * MORO_AR);
+    /* 相方＝もう片方の席の名簿名。的中したrcと**名前が違う方**の席を採る
+       （席オブジェクトの同一性に頼らない＝?fx=強制やラボでrcが席と別物でも安全）。
+       片席しか埋まっていない日（一人配信）＝相方なし＝「もろたで!!!」だけ */
+    var seats = seatMap(), mate = "";
+    if (seats.a && seats.b) {
+      var myName = rc && rc.name;
+      var other = (seats.a.name === myName) ? seats.b
+        : (seats.b.name === myName) ? seats.a
+        : (memberKey(seats.a) !== key ? seats.a : seats.b);
+      if (other && other.name && other.name !== myName) mate = String(other.name);
+    }
+    var box = document.createElement("div");
+    box.className = "fx-moro m-" + key;
+    box.style.setProperty("--mw", mw + "px");
+    box.style.setProperty("--mh", mh + "px");
+    box.innerHTML =
+      '<div class="fx-moro-body"><i class="fx-moro-art"></i></div>' +
+      '<div class="fx-moro-b b1"><span>このレース、</span></div>' +
+      '<div class="fx-moro-b b2"><span></span>' + (mate ? "<span></span>" : "") + "</div>";
+    var b2 = box.querySelectorAll(".fx-moro-b.b2 span");
+    // 相方あり＝2行（「もろたで」＋「〇〇!!!」）で名前を大きく見せる／一人配信＝1行
+    b2[0].textContent = mate ? "もろたで" : "もろたで!!!";
+    if (mate) b2[1].textContent = mate + "!!!";
+    cam.appendChild(box);
+    fitMoroCap(box.querySelector(".fx-moro-b.b1"), cw * 0.36, ch * 0.105);
+    // ②の幅＝キャラの左端までの空き幅から逆算（固定%だと狭いワイプで白い吹き出しが顔に掛かる）。
+    // はみ出し先が暗い法衣に少し乗るのは漫画の重なりとして許容（顔・目には掛からない）
+    fitMoroCap(box.querySelector(".fx-moro-b.b2"), Math.max(cw * 0.30, cw * 0.99 - mw), ch * 0.145);
+    setTimeout(function () { box.classList.add("pop"); }, T.IN);
+    setTimeout(function () { box.classList.add("talk1"); }, T.B1);
+    setTimeout(function () { box.classList.add("talk2"); }, T.B2);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+  /** 吹き出しの文字を幅に収める（fitTeaCapと同じ手法・複数行は一番長い行で判定） */
+  function fitMoroCap(bubble, availW, baseFs) {
+    if (!bubble || availW <= 0) return;
+    var spans = bubble.querySelectorAll("span");
+    var fs = Math.round(baseFs), guard = 0;
+    bubble.style.setProperty("--bfs", fs + "px");
+    function wide() {
+      var w = 0;
+      for (var i = 0; i < spans.length; i++) w = Math.max(w, spans[i].scrollWidth);
+      return w;
+    }
+    while (wide() > availW && fs > 12 && guard < 40) {
+      fs -= 2; bubble.style.setProperty("--bfs", fs + "px"); guard++;
+    }
   }
 
   /* お茶（8/9 FB90・橙メンバーの2つ目）：画面右からてくてく歩いてきて、中央で止まり、湯呑みを掲げる。
@@ -3510,7 +3594,7 @@
      ⚠️galgod（ギャル神・9/1）も同じ理由で**入れない**＝ガールズレース限定（正しい置き場はGIRLS_FX）。
      MEMBER_RATESに書くと通常レースでも出てしまう */
   var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, pray_ng: 1, tea: 1, nicha: 1,
-    samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1 };
+    samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1, morotade: 1 };
   function auditRates() {
     Object.keys(MEMBER_RATES).forEach(function (k) {
       var rates = MEMBER_RATES[k], sum = 0;
@@ -3854,7 +3938,7 @@
   }
 
   var fxGen = 0;
-  var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea," +
+  var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea, .fx-moro," +
     " .fx-adj, .fx-samba, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
   function clearHitFx() {
     fxGen++;
@@ -3959,7 +4043,10 @@
     var rainMs = eff === "yakumono" ? yakTimes().END
       : eff === "slot" ? slotTimes(combo.length).END
       : eff === "sumo" ? sumoTimes().END
-      : eff === "pray" ? prayTimes().END
+      // ⚠️pray_ngも尺はprayと共通（8/31）。9/1まで抜けていて、眼鏡なしの回だけバッジが
+      //    約1.4秒早く（既定の4500msで）出ていた＝もろたで追加のついでに修正
+      : eff === "pray" || eff === "pray_ng" ? prayTimes().END
+      : eff === "morotade" ? moroTimes().END
       : eff === "tea" ? teaTimes().END
       : eff === "nicha" ? nichaTimes().END
       : eff === "samba" ? sambaTimes().END
@@ -3993,6 +4080,7 @@
       else if (eff === "slot") spawnSlot(cam, key, hit, combo);
       else if (eff === "sumo") spawnSumo(cam, key, hit);
       else if (eff === "pray" || eff === "pray_ng") spawnPray(cam, key, eff === "pray_ng");
+      else if (eff === "morotade") spawnMorotade(cam, key, rc);  // もろたで（9/1・黄の3つ目＝相方の名前入り）
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "nicha") spawnTea(cam, key, "nicha");  // ニチャー（8/29・お茶の派生＝歩きは共通）
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);

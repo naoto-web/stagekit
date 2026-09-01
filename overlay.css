@@ -1605,6 +1605,65 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes fxPrayOut { to { opacity: 0; } }
 .fx-pray.out { animation: fxPrayOut .45s ease-in forwards; }
 
+/* ══════════ もろたで＝黄メンバーの3つ目の個人演出（9/1・Naoto案）
+   キャラ（もろたで①.jpgの右の1体＝fx_moro.png）が右下にドンとポップイン →
+   キャラの右上に吹き出し①「このレース、」→ 一拍おいて左に吹き出し②「もろたで〇〇!!!」。
+   ①は消さず両方残す（漫画のコマ＝2つ並んで1つのセリフに読める・9/1 Naoto指定）。
+   〇〇＝当日の相方の名簿名（JS側で組む・一人配信は「もろたで!!!」だけ）。
+   ⚠️素材は上・右・下が見切れた絵（元絵がそう）＝キャラは枠の右下に少しはみ出して置き、
+      切り口を .fx-moro の overflow:hidden で枠外に隠す。中に収めて置き直さないこと
+      （頭の上に「平らな切り口」が見える）。尺はJS側の MORO_BASE で管理 ══════════ */
+.fx-moro { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.fx-moro-body { position: absolute; right: -1.5%; bottom: calc(var(--mh) * -0.02);
+  width: var(--mw); height: var(--mh); opacity: 0; will-change: transform;
+  transform-origin: 70% 96%; }
+@keyframes moroPop {
+  0%   { opacity: 0; transform: translateY(9%) scale(.6); }
+  55%  { opacity: 1; transform: translateY(-1.6%) scale(1.05); }
+  78%  { transform: translateY(.6%) scale(.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fx-moro.pop .fx-moro-body { animation: moroPop .48s cubic-bezier(.2, 1.2, .35, 1) forwards; }
+.fx-moro-art { position: absolute; inset: 0;
+  background: url("fx_moro.png") right bottom / contain no-repeat;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); }
+/* ②のキメで本人がぐいっと寄る＝bodyでなくartに掛ける
+   （bodyはmoroPopのfill保持中＝animationを差し替えると登場前のopacity:0へ戻ってしまう） */
+@keyframes moroKime { 0% { transform: scale(1); } 45% { transform: scale(1.05); } 100% { transform: scale(1.025); } }
+.fx-moro.talk2 .fx-moro-art { animation: moroKime .5s cubic-bezier(.2, 1.3, .4, 1) forwards; }
+/* 吹き出し＝白地に黒フチの漫画スタイル。線の太さ・しっぽは文字サイズ（--bfs）に追従（em） */
+.fx-moro-b { position: absolute; opacity: 0; font-size: var(--bfs, 40px);
+  background: #fff; border: .09em solid #14100a; border-radius: 1.1em;
+  padding: .26em .55em; box-shadow: 0 .14em .35em rgba(0,0,0,.35); }
+.fx-moro-b span { display: block; text-align: center; white-space: nowrap; line-height: 1.18;
+  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900;
+  color: #14100a; letter-spacing: .03em; }
+/* しっぽ（▽）＝回転させた正方形の外側2辺にだけ線。白い半分が吹き出しの黒フチに重なって
+   「くり抜いたしっぽ」に見える定番の作り */
+.fx-moro-b::after { content: ""; position: absolute; width: .6em; height: .6em; background: #fff; }
+.fx-moro-b.b1 { right: 2.5%; top: 3.5%; transform-origin: 55% 115%; }
+.fx-moro-b.b1::after { left: 56%; bottom: -.33em;
+  border-bottom: .09em solid #14100a; border-left: .09em solid #14100a;
+  transform: rotate(-45deg); }
+.fx-moro-b.b2 { left: 2.5%; top: 34%; transform-origin: 105% 45%; }
+.fx-moro-b.b2::after { right: -.33em; top: 42%;
+  border-top: .09em solid #14100a; border-right: .09em solid #14100a;
+  transform: rotate(45deg); }
+@keyframes moroBub {
+  0%   { opacity: 0; transform: scale(.45); }
+  60%  { opacity: 1; transform: scale(1.09); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes moroBub2 {
+  0%   { opacity: 0; transform: scale(.45) rotate(6deg); }
+  60%  { opacity: 1; transform: scale(1.1) rotate(-3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-2deg); }
+}
+.fx-moro.talk1 .fx-moro-b.b1 { animation: moroBub .3s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+.fx-moro.talk2 .fx-moro-b.b2 { animation: moroBub2 .34s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+@keyframes moroOut { to { opacity: 0; } }
+.fx-moro.out { animation: moroOut .45s ease-in forwards; }
+
 /* ══════════ お茶＝橙メンバーの2つ目の個人演出（8/9 FB90・Naoto案）
    画面の右からてくてく歩いてくる → 真ん中で止まる → お茶をぐいっと掲げる。
    ⚠️歩行は「足の違う2枚を交互に切り替える」本物のコマ送り（③④＝w1/w2）。
