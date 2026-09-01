@@ -2090,7 +2090,8 @@
        B2   …①から吹き出し②「もろたで〇〇!!!」までの間ms（＝漫画の「一拍」）
        HOLD …②が出てから退場開始までのms（①②とも出したまま＝両方残す・9/1 Naoto指定）
        FADE …退場フェードms */
-  var MORO_BASE = { IN: 60, POP: 480, B1: 700, B2: 1050, HOLD: 2700, FADE: 450 };
+  // 9/2 Naoto FB「間をもうちょっと伸ばして」＝B1 700→1100・B2 1050→1600（バッジ約5.0→5.9秒）
+  var MORO_BASE = { IN: 60, POP: 480, B1: 1100, B2: 1600, HOLD: 2700, FADE: 450 };
   var MORO_AR = 892 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する・9/2素材差し替えで799→892）
   function moroTimes() {
     var t = { IN: MORO_BASE.IN };
@@ -2908,8 +2909,10 @@
     cam.appendChild(box);
     fitMoroCap(box.querySelector(".fx-moro-b.b1"), cw * 0.36, ch * 0.105);
     // ②の幅＝キャラの左端までの空き幅から逆算（固定%だと狭いワイプで白い吹き出しが顔に掛かる）。
-    // はみ出し先が暗い法衣に少し乗るのは漫画の重なりとして許容（顔・目には掛からない）
-    fitMoroCap(box.querySelector(".fx-moro-b.b2"), Math.max(cw * 0.30, cw * 0.99 - mw), ch * 0.145);
+    // はみ出し先が暗い法衣・耳の縁に少し乗るのは漫画の重なりとして許容（目には掛からない）。
+    // 9/2 Naoto FB「もろたでの吹き出しをもうちょっと大きく」＝基準0.145→0.175・下限0.30→0.34。
+    // 名前が長くてもfitMoroCapのwhileが幅に収まるまで縮める＝最長のピーター(4文字)でもはみ出さない
+    fitMoroCap(box.querySelector(".fx-moro-b.b2"), Math.max(cw * 0.34, cw * 0.99 - mw), ch * 0.175);
     setTimeout(function () { box.classList.add("pop"); }, T.IN);
     setTimeout(function () { box.classList.add("talk1"); }, T.B1);
     setTimeout(function () { box.classList.add("talk2"); }, T.B2);
