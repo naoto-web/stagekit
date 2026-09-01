@@ -2474,6 +2474,130 @@ body.race-sub-on .race-sub { display: flex; }
   padding: 6px 12px; border-radius: 6px; font-family: Consolas, monospace; }
 body.debug .dbg { display: block; }
 
+/* ══════════ ギャル神＝青メンバーのガールズレース限定演出（9/1 Naoto案）
+   黄金の階段を**視点だけ**が駆け上がる（ggClimb＝下→上パン＋頂上の光へ加速ズーム＋歩幅の縦揺れggBob）
+   →頂上の光がせり上がる（ggGlowIn）→白フラッシュ（ggFlash・真っ白の裏で玉座に差し替え）
+   →玉座のギャル神が降臨（ggSettle＝ズームアウト＋じわっと下へ）→「ギャル神」金文字が
+   上からゆっくり降下（ggDrop）。尺・段取りはJS側の GALGOD_BASE / spawnGalgod。
+   出る条件＝ガールズレースの的中のみ（overlay.jsのGIRLS_FX／isGirlsHit）
+   状態クラス＝flash(白フラッシュ) revealed(玉座へ切替) title-on(文字降下) out(退場) ══════════ */
+.fx-galgod { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden;
+  background: #0b1020; }
+.fx-galgod.out { opacity: 0; transition: opacity .5s ease; }
+/* ⓪光に包まれてスタート（9/1夜v5 Naoto「スタートは光につつまれて、その中から階段が見えてくる」）
+   ＝白金の光が全面を覆った状態で始まり、.opened（JSがOPEN_HOLD後に付ける）で--openfadeかけて明ける。
+   z5＝階段・光・フラッシュ全部の上（この時点で金塊タイトルはまだ無い） */
+.fx-galgod-open { position: absolute; inset: 0; z-index: 5; opacity: 1; pointer-events: none;
+  background: radial-gradient(circle at 50% 32%, #fff 0 38%, #fff8e0 62%, #ffe9ad 82%, #ffd98e 100%); }
+.fx-galgod.opened .fx-galgod-open { opacity: 0; transition: opacity var(--openfade, .9s) ease-in-out; }
+/* 歩幅の縦揺れ＝階段を踏むリズム。下方向だけに振る（上に振ると画像の下端が枠から浮く）。
+   ⚠️揺れ・パン・光のせり上がりは全部 .climb（歩き出し）から＝光の中では立ち止まっている */
+.fx-galgod-walk { position: absolute; inset: 0; z-index: 1; }
+.fx-galgod.climb .fx-galgod-walk { animation: ggBob .42s ease-in-out infinite alternate; }
+@keyframes ggBob { from { transform: translateY(0); } to { transform: translateY(var(--bob, 8px)); } }
+/* 階段＝幅100%・縦は必ず余る（全ワイプ・全画面とも横長）。下端合わせ（--y0）→上端0へ
+   ＝視点が上る。scaleのorigin＝上端中央＝頂上の光へ寄りながら上がる。強めのease-in＝どんどん加速 */
+.fx-galgod-stairs { position: absolute; left: 50%; top: 0; width: var(--gw); height: var(--gsh);
+  margin-left: calc(var(--gw) / -2); transform-origin: 50% 0;
+  transform: translateY(var(--y0)) scale(1);   /* 光の中で待つ間＝スタート位置で静止 */
+  background: url("fx_galgod_stairs.jpg") 0 0 / 100% 100% no-repeat; }
+.fx-galgod.climb .fx-galgod-stairs {
+  animation: ggClimb var(--climb, 3s) cubic-bezier(.5, .05, .75, .5) forwards; }
+@keyframes ggClimb { from { transform: translateY(var(--y0)) scale(1); }
+  to { transform: translateY(0) scale(1.35); } }
+/* 頂上の光＝上りにつれて画面上部からせり上がる白金の光（フラッシュへの橋渡し） */
+.fx-galgod-glow { position: absolute; inset: 0; z-index: 2; opacity: 0;
+  background: radial-gradient(ellipse at 50% 8%, rgba(255, 252, 230, .98),
+    rgba(255, 238, 170, .45) 45%, transparent 72%); }
+.fx-galgod.climb .fx-galgod-glow { animation: ggGlowIn var(--climb, 3s) ease-in forwards; }
+@keyframes ggGlowIn { 0% { opacity: 0; } 55% { opacity: .12; } 100% { opacity: .9; } }
+.fx-galgod.revealed .fx-galgod-walk { display: none; }   /* 玉座に切り替わったら階段は畳む */
+.fx-galgod.revealed .fx-galgod-glow { opacity: 0; transition: opacity .6s ease; animation: none; }
+/* 白フラッシュ＝30%地点（FLASH_IN相当）で真っ白＝この裏でrevealedが入る（つなぎ目を見せない） */
+.fx-galgod-flash { position: absolute; inset: 0; z-index: 3; opacity: 0; background: #fff; }
+.fx-galgod.flash .fx-galgod-flash { animation: ggFlash var(--flash, .86s) linear forwards; }
+@keyframes ggFlash { 0% { opacity: 0; } 30% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
+/* 玉座＝③の16:9全景をカバーで敷く（--gtw/--gth＝JSが「足りない方に合わせて拡大」で計算・
+   縦の余りは--tyで中央寄せ）。降臨＝ズームアウトで着座。originは顔のあたり（上から24%）＝
+   scale>1でも枠の外側にしか伸びない＝隙間は出ない。⚠️9/1夜に②縦長→③横長へ差し替え */
+.fx-galgod-throne { position: absolute; left: 50%; top: 0; width: var(--gtw); height: var(--gth);
+  margin-left: calc(var(--gtw) / -2); z-index: 2; display: none; transform-origin: 50% 24%;
+  background: url("fx_galgod_throne.jpg") 0 0 / 100% 100% no-repeat; }
+.fx-galgod.revealed .fx-galgod-throne { display: block;
+  animation: ggSettle 1.1s cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes ggSettle { from { transform: translateY(var(--ty)) scale(1.12); }
+  to { transform: translateY(var(--ty)) scale(1); } }
+/* 「ギャル神」の金塊＝**Naoto支給④の3Dレンダリング切り抜き**（9/1夜v7・文字ごと画像に置換＝
+   v3〜v4のCSS描きプレート＋浮き出し文字は廃止。経緯＝彫り→浮き出し→支給画像）。
+   残っている飾り＝**照り返しスイープ**（::after＝白帯が金塊の上を周期的に走る・④のアルファで
+   マスク済み）＋**きらめき星3つ**（.gg-spark・時間差で明滅）＋親の金オーラ。
+   ⚠️金塊の外への落ち影と金のオーラは**親（.fx-galgod-title）のdrop-shadow**＝PNGのアルファに
+   沿って落ちる。上からワイプ中央（top 48%）までゆっくり降下＝降下開始--dropy0はJSがpxで入れる
+   （%だと自身の高さ基準＝画面上端の外から入って来ない） */
+.fx-galgod-title { position: absolute; left: 0; right: 0; top: 48%; z-index: 4;
+  text-align: center; display: none; font-size: var(--fs); line-height: 1;
+  filter: drop-shadow(0 .05em .16em rgba(0, 0, 0, .5)) drop-shadow(0 0 .32em rgba(255, 220, 110, .55)); }
+.fx-galgod.title-on .fx-galgod-title { display: block;
+  animation: ggDrop var(--drop, 1.7s) cubic-bezier(.25, .55, .3, 1) both; }
+@keyframes ggDrop { 0% { opacity: 0; transform: translateY(var(--dropy0, -170%)); }
+  12% { opacity: 1; } 100% { opacity: 1; transform: translateY(0); } }
+/* 金塊＝Naoto支給④の切り抜き（fx_galgod_ingot.png・文字ごと3Dレンダリング＝9/1夜v7で
+   CSS描きのプレート＋文字を丸ごと置き換え）。寸法--giw/--gihはJSがワイプ実寸から計算 */
+.fx-galgod-title span { display: inline-block; position: relative;
+  width: var(--giw); height: var(--gih);
+  background: url("fx_galgod_ingot.png") 0 0 / 100% 100% no-repeat; }
+/* 照り返しスイープ＝細い白帯が周期的に走る（テカテカの主役）。v7＝金塊④の**アルファでマスク**
+   ＝帯が金塊のシルエットの中だけを通る（矩形のまま走らせると透過部分に四角い光が見える） */
+.fx-galgod-title span::after { content: ""; position: absolute; inset: 0; z-index: 2;
+  pointer-events: none;
+  -webkit-mask: url("fx_galgod_ingot.png") 0 0 / 100% 100% no-repeat;
+  mask: url("fx_galgod_ingot.png") 0 0 / 100% 100% no-repeat;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .5) 40%,
+    rgba(255, 255, 255, .85) 50%, rgba(255, 255, 255, .5) 60%, transparent) no-repeat;
+  background-size: 26% 100%; background-position: -60% 0;
+  animation: ggSheen 2.6s ease-in-out .8s infinite; }
+@keyframes ggSheen { 0% { background-position: -60% 0; } 45%, 100% { background-position: 170% 0; } }
+/* きらめき星＝十字グリント（peyeの目ピカと同じ語彙）。プレートの面の上で時間差で明滅 */
+.fx-galgod .gg-spark { position: absolute; width: .34em; height: .34em; z-index: 3; opacity: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, #fff 0 20%, rgba(255, 255, 255, 0) 46%),
+    linear-gradient(0deg, transparent 43%, #fff 48% 52%, transparent 57%),
+    linear-gradient(90deg, transparent 43%, #fff 48% 52%, transparent 57%);
+  animation: ggSpark 1.9s ease-in-out infinite; }
+.fx-galgod .gg-spark.s1 { left: 7%; top: 10%; }
+.fx-galgod .gg-spark.s2 { right: 9%; top: 16%; animation-delay: .65s; }
+.fx-galgod .gg-spark.s3 { left: 46%; bottom: 8%; animation-delay: 1.3s; }
+@keyframes ggSpark { 0%, 100% { opacity: 0; transform: scale(.25) rotate(-25deg); }
+  50% { opacity: 1; transform: scale(1) rotate(20deg); } }
+/* ══ 金の羽（9/1夜v6 Naoto）＝キメで金色の羽がひらひら舞い降りる ══
+   2層アニメ＝親（.gg-fea）が落下（ggFeaFall・線形・--fallはJSがpxで入れる）、
+   子（b）がひらひら（ggFeaSway・揺り戻し±0.6羽ぶん＋回転・alternate）。
+   周期・大きさ・出遅れは1枚ずつ乱数（spawnGalgod）＝同じ羽が2枚並ばない。
+   羽の絵＝インラインSVG（金グラデの羽根＋羽軸2本）＝素材ファイル不要。
+   z3＝玉座(z2)の手前・金塊タイトル(z4)の奥＝文字は隠さない */
+.fx-galgod-feas { position: absolute; inset: 0; z-index: 3; display: none; pointer-events: none; }
+.fx-galgod.fea .fx-galgod-feas { display: block; } /* display切替でループ開始＝.feaの瞬間が0秒目 */
+.gg-fea { position: absolute; width: var(--fsz, 50px);
+  height: calc(var(--fsz, 50px) / 1.6733); /* 1.6733＝羽⑤の実寸比（fx_galgod_make.py出力・差し替えたら更新） */
+  opacity: 0; animation: ggFeaFall var(--fdur, 3.5s) linear var(--fdel, 0s) infinite; }
+@keyframes ggFeaFall { 0% { transform: translateY(0); opacity: 0; }
+  7% { opacity: 1; } 88% { opacity: 1; }
+  100% { transform: translateY(var(--fall, 500px)); opacity: 0; } }
+/* 羽の絵＝Naoto支給⑤の切り抜き（9/1夜v7でインラインSVGから置き換え・グロー・金粉ごと
+   発光体として抜いてある＝fx_galgod_make.pyのcut_feather）。--flip＝左右反転の個体差（JS） */
+.gg-fea b { display: block; width: 100%; height: 100%;
+  background: url("fx_galgod_fea.png") 0 0 / 100% 100% no-repeat;
+  animation: ggFeaSway var(--fsw, 1.4s) ease-in-out infinite alternate;
+  /* ⚠️金の羽×金の背景＝色では立たない（アンバー補正は溶けて撤回・v7実測）。
+     暗色の落ち影で輪郭を切るのが正解＝雲背景でもシルエットが読める */
+  filter: drop-shadow(0 3px 4px rgba(85, 48, 0, .7)) drop-shadow(0 0 3px rgba(60, 32, 0, .45)); }
+@keyframes ggFeaSway {
+  from { transform: translateX(calc(var(--fsz, 50px) * -.5)) rotate(-32deg) scaleX(var(--flip, 1)); }
+  to { transform: translateX(calc(var(--fsz, 50px) * .5)) rotate(28deg) scaleX(var(--flip, 1)); } }
+/* 大きい箱（全画面ホスト）＝per要素filterを落とす（8/30 FX_LITEの流儀・見た目は羽のグローが消えるだけ） */
+.fx-galgod.lite .gg-fea b { filter: none; }
+
 /* ============================================================
    ②レース観戦 v2（8/13 Naoto案）＝ &v2=1 のときだけ有効
    狙い：レース映像を見ている最中もラインが分かるようにする

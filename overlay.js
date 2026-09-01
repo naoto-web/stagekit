@@ -1948,6 +1948,8 @@
   var MEMBER_RATES = {
     orange: { rain: 33.34, tea: 33.33, nicha: 33.33, thanks: 0 }, // 走行／お茶（FB90）／ニチャー（8/29）
     blue:   { yakumono: 50, adjust: 50, thanks: 0 },  // 役物合体（FB82）／アジャスト（FB130）
+    // ⚠️青は**ガールズレースの的中だけ**この表を使わず「ギャル神」100%（9/1・GIRLS_FX参照）。
+    //   ギャル神はこの表に書かない＝書くと通常レースでも出てしまう（安全弁はFX_KNOWN側）
     pink:   { slot: 100, thanks: 0 },                 // スロット（FB83）
     green:  { sumo: 50, peye: 50, thanks: 0 },        // 相撲（FB86）／ピーターズ・アイ（8/25）
     yellow: { pray: 50, pray_ng: 50, thanks: 0 },     // 念仏＝眼鏡あり/なし50%ずつ（FB88→8/31 Naoto指示）
@@ -2324,6 +2326,40 @@
     return t;
   }
 
+  /* ギャル神の尺（9/1 Naoto案・青のガールズレース限定演出＝GIRLS_FX参照）
+       流れ＝⓪光に包まれてスタート→光が明けて階段が見えてくる（9/1夜v5 Naoto指示）
+             ①黄金の階段を**視点だけ**がどんどん駆け上がる（人物は映さない・9/1確認）
+             ②頂上の光に包まれて白フラッシュ→玉座のギャル神が降臨
+             ③「ギャル神」の金塊が上からゆっくり降りてくる→キメ
+       OPEN_HOLD…光に包まれている間ms／OPEN_FADE…光が明けて階段が見えてくるms
+                 （歩き出しは明け55%地点＝galgodTimesのCLIMB_START。「明け切ってから」だと間延び）
+       CLIMB    …階段パン（下端→頂上の光へ・加速しながら寄る）ms
+       FLASH_IN …白フラッシュが真っ白になるまでms（真っ白の瞬間に玉座へ差し替える）
+       FLASH_OUT…白が明けるms／TITLE_LAG…降臨から金塊降下開始までの一拍ms
+       DROP     …「ギャル神」が上から降り切るms（Naoto指定「ゆっくり」）
+       HOLD     …キメを見せる時間ms（9/1夜v5「もうちょっと長め」＝2100→3400）／FADE…退場ms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約9.7秒（アジャスト10.3秒の帯）
+     素材＝fx_galgod_stairs/throne.jpg（素材加工/fx_galgod_make.py・元絵はOBS/ギャル神①③.jpg） */
+  var GALGOD_BASE = { OPEN_HOLD: 350, OPEN_FADE: 900, CLIMB: 3000, FLASH_IN: 260, FLASH_OUT: 600,
+    TITLE_LAG: 520, DROP: 1700, HOLD: 3400, FADE: 500 };
+  var GALGOD_AR_S = 1122 / 1402; // 階段①の実寸比（横/縦）＝絵を差し替えたらfx_galgod_make.pyの出力で更新
+  var GALGOD_AR_T = 1672 / 941;  // 玉座③の実寸比（同上）。⚠️9/1夜に②（縦長・顔アップ）→③（16:9全景）へ
+                                 //   差し替え（Naoto「キメはワイプ画面を大きく使って表示」）＝ほぼ無クロップで敷ける
+  var GALGOD_AR_I = 1280 / 427;  // 金塊④の切り抜き実寸比（同上）。9/1夜v7＝CSS描き→Naoto支給④へ
+  var GALGOD_AR_F = 420 / 251;   // 金の羽⑤の切り抜き実寸比（同上）。9/1夜v7＝インラインSVG→支給⑤へ
+  function galgodTimes() {
+    var t = { OPENED: GALGOD_BASE.OPEN_HOLD };            // 光が明け始める＝階段が透けてくる
+    t.CLIMB_START = t.OPENED + Math.round(GALGOD_BASE.OPEN_FADE * 0.55); // 明け55%で歩き出す
+    t.FLASH = t.CLIMB_START + GALGOD_BASE.CLIMB;          // 頂上到達＝白フラッシュ開始
+    t.REVEAL = t.FLASH + GALGOD_BASE.FLASH_IN;            // 真っ白の裏で玉座へ差し替え
+    t.TITLE = t.REVEAL + GALGOD_BASE.TITLE_LAG;           // 「ギャル神」金塊の降下開始
+    t.FEA = t.REVEAL; // 金の羽＝玉座の降臨と同時（v6着地間際→降下と同時→v7 Naoto
+                      // 「インゴットが下りてくるより前から降らしていてOK」＝さらに前倒し）
+    t.END = t.TITLE + GALGOD_BASE.DROP + GALGOD_BASE.HOLD; // 退場開始＝バッジにバトンを渡す
+    t.GONE = t.END + GALGOD_BASE.FADE;
+    return t;
+  }
+
   /** 的中の組合せ（comboLabel "1-3-5"）→ リールに出す車番配列。
       手動追加の的中はcomboLabelを持たない＝数字を作り話にしないため空配列を返す（呼び出し側で走行に落とす） */
   function slotCombo(hit) {
@@ -2361,6 +2397,11 @@
   ["fx_slotchar1.png", "fx_slotchar2.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // スロットのキャラ2ポーズ（8/10 FB122）＝入場でコマ落ちしないよう先読み
   });
+  ["fx_galgod_stairs.jpg", "fx_galgod_throne.jpg",
+   "fx_galgod_ingot.png", "fx_galgod_fea.png"].forEach(function (f) {
+    var im = new Image(); im.src = f;  // ギャル神4枚（9/1・v7で金塊④と羽⑤を追加）＝
+  });                                  // ⚠️玉座は白フラッシュの裏で差し替える＝未読込だと白明けが空白。
+                                       //   金塊・羽も演出中の途中登場＝先読み必須
   /** メンバーカラー→色キー（未登録の色は個人演出なし＝アイコンも雨も出ない従来動作） */
   function memberKey(rc) { return rc && COLOR_KEY[rc.color] ? COLOR_KEY[rc.color] : ""; }
   /* ══════════ 大きい箱のときだけ落とす「軽量版」の判定（8/30）══════════
@@ -3411,6 +3452,33 @@
        また使うとき＝ { red: "dance" } のように書いて再publish（戻し忘れは fxdisttest が毎回先頭で知らせる） */
   var FX_PIN = {}; // 固定なし＝通常運用（全色 MEMBER_RATES の抽選どおり）
 
+  /* ══════════ ガールズレース限定演出（9/1 Naoto案＝ギャル神） ══════════
+     演出を決める3つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（PAIR_FX）に続く
+     「**どんなレースを**当てたか」＝色キーを書くと、その人がガールズのレースを的中させたとき
+     **必ずこの演出**（案A・9/1 Naoto決定＝抽選なしの100%）。
+     優先順位＝?fx=強制 > ダブル的中の共演 > FX_PIN > **この表** > MEMBER_RATESの抽選。
+       FX_PINより下に置く理由＝PINは「今だけ必ずこれ」という手動の一時運用＝約束を守る。
+     ⚠️MEMBER_RATESには書かない（書くと通常レースでも出る）。FX_KNOWNにも入れない＝
+       間違って表に書いたら未知の演出名として警告が出る（hitouchと同じ安全弁） */
+  var GIRLS_FX = { blue: "galgod" }; // 青＝👑ギャル神
+  /* ガールズレース判定＝的中ID（場|R|配信者|式別|買い目）の場|Rで時刻表を引き、
+     種目（keirin.jp JSJ017のsyumoku＝r.cls）に「ガールズ」を含むか（保険で「Ｌ級/L級」も拾う）。
+     オッズパーク経路にフォールバックしても種目は「第7R ガールズ予選」の見出し由来＝同様に含む。
+     判定できない的中（手動追加manual-N・時刻表未取得・場名不一致）は false
+     ＝通常の抽選に落ちるだけで事故にはならない（安全側・9/1 Naoto了承） */
+  function isGirlsHit(hit) {
+    var p = String((hit && hit.id) || "").split("|");
+    if (p.length < 5 || !timetable) return false;
+    var girls = false;
+    (timetable.venues || []).forEach(function (tv) {
+      if (tv.name !== p[0]) return;
+      (tv.races || []).forEach(function (r) {
+        if (r.no === +p[1] && /ガールズ|[ＬL]級/.test(String(r.cls || ""))) girls = true;
+      });
+    });
+    return girls;
+  }
+
   /* ══════════ 確率テーブルから1つ引く仕組み（8/27） ══════════
      ⚠️ここは**仕組み**＝確率を変えるときに触る場所ではない（触るのはMEMBER_RATESの数字だけ）。
      ・引き方＝ハッシュの**下の桁**（% RATE_SCALE）で整数の当たり枠に落とす。
@@ -3438,7 +3506,9 @@
      ⚠️OBSではコンソールが見えない＝これは補助。本当の関門は公開前の fxdisttest.js */
   /* ⚠️ここに hitouch（ダブル的中の共演）は**入れない**。あれは2人揃って初めて成立する演出で、
      MEMBER_RATESに書いても「1人の的中で出る」ようにはならない（正しい置き場はPAIR_FX）。
-     入れないでおくと、間違ってこの表に書いたときに未知の演出名として警告が出る＝安全弁 */
+     入れないでおくと、間違ってこの表に書いたときに未知の演出名として警告が出る＝安全弁
+     ⚠️galgod（ギャル神・9/1）も同じ理由で**入れない**＝ガールズレース限定（正しい置き場はGIRLS_FX）。
+     MEMBER_RATESに書くと通常レースでも出てしまう */
   var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, pray_ng: 1, tea: 1, nicha: 1,
     samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1 };
   function auditRates() {
@@ -3461,6 +3531,7 @@
        「今だけ○○固定」の期間にたまたまダブルが出たら、そっちを見せたい（Naoto確認済み） */
     if (pairFx) return pairFx;
     if (FX_PIN[key]) return FX_PIN[key]; // 今だけの固定枠（上のFX_PIN参照・戻し忘れ注意）
+    if (GIRLS_FX[key] && isGirlsHit(hit)) return GIRLS_FX[key]; // ガールズ限定枠＝ギャル神（9/1）
     var rates = MEMBER_RATES[key];
     if (!rates) return "";               // 表に無い色＝名簿外＝既定のアイコン走行（従来動作）
     // IDが取れない経路（保険）だけ乱数。通常の的中は必ずid付き（derive.jsのhits）
@@ -3691,9 +3762,100 @@
          後の的中が前の演出を消す挙動は望ましくない
      fxGen＝世代番号。掃除のたびに繰り上げ、掃除前に予約された setTimeout は
      自分の世代と違えば何もしない（止められないタイマーの空振り対策） */
+  /* ══════════ ギャル神（9/1 Naoto案・青のガールズレース限定＝GIRLS_FX） ══════════
+     ⓪光に包まれてスタート（v5）＝白金の光レイヤー（.fx-galgod-open）が全面を覆い、OPEN_HOLD後に
+       OPEN_FADEかけて明ける＝光の中から階段が見えてくる。歩き出しは明け55%（.climbクラス）
+     ①階段パン＝画像を幅100%で置くと縦が必ず余る（全ワイプ・全画面とも横長）ので、
+       下端合わせ（--y0＝マイナス）から上端0へtranslateY＝視点が駆け上がって見える。
+       同時にscale1→1.35（origin上端中央＝頂上の光へ寄る）＋歩幅の縦揺れ（ggBob）＋光のせり上がり
+     ②白フラッシュの真っ白の瞬間（T.REVEAL）に玉座へ差し替え＝つなぎ目を見せない
+     ③玉座＝③の16:9全景をカバーで敷いて降臨（9/1夜 Naoto「ワイプ画面を大きく使って」＝
+       ②の縦長顔アップから差し替え）→ゆっくりズームアウトで着座
+     ④「ギャル神」＝**支給④の金塊（文字ごと3Dレンダリング・v7で画像化）**が上からワイプ中央
+       （48%）までゆっくり降下（ggDrop・1.7秒＝照り返しスイープ＋きらめき星つき）。
+       金の羽＝支給⑤（v7で画像化）が玉座の降臨と同時から降り続ける
+     尺＝GALGOD_BASE／見た目＝overlay.cssの.fx-galgod群 */
+  function spawnGalgod(cam, key) {
+    var old = cam.querySelector(".fx-galgod");
+    if (old) old.parentNode.removeChild(old);
+    var T = galgodTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var sh = Math.round(cw / GALGOD_AR_S);  // 階段＝幅100%時の縦px（必ずch超＝全ワイプ横長）
+    // 玉座③＝16:9の全景＝カバーで敷く（足りない方に合わせて拡大・中央寄せ）。
+    // ①トーク/全画面は比率がほぼ同じ＝ほぼ等倍で全景がそのまま入る。②(約4:3)は左右を少し切るだけ
+    var th = Math.max(ch, Math.round(cw / GALGOD_AR_T));
+    var tw = Math.round(th * GALGOD_AR_T);
+    var box = document.createElement("div");
+    box.className = "fx-galgod m-" + key;
+    box.style.setProperty("--gw", cw + "px");
+    box.style.setProperty("--gsh", sh + "px");
+    box.style.setProperty("--gtw", tw + "px");
+    box.style.setProperty("--gth", th + "px");
+    box.style.setProperty("--y0", (ch - sh) + "px");           // 階段の開始位置＝下端合わせ
+    box.style.setProperty("--ty", -Math.round((th - ch) / 2) + "px"); // 玉座＝縦の余りは中央寄せ
+    box.style.setProperty("--bob", Math.max(4, Math.round(ch * 0.02)) + "px"); // 歩幅の縦揺れ量
+    box.style.setProperty("--climb", (GALGOD_BASE.CLIMB / 1000) + "s");
+    box.style.setProperty("--openfade", (GALGOD_BASE.OPEN_FADE / 1000) + "s");
+    box.style.setProperty("--flash", ((GALGOD_BASE.FLASH_IN + GALGOD_BASE.FLASH_OUT) / 1000) + "s");
+    box.style.setProperty("--drop", (GALGOD_BASE.DROP / 1000) + "s");
+    var fs = Math.round(ch * 0.22);                            // きらめき星・影のem基準（v7で文字は廃止）
+    box.style.setProperty("--fs", fs + "px");
+    // 金塊④の表示寸法＝幅82%を上限に、高さ45%相当まで大きく（v7＝支給画像・文字入り）
+    var giw = Math.round(Math.min(cw * 0.82, ch * 0.45 * GALGOD_AR_I));
+    var gih = Math.round(giw / GALGOD_AR_I);
+    box.style.setProperty("--giw", giw + "px");
+    box.style.setProperty("--gih", gih + "px");
+    // 着地＝ワイプの48%（9/1夜 Naoto「文字はもっと下まで降りてきていい」＝玉座③は顔が上1/4に
+    // 小さく入る全景なので、中央まで降ろしても顔に被らない）。降下開始位置は画面上端の外＝
+    // 着地点までの距離をpxで渡す（%だと自身の高さ基準になり上端から入って来ない）。
+    // 1.15＝金塊の高さより少し大きい安全マージン
+    box.style.setProperty("--dropy0", -Math.round(ch * 0.48 + gih * 1.15) + "px");
+    box.innerHTML =
+      '<div class="fx-galgod-walk"><i class="fx-galgod-stairs"></i></div>' +
+      '<i class="fx-galgod-glow"></i>' +
+      '<i class="fx-galgod-throne"></i>' +
+      '<div class="fx-galgod-feas"></div>' + // 金の羽の降り場（v6・.feaが付くまでdisplay:none）
+      '<div class="fx-galgod-flash"></div>' +
+      '<div class="fx-galgod-open"></div>' + // ⓪の光＝最初は真っ白・opened で明けて階段が見えてくる（v5）
+      '<div class="fx-galgod-title"><span>' + // span＝支給④の金塊画像（文字入り・v7でCSS文字は廃止）
+        '<i class="gg-spark s1"></i><i class="gg-spark s2"></i><i class="gg-spark s3"></i>' +
+      '</span></div>'; // spark＝金塊の面のきらめき（9/1夜v4）
+    /* 金の羽（9/1夜v6 Naoto「金色の羽が降ってくる演出とか追加できたりする？笑」）＝
+       キメの間じゅう降り続ける。個体差（位置・大きさ・落下/ひらひらの周期・出遅れ）は乱数で
+       ばらまく＝見た目だけの乱数なので決定性は不要（spawnRainと同じ扱い）。
+       落下距離--fallはpx（%だと自身の高さ基準で画面を渡り切れない）。ループはinfinite＝
+       .fea（着地間際）から.out（退場フェード）まで途切れず降る */
+    var feas = box.querySelector(".fx-galgod-feas");
+    for (var fi = 0; fi < 10; fi++) { // 16→10枚（9/1夜 Naoto「もうすこし減らしてOK」）
+      var fea = document.createElement("i");
+      fea.className = "gg-fea";
+      var fsz = Math.round(ch * (0.11 + Math.random() * 0.07)); // --fsz＝羽⑤の表示幅（v7＝横長画像）
+      fea.style.left = (2 + Math.random() * 94) + "%";
+      fea.style.top = (-fsz * 2) + "px";
+      fea.style.setProperty("--fsz", fsz + "px");
+      fea.style.setProperty("--fall", (ch + fsz * 3) + "px");
+      fea.style.setProperty("--fdur", (2.8 + Math.random() * 1.8).toFixed(2) + "s");
+      fea.style.setProperty("--fdel", (Math.random() * 2.5).toFixed(2) + "s");
+      fea.style.setProperty("--fsw", (1.1 + Math.random() * 0.8).toFixed(2) + "s");
+      fea.style.setProperty("--flip", Math.random() < 0.5 ? "-1" : "1"); // 左右反転の個体差
+      fea.innerHTML = "<b></b>"; // b＝ひらひら層（揺り戻し＋回転）・親＝落下層
+      feas.appendChild(fea);
+    }
+    if (fxLite(cam)) box.classList.add("lite"); // 大きい箱＝羽のグロー（filter）を落とす（8/30の流儀）
+    cam.appendChild(box);
+    setTimeout(function () { box.classList.add("opened"); }, T.OPENED); // 光が明け始める
+    setTimeout(function () { box.classList.add("climb"); }, T.CLIMB_START); // 歩き出し（パン・揺れ・光のせり上がり）
+    setTimeout(function () { box.classList.add("flash"); }, T.FLASH);
+    setTimeout(function () { box.classList.add("revealed"); }, T.REVEAL);
+    setTimeout(function () { box.classList.add("title-on"); }, T.TITLE);
+    setTimeout(function () { box.classList.add("fea"); }, T.FEA); // 金の羽＝金塊の降下と同時（v6改）
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
   var fxGen = 0;
   var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea," +
-    " .fx-adj, .fx-samba, .fx-peye, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
+    " .fx-adj, .fx-samba, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
   function clearHitFx() {
     fxGen++;
     var nodes = document.querySelectorAll(FX_ROOTS);
@@ -3804,6 +3966,7 @@
       : eff === "dance" ? danceTimes().END
       : eff === "adjust" ? adjTimes().END
       : eff === "peye" ? peyeTimes().END
+      : eff === "galgod" ? galgodTimes().END
       : eff === "thanks" ? thxTimes().END
       : eff === "hitouch" ? htTimes().END
       : (key ? fxConf(key).rainMs : 0);
@@ -3836,6 +3999,7 @@
       else if (eff === "dance") spawnDance(cam, key);   // ダンス（8/25・赤の2つ目）
       else if (eff === "adjust") spawnAdjust(cam, key);
       else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
+      else if (eff === "galgod") spawnGalgod(cam, key);        // ギャル神（9/1・青のガールズレース限定）
       else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）
       else if (eff === "hitouch") spawnHitouch(cam);           // ダブル的中の共演＝ペア表（8/28）
       else if (key) spawnRain(cam, key);
