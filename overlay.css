@@ -1627,6 +1627,9 @@ body.race-sub-on .race-sub { display: flex; }
 .fx-moro-art { position: absolute; inset: 0;
   background: url("fx_moro.png") right bottom / contain no-repeat;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); }
+/* 🕶b＝眼鏡あり版（もろたで②・9/2）＝**テスト接続（?gas=）と&morob=1限定**（overlay.jsのMORO_B）。
+   本番昇格時＝fx_moro.pngを②素材に置き換えてこの行とゲートを撤去 */
+.fx-moro.b .fx-moro-art { background-image: url("fx_moro_b.png"); }
 /* ②のキメで本人がぐいっと寄る＝bodyでなくartに掛ける
    （bodyはmoroPopのfill保持中＝animationを差し替えると登場前のopacity:0へ戻ってしまう） */
 @keyframes moroKime { 0% { transform: scale(1); } 45% { transform: scale(1.05); } 100% { transform: scale(1.025); } }

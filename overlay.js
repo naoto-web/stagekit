@@ -2121,6 +2121,13 @@
     return t;
   }
   var MORO_AR = 892 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する・9/2素材差し替えで799→892）
+  /* 🕶テスト限定の絵替え（9/2 Naoto依頼「眼鏡かけた②に差し替え・いったんテスト環境でチェック」）＝
+     フロントは本番とテストで共用なので、単純に差し替えると本番も変わってしまう。
+     **テスト接続（?gas=＝IS_TEST_BACKEND）と &morob=1 のときだけ**眼鏡あり版（fx_moro_b.png）を使う。
+     Naoto確認でOKが出たら＝fx_moro.pngを②素材で置き換えてMORO_ARを909に→このゲートは撤去する */
+  var MORO_AR_B = 909 / 1000; // fx_moro_b.png（🕶眼鏡あり・もろたで②）の実寸比
+  var MORO_B = (params.get("morob") === "1") ||
+    !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
   function moroTimes() {
     var t = { IN: MORO_BASE.IN };
     t.B1 = t.IN + MORO_BASE.POP + MORO_BASE.B1;   // 吹き出し①（キャラの右上）
@@ -2442,8 +2449,9 @@
    "fx_pray_ng.png", "fx_pray_shut_ng.png"].forEach(function (f) {   // 念仏は2枚重ね（8/9 FB88）＋眼鏡なし版（8/31）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
   });
-  (function () { var im = new Image(); im.src = "fx_moro.png"; })(); // もろたで（9/1・黄の3つ目）＝
-  // 登場ポップと同時に絵が要る＝先読みしないと初回だけ「吹き出しが無人に出る」
+  (function () { // もろたで（9/1・黄の3つ目）＝このソースで使う方の絵だけ先読み
+    var im = new Image(); im.src = MORO_B ? "fx_moro_b.png" : "fx_moro.png";
+  })(); // 登場ポップと同時に絵が要る＝先読みしないと初回だけ「吹き出しが無人に出る」
   ["fx_ori_w1.png", "fx_ori_w2.png", "fx_ori_up.png", "fx_ori_dn.png",
    "fx_ori_kime.png", "fx_ori_rock1.png", "fx_ori_rock2.png", "fx_ori_gem.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // オリハルコン8枚（9/2）＝歩行コマ落ち・岩パカッの入れ替え対策
@@ -2917,7 +2925,7 @@
     if (old) old.parentNode.removeChild(old);
     var T = moroTimes();
     var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
-    var mh = Math.round(ch * 1.06), mw = Math.round(mh * MORO_AR);
+    var mh = Math.round(ch * 1.06), mw = Math.round(mh * (MORO_B ? MORO_AR_B : MORO_AR));
     /* 相方＝もう片方の席の名簿名。的中したrcと**名前が違う方**の席を採る
        （席オブジェクトの同一性に頼らない＝?fx=強制やラボでrcが席と別物でも安全）。
        片席しか埋まっていない日（一人配信）＝相方なし＝「もろたで!!!」だけ */
@@ -2930,7 +2938,7 @@
       if (other && other.name && other.name !== myName) mate = String(other.name);
     }
     var box = document.createElement("div");
-    box.className = "fx-moro m-" + key;
+    box.className = "fx-moro m-" + key + (MORO_B ? " b" : ""); // b＝🕶眼鏡あり版（テスト接続限定）
     box.style.setProperty("--mw", mw + "px");
     box.style.setProperty("--mh", mh + "px");
     box.innerHTML =
