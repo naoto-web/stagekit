@@ -1953,7 +1953,9 @@
     //   ギャル神はこの表に書かない＝書くと通常レースでも出てしまう（安全弁はFX_KNOWN側）
     pink:   { slot: 100, thanks: 0 },                 // スロット（FB83）
     green:  { sumo: 50, peye: 50, thanks: 0 },        // 相撲（FB86）／ピーターズ・アイ（8/25）
-    yellow: { pray: 34, pray_ng: 33, morotade: 33, thanks: 0 }, // 念仏あり/なし/もろたで＝ほぼ均等（9/1 Naoto指示）
+    // 9/2夜 Naoto指示＝**眼鏡あり念仏50／眼鏡ありもろたで50**。眼鏡なし念仏（pray_ng）は0%封印
+    // （thanksと同じ流儀＝行を消さず0で残す・戻すときは数字だけ）
+    yellow: { pray: 50, pray_ng: 0, morotade: 50, thanks: 0 },
     red:    { samba: 50, dance: 50, thanks: 0 }       // サンバ（FB121）／ダンス（8/25）
     // 例）purple: { rain: 50, slot: 30, thanks: 20 }
   };
@@ -2120,14 +2122,10 @@
     t.GONE = t.END + ORI_BASE.FADE;
     return t;
   }
-  var MORO_AR = 892 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する・9/2素材差し替えで799→892）
-  /* 🕶テスト限定の絵替え（9/2 Naoto依頼「眼鏡かけた②に差し替え・いったんテスト環境でチェック」）＝
-     フロントは本番とテストで共用なので、単純に差し替えると本番も変わってしまう。
-     **テスト接続（?gas=＝IS_TEST_BACKEND）と &morob=1 のときだけ**眼鏡あり版（fx_moro_b.png）を使う。
-     Naoto確認でOKが出たら＝fx_moro.pngを②素材で置き換えてMORO_ARを909に→このゲートは撤去する */
-  var MORO_AR_B = 909 / 1000; // fx_moro_b.png（🕶眼鏡あり・もろたで②）の実寸比
-  var MORO_B = (params.get("morob") === "1") ||
-    !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
+  var MORO_AR = 909 / 1000; // fx_moro.png の実寸比（横/縦）＝絵を差し替えたらここも直す（素材加工/fx_moro_make.py が出力する）
+  // 🕶9/2夜＝絵は**眼鏡あり版（もろたで②）に本番昇格**（Naoto指示「メガネありのもろたで」）。
+  //   テスト限定ゲート（MORO_B/fx_moro_b.png）は撤去済み＝一本化。眼鏡なし①へ戻すときは
+  //   fx_moro_make.pyのSRCを①に戻して再生成＋MORO_ARを892へ
   function moroTimes() {
     var t = { IN: MORO_BASE.IN };
     t.B1 = t.IN + MORO_BASE.POP + MORO_BASE.B1;   // 吹き出し①（キャラの右上）
@@ -2449,9 +2447,8 @@
    "fx_pray_ng.png", "fx_pray_shut_ng.png"].forEach(function (f) {   // 念仏は2枚重ね（8/9 FB88）＋眼鏡なし版（8/31）
     var im = new Image(); im.src = f;                                // ⚠️閉じ目が遅れて乗ると開き目で始まる
   });
-  (function () { // もろたで（9/1・黄の3つ目）＝このソースで使う方の絵だけ先読み
-    var im = new Image(); im.src = MORO_B ? "fx_moro_b.png" : "fx_moro.png";
-  })(); // 登場ポップと同時に絵が要る＝先読みしないと初回だけ「吹き出しが無人に出る」
+  (function () { var im = new Image(); im.src = "fx_moro.png"; })(); // もろたで（9/1・黄の3つ目）＝
+  // 登場ポップと同時に絵が要る＝先読みしないと初回だけ「吹き出しが無人に出る」
   ["fx_ori_w1.png", "fx_ori_w2.png", "fx_ori_up.png", "fx_ori_dn.png",
    "fx_ori_kime.png", "fx_ori_rock1.png", "fx_ori_rock2.png", "fx_ori_gem.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // オリハルコン8枚（9/2）＝歩行コマ落ち・岩パカッの入れ替え対策
@@ -2925,9 +2922,7 @@
     if (old) old.parentNode.removeChild(old);
     var T = moroTimes();
     var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
-    // __MORO_B＝fxlab専用フック（トグルでリロード不要・本番では未定義＝素通り。__NG_YELLOWと同じ流儀）
-    var moroB = MORO_B || !!window.__MORO_B;
-    var mh = Math.round(ch * 1.06), mw = Math.round(mh * (moroB ? MORO_AR_B : MORO_AR));
+    var mh = Math.round(ch * 1.06), mw = Math.round(mh * MORO_AR);
     /* 相方＝もう片方の席の名簿名。的中したrcと**名前が違う方**の席を採る
        （席オブジェクトの同一性に頼らない＝?fx=強制やラボでrcが席と別物でも安全）。
        片席しか埋まっていない日（一人配信）＝相方なし＝「もろたで!!!」だけ */
@@ -2940,7 +2935,7 @@
       if (other && other.name && other.name !== myName) mate = String(other.name);
     }
     var box = document.createElement("div");
-    box.className = "fx-moro m-" + key + (moroB ? " b" : ""); // b＝🕶眼鏡あり版（テスト接続・ラボ限定）
+    box.className = "fx-moro m-" + key;
     box.style.setProperty("--mw", mw + "px");
     box.style.setProperty("--mh", mh + "px");
     box.innerHTML =
@@ -3695,9 +3690,8 @@
        ?fx=強制（検証用）とダブル的中の共演だけはこれより優先。恒久機能ではなく一時運用のスイッチ。
      ✅8/29 Naoto指示で**空に戻した**（8/26からの「赤＝ダンス100%」を解除）＝赤も表どおり samba/dance 50/50。
        また使うとき＝ { red: "dance" } のように書いて再publish（戻し忘れは fxdisttest が毎回先頭で知らせる）
-     🟡9/2 Naoto指示「今だけもろたで100%・また連絡したら1/3に戻す」＝yellowを固定中。
-       戻すとき＝空の {} に戻して再publish（MEMBER_RATESのyellow行は触らない＝34/33/33のまま眠っている） */
-  var FX_PIN = { yellow: "morotade" }; // 🟡一時固定中（9/2〜・Naoto連絡で解除）
+     🟡9/2昼「今だけもろたで100%」→**同日夜に解除**（Naoto指示＝黄の抽選を念仏50/もろたで50へ改定と同時） */
+  var FX_PIN = {}; // 固定なし＝通常運用（全色 MEMBER_RATES の抽選どおり）
 
   /* ══════════ ガールズレース限定演出（9/1 Naoto案＝ギャル神） ══════════
      演出を決める3つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（PAIR_FX）に続く
