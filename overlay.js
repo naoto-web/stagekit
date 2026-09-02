@@ -2925,7 +2925,9 @@
     if (old) old.parentNode.removeChild(old);
     var T = moroTimes();
     var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
-    var mh = Math.round(ch * 1.06), mw = Math.round(mh * (MORO_B ? MORO_AR_B : MORO_AR));
+    // __MORO_B＝fxlab専用フック（トグルでリロード不要・本番では未定義＝素通り。__NG_YELLOWと同じ流儀）
+    var moroB = MORO_B || !!window.__MORO_B;
+    var mh = Math.round(ch * 1.06), mw = Math.round(mh * (moroB ? MORO_AR_B : MORO_AR));
     /* 相方＝もう片方の席の名簿名。的中したrcと**名前が違う方**の席を採る
        （席オブジェクトの同一性に頼らない＝?fx=強制やラボでrcが席と別物でも安全）。
        片席しか埋まっていない日（一人配信）＝相方なし＝「もろたで!!!」だけ */
@@ -2938,7 +2940,7 @@
       if (other && other.name && other.name !== myName) mate = String(other.name);
     }
     var box = document.createElement("div");
-    box.className = "fx-moro m-" + key + (MORO_B ? " b" : ""); // b＝🕶眼鏡あり版（テスト接続限定）
+    box.className = "fx-moro m-" + key + (moroB ? " b" : ""); // b＝🕶眼鏡あり版（テスト接続・ラボ限定）
     box.style.setProperty("--mw", mw + "px");
     box.style.setProperty("--mh", mh + "px");
     box.innerHTML =
