@@ -1176,6 +1176,77 @@ body.race-sub-on .race-sub { display: flex; }
 @keyframes fxYakOut { to { opacity: 0; transform: scale(1.12); } }
 .fx-yak.out { animation: fxYakOut .45s ease-in forwards; }
 
+/* ── 役物の「輝き」スキン＝🥇金／🌈虹（9/4 Naoto依頼「役物自体が金/レインボーに輝く版」）──────
+   絵（fx_coin.png）は差し替えない＝**同じ絵をもう1枚ぴったり重ねて**フィルタで色を振る。
+   ⚠️`.fx-piece` 自体に filter を掛けてはいけない（実装前に潰した罠）：
+      ①`.fx-piece.lock` が `filter:none` で合体後の影を消している
+      ②`.fx-yak.glow` の fxYakGlow が filter をアニメで上書きする
+      ＝どちらかに必ず食われて、**合体の瞬間（見せ場）に色が飛ぶ**。重ねる方式なら
+      親のfilter（落ち影・明滅）はそのまま素通しで効き、4状態のどれでも色が残る。
+   ⚠️**色替えはカケラ単位でよいが、流れる光はカケラ単位でやってはいけない**。
+      色は位置に依存しない一様な変換＝継ぎ目が出ない。対してスイープや虹の帯は位置で
+      色が変わる＝4枚それぞれの中を走って**継ぎ目に4本の線**が見える（.lockで影を消したのと同じ理屈）。
+      → 流れる光は合体後に「1枚のコイン」全面へ被せる .fx-shine（JSが金/虹のときだけ作る）が担当。
+   出し分け＝いまはラボの `?fx=yakumono_gold` / `yakumono_rainbow` からのみ。
+   **本番でどう出すかは未決**（MEMBER_RATESにもFX_KNOWNにも書いていない＝抽選には絶対に出ない）*/
+.fx-yak.gold .fx-piece::before, .fx-yak.rainbow .fx-piece::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: url("fx_coin.png"); background-repeat: no-repeat;
+  /* 寸法と象限は本体（.fx-piece）の計算をそのまま継ぐ＝四隅の割り方を変えても自動で追従する */
+  background-size: inherit; background-position: inherit; }
+/* 🥇金＝銀色のメダルを金に振る（sepiaで金の下地を作ってから彩度と色相で寄せる）。
+   ⚠️hue-rotateは**プラス側**（+8deg）＝マイナスに振るとオレンジ／銅に寄る。+15を超えると
+     今度は黄緑に転ぶ＝金として成立するのは概ね 0〜+12deg（9/4に5案を色計算で見比べて確定）。
+   数字は見た目調整用＝ラボ右下の「演出CSSの試し書き」でこの1行だけ上書きして詰められる */
+.fx-yak.gold .fx-piece::before {
+  filter: sepia(1) saturate(4.4) hue-rotate(8deg) brightness(1.08) contrast(1.06); }
+/* 🌈虹＝同じ下地の色相をぐるぐる回す（1周2.4秒）＝四隅から飛んでくる間からもう色が変わる。
+   ⚠️from/toは**同じ関数の並び**で書く（並びが違うと補間されず1周ごとにパッと切り替わる） */
+@keyframes fxYakHue {
+  from { filter: sepia(1) saturate(5.2) hue-rotate(0deg)   brightness(1.06) contrast(1.04); }
+  to   { filter: sepia(1) saturate(5.2) hue-rotate(360deg) brightness(1.06) contrast(1.04); }
+}
+.fx-yak.rainbow .fx-piece::before {
+  filter: sepia(1) saturate(5.2) hue-rotate(0deg) brightness(1.06) contrast(1.04);
+  animation: fxYakHue 2.4s linear infinite; }
+
+/* 合体後に1枚のコイン全面へ被せる光の層（JSが金/虹のときだけ作る＝通常の役物はDOMも増えない）。
+   マスク＝コイン画像のアルファ＝光は必ずコインの形の中だけを走る（矩形のまま走らせると
+   透過部分に四角い光が見える＝ギャル神の金塊 ggSheen と同じ作り）。
+   .glow（合体して後光が出た状態）で初めて出す＝バラバラの間に全面の帯を出さない */
+.fx-yak .fx-shine { position: absolute; left: 50%; top: 50%;
+  width: calc(var(--pw) * 2); height: calc(var(--ph) * 2);
+  transform: translate(-50%, -50%); opacity: 0; pointer-events: none;
+  /* 後光と同時に「パッ」と出ると板を貼ったように見える＝短くフェードで馴染ませる */
+  transition: opacity .28s ease-out;
+  -webkit-mask: url("fx_coin.png") 0 0 / 100% 100% no-repeat;
+          mask: url("fx_coin.png") 0 0 / 100% 100% no-repeat; }
+.fx-yak.glow .fx-shine { opacity: 1; }
+/* 虹の帯＝万車バッジ・スロット枠と同じ語彙（rainbowSweepを共用＝色の並びも同じ）。
+   半透明にする＝下のコインの彫りを潰さない（不透明だと「虹色の板」になって役物に見えない） */
+.fx-yak.rainbow .fx-shine::before { content: ""; position: absolute; inset: 0; opacity: .46;
+  background: linear-gradient(100deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff,
+    #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff, #ff5252);
+  background-size: 200% 100%; }
+.fx-yak.rainbow.glow .fx-shine::before { animation: rainbowSweep 1.6s linear infinite; }
+/* 照り返し＝白い細帯がコインの端から端へ走る（金の主役／虹にも重ねる） */
+.fx-yak .fx-shine::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.42) 40%,
+    rgba(255,255,255,.9) 50%, rgba(255,255,255,.42) 60%, transparent) no-repeat;
+  background-size: 28% 100%; background-position: -60% 0; }
+.fx-yak.glow .fx-shine::after { animation: fxYakSheen 1.7s ease-in-out .15s infinite; }
+@keyframes fxYakSheen { 0% { background-position: -60% 0; } 55%, 100% { background-position: 175% 0; } }
+/* 後光・フチ光・リングも色を合わせる（コインだけ虹で周りが金だと嘘の光になる）。
+   ⚠️指定は3クラス＝既定（.fx-yak .fx-halo 等）より必ず強い＝順番に依存しない */
+.fx-yak.gold .fx-halo {
+  background: radial-gradient(closest-side, rgba(255,232,150,.6), rgba(255,214,90,.2) 55%, transparent 72%); }
+.fx-yak.rainbow .fx-halo {
+  background: radial-gradient(closest-side, rgba(255,255,255,.55), rgba(160,210,255,.22) 45%,
+    rgba(255,150,230,.16) 62%, transparent 76%); }
+.fx-yak.rainbow .fx-rimlight { filter: brightness(0) invert(1) drop-shadow(0 0 14px #fff)
+  drop-shadow(0 0 28px #7de8ff) drop-shadow(0 0 54px #ff7ae0) drop-shadow(0 0 92px rgba(140,120,255,.55)); }
+.fx-yak.rainbow .fx-ring.r2 { border-color: #7de8ff; }
+
 /* ══════════ スロット＝ピンクメンバー専用の個人演出（8/8 FB83・Naoto案／ラボfxlabで詰めて本番化）
    当たり目の車番を並べたリールが「クルクル」回り、左から順に減速して「ドン」と停まる →
    全部揃ったら「ピカピカ」→ 本番の的中バッジへバトンを渡す。

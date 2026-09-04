@@ -5,7 +5,8 @@
      ?debug=1                      … 透過穴の代わりにプレースホルダ表示＋同期状態バッジ
      ?wm=0                         … ヘッダー帯のCTC透かしを非表示（既定＝表示・8/6反転。CTC承認NGなら&wm=0で消す）
      ?fx=<演出キー>                 … 的中演出の抽選をやめて指定の演出を出す（検証用・本番URLには付けない）
-                                      rain|yakumono|adjust|slot|sumo|pray|tea|samba|peye|thanks|morotade|ori|auto
+                                      rain|yakumono|yakumono_gold|yakumono_rainbow|adjust|slot|sumo
+                                      |pray|tea|samba|peye|thanks|morotade|ori|auto
                                       ⚠️テスト接続（?gas=）も**本番と同じ抽選**（8/29〜・旧＝thanks固定8/25）
    データ: GAS状態（5秒ポーリング＋BroadcastChannel即時反映）＋タイムテーブル（10分毎） */
 
@@ -1949,6 +1950,9 @@
   var MEMBER_RATES = {
     orange: { rain: 33.34, tea: 33.33, nicha: 33.33, thanks: 0 }, // 走行／お茶（FB90）／ニチャー（8/29）
     blue:   { yakumono: 50, adjust: 50, thanks: 0 },  // 役物合体（FB82）／アジャスト（FB130）
+    // ⚠️青は**note的中・万車的中もこの表を使わない**（9/4・KIND_FX参照）＝note→🥇金の役物一択
+    //   （アジャストはnote以外の的中で出る）／万車→🌈虹の役物（noteの万車も虹が優先）。
+    //   ここに書かない＝書くと通常の的中でも金や虹が出てしまう（安全弁はFX_KNOWN側）
     // ⚠️青は**ガールズレースの的中だけ**この表を使わず「ギャル神」100%（9/1・GIRLS_FX参照）。
     //   ギャル神はこの表に書かない＝書くと通常レースでも出てしまう（安全弁はFX_KNOWN側）
     pink:   { slot: 100, thanks: 0 },                 // スロット（FB83）
@@ -1994,6 +1998,19 @@
     t.END   = t.GLOW + YAK_BASE.HOLD;       // 退場開始＝ここでバッジにバトンを渡す
     t.GONE  = t.END + YAK_BASE.FADE;
     return t;
+  }
+
+  /* 役物の「輝き」スキン（9/4 Naoto依頼「役物自体が金色／レインボーに輝くバージョン」）。
+     絵も動きも尺も本体（yakumono）と完全に同じで、**色だけ**が違う＝演出キーを分けただけ。
+     色を付けているのは全部CSS（overlay.css の .fx-yak.gold / .fx-yak.rainbow）＝
+     JSがやるのは「スキン名をboxのクラスに足す」「合体後の光の層 .fx-shine を1枚足す」の2つだけ。
+     出し分け＝**的中の種別**（9/4 Naoto決定・KIND_FX参照）＝青の万車→虹／青のnote→金。
+     ⚠️**MEMBER_RATES にも FX_KNOWN にも書かない**＝抽選には入れない限定枠
+        （galgod/ori/hitouchと同じ流儀）。書くと通常の的中でも金や虹が出てしまう。 */
+  var YAK_SKIN = { yakumono: "", yakumono_gold: "gold", yakumono_rainbow: "rainbow" };
+  // 役物の一族なら "" / "gold" / "rainbow" を、そうでなければ null を返す（＝分岐の判定にも使う）
+  function yakSkinOf(eff) {
+    return Object.prototype.hasOwnProperty.call(YAK_SKIN, eff) ? YAK_SKIN[eff] : null;
   }
 
   /* スロットの尺（8/8 FB83・8/9 FB84でレバー追加・8/10 FB122でキャラ入場・8/10 FB123で右入場＋溜め。ピンクメンバー専用）。
@@ -2554,8 +2571,9 @@
   }
 
   /* 役物合体（8/8 FB82・青メンバー専用）：コイン1枚を4象限に割り、四隅から寄せて合体させる。
-     この演出のメンバーはアイコン走行を出さない（fireHitFx側で分岐）＝二重演出にしない */
-  function spawnYakumono(cam, key) {
+     この演出のメンバーはアイコン走行を出さない（fireHitFx側で分岐）＝二重演出にしない。
+     skin＝""（従来）／"gold"／"rainbow"（9/4・YAK_SKIN参照）。動きと尺は3つとも同一 */
+  function spawnYakumono(cam, key, skin) {
     var old = cam.querySelector(".fx-yak");
     if (old) old.parentNode.removeChild(old);
     var T = yakTimes();
@@ -2566,7 +2584,7 @@
     var fullW = Math.min(maxW, maxH * AR);
     var pw = Math.round(fullW / 2), ph = Math.round(fullW / AR / 2);
     var box = document.createElement("div");
-    box.className = ["fx-yak", "m-" + key].join(" ");
+    box.className = ["fx-yak", "m-" + key].join(" ") + (skin ? " " + skin : "");
     box.style.setProperty("--pw", pw + "px");
     box.style.setProperty("--ph", ph + "px");
     box.style.setProperty("--fly", (T.FLY / 1000) + "s");
@@ -2589,6 +2607,14 @@
       box.appendChild(el);
       return el;
     });
+    /* 金/虹スキンのときだけ、合体後に「1枚のコイン」全面へ被せる光の層を足す（CSS .fx-shine 参照）。
+       ⚠️流れる光をカケラ側に持たせると4枚それぞれの中を走って**継ぎ目に4本の線**が見える＝
+         必ず全面1枚でやる。カケラの直後に入れる＝光はコインの上／白フラッシュと衝撃波はさらに上 */
+    if (skin) {
+      var shine = document.createElement("div");
+      shine.className = "fx-shine";
+      box.appendChild(shine);
+    }
     // fx-rimlight＝合体の瞬間のフチ光（8/11 FB131・Naoto「フチがもっとピカっと」）。
     // カケラの背後（haloの上）に置く＝白シルエット本体はコインに隠れ、はみ出したフチと後光だけが見える
     ["fx-halo", "fx-rimlight", "fx-boom", "fx-ring", "fx-ring r2"].forEach(function (c) {
@@ -3662,7 +3688,8 @@
         Math.random()だとソースごとに別の演出を引き、シーン切替で演出が変わって見える（8/26 Naoto報告）。
         同じ的中IDなら全ソースが同じ計算＝どのシーンに切り替えても同じ絵になる。 */
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
-       rain＝アイコン走行／yakumono／adjust／slot／sumo／pray／tea／nicha／samba／dance／peye
+       rain＝アイコン走行／yakumono（＋9/4の輝きスキン yakumono_gold／yakumono_rainbow）
+       ／adjust／slot／sumo／pray／tea／nicha／samba／dance／peye
        ／hitouch＝ダブル的中の共演（⚠️本来は2人揃わないと出ない＝これで単独確認できる）
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
        本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
@@ -3739,6 +3766,29 @@
     return Math.max.apply(null, ms) < LOWODDS_MAX;
   }
 
+  /* ══════════ 的中の「種別」で決まる枠（9/4 Naoto指示＝役物の輝きスキン） ══════════
+     演出を決める4つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（PAIR_FX）
+     「どんなレースを」（GIRLS_FX / LOWODDS_FX）に続く「**どんな当たり方をしたか**」。
+       青の万車的中     → 🌈虹の役物（yakumono_rainbow）
+       青のnote的中     → 🥇金の役物（yakumono_gold）＝**金一択**（アジャストとの抽選をしない）
+       それ以外（通常） → 従来どおり yakumono / adjust の50/50（MEMBER_RATES）
+     ⚠️**noteの万車は虹が優先**（9/4 Naoto指示）＝万車を先に見る。
+        理由＝万車のほうが珍しく、バッジ・枠パルスも「note＝黄金／万車＝レインボー」で
+        万車が上書きする既存の語彙に合わせる（画面全体で色の意味が食い違わない）。
+     ⚠️色は青だけ＝役物は青の個人演出。他の色のnote/万車的中は今までと1文字も変わらない。
+     優先順位＝?fx=強制 > ダブル的中の共演 > FX_PIN > ギャル神 > オリハルコン > **この表**
+              > MEMBER_RATESの抽選（＝ハイタッチ・ギャル神が上・9/4 Naoto了承）
+     ⚠️MEMBER_RATESにもFX_KNOWNにも書かない（galgod/ori/hitouchと同じ安全弁＝
+       書くと**通常の的中でも金や虹が出てしまう**） */
+  var KIND_FX = { blue: { manche: "yakumono_rainbow", note: "yakumono_gold" } };
+  function kindFxFor(key, hit) {
+    var t = KIND_FX[key];
+    if (!t || !hit) return "";
+    if (hit.manche && t.manche) return t.manche; // 万車が先＝noteの万車は虹（9/4 Naoto指示）
+    if (hit.note && t.note) return t.note;
+    return "";
+  }
+
   /* ══════════ 確率テーブルから1つ引く仕組み（8/27） ══════════
      ⚠️ここは**仕組み**＝確率を変えるときに触る場所ではない（触るのはMEMBER_RATESの数字だけ）。
      ・引き方＝ハッシュの**下の桁**（% RATE_SCALE）で整数の当たり枠に落とす。
@@ -3794,6 +3844,8 @@
     if (FX_PIN[key]) return FX_PIN[key]; // 今だけの固定枠（上のFX_PIN参照・戻し忘れ注意）
     if (GIRLS_FX[key] && isGirlsHit(hit)) return GIRLS_FX[key]; // ガールズ限定枠＝ギャル神（9/1）
     if (LOWODDS_FX[key] && isLowOddsHit(hit)) return LOWODDS_FX[key]; // 低倍率限定枠＝オリハルコン（9/2）
+    var kindFx = kindFxFor(key, hit); // 種別枠＝青の万車→虹の役物／note→金の役物（9/4・KIND_FX参照）
+    if (kindFx) return kindFx;
     var rates = MEMBER_RATES[key];
     if (!rates) return "";               // 表に無い色＝名簿外＝既定のアイコン走行（従来動作）
     // IDが取れない経路（保険）だけ乱数。通常の的中は必ずid付き（derive.jsのhits）
@@ -4218,7 +4270,8 @@
     // 選手リスペクトは結果の1〜3着が要る。揃わない的中では既定のアイコン走行に落とす
     if (eff === "thanks" && !thxResult(hit)) eff = "";
     // バッジまでの待ち時間＝その人の前奏の長さ。専用演出は退場開始と同時に出す（消えきるのを待たない）
-    var rainMs = eff === "yakumono" ? yakTimes().END
+    // ⚠️役物は金/虹（9/4）も尺が同じ＝一族まとめて yakSkinOf で判定する（キーを足すたびに書き足さない）
+    var rainMs = yakSkinOf(eff) !== null ? yakTimes().END
       : eff === "slot" ? slotTimes(combo.length).END
       : eff === "sumo" ? sumoTimes().END
       // ⚠️pray_ngも尺はprayと共通（8/31）。9/1まで抜けていて、眼鏡なしの回だけバッジが
@@ -4255,7 +4308,7 @@
        （役物FB82・スロットFB83・相撲FB86・念仏FB88）。
        万車＝全画面ホスト**1枚だけ**に出す（5シーンぶん撒かない・fxStageHostのコメント参照） */
     (stage ? [stage] : wipes).forEach(function (cam) {
-      if (eff === "yakumono") spawnYakumono(cam, key);
+      if (yakSkinOf(eff) !== null) spawnYakumono(cam, key, yakSkinOf(eff)); // 役物＝従来/金/虹（9/4）
       else if (eff === "slot") spawnSlot(cam, key, hit, combo);
       else if (eff === "sumo") spawnSumo(cam, key, hit);
       else if (eff === "pray" || eff === "pray_ng") spawnPray(cam, key, eff === "pray_ng");
