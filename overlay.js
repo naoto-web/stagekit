@@ -2122,11 +2122,13 @@
   var ORI_BASE = { IN: 60, WALK: 2600, STEP: 350, RAISE: 380, SWING: 500, DOWNMS: 190,
                    CRACK: 90, GEMRISE: 520, KIME: 700, HOLD: 2600, FADE: 450 };
   /* 実寸比と体の重心x比＝素材加工/fx_ori_make.py の出力（絵を差し替えたら再実行して貼り直す） */
-  var ORI_AR_W = 0.7310, ORI_CX_W = 0.5382; // 歩行（w1/w2共通枠・体の重心x比）
-  var ORI_AR_S = 1.0280, ORI_CX_S = 0.4744; // 振り（up/dn共通枠）
-  var ORI_AR_K = 0.8810, ORI_CX_K = 0.4432; // キメ
-  var ORI_AR_R = 0.9570;                    // 岩（rock1/rock2共通枠）
-  var ORI_AR_G = 1.0200;                    // 鉱石
+  // 9/6 Naoto FB「岩の右・歩きの柄の先・振り上げの柄の先・キメの足元が切れている」＝素材の切り抜き枠が
+  //   絵より狭かった（CSS/配置の問題ではない）→ 枠を広げて8枚とも再生成・定数を貼り直し
+  var ORI_AR_W = 0.7350, ORI_CX_W = 0.5263; // 歩行（w1/w2共通枠・体の重心x比）
+  var ORI_AR_S = 1.0280, ORI_CX_S = 0.4753; // 振り（up/dn共通枠）
+  var ORI_AR_K = 0.8280, ORI_CX_K = 0.4440; // キメ（9/6＝足元まで入って枠が縦に6%伸びた）
+  var ORI_AR_R = 1.1970, ORI_R1_L = 0.0723, ORI_R1_W = 0.8594; // 岩（rock1/rock2共通枠・割れる前の岩の左端比と幅比）
+  var ORI_AR_G = 0.9810;                    // 鉱石（9/6＝結晶の先端まで入った）
   function oriTimes() {
     var t = { IN: ORI_BASE.IN };
     t.ARRIVE = t.IN + ORI_BASE.WALK;             // 歩き終わり＝振りかぶりへ
@@ -3017,14 +3019,19 @@
     var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
     var wh = Math.round(ch * 0.56), ww = Math.round(wh * ORI_AR_W);
     var sh = Math.round(ch * 0.62), sw = Math.round(sh * ORI_AR_S);
-    var kh = Math.round(ch * 0.60), kw = Math.round(kh * ORI_AR_K);
+    // 9/6＝キメ枠は足元まで入って縦に6%伸びた（旧0.60）→体の見た目を振り枠と同じ高さに保つため0.64
+    var kh = Math.round(ch * 0.64), kw = Math.round(kh * ORI_AR_K);
     var rh = Math.round(ch * 0.32), rw = Math.round(rh * ORI_AR_R);
-    var gh = Math.round(ch * 0.38), gw = Math.round(gh * ORI_AR_G);
+    var gh = Math.round(ch * 0.395), gw = Math.round(gh * ORI_AR_G); // 9/6 結晶の先端まで入って4%伸びた分（旧0.38）
     var rockL = Math.round((cw - rw) / 2);        // 岩＝中央（9/2 Naoto FB・初版は右寄り）
+    /* 9/6＝共通枠の幅は「割れた後」（rock2＝左右に開く）で決まり、割れる前の岩は枠の内側
+       （左端比ORI_R1_L・幅比ORI_R1_W）に収まる。打点と体の立ち位置は**割れる前の岩の実体**で決める
+       （枠比のままだと枠が広がった分だけ左へズレる） */
+    var r1L = rockL + rw * ORI_R1_L, r1W = rw * ORI_R1_W;
     /* 体のアンカーx＝**振り下ろしのツルハシ先端が岩の左肩（左から30%）に当たる**逆算位置。
        振り枠の右端≒ツルハシ先端なので、先端までの距離＝sw×(1-体の重心x比)。
        体を岩の位置に置くと重なって埋まる（初版の実写で確認） */
-    var manX = Math.round(rockL + rw * 0.30 - sw * (1 - ORI_CX_S));
+    var manX = Math.round(r1L + r1W * 0.30 - sw * (1 - ORI_CX_S));
     var box = document.createElement("div");
     box.className = "fx-ori m-" + key;
     var v = { "--walk": (ORI_BASE.WALK / 1000) + "s", "--step": (ORI_BASE.STEP / 1000) + "s",
@@ -3077,7 +3084,7 @@
       if (!box.isConnected) return;
       var hitFx = document.createElement("i");
       hitFx.className = "fx-ori-hitfx" + (big ? " big" : "");
-      hitFx.style.left = (rockL + rw * 0.20) + "px";
+      hitFx.style.left = (r1L + r1W * 0.20) + "px";   // 9/6 割れる前の岩の実体基準（枠比→岩比）
       hitFx.style.bottom = Math.round(ch * 0.045 + rh * 0.78) + "px";
       box.appendChild(hitFx);
       var se = null;
