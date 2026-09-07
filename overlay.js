@@ -21,16 +21,21 @@
      ロールバック＝ソースURLに &v2=0（旧レイアウトへ即復帰・デプロイ不要）。
      &ln=0 … 車番チップの下の苗字だけ消す（ラインと枠はそのまま） */
   var V2 = params.get("v2") !== "0";
-  /* ②サブ予想枠を常時確保するか（8/28・§10項86）。既定ON（8/30〜恒久）。
-     ONだと枠を畳まず、ワイプ穴を常に362pxへ固定する＝カメラが362幅でも544幅でも空白が出ない
-     （544幅なら左182pxが枠の下に隠れるだけ・画角はNaoto確認済み）。
-     ⚠️OFFで丸かぶり判定や場消滅で枠が畳まれると、カメラが362幅のとき左182pxが空白になる。
-     ⚠️経緯＝8/27夜の空白事故→8/28に既定ONで根治→カメラを544幅へ直したのを受け8/29に既定OFFへ
-        →8/30夜の本番でまた空白（メイン小倉×サブ小倉の丸かぶりで枠が畳まれ、カメラは362幅に
-        戻されていた）。カメラの変換はシフトのたびに触られうることが2度実証されたので、
-        レイアウトをOBS側の手動座標に依存させない既定ONへ恒久的に倒した。
-     ロールバック＝ソースURLに &subfix=0（デプロイ不要・ただし福岡の操作が要る）。 */
-  var SUB_FIXED = params.get("subfix") !== "0";
+  /* ②サブ予想枠の出し方（8/28 §10項86 → 9/7改定 §10項98）。
+     枠（182px）が出るとワイプ穴は362px（x1550〜）・畳むと544px（x1368〜）＝OBSのカメラ座標と噛み合う幾何。
+     既定＝「その席がサブ場を選んでいる」なら枠を出す／「なし」（未選択・本日の場に無い）なら枠ごと畳んで
+     ワイプ全幅（9/7 Naoto依頼「なしにしたのに枠だけ出る」）。席ごとに独立（CSSグリッド・overlay.css参照）。
+     ⚠️ただし「メインと同じ場＝丸かぶり」だけは枠を残す（SUB_KEEP_OVERLAP・既定ON）＝夜は自動追従が
+        「次に発走する場」を追ってメインと同じ場に落ちるのが常で、その瞬間に畳むとカメラが362幅の運用では
+        左182pxが素通し（8/27・8/30の空白事故）。丸かぶりは人の操作でなく自動で起きるので枠を維持し、
+        畳むのは人が「なし」を選んだときだけ＝結果が目に見える操作に限る。
+     ⚠️帯の色の正体（9/2実測）＝畳んだ穴から透けるのはOBS背景の黒でなく、下に敷かれたレース映像
+        ウィンドウ（ブラウザ）のページ背景。カメラが設計どおり1368/544なら透けない。
+     経緯＝8/27夜の空白事故→8/28既定ON→8/29既定OFF→8/30夜に再発（丸かぶり）→8/30 23:24既定ON恒久化
+        →9/7「なし」だけ畳む方式へ（席ごと独立）。
+     切替＝&subfix=1 …常時枠を固定（非常用・8/30〜9/2の既定と同じ）／&subfix=0 …丸かぶりも畳む（8/29の旧既定） */
+  var SUB_FIXED = params.get("subfix") === "1";
+  var SUB_KEEP_OVERLAP = params.get("subfix") !== "0";
   /* 苗字は既定ON（8/13 Naoto判断）。出すにはヘッダー行を82pxまで広げる必要があり、
      その差分（約30px）は買い目エリアから借りている＝トレードオフを承知のうえでの選択。
      レース映像に重ねる案は映像利用の条件で不可・予想帯208pxは伸ばせないため他に置き場がない。
@@ -1200,19 +1205,28 @@
     document.body.classList.toggle("seat-a-off", !seats.a);
     document.body.classList.toggle("seat-b-off", !seats.b);
     // ②サブ予想（8/6 FB13・FB17で配信者ごとに選択）：raceSubBy[配信者id]＝場名。旧raceSubVenueは互換読み
-    var subVenueOf = function (rc) {
-      if (!rc) return null;
-      var vn = (state.raceSubBy || {})[rc.id] || state.raceSubVenue;
-      // メインと同じ場＝丸かぶり → 「なし」と同じ扱いにして枠ごと畳む（8/28 Naoto指定）。
+    var rawSubOf = function (rc) { // 保存されている選択そのもの（場名 or null）
+      return rc ? ((state.raceSubBy || {})[rc.id] || state.raceSubVenue || null) : null;
+    };
+    var subVenueOf = function (rc) { // 中身を出せる有効なサブ場（丸かぶり・本日の場に無いはnull）
+      var vn = rawSubOf(rc);
+      // メインと同じ場＝丸かぶり → 中身は「なし」扱い（8/28 Naoto指定）。
       // currentRaceは場単位なので「場が同じ＝レースも必ず同じ」＝場名の比較だけで判定できる。
       // 1場運用に落ちた日（もう一方が本日終了で場リストから外れる）に必ず起きる
       if (vn && vn === mainName) return null;
       return vn && state.venues.some(function (v) { return v.name === vn; }) ? vn : null;
     };
-    // 枠の有無はレイアウト＝OBSのカメラ座標と噛み合う幾何なので、SUB_FIXED中は選択状態で切り替えない。
-    // （旧＝サブ場が1人でも有効なら枠を出す。この連動が8/27夜の空白事故の直接原因・§10項86）
-    document.body.classList.toggle("race-sub-on",
-      SUB_FIXED || !!(subVenueOf(seats.a) || subVenueOf(seats.b)));
+    // 枠（182px）を出すか＝席ごと（9/7・§10項98）。有効なサブ場あり／丸かぶり（SUB_KEEP_OVERLAP）／SUB_FIXED なら出す。
+    // 「なし」（未選択・本日の場に無い）は畳んでワイプ全幅。枠の有無＝OBSカメラ座標と噛み合う幾何（§10項86）
+    var subFrameOf = function (rc) {
+      if (!rc) return false;
+      if (SUB_FIXED) return true;
+      if (subVenueOf(rc)) return true;
+      var raw = rawSubOf(rc);
+      return !!(SUB_KEEP_OVERLAP && raw && raw === mainName);
+    };
+    // 互換：どちらかの席に枠が出ていれば body.race-sub-on（レイアウト自体はCSSグリッドで席ごとに決まる）
+    document.body.classList.toggle("race-sub-on", subFrameOf(seats.a) || subFrameOf(seats.b));
     ["a", "b"].forEach(function (slot) {
       var rc = seats[slot];
       var name = rc ? rc.name : "";
@@ -1330,9 +1344,12 @@
       if (sHead) {
         var svn = subVenueOf(rc);
         var sPanel = sHead.parentElement;
-        // SUB_FIXED中は席に人が居れば枠ごと出す（サブ場が未選択・無効でもヘッダーだけ残す）。
-        // 畳むと182pxの列が素通しになり、その下のカメラ／背景が覗く（＝空白に見える）
-        if (sPanel) sPanel.style.display = (rc && (svn || SUB_FIXED)) ? "" : "none";
+        // 席ごとに枠を出し入れ（9/7・§10項98）：ON＝パネル表示＋カメラ穴362（.sub-on）／OFF＝パネル非表示＋カメラ穴544。
+        // 丸かぶり・SUB_FIXEDでは svn が null でも枠は出る（ヘッダーだけ残る）
+        var sFrame = subFrameOf(rc);
+        if (sPanel) sPanel.classList.toggle("sub-on", sFrame);
+        var sCam = document.querySelector(".race-sub-wrap .race-wipes .cam.slot-" + slot);
+        if (sCam) sCam.classList.toggle("sub-on", sFrame);
         var sName = $("sband-name-" + slot);
         if (sName) {
           // 「予想（NEXT）」は添え字（.sub-sfx＝0.62em）に分離＝同サイズで並べると

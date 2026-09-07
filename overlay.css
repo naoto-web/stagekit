@@ -719,20 +719,31 @@ body.debug #scene-tenkai .slist:empty::after {
   vertical-align: middle; white-space: nowrap; }
 
 .race-rail { width: 544px; }
-.race-sub-wrap { flex: 1 1 0; min-height: 0; display: flex; }
+/* ②サブ予想（8/6 FB13）：タイマー1枚目の区切り線を下へ延長した位置（左182px）に別場の予想を縦2段。
+   ONはコンソール「②サブ予想の場」で場選択。
+   🧩9/7改定（§10項98・Naoto依頼「なし」なら枠ごと消してワイプ全幅）＝ワイプごとに独立して出し入れする。
+   DOMは従来どおり（.race-sub に2パネル／.race-wipes に2カメラ）だが、両方を display:contents で平らにして
+   .race-sub-wrap の 2列×2行グリッドへ直接置く＝列1（182px）がパネル・列2（362px）がカメラ。
+   席ごとに JS が .sub-on を付ける：ON＝パネル表示＋カメラは列2だけ（穴362）／OFF＝パネル非表示＋カメラが
+   列1〜2（穴544）。既定（JS未実行・state未着）はOFF＝全幅＝空のセルが透けない安全側。
+   ⚠️③レース展開の .race-wipes は .race-sub-wrap の外＝従来の縦flexのまま（グリッド系セレクタは wrap 配下限定）。
+   ⚠️OBSのカメラ1/2は x1368・544×404 が設計値（8/28・§10項86）。ONのときはカメラの左182pxがパネルの下に
+      隠れるだけ。カメラを362幅に置く運用だと、OFFに転んだ瞬間に穴だけ544へ広がり左182pxが素通しになる
+      （8/27・8/30の空白事故＝透けるのはOBS背景の黒でなく下に敷かれたレース映像ウィンドウのページ背景・9/2実測）。
+   ⚠️パネルの背景は不透明にしておくこと＝この枠の下にカメラが来る運用のため。--panel は 94% なので
+      パネル単体では6%透ける→ --bg2 を下に敷いた2層背景で素通しを塞ぐ（旧は列 .race-sub に敷いていた） */
+.race-sub-wrap { flex: 1 1 0; min-height: 0; display: grid;
+  grid-template-columns: 182px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+.race-sub-wrap > .race-sub, .race-sub-wrap > .race-wipes { display: contents; }
 .race-wipes { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
 .race-wipes .cam { flex: 1 1 0; }
-/* ②サブ予想（8/6 FB13）：タイマー1枚目の区切り線を下へ延長した位置（左182px）に別場の予想を縦2段。
-   既定OFF＝従来レイアウト（ワイプ544幅のまま）。ONはコンソール「②サブ予想の場」で場選択。
-   ⚠️OBSのカメラ1/2は常に x1368・544×404 固定＝モードで動かさない（8/28・§10項86）。ONのときは
-      カメラの左182pxがこの枠の下に隠れるだけ。動かす運用だと、サブがOFFに転んだ瞬間に穴だけ544へ
-      広がり、カメラの無い左182pxが空白になる（8/27夜の放送事故）。
-   ⚠️背景を不透明にしておくこと＝この枠の下にカメラが来る運用になったため。--panel は 94% なので
-      パネルだけでは6%透ける（枠自体に --bg2 を敷いて素通しを塞ぐ） */
-.race-sub { display: none; width: 182px; flex: 0 0 182px; flex-direction: column;
-  background: var(--bg2); border-right: 1.5px solid var(--panel-line); }
-body.race-sub-on .race-sub { display: flex; }
-.sub-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.race-sub-wrap .sub-panel.slot-a, .race-sub-wrap .race-wipes .cam.slot-a { grid-row: 1; }
+.race-sub-wrap .sub-panel.slot-b, .race-sub-wrap .race-wipes .cam.slot-b { grid-row: 2; }
+.race-sub-wrap .race-wipes .cam { grid-column: 1 / 3; min-width: 0; }
+.race-sub-wrap .race-wipes .cam.sub-on { grid-column: 2; }
+.sub-panel { grid-column: 1; min-height: 0; display: none; flex-direction: column;
+  background-color: var(--bg2); background-image: linear-gradient(var(--panel), var(--panel)); }
+.sub-panel.sub-on { display: flex; }
 .sub-head { font-size: 18px; padding: 5px 7px; white-space: nowrap; overflow: hidden; } /* 折返し禁止＝JSが幅に合わせて縮小（8/6 FB18）・左右paddingは8/13 FBで10→7に詰めて文字幅を稼いだ */
 /* 「予想（NEXT）」は添え字扱いで小さく＝ラベル全体は幅いっぱいのまま、配信者名だけを大きくできる
    （8/13 FB「文字が小さい」。名前＋9文字を同サイズで並べると全体が頭打ちになるため） */
