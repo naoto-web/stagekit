@@ -338,12 +338,46 @@
     return next;
   }
 
-  /** 盤面をraceに合わせる：メイン（activeVenue・currentRace）＝race／
-      サブ（raceSubBy）＝その次に発走するレースの場（サブONの配信者のみ・OFFの人は触らない）。
+  /* サブONのまま「出せるレースが無い」状態を表す番兵（9/7・§10項99）。
+     場名にはなり得ない文字なので、コンソールは「なし」を選択表示し（renderRaceSubRowの
+     「本日の場に無い場名はnull扱い」ガードに素直に落ちる）、オーバーレイは枠ごと畳む（項98）。
+     ⚠️キーを消して表現してはいけない＝キー無し＝サブOFFなので、次のレースが現れても復帰しなくなる */
+  var SUB_NONE = "-";
+
+  /** ②サブ（NEXT）を「メインのレースより後に発走する、別場の、まだ発走していない最も早いレース」へ
+      合わせる（9/7・§10項99）。サブONの配信者（raceSubByにキーがある人）だけを動かす。
       変更が1つでもあればtrue（保存は呼び出し側）。
-      ⚠️次レースが同じ場のとき（1場運用の帯など）はサブを触らない：
-        currentRaceが場単位のため「メイン＝2R・サブ＝3R」を同じ場では表現できない */
-  function alignToRace(state, races, race) {
+      ⚠️別場だけを見る＝currentRaceが場単位なので「メイン＝2R・サブ＝3R」を同じ場では表現できない。
+        （旧実装は「次に発走するレースが同じ場ならサブを触らない」だったので、1場運用でサブが
+         前のレースを指したまま残った。今は出せるものが無い＝SUB_NONEで畳む）
+      ⚠️nowSecで未発走に絞る＝回収入力で終わったレースへメインを戻したとき、サブが
+        終了済みレースを指さないため。省略時（-1）はフィルタなし＝時刻を持たない呼び出しでも動く */
+  function alignSub(state, races, mainRace, nowSec) {
+    if (!state || !mainRace) return false;
+    var now = (typeof nowSec === "number") ? nowSec : -1;
+    var next = null;
+    (races || []).forEach(function (r) {
+      if (r.venue === mainRace.venue) return;
+      if (r.startSec <= mainRace.startSec || r.startSec <= now) return;
+      if (!next || r.startSec < next.startSec) next = r;
+    });
+    var changed = false;
+    if (!state.currentRace) state.currentRace = {};
+    if (next && state.currentRace[next.venue] !== next.no) {
+      state.currentRace[next.venue] = next.no; changed = true;
+    }
+    var want = next ? next.venue : SUB_NONE;
+    (state.racers || []).forEach(function (rc) {
+      var cur = state.raceSubBy && state.raceSubBy[rc.id];
+      if (!cur) return; // サブOFF（キー無し）の人は触らない
+      if (cur !== want) { state.raceSubBy[rc.id] = want; changed = true; }
+    });
+    return changed;
+  }
+
+  /** 盤面をraceに合わせる：メイン（activeVenue・currentRace）＝race／サブ＝alignSubに委譲。
+      変更が1つでもあればtrue（保存は呼び出し側） */
+  function alignToRace(state, races, race, nowSec) {
     if (!state || !race) return false;
     var idx = -1;
     (state.venues || []).forEach(function (v, i) { if (v.name === race.venue) idx = i; });
@@ -352,17 +386,7 @@
     if (state.activeVenue !== idx) { state.activeVenue = idx; changed = true; }
     if (!state.currentRace) state.currentRace = {};
     if (state.currentRace[race.venue] !== race.no) { state.currentRace[race.venue] = race.no; changed = true; }
-    var next = null;
-    (races || []).forEach(function (r) {
-      if (r.startSec > race.startSec && (!next || r.startSec < next.startSec)) next = r;
-    });
-    if (next && next.venue !== race.venue) {
-      if (state.currentRace[next.venue] !== next.no) { state.currentRace[next.venue] = next.no; changed = true; }
-      (state.racers || []).forEach(function (rc) {
-        var cur = state.raceSubBy && state.raceSubBy[rc.id];
-        if (cur && cur !== next.venue) { state.raceSubBy[rc.id] = next.venue; changed = true; }
-      });
-    }
+    if (alignSub(state, races, race, nowSec)) changed = true;
     return changed;
   }
 
@@ -430,6 +454,8 @@
     justStartedRace: justStartedRace,
     videoRaceAt: videoRaceAt,
     alignToRace: alignToRace,
+    alignSub: alignSub,
+    SUB_NONE: SUB_NONE,
     carryResultMeta: carryResultMeta,
     nameKey: nameKey,
     nameHit: nameHit,
