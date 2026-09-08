@@ -170,7 +170,6 @@
       b.addEventListener("click", function () {
         state.activeVenue = +b.getAttribute("data-i");
         manualNav(true); // 手動の場切替＝結果フォームの固定解除＋自動追従に手動優先を通知（FB96）
-        resyncSub();     // メインが変わった＝サブ（NEXT）を次に発走する別場へ合わせ直す（項99）
         save();
         renderAll();
       });
@@ -291,7 +290,6 @@
       b.addEventListener("click", function () {
         state.currentRace[name] = +b.getAttribute("data-no");
         manualNav(true); // 手動のレース切替＝結果フォームの固定解除＋手動優先を通知（FB96）
-        resyncSub();     // 同上（項99）
         save();
         renderAll();
       });
@@ -314,7 +312,6 @@
     if (next) {
       state.currentRace[name] = next.no;
       manualNav(true); // 手動のレース送り（FB96）
-      resyncSub();     // 同上（項99）
       save();
       renderAll();
     }
@@ -1342,21 +1339,15 @@
     });
     return out;
   }
-  /* メインを変えたらサブ（NEXT）を追従させ直す（9/7・§10項99）。
-     再計算のトリガーはメイン変更だけ＝手で選び直したサブは次にメインが変わるまでそのまま残る。
-     本日設定「発走・②切替時に予想レースを自動で合わせる」がOFFなら何もしない（全部手動運用）。
-     ⚠️save()/renderAll()は呼び出し側に任せる＝クリック処理の中で二重に走らせないため */
-  function resyncSub() {
-    if (!state || state.cfg.autoAlign === false || state.date !== todayStr()) return false;
-    var v = state.venues[state.activeVenue];
-    if (!v) return false;
-    var no = state.currentRace && state.currentRace[v.name];
-    if (!no) return false;
-    var races = selectedRaces(), main = null;
-    races.forEach(function (r) { if (r.venue === v.name && r.no === no) main = r; });
-    if (!main) return false; // 時刻表が未取得＝合わせようがない
-    return window.Derive.alignSub(state, races, main, nowSec());
-  }
+  /* ⚠️手動操作（場ボタン・レースチップ・R送り・回収ジャンプ）ではサブ（NEXT）に触らない（9/8）。
+     9/7に「メインを変えたらサブを次に発走する別場へ合わせ直す」（旧resyncSub・§10項99）を4か所に
+     配線したが、翌9/8朝に「弥彦1Rを保存したのに大垣を入力した瞬間に消える」が発生して撤去した。
+     原因＝入力のためにメインを先のレース（大垣2R）へ動かすと、alignSubは「メインより後に発走する
+     別場」を探すので未発走の弥彦1Rを飛ばして弥彦2Rを選び、currentRace[弥彦]を書き換える。
+     ①②もコンソールの場ボタンもcurrentRaceを見るので、発走10秒前まで買い目が一斉に消えていた。
+     サブが自動で動くのは発走エッジ・②切替（alignBoard→Derive.alignToRace→alignSub）だけ＝
+     そこではメイン＝いま発走したレースなので「メインより後」＝「今より後」となり飛ばしは起きない。
+     ⚠️ここに再配線しないこと（subaligntest.jsが「手動4か所でサブを触らない」を検査している） */
   function alignBoard(race) {
     if (!state || state.cfg.autoAlign === false || state.date !== todayStr()) return;
     if (window.Derive.alignToRace(state, selectedRaces(), race, nowSec())) {
@@ -1603,7 +1594,6 @@
       state.activeVenue = idx;
       state.currentRace[parts[0]] = +parts[1];
       manualNav(true); // 回収入力のための手動ジャンプ（FB96）
-      resyncSub();     // 同上（項99）＝終わったレースへ戻してもサブは未発走の次レースを指す
       save();
       renderAll();
     };
