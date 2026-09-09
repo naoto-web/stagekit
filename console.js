@@ -259,7 +259,9 @@
       b.addEventListener("click", function () {
         var rid = b.getAttribute("data-rid");
         var v = b.getAttribute("data-v") || null;
-        if (v) state.raceSubBy[rid] = v; else delete state.raceSubBy[rid];
+        // 「なし」は明示的な値（SUB_OFF）で保存する（9/9・§10項100）。キー削除だと「未設定」と区別できず、
+        // ensureSubDefaults の補完で即座にONへ戻ってしまう（＝人の「なし」が効かない）
+        if (v) state.raceSubBy[rid] = v; else state.raceSubBy[rid] = window.Derive.SUB_OFF;
         manualNav(); // 手動のサブ変更＝発走直後の自動追従に上書きさせない（FB96）
         save();
         renderAll();
@@ -1116,6 +1118,7 @@
       .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
     state.campaignCount = $("campaign-count").value === "" ? null : +$("campaign-count").value;
     ensureTalkRaces(); // 場の構成が変わったら表示場リストを整える
+    ensureSubDefaults(); // 配信者・場が変わったらサブ未設定の席を既定＝ONで埋める（9/9・項100）
     save();
     renderAll();
   }
@@ -1599,8 +1602,19 @@
     };
   }
 
+  /* サブ（NEXT）の既定＝ON（9/9・§10項100）：席に座っている配信者にサブの設定が無ければ、
+     「別場の・未発走の・最も早いレース」の場を自動で入れる（①トークの ensureTalkRaces と同じ「未設定なら補完」）。
+     ⚠️9/9以前は「新しい日を開始」（raceSubByを引き継がない）とシフト交代（キー＝配信者名）のたびに
+        全席が黙って「なし」に落ち、畳まれた穴（項98）に下のページ背景が透けていた（白帯4回目・朝も夜も）。
+     人が「なし」を選んだ席（SUB_OFF）と選択済みの席は触らない。時刻表が無い間は何もしない（純関数側で判定） */
+  function ensureSubDefaults() {
+    if (!state || !timetable || !state.venues.length || !state.racers.length) return false;
+    return window.Derive.ensureSub(state, selectedRaces(), nowSec());
+  }
+
   /* ---------- 描画一括 ---------- */
   function renderAll() {
+    if (ensureSubDefaults()) save(); // 安全網（時刻表の到着後など）。save() は renderAll を呼ばないので再帰しない
     renderVenueRow();
     renderCampQuick();
     renderRaceChips();

@@ -338,29 +338,47 @@
     return next;
   }
 
-  /* サブONのまま「出せるレースが無い」状態を表す番兵（9/7・§10項99）。
-     場名にはなり得ない文字なので、コンソールは「なし」を選択表示し（renderRaceSubRowの
-     「本日の場に無い場名はnull扱い」ガードに素直に落ちる）、オーバーレイは枠ごと畳む（項98）。
-     ⚠️キーを消して表現してはいけない＝キー無し＝サブOFFなので、次のレースが現れても復帰しなくなる */
+  /* ②サブ（NEXT）の値の意味（9/7・§10項99／9/9・項100）。raceSubBy[配信者id] は
+       ・undefined（キー無し）＝未設定 → ensureSub が既定＝ON（自動）で埋める（新しい日・シフト交代の直後）
+       ・場名＝ON（その場の currentRace を出す）
+       ・SUB_NONE＝ONのまま「出せるレースが無い」（1場運用・全レース終了）→ 畳む。次の別場が現れたら alignSub で自動復帰
+       ・SUB_OFF＝人が「なし」を選んだ → 畳む。自動追従も補完も触らない（唯一の恒久OFF）
+     どちらの番兵も場名になり得ない文字列なので、コンソールは「なし」を選択表示し（renderRaceSubRowの
+     「本日の場に無い場名はnull扱い」ガードに落ちる）、オーバーレイは枠ごと畳む（項98）＝オーバーレイは無改修。
+     ⚠️9/9以前は「なし」＝キー削除だったため未設定と区別できず、「新しい日を開始」（raceSubByを引き継がない）と
+        シフト交代（キー＝配信者名）のたびに全席が黙って「なし」に落ちていた。畳まれた穴（項98）にOBSのカメラが
+        1550/362だと下のページ背景が透ける＝9/9の白帯（朝も夜も）の真犯人。ensureSub がこの穴を塞ぐ */
   var SUB_NONE = "-";
+  var SUB_OFF = "off";
+
+  /** 「別場の・未発走の・最も早いレース」。mainStartSec を数値で渡すと「メインより後に発走」も条件に加える
+      （alignSub＝発走エッジ・②切替用）。null なら時計だけで選ぶ（ensureSub＝既定の埋め込み用。
+      9/8の教訓＝メインを先のレースへ動かした状態で「メインより後」を使うと直近の別場レースを飛ばして
+      その買い目が画面から消える）。nowSec も数値以外なら条件なし */
+  function nextSubRace(races, mainVenue, mainStartSec, nowSec) {
+    var mainT = (typeof mainStartSec === "number") ? mainStartSec : -1;
+    var now = (typeof nowSec === "number") ? nowSec : -1;
+    var next = null;
+    (races || []).forEach(function (r) {
+      if (r.venue === mainVenue) return;
+      if (r.startSec <= mainT || r.startSec <= now) return;
+      if (!next || r.startSec < next.startSec) next = r;
+    });
+    return next;
+  }
 
   /** ②サブ（NEXT）を「メインのレースより後に発走する、別場の、まだ発走していない最も早いレース」へ
-      合わせる（9/7・§10項99）。サブONの配信者（raceSubByにキーがある人）だけを動かす。
+      合わせる（9/7・§10項99）。サブONの配信者（raceSubByに場名かSUB_NONEがある人）だけを動かす。
       変更が1つでもあればtrue（保存は呼び出し側）。
       ⚠️別場だけを見る＝currentRaceが場単位なので「メイン＝2R・サブ＝3R」を同じ場では表現できない。
         （旧実装は「次に発走するレースが同じ場ならサブを触らない」だったので、1場運用でサブが
          前のレースを指したまま残った。今は出せるものが無い＝SUB_NONEで畳む）
       ⚠️nowSecで未発走に絞る＝回収入力で終わったレースへメインを戻したとき、サブが
-        終了済みレースを指さないため。省略時（-1）はフィルタなし＝時刻を持たない呼び出しでも動く */
+        終了済みレースを指さないため。省略時（-1）はフィルタなし＝時刻を持たない呼び出しでも動く
+      ⚠️呼ぶのは発走エッジ・②切替（alignToRace経由）だけ。手動操作に配線しない（9/8＝console.js参照） */
   function alignSub(state, races, mainRace, nowSec) {
     if (!state || !mainRace) return false;
-    var now = (typeof nowSec === "number") ? nowSec : -1;
-    var next = null;
-    (races || []).forEach(function (r) {
-      if (r.venue === mainRace.venue) return;
-      if (r.startSec <= mainRace.startSec || r.startSec <= now) return;
-      if (!next || r.startSec < next.startSec) next = r;
-    });
+    var next = nextSubRace(races, mainRace.venue, mainRace.startSec, nowSec);
     var changed = false;
     if (!state.currentRace) state.currentRace = {};
     if (next && state.currentRace[next.venue] !== next.no) {
@@ -369,10 +387,31 @@
     var want = next ? next.venue : SUB_NONE;
     (state.racers || []).forEach(function (rc) {
       var cur = state.raceSubBy && state.raceSubBy[rc.id];
-      if (!cur) return; // サブOFF（キー無し）の人は触らない
+      if (!cur || cur === SUB_OFF) return; // 未設定（キー無し）と人の「なし」は触らない
       if (cur !== want) { state.raceSubBy[rc.id] = want; changed = true; }
     });
     return changed;
+  }
+
+  /** 未設定（キー無し）の席にだけ既定＝ON（自動）を与える（9/9・§10項100）。①トークの ensureTalkRaces と同じ
+      「未設定なら補完」の対＝新しい日・シフト交代の直後に黙って「なし」へ落ちるのを塞ぐ。
+      ・選ぶのは「別場の・未発走の・最も早いレース」（時計基準＝メインの時刻とは比べない）
+      ・既存の選択・SUB_OFF・SUB_NONE は触らない
+      ・currentRace は空の場にだけ入れる（人が選んだレース番号を上書きしない。ズレは次の発走エッジで直る）
+      ・時刻表が未着（races空）なら何もしない＝SUB_NONEを仮置きすると次の発走エッジまで畳まれたままになるため
+      変更があればtrue（保存は呼び出し側） */
+  function ensureSub(state, races, nowSec) {
+    if (!state || !races || !races.length) return false;
+    if (!state.raceSubBy || typeof state.raceSubBy !== "object") state.raceSubBy = {};
+    var todo = (state.racers || []).filter(function (rc) { return state.raceSubBy[rc.id] === undefined; });
+    if (!todo.length) return false;
+    var mv = (state.venues || [])[state.activeVenue];
+    var next = nextSubRace(races, mv ? mv.name : null, null, nowSec);
+    var want = next ? next.venue : SUB_NONE;
+    todo.forEach(function (rc) { state.raceSubBy[rc.id] = want; });
+    if (!state.currentRace) state.currentRace = {};
+    if (next && !state.currentRace[next.venue]) state.currentRace[next.venue] = next.no;
+    return true;
   }
 
   /** 盤面をraceに合わせる：メイン（activeVenue・currentRace）＝race／サブ＝alignSubに委譲。
@@ -455,7 +494,10 @@
     videoRaceAt: videoRaceAt,
     alignToRace: alignToRace,
     alignSub: alignSub,
+    nextSubRace: nextSubRace,
+    ensureSub: ensureSub,
     SUB_NONE: SUB_NONE,
+    SUB_OFF: SUB_OFF,
     carryResultMeta: carryResultMeta,
     nameKey: nameKey,
     nameHit: nameHit,
