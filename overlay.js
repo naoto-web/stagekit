@@ -2431,12 +2431,13 @@
        DROP     …「ギャル神」が上から降り切るms（Naoto指定「ゆっくり」）
        HOLD     …キメを見せる時間ms（9/1夜v5「もうちょっと長め」＝2100→3400）／FADE…退場ms
      ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約9.7秒（アジャスト10.3秒の帯）
-     素材＝fx_galgod_stairs/throne.jpg（素材加工/fx_galgod_make.py・元絵はOBS/ギャル神①③.jpg） */
+     素材＝fx_galgod_stairs/throne.jpg（素材加工/fx_galgod_make.py・元絵はOBS/ギャル神①⑥.jpg） */
   var GALGOD_BASE = { OPEN_HOLD: 350, OPEN_FADE: 900, CLIMB: 3000, FLASH_IN: 260, FLASH_OUT: 600,
     TITLE_LAG: 520, DROP: 1700, HOLD: 3400, FADE: 500 };
   var GALGOD_AR_S = 1122 / 1402; // 階段①の実寸比（横/縦）＝絵を差し替えたらfx_galgod_make.pyの出力で更新
-  var GALGOD_AR_T = 1672 / 941;  // 玉座③の実寸比（同上）。⚠️9/1夜に②（縦長・顔アップ）→③（16:9全景）へ
+  var GALGOD_AR_T = 1672 / 941;  // 玉座⑥の実寸比（同上）。⚠️9/1夜に②（縦長・顔アップ）→③（16:9全景）へ
                                  //   差し替え（Naoto「キメはワイプ画面を大きく使って表示」）＝ほぼ無クロップで敷ける
+                                 //   ⚠️9/10にさらに③→⑥（白トーガの神様版）へ差し替え＝**寸法が同一なのでこの比は据え置き**
   var GALGOD_AR_I = 1280 / 427;  // 金塊④の切り抜き実寸比（同上）。9/1夜v7＝CSS描き→Naoto支給④へ
   var GALGOD_AR_F = 420 / 251;   // 金の羽⑤の切り抜き実寸比（同上）。9/1夜v7＝インラインSVG→支給⑤へ
   function galgodTimes() {
