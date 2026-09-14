@@ -2130,6 +2130,34 @@ body.debug #scene-tenkai .slist:empty::after {
 .ht-img.c-red.w2    { background-image: url("fx_ht_red_w2.png"); }
 .ht-pose.c-red      { background-image: url("fx_ht_red_p.png"); }
 
+/* 🍻乾杯（9/11・夜配信版）＝ハイタッチと**同じ動きのCSSをそのまま使う**。
+   ⚠️見出し記号（══）で始めない＝pairfxtest.js が「次の大見出しまで」を .fx-ht のブロックとして
+     読むので、ここで区切ると乾杯の指定がブロックの外に落ちて検査されなくなる。
+   ここに足すのは画像の指定3行×色数だけ。箱には .v-kanpai も付くが（overlay.jsのPAIR_FX）、
+   いまは見た目を足していない＝乾杯だけ色や光り方を変えたくなったときのフック。
+   ⚠️動きのCSSを乾杯用に複製しない＝直すとき2か所になる（役物の事故と同じ轍）。
+   ⚠️色クラスは `c-kp-<色>`（ハイタッチの `c-<色>` と別名）＝**同じ色で絵が2種類ある**ので、
+     同名にすると詳細度の勝ち負けで決まってしまい、どちらが出るか読めなくなる。
+   ファイル名は 素材加工/fx_kanpai_make.py の出力そのまま。色を足すときは絵2枚＋KP_CHARSに1行＋ここに3行 */
+.ht-img.c-kp-blue.w1   { background-image: url("fx_kp_blue_w1.png"); }
+.ht-img.c-kp-blue.w2   { background-image: url("fx_kp_blue_w2.png"); }
+.ht-pose.c-kp-blue     { background-image: url("fx_kp_blue_p.png"); }
+.ht-img.c-kp-green.w1  { background-image: url("fx_kp_green_w1.png"); }
+.ht-img.c-kp-green.w2  { background-image: url("fx_kp_green_w2.png"); }
+.ht-pose.c-kp-green    { background-image: url("fx_kp_green_p.png"); }
+.ht-img.c-kp-orange.w1 { background-image: url("fx_kp_orange_w1.png"); }
+.ht-img.c-kp-orange.w2 { background-image: url("fx_kp_orange_w2.png"); }
+.ht-pose.c-kp-orange   { background-image: url("fx_kp_orange_p.png"); }
+.ht-img.c-kp-red.w1    { background-image: url("fx_kp_red_w1.png"); }
+.ht-img.c-kp-red.w2    { background-image: url("fx_kp_red_w2.png"); }
+.ht-pose.c-kp-red      { background-image: url("fx_kp_red_p.png"); }
+.ht-img.c-kp-pink.w1   { background-image: url("fx_kp_pink_w1.png"); }
+.ht-img.c-kp-pink.w2   { background-image: url("fx_kp_pink_w2.png"); }
+.ht-pose.c-kp-pink     { background-image: url("fx_kp_pink_p.png"); }
+.ht-img.c-kp-yellow.w1 { background-image: url("fx_kp_yellow_w1.png"); }
+.ht-img.c-kp-yellow.w2 { background-image: url("fx_kp_yellow_w2.png"); }
+.ht-pose.c-kp-yellow   { background-image: url("fx_kp_yellow_p.png"); }
+
 /* ハイタッチのポーズ＝1人ずつ。境目で手が合うようJSが位置と大きさを決める。
    ⚠️pw＝寸法と「ドン！の当たり」（寄り）／pose＝左右反転と絵。transformを分けるため2階建て */
 .ht-pw { position: absolute; opacity: 0; }

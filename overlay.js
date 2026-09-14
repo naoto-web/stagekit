@@ -1849,7 +1849,7 @@
   }
 
   /** ダブル的中（8/28）＝この回のパスで**席aと席bが同じレースを的中させたか**。
-      成立したらペア表（PAIR_FX）を引いて共演演出のキーを返す。出なければ ""。
+      成立したら pairEffectOf を引いて共演演出のキーを返す。出なければ ""。
       ⚠️「同じレース」に限る理由＝結果を確定した瞬間、そのレースの全員分の的中が同じ1回の
         パスで同時に立つ（derive.jsのhitsは結果×買い目から毎回まとめて計算される）。
         だから発火**前**に「2人揃ったか」を判定できる＝先に出た演出を後から上書きせずに済む。
@@ -1860,8 +1860,7 @@
     if (!seats.a || !seats.b) return "";
     var ka = memberKey(seats.a), kb = memberKey(seats.b);
     if (!ka || !kb || ka === kb) return "";
-    var eff = pairEffectOf(ka, kb);
-    if (!eff) return "";
+    if (!pairEffectOf(ka, kb, "day") && !pairEffectOf(ka, kb, "night")) return "";  // どの素材も無い色
     var byRace = {};
     for (var i = 0; i < fresh.length; i++) {
       var p = String(fresh[i].id).split("|");       // id＝場|R|配信者|式別|組合せ
@@ -1870,7 +1869,8 @@
       if (!byRace[rk]) byRace[rk] = {};
       if (fresh[i].racerName === seats.a.name) byRace[rk].a = true;
       if (fresh[i].racerName === seats.b.name) byRace[rk].b = true;
-      if (byRace[rk].a && byRace[rk].b) return eff;
+      // 演出の種類は**当てたレース**の時間帯で決める（9/14）＝同じ2人でも昼はハイタッチ・夜は乾杯
+      if (byRace[rk].a && byRace[rk].b) return pairEffectOf(ka, kb, pairBandOf(rk));
     }
     return "";
   }
@@ -1991,7 +1991,33 @@
        実行時に合成するので、**素材がある色どうしなら全部の組み合わせで成立する**＝
        HT_CHARSに色を1行足すだけで、その色を含む組み合わせが全部増える。
        （ペアごとにキメ絵を用意する方式だと、色が増えるたびに組み合わせの数＝2乗で絵が要った） */
-  function pairEffectOf(ka, kb) {
+  /* ══ どちらのペア演出を出すか＝**時間帯**で切り替える（9/14 Naoto仕様） ══
+       モーニング・昼＝🙌ハイタッチ／ナイター・ミッドナイト＝🍻乾杯。
+     ⚠️見るのは「配信が昼か夜か」ではなく「**当てたレースが昼の場か夜の場か**」。
+       昼配信の終盤に夜の場（ナイター）を当てたら乾杯が出る＝レースの時間帯に素直に従う。
+       15〜17時台は昼の場とナイターの場が同時に走っているので、時計で決めると必ずどちらかを間違える。
+     判定の材料は3段（上から順に、使えるものを採用）：
+       1. その場の開催区分ラベル（gradeOfVenue＝「F1 ナイター」等。GASの kjGrade_ が keirin.jp の
+          night/midnight タグ、または初レースの発走時刻から付けている）。ナイター／ミッドナイト＝夜が決定、
+          モーニング＝昼が決定。ラベルに時間帯の語が無い（「F1」だけ・空）なら次へ
+       2. そのレースの発走時刻（raceStartSecOf）＝15:00以降なら夜（GASの kjGrade_ と同じ境界）
+       3. いまの時計（nowSec）＝15:00以降なら夜（時刻表が未着のときの最後の保険）
+     spawnPairFx 側は素材表（PAIR_FX）を引くだけなので無改造。 */
+  var NIGHT_FROM_SEC = 15 * 3600;   // 0時起点秒。GASの kjGrade_ と同じ「15時以降＝ナイター」
+  function pairBandOf(raceKey) {
+    var venue = raceKey ? String(raceKey).split("|")[0] : "";
+    var g = venue ? gradeOfVenue(venue) : "";
+    if (/ナイター|ミッドナイト/.test(g)) return "night";
+    if (/モーニング/.test(g)) return "day";
+    var sec = raceKey ? raceStartSecOf(raceKey) : null;
+    if (typeof sec !== "number") sec = nowSec();
+    return sec >= NIGHT_FROM_SEC ? "night" : "day";
+  }
+  /* band＝"day"|"night"（pairBandOf の結果）。省略時は昼扱い。
+     夜でも乾杯の素材が無い色が混ざっていたらハイタッチに落とす（出ないより出る）。
+     どちらの素材も無い色が混ざっていたら空＝いつもどおり個人演出。 */
+  function pairEffectOf(ka, kb, band) {
+    if (band === "night" && KP_CHARS[ka] && KP_CHARS[kb]) return "kanpai";
     if (HT_CHARS[ka] && HT_CHARS[kb]) return "hitouch";
     return "";   // 別のペア演出を足すときはここに条件を並べる
   }
@@ -2242,12 +2268,23 @@
      流れ＝①左右の画面外から2人がてくてく歩いてくる ②中央手前で止まって一拍おく
            ③パチン！＝白閃光＋衝撃波＋揺れの瞬間に**キメ絵へ差し替え** ④「W的中！！」⑤退場
        WALK   …画面外から止まる位置までのms（お茶と同じテンポ感＝Naoto指定「てくてく歩き」）
-       STRIDE …1コマで背丈の何倍進むか＝**コマ送り間隔はここから逆算する**（spawnHitouchのstepMs）。
+       STRIDE …1コマで背丈の何倍進むか＝**コマ送り間隔はここから逆算する**（spawnPairFxのstepMs）。
               ⚠️お茶FB91の教訓「歩く速さだけ変えると足の回転が合わず滑って見える」への答え。
                 お茶は距離も間隔も固定値だったが、この演出は歩く距離がワイプ幅で変わる
                 （①752px／②544px）ので、間隔を固定にすると狭い②で必ず滑る。実測値＝お茶の
                 歩き（1コマ34px／背丈330px）から 0.104
+              ⚠️**この値は演出ごとに持つ**（9/12・PAIR_FXのstride）＝ここはハイタッチの既定値。
+                🔴9/12にNaotoから「腕を振る回数が多くて勢いよく振っているみたい」の指摘。原因＝
+                **この値が絵に描かれている歩幅より小さい**と、少ししか進まないうちに次のコマへ
+                送るので歩数（＝腕の振り）が増える。素材の実測（素材加工/stride_diag.py＝足元の
+                帯で前足と後足の重心距離を測る）＝**乾杯0.285／ハイタッチ0.254**に対して0.104＝
+                乾杯で2.7倍・ハイタッチで2.4倍も多くコマを送っていた。乾杯は実測値に直した（下の
+                KP_STRIDE）。**ハイタッチは本番稼働中なので触っていない**＝直すならPAIR_FXの
+                hitouch.stride を 0.254 にする1行だけ（Naoto判断待ち）
        STEP_MIN/MAX …逆算した間隔の上下限ms（極端なワイプ比でパラパラ/ヌルヌルになるのを防ぐ）
+              ⚠️②レース観戦は歩く距離が短い（254px＝背丈より短い）ので、絵どおりの歩幅にすると
+                逆算値がMAXを超えて**クランプされる**＝そのぶんは滑る（足が進まず刻む感じ）。
+                的中演出は必ず①トークへ切り替わる（FB149・hitSceneSwitch）ので、合わせるのは①側
        SETTLE …止まってから手を合わせるまでの間ms（一拍おく＝「せーの」の溜め）
        CAP_LAG…パチンから「W的中！！」が出はじめるまでms／CAP_IN…出る時間ms
        HOLD   …文字を見せる時間ms／FADE…退場ms
@@ -2316,6 +2353,100 @@
     t.END  = t.CAP + HT_BASE.CAP_IN + HT_BASE.HOLD;    // 退場開始＝ここでバッジにバトンを渡す
     t.GONE = t.END + HT_BASE.FADE;
     return t;
+  }
+
+  /* ══════════ 🍻乾杯（9/11 Naoto案・ダブル的中の共演＝夜配信版） ══════════
+     ハイタッチと**まったく同じ段取り・同じ尺・同じ光り方**で、違うのは素材と接点の高さだけ
+     （2人が外から歩いてくる → 止まる → 一拍 → カチン！＝閃光＋衝撃波＋揺れ → キメ文字）。
+     だから動きのコードもCSSも共有し、ここでは「どの絵を使うか」だけを表で差し替える（下のPAIR_FX）。
+     ✅**発動条件＝9/14に付けた**：当てたレースがナイター／ミッドナイトの場なら乾杯、
+       モーニング／昼ならハイタッチ（pairBandOf → pairEffectOf）。spawnPairFx側は無改造。
+     ⚠️素材の実測値は**素材加工/fx_kanpai_make.py が出力したものを丸ごと貼る**（手で書き換えない）。
+       値の意味はHT_CHARSと同じ。ただし接点（pHX/pHY）は**グラスがカチンと当たる1点**で、
+       左右で**同じ1点を共有**している（2人が同じ1枚に描かれているため＝元絵の位置関係がそのまま
+       再現され、合成後に高さズレも身長差も出ない）。pHXが1をわずかに超える／0をわずかに下回るのは
+       接点が自分の枠の数px外にあるから＝正常。 */
+  var KP_CHARS = {
+    blue:   { wAR: 0.6620, wSX: 0.4567, wFace: "l",
+              pAR: 0.7360, pSX: 0.4434, pHX: -0.0030, pHY: 0.2979, pFace: "l" },
+    green:  { wAR: 0.5870, wSX: 0.4280, wFace: "l",
+              pAR: 0.6970, pSX: 0.5060, pHX: 0.9992, pHY: 0.3796, pFace: "r" },
+    orange: { wAR: 0.6200, wSX: 0.4201, wFace: "l",
+              pAR: 0.7020, pSX: 0.5063, pHX: -0.0008, pHY: 0.3522, pFace: "l" },
+    red:    { wAR: 0.6330, wSX: 0.6110, wFace: "l",
+              pAR: 0.7210, pSX: 0.3566, pHX: 1.0015, pHY: 0.2946, pFace: "r" },
+    pink:   { wAR: 0.6180, wSX: 0.6171, wFace: "l",
+              pAR: 0.7010, pSX: 0.6574, pHX: -0.0025, pHY: 0.2856, pFace: "l" },
+    yellow: { wAR: 0.6300, wSX: 0.4523, wFace: "l",
+              pAR: 0.7170, pSX: 0.4858, pHX: 1.0019, pHY: 0.2976, pFace: "r" }
+  };
+  window.__KP_COLORS = KP_CHARS;   // 検証ハーネス（fxlab）専用の窓口＝__HT_COLORSと同じ立ち位置
+  /* グラスを合わせる高さ／ワイプ高（fx_kanpai_make.py が背丈76%から逆算）。
+     🔴9/14に6色化して 0.534→0.514→**0.518**（⑧を1度描き直した後の値）。
+     ⚠️背丈は ph = KP_HANDH / (1 - pHY) ＝**pHYが大きい色ほど大きく描かれる**。
+     🔴**未解決**：キメ絵⑧（緑×橙）だけグラスを**目の高さ**で持っている（他の4色は額＝鉢巻の高さ）。
+       実測＝グラスが頭の天辺から下に 緑0.337・橙0.325／青0.242・赤0.259・桃0.259・黄0.251。
+       この差でpHYが 0.35〜0.38（他は0.29）となり、**緑・橙が15%背が高く出る**。
+       「身長を揃える」「グラスが合う」「足が床に着く」は**同時に2つまでしか満たせない**ので、
+       画像処理では救えない＝⑧を「グラスを額の高さまで掲げた絵」に描き直すのが唯一の直し
+       （素材加工/乾杯_指示文/26_緑x橙_キメ_グラス高め.txt）。 */
+  var KP_HANDH = 0.518;
+  /* 背丈の揃え方（9/14 Naoto指示）。
+       "even"（既定）＝**全員同じ背丈**にする。緑・橙が他の4色と同じ大きさになる代わりに、
+                      グラスの高さは絵なりにズレる（緑・橙のグラスが他より低い位置で合う）。
+       "glass"        ＝グラスの接点の高さで正規化する元の設計。グラスは必ず合うが緑・橙が15%大きい。
+     ⚠️`?kpsize=glass` を付ければ元の挙動に戻せる＝fxlabで**同じ組み合わせを見比べられる**。
+     KP_PHY_REF＝「ふつうの4色（青0.2979・赤0.2946・桃0.2856・黄0.2976）の平均」。
+       この4色を基準にすることで、**4色どうしの10通りではグラスがほぼ合ったまま**（差0.6%＝数px）、
+       ズレるのは緑か橙が入る組み合わせだけに閉じ込められる。 */
+  var KP_SIZE_MODE = params.get("kpsize") === "glass" ? "glass" : "even";
+  var KP_PHY_REF = 0.2939;
+  /* 色ごとの見た目の大きさ（9/14 Naoto指示・fxlabで6色を見比べて決めた値）。
+     「背丈を揃える」だけだと、髪の盛りや羽根で枠の高さが違うぶん見た目の大きさが揃わない。
+     赤・黄を1として、この倍率を背丈（＝歩きもポーズも）に掛ける。
+     ⚠️"even" モードだけに効く（?kpsize=glass の元の設計には掛けない＝比較の基準を汚さない）。
+     ⚠️絵を差し替えたら見た目が変わるので、この表も見直す */
+  // 初版（桃0.97／橙1.05／青緑1.10）は「差が出すぎ」で9/14に半分に詰めた
+  var KP_SIZE = { red: 1.00, yellow: 1.00, pink: 0.98, orange: 1.02, blue: 1.05, green: 1.05 };
+  /* 1コマで背丈の何倍進むか（＝コマ送り間隔の逆算元・HT_BASE.STRIDEの説明を参照）。
+     🔴9/12 Naoto「腕を振る回数が多くて勢いよく振っているみたい」への直し＝**絵の実測値**にした。
+     0.285＝素材加工/stride_diag.py が乾杯①②の足元で測った前足と後足の重心距離（背丈比）の平均
+     （黄0.255/0.308・青0.272/0.305）。旧0.104では2.7倍多くコマを送っていた＝①トークで
+     1コマ192ms（4.2秒に22回）→ 526ms（8回）。⚠️絵より小さくすると慌ただしく・大きくすると滑る。
+     ✅9/14に6色化して取り直した＝**平均0.284**（緑0.275/0.294・橙0.281/0.300・赤0.254/0.301・
+     桃0.239/0.317）＝現行値のままでよい（差0.001）。Geminiには④を型に描かせたので歩幅も揃った */
+  var KP_STRIDE = 0.285;
+
+  /* ══════════ ペア演出の「見た目ちがい」表 ══════════
+     段取り・尺・光り方は spawnPairFx / overlay.css の .fx-ht 一式で共通。ここが持つのは
+       chars … 色ごとの素材の実測値（上の2つの表）
+       handh … 接点（手／グラス）を合わせる高さ・ワイプ高に対する比
+       stride… 1コマで背丈の何倍進むか＝**コマ送り間隔の逆算元**（9/12・HT_BASE.STRIDEの説明を参照）
+       pre   … CSSの色クラスの前置き＝`.ht-img.c-<pre><色>`（素材の出し分けはCSS側・下の⚠️参照）
+       cls   … 箱に足すクラス（CSSで見た目を足したいとき用のフック）
+       cap   … キメ文字。単独表示（1つのワイプに2人）／capL+capR＝またぎ表示（左のワイプ／右のワイプ）
+     ⚠️演出を1つ足すときに触るのはこの表＋CSSの画像3行だけ。動きのコードは複製しない。 */
+  var PAIR_FX = {
+    // ⚠️strideは**絵の実測より2.4倍速い**（実測0.254／素材加工/stride_diag.py）＝乾杯と同じ
+    //   「腕を振りすぎ」の状態。本番稼働中なので9/12は触っていない＝直すならこの数字だけ
+    hitouch: { chars: HT_CHARS, handh: HT_HANDH, stride: HT_BASE.STRIDE, pre: "", cls: "",
+               sizeRef: null, size: null,
+               cap: HT_CAP, capL: HT_CAP_L, capR: HT_CAP_R },
+    // キメ文字は当面ハイタッチと同じ（きっかけが「ダブル的中」なのは同じため）。
+    // 乾杯ならではの文言にするならここの3つだけ差し替える
+    // sizeRef … 背丈を「この pHY の絵」として揃える（＝全員同じ背丈）。null なら色ごとのpHYで
+    //           正規化＝接点の高さが揃う元の設計。ハイタッチは6色とも絵が揃っているので null のまま
+    // size    … 色ごとの見た目の倍率（sizeRef と組で使う。null なら全色1）
+    kanpai:  { chars: KP_CHARS, handh: KP_HANDH, stride: KP_STRIDE, pre: "kp-", cls: " v-kanpai",
+               sizeRef: KP_SIZE_MODE === "even" ? KP_PHY_REF : null,
+               size: KP_SIZE_MODE === "even" ? KP_SIZE : null,
+               cap: HT_CAP, capL: HT_CAP_L, capR: HT_CAP_R }
+  };
+  /* ペア演出なら設定を、そうでなければ null を返す（＝分岐の判定にも使う・yakSkinOfと同じ流儀）。
+     ⚠️`PAIR_FX[eff]` を直に見ない＝?fx=toString のような入力でObject.prototypeの中身を拾う */
+  function pairFxOf(eff) {
+    var v = eff && PAIR_FX[eff];
+    return (v && v.chars) ? v : null;
   }
 
   /* サンバの尺（8/10 FB121・赤メンバー専用＝ラボsambatest.htmlの本番移植）
@@ -3263,9 +3394,12 @@
     span.parentNode.style.setProperty("--cfs", fs + "px");
   }
 
-  /* ══════════ ハイタッチ（8/28・ダブル的中＝橙×緑の共演） ══════════
+  /* ══════════ ペア演出の本体＝ハイタッチ（8/28）／乾杯（9/11） ══════════
      他の演出と決定的に違う点＝**個人ではなくペアに紐づく**（PAIR_FX参照）。
      両方のワイプに同じ絵を出すので、2画面で1つの出来事が起きているように見える。
+     ⚠️**ハイタッチと乾杯はこの1つの関数で出す**（9/11）＝段取り・尺・光り方が同じで、違うのは
+       素材と接点の高さとキメ文字だけ。違いは PAIR_FX の表が持つ＝ここには演出名で分岐を書かない
+       （書くと絵が増えるたびに同じ段取りのコピーが増える）。
 
      ⚠️設計の肝＝「歩き（2体バラバラの素材）」から「キメ（2体が1枚に描かれた素材）」への差し替え。
        素材ごとに元の描かれ方（スケール・立ち位置）が違うので、fx_hitouch_make.py が出した
@@ -3275,7 +3409,9 @@
        狭い②で足が滑る。**間隔は距離から逆算**（HT_BASE.STRIDE＝1コマあたり背丈の何倍進むか）。
        ⚠️尺そのもの（WALK等のms）は固定＝①②が必ず同時に進む（「同期して出る」の担保）。
          ここを距離依存にすると2つのワイプでパチンの瞬間がズレる */
-  function spawnHitouch(cam) {
+  function spawnPairFx(cam, variant) {
+    var V = pairFxOf(variant) || PAIR_FX.hitouch;   // 未知の名前でも従来どおり出す（保険）
+    var CHARS = V.chars;
     var old = cam.querySelector(".fx-ht");
     if (old) old.parentNode.removeChild(old);
     var T = htTimes();
@@ -3314,13 +3450,13 @@
        ⚠️?fx=hitouch で無理やり出したときなど、素材の無い色が席にいたら表の先頭2色で代用する */
     var seats = seatMap();
     var ka = memberKey(seats.a), kb = memberKey(seats.b);
-    if (!HT_CHARS[ka] || !HT_CHARS[kb] || ka === kb) {
-      var ks = Object.keys(HT_CHARS);
+    if (!CHARS[ka] || !CHARS[kb] || ka === kb) {
+      var ks = Object.keys(CHARS);
       ka = ks[0]; kb = ks[1];
     }
 
     var baseY = Math.round(ch * HT_BOTTOM);          // 足元のライン（2人ともここに立つ）
-    var handY = Math.round(baseY - ch * HT_HANDH);   // 手を合わせる高さ（2人ともここで合わせる）
+    var handY = Math.round(baseY - ch * V.handh);    // 接点の高さ（手／グラス・2人ともここで合わせる）
     /* 「世界」＝2枚のワイプをつないだ座標（原点＝自分のワイプの左上）。
        またぎのときは**両方のワイプが同じ世界を描き**、はみ出しはワイプのoverflow:hiddenが切る＝
        2枚の絵が境目でぴたりと繋がる（各ワイプは自分の担当キャラだけが見える結果になる）。 */
@@ -3334,9 +3470,15 @@
        ・横位置＝ポーズは手を境目に、歩きはポーズの衣装色重心に合わせる＝差し替えで横に動かない
        ・向き  ＝必要な向きと違う絵は左右反転（反転すると比率 x は 1-x になる） */
     function layout(key, isLeft) {
-      var C = HT_CHARS[key], need = isLeft ? "r" : "l";
+      var C = CHARS[key], need = isLeft ? "r" : "l";
       var pFlip = C.pFace !== need, wFlip = C.wFace !== need;
-      var ph = (baseY - handY) / (1 - C.pHY), pw2 = ph * C.pAR;
+      /* 背丈。V.sizeRef があれば**その1つの値で全員を正規化**＝色によらず同じ背丈になる
+         （そのぶん接点＝グラスの高さは絵なりにズレる・上のKP_SIZE_MODEを参照）。
+         null なら色ごとの pHY で正規化＝接点が必ず揃う元の設計（ハイタッチはこちら） */
+      var phyRef = (V.sizeRef == null) ? C.pHY : V.sizeRef;
+      // 色ごとの見た目の倍率（KP_SIZE・9/14）。歩きは wh = ph なので同じ倍率がかかる
+      var sizeMul = (V.size && V.size[key] > 0) ? V.size[key] : 1;
+      var ph = (baseY - handY) / (1 - phyRef) * sizeMul, pw2 = ph * C.pAR;
       var pHX = pFlip ? (1 - C.pHX) : C.pHX;
       var pLeft = bx - pHX * pw2;
       /* 歩きの背丈＝ポーズと同じ（8/29 Naoto「赤が歩いてくるとき大きい」で変更）。
@@ -3351,6 +3493,8 @@
       return { key: key, pFlip: pFlip, wFlip: wFlip,
         pw: Math.round(pw2), ph: Math.round(ph), pl: Math.round(pLeft), pt: Math.round(baseY - ph),
         ww: Math.round(ww), wh: Math.round(wh), wl: Math.round(wLeft), wt: Math.round(baseY - wh),
+        // この絵で手／グラスが実際に来るy。sizeRef を使うと絵ごとにズレるので閃光の位置に使う
+        handY: baseY - ph * (1 - C.pHY),
         x0: Math.round(from - wLeft), dist: Math.abs(wLeft - from) };
     }
     var A = layout(ka, true), B = layout(kb, false);
@@ -3358,22 +3502,30 @@
     /* コマ送り間隔＝歩く距離から逆算（滑り防止）。⚠️極端なワイプ比でも破綻しないよう上下限で挟む。
        ⚠️またぎ（歩く距離700px級）と単独（250px級）で距離が3倍違う＝同じ間隔にすると必ず片方が滑る。
          上下限を広めに取って**どちらも足が地面と合う**ようにしてある（単独側はゆっくり歩きになる） */
+    /* ⚠️歩幅は**演出ごと**（PAIR_FXのstride・9/12）＝絵に描かれている歩幅に合わせる。
+       `window.__PAIR_STRIDE` は**検証ハーネス専用のツマミ**（立てるのはfxlab/httestだけ＝
+       本番URLでは未定義でこの行は素通り）。数字を変えながら見比べて決めるための窓口で、
+       決まった値はPAIR_FXの表に書く（__FX_HOST / __FX_FORCE と同じ立ち位置） */
+    var stride = (+window.__PAIR_STRIDE > 0) ? +window.__PAIR_STRIDE : V.stride;
     function stepMs(dist, h) {
       return Math.round(Math.min(HT_BASE.STEP_MAX, Math.max(HT_BASE.STEP_MIN,
-        HT_BASE.WALK * HT_BASE.STRIDE * h / Math.max(1, dist))));
+        HT_BASE.WALK * stride * h / Math.max(1, dist))));
     }
-    // ✋手が触れる点＝閃光・衝撃波・キラッの中心。リングは最も遠い角まで届けば画面を抜け切る
-    var tx = bx, ty = handY;
+    /* ✋手が触れる点＝閃光・衝撃波・キラッの中心。リングは最も遠い角まで届けば画面を抜け切る。
+       ⚠️yは**2人の手／グラスの実際の高さの中点**（9/14）。sizeRef で背丈を揃えると絵ごとに
+         接点の高さがズレるので、handY 決め打ちだと光る場所と手がズレる。
+         sizeRef を使わない設計（ハイタッチ）では2人とも handY に来る＝この式は同じ値になる */
+    var tx = bx, ty = Math.round((A.handY + B.handY) / 2);
     function far(x, y) { return Math.sqrt(x * x + y * y); }
     var reach = Math.max(far(tx, ty), far(cw - tx, ty), far(tx, ch - ty), far(cw - tx, ch - ty));
     /* キメ文字＝またぎなら**それぞれのワイプの中央**に1語ずつ（8/29 Naoto指示）。
        ⚠️8/28は境目を挟んで寄せていたが、字を大きくすると境目付近が窮屈になるため中央へ。
          左のワイプに「ダブル」・右のワイプに「的中！！」＝2枚並べて1つのフレーズに読める */
-    var capText = straddle ? (partnerRight ? HT_CAP_L : HT_CAP_R) : HT_CAP;
-    var capAll  = straddle ? [HT_CAP_L, HT_CAP_R] : [HT_CAP];   // 大きさは長いほうに合わせる
+    var capText = straddle ? (partnerRight ? V.capL : V.capR) : V.cap;
+    var capAll  = straddle ? [V.capL, V.capR] : [V.cap];   // 大きさは長いほうに合わせる
 
     var box = document.createElement("div");
-    box.className = "fx-ht" + (straddle ? " straddle" : "");
+    box.className = "fx-ht" + V.cls + (straddle ? " straddle" : "");
     var v = {
       "--a-ww": A.ww + "px", "--a-wh": A.wh + "px", "--a-wl": A.wl + "px", "--a-wt": A.wt + "px",
       "--a-x0": A.x0 + "px", "--a-step": (stepMs(A.dist, A.wh) / 1000) + "s",
@@ -3397,14 +3549,14 @@
        JSで背景画像を入れると、ページの位置で解決されて検証ハーネスから404になる（既存の教訓） */
     function walkHtml(slot, key) {
       return '<div class="ht-run ' + slot + '"><div class="ht-body"><div class="ht-flip">' +
-        '<i class="ht-img w1 c-' + key + '"></i><i class="ht-img w2 c-' + key + '"></i>' +
+        '<i class="ht-img w1 c-' + V.pre + key + '"></i><i class="ht-img w2 c-' + V.pre + key + '"></i>' +
         "</div></div></div>";
     }
     box.innerHTML =
       '<div class="ht-stage"><div class="ht-world">' +
         walkHtml("a", A.key) + walkHtml("b", B.key) +
-        '<div class="ht-pw a"><i class="ht-pose c-' + A.key + '"></i></div>' +
-        '<div class="ht-pw b"><i class="ht-pose c-' + B.key + '"></i></div>' +
+        '<div class="ht-pw a"><i class="ht-pose c-' + V.pre + A.key + '"></i></div>' +
+        '<div class="ht-pw b"><i class="ht-pose c-' + V.pre + B.key + '"></i></div>' +
       "</div></div>" +
       '<i class="ht-ring"></i><i class="ht-spark"><b></b></i><i class="ht-flash"></i>' +
       '<div class="ht-cap"><span></span></div>';
@@ -3715,7 +3867,8 @@
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
        rain＝アイコン走行／yakumono（＋9/4の輝きスキン yakumono_gold／yakumono_rainbow）
        ／adjust／slot／sumo／pray／tea／nicha／samba／dance／peye
-       ／hitouch＝ダブル的中の共演（⚠️本来は2人揃わないと出ない＝これで単独確認できる）
+       ／hitouch・kanpai＝ダブル的中の共演（⚠️本来は2人揃わないと出ない＝これで単独確認できる。
+         kanpai＝🍻乾杯・9/11追加→9/14から本番でも出る＝当てたレースがナイター/ミッドナイトの場のとき）
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
        本番では未定義＝この行は素通り。⚠️絵柄は演出ごとに固定なので、その演出を持たない色を
        選んだ状態で強制すると「絵は別人・枠の色は選んだ人」という組み合わせになる（ラボ用途では想定内） */
@@ -3746,7 +3899,7 @@
   var FX_PIN = {}; // 固定なし＝通常運用（全色 MEMBER_RATES の抽選どおり）
 
   /* ══════════ ガールズレース限定演出（9/1 Naoto案＝ギャル神） ══════════
-     演出を決める3つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（PAIR_FX）に続く
+     演出を決める3つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（pairEffectOf）に続く
      「**どんなレースを**当てたか」＝色キーを書くと、その人がガールズのレースを的中させたとき
      **必ずこの演出**（案A・9/1 Naoto決定＝抽選なしの100%）。
      優先順位＝?fx=強制 > ダブル的中の共演 > FX_PIN > **この表** > MEMBER_RATESの抽選。
@@ -3792,7 +3945,7 @@
   }
 
   /* ══════════ 的中の「種別」で決まる枠（9/4 Naoto指示＝役物の輝きスキン） ══════════
-     演出を決める4つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（PAIR_FX）
+     演出を決める4つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（pairEffectOf）
      「どんなレースを」（GIRLS_FX / LOWODDS_FX）に続く「**どんな当たり方をしたか**」。
        青の万車的中     → 🌈虹の役物（yakumono_rainbow）
        青のnote的中     → 🥇金の役物（yakumono_gold）＝**金一択**（アジャストとの抽選をしない）
@@ -3839,8 +3992,8 @@
   }
   /* 表の自己検査（8/27）＝合計100か・演出名のタイプミスがないか。
      ⚠️OBSではコンソールが見えない＝これは補助。本当の関門は公開前の fxdisttest.js */
-  /* ⚠️ここに hitouch（ダブル的中の共演）は**入れない**。あれは2人揃って初めて成立する演出で、
-     MEMBER_RATESに書いても「1人の的中で出る」ようにはならない（正しい置き場はPAIR_FX）。
+  /* ⚠️ここに hitouch・kanpai（ダブル的中の共演）は**入れない**。あれは2人揃って初めて成立する演出で、
+     MEMBER_RATESに書いても「1人の的中で出る」ようにはならない（正しい置き場は pairEffectOf）。
      入れないでおくと、間違ってこの表に書いたときに未知の演出名として警告が出る＝安全弁
      ⚠️galgod（ギャル神・9/1）も同じ理由で**入れない**＝ガールズレース限定（正しい置き場はGIRLS_FX）。
      MEMBER_RATESに書くと通常レースでも出てしまう
@@ -4312,7 +4465,8 @@
       : eff === "peye" ? peyeTimes().END
       : eff === "galgod" ? galgodTimes().END
       : eff === "thanks" ? thxTimes().END
-      : eff === "hitouch" ? htTimes().END
+      // ペア演出（ハイタッチ／乾杯・9/11）は尺が共通＝PAIR_FXにある名前をまとめて拾う
+      : pairFxOf(eff) ? htTimes().END
       : (key ? fxConf(key).rainMs : 0);
     // 遠隔自動更新（autoupdate.js・要件§12）への「演出中」通知＝force時はこの時刻まで待つ。
     // rainMs＝バッジが出るまで／HIT_FX_MS＝バッジ・買目強調の持続
@@ -4347,7 +4501,8 @@
       else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
       else if (eff === "galgod") spawnGalgod(cam, key);        // ギャル神（9/1・青のガールズレース限定）
       else if (eff === "thanks") spawnThanks(cam, key, hit);   // 全員共通（8/23）
-      else if (eff === "hitouch") spawnHitouch(cam);           // ダブル的中の共演＝ペア表（8/28）
+      // ダブル的中の共演（8/28ハイタッチ／9/11乾杯）＝PAIR_FXの表が素材だけを差し替える
+      else if (pairFxOf(eff)) spawnPairFx(cam, eff);
       else if (key) spawnRain(cam, key);
     });
   }
