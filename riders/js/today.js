@@ -82,8 +82,9 @@ var TODAY = (function () {
 
     var roleMap = rolesFromLines(lines);
     var tbl = el('div', 'racers');
+    tbl.appendChild(racerHeader());
     r.racers.forEach(function (s) {
-      var row = el('button', 'racer');
+      var row = el('button', 'racer-row racer');
       row.type = 'button';
       row.disabled = !s.reg;
       row.onclick = function () {
@@ -91,19 +92,44 @@ var TODAY = (function () {
         DETAIL.open(s.reg, { jo: v.name, raceDate: (state.data || {}).date, raceNo: r.no, role: roleMap[s.no] || '' }, s);
       };
       row.appendChild(carChip(s.no));
+
       var nm = el('div', 'racer-name');
       nm.appendChild(el('span', 'racer-name-main', s.name || ''));
-      var sub = el('span', 'racer-sub', [s.pref, s.term ? s.term + '期' : '', s.age ? s.age + '歳' : ''].filter(Boolean).join(' '));
-      nm.appendChild(sub);
+      nm.appendChild(el('span', 'racer-sub',
+        [s.pref, s.term ? s.term + '期' : '', s.age ? s.age + '歳' : ''].filter(Boolean).join(' ')));
       row.appendChild(nm);
+
       row.appendChild(el('span', 'racer-kyuhan', s.kyuhan || ''));
       row.appendChild(el('span', 'racer-kyaku', s.kyaku || ''));
       row.appendChild(el('span', 'racer-score', s.score || ''));
-      if (roleMap[s.no]) row.appendChild(el('span', 'racer-role', roleLabel(roleMap[s.no])));
+
+      // 直近4ヶ月成績。0は薄くして、数字のあるところが目に入るようにする
+      ['nige', 'makuri', 'sasi', 'mark', 'b', 'h', 's', 'win', 'ren2', 'ren3'].forEach(function (k, i) {
+        var v2 = String(s[k] == null ? '' : s[k]).trim();
+        var cls = 'n' + (i >= 7 ? ' n-rate' : '') + (!v2 || v2 === '0' ? ' is-zero' : '');
+        row.appendChild(el('span', cls, v2 === '' ? '-' : v2));
+      });
+
+      row.appendChild(el('span', 'racer-role', roleMap[s.no] ? roleLabel(roleMap[s.no]) : ''));
       tbl.appendChild(row);
     });
     wrap.appendChild(tbl);
     return wrap;
+  }
+
+  /** 見出し行。数字が10個並ぶので、見出しが無いと読めない。
+      値は keirin.jp の「直近4ヶ月成績」そのもの（率は%）。 */
+  function racerHeader() {
+    var h = el('div', 'racer-row racer-head');
+    h.appendChild(el('span', '', '車'));
+    h.appendChild(el('span', '', '選手名'));
+    h.appendChild(el('span', '', '級班'));
+    h.appendChild(el('span', '', '脚'));
+    h.appendChild(el('span', 'racer-score', '得点'));
+    ['逃', '捲', '差', 'マ', 'B', 'H', 'S'].forEach(function (t) { h.appendChild(el('span', 'n', t)); });
+    ['勝率', '2連', '3連'].forEach(function (t) { h.appendChild(el('span', 'n n-rate', t)); });
+    h.appendChild(el('span', 'racer-role', '直近4ヶ月'));
+    return h;
   }
 
   /** 構造化された並びから 車番→役割 を作る。

@@ -56,6 +56,8 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 
 .cols { display: flex; flex: 1 1 auto; min-height: 0; }
 .col-left { width: 460px; flex: 0 0 460px; border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+/* 出走表タブは直近4ヶ月成績まで10列出すので、そのときだけ左を広げる（選手一覧は460pxのまま） */
+.app[data-tab="today"] .col-left { width: 712px; flex: 0 0 712px; }
 .col-right { flex: 1 1 auto; overflow-y: auto; padding: 16px 20px 60px; min-width: 0; }
 .pane { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 
@@ -151,19 +153,34 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 
 .racers { display: flex; flex-direction: column; gap: 1px; }
+
+/* 車番・選手名・級班・脚質・得点／逃捲差マ／BHS／勝率2連3連／役割 */
+.racer-row {
+  display: grid;
+  grid-template-columns: 24px minmax(112px, 1fr) 28px 18px 46px
+                         repeat(4, 17px) repeat(3, 17px) repeat(3, 30px) 56px;
+  gap: 5px; align-items: center; width: 100%; text-align: left;
+}
+.racer-head {
+  font-size: 10px; color: var(--fg-dim); padding: 0 6px 3px;
+  border-bottom: 1px solid var(--line); margin-bottom: 3px;
+}
 .racer {
-  display: grid; grid-template-columns: 24px 1fr 32px 24px 52px auto;
-  gap: 8px; align-items: center; width: 100%; text-align: left; cursor: pointer;
-  background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 3px 6px;
+  cursor: pointer; background: transparent;
+  border: 1px solid transparent; border-radius: 6px; padding: 3px 6px;
 }
 .racer:hover:not(:disabled) { background: var(--panel2); }
 .racer:disabled { opacity: .5; cursor: default; }
 .racer-name { display: flex; flex-direction: column; min-width: 0; }
 .racer-name-main { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.racer-sub { font-size: 10px; color: var(--fg-dim); }
+.racer-sub { font-size: 10px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .racer-kyuhan, .racer-kyaku { font-size: 11px; color: var(--fg-dim); }
 .racer-score { font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; text-align: right; }
-.racer-role { font-size: 10px; color: #a9cdf5; }
+.racer-role { font-size: 10px; color: #a9cdf5; text-align: right; }
+/* 直近4ヶ月成績の数字。0は薄くして、値のあるところだけ目に入るようにする */
+.n { font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+.n-rate { color: var(--fg); }
+.n.is-zero { opacity: .3; }
 
 /* ── 詳細 ── */
 .dt-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }

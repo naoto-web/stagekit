@@ -35,6 +35,7 @@
       t.addEventListener('click', function () {
         Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (x) { x.classList.toggle('is-on', x === t); });
         var want = t.dataset.tab;
+        document.getElementById('app').dataset.tab = want;   // 出走表のとき左を広げる（CSS）
         document.getElementById('pane-list').classList.toggle('is-hidden', want !== 'list');
         document.getElementById('pane-today').classList.toggle('is-hidden', want !== 'today');
         if (want === 'today') TODAY.ensure();
