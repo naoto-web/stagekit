@@ -6,20 +6,62 @@ var LIST = (function () {
 
   var state = { all: [], row: '', q: '', kyuhan: 'A3', loaded: false };
 
+  /* 級班の並び順（上が強い）。ここに無い値は最後にまとめて出す */
+  var KYUHAN_ORDER = ['SS', 'S1', 'S2', 'A1', 'A2', 'A3', 'L1'];
+  var KYUHAN_LABEL = {
+    SS: 'S級S班', S1: 'S級1班', S2: 'S級2班',
+    A1: 'A級1班', A2: 'A級2班', A3: 'A級3班',
+    L1: 'L級1班（ガールズ）'
+  };
+
+  /** 名簿は全級班を1回だけ取り、しぼりこみは画面側でやる。
+      🔑級班を変えるたびにGASを往復すると毎回1.5秒待たされる（9/23 Naoto指摘で細分化したため
+        切り替え回数が増える）。837人＝109KBなので、1回取ってしまうほうが速い。 */
   function load(kyuhan, force) {
-    var want = kyuhan || state.kyuhan;
-    if (state.loaded && want === state.kyuhan && !force) return Promise.resolve(state.all);
-    state.kyuhan = want;
+    if (kyuhan) state.kyuhan = kyuhan;
+    if (state.loaded && !force) { render(); return Promise.resolve(state.all); }
     setCount('読み込み中…');
-    return API.roster(want).then(function (j) {
+    return API.roster('all').then(function (j) {
       state.all = j.riders || [];
       state.loaded = true;
+      renderKyuhanOptions();
       render();
       return state.all;
     }).catch(function (e) {
       setCount('読み込めませんでした：' + e.message);
       throw e;
     });
+  }
+
+  /** しぼりこみの選択肢を実データから作る（人数つき）。使われていない級班は出さない */
+  function renderKyuhanOptions() {
+    var sel = document.getElementById('kyuhan-sel');
+    if (!sel) return;
+    var count = {};
+    state.all.forEach(function (r) {
+      var k = String(r.kyuhan || '').trim() || '（級班なし）';
+      count[k] = (count[k] || 0) + 1;
+    });
+    var keys = Object.keys(count).sort(function (a, b) {
+      var ia = KYUHAN_ORDER.indexOf(a), ib = KYUHAN_ORDER.indexOf(b);
+      if (ia < 0) ia = 99;
+      if (ib < 0) ib = 99;
+      return ia !== ib ? ia - ib : a.localeCompare(b, 'ja');
+    });
+
+    clear(sel);
+    keys.forEach(function (k) {
+      var o = el('option', '', (KYUHAN_LABEL[k] || k) + '（' + count[k] + '人）');
+      o.value = k;
+      sel.appendChild(o);
+    });
+    var all = el('option', '', 'すべての級班（' + state.all.length + '人）');
+    all.value = 'all';
+    sel.appendChild(all);
+
+    // 選ばれていた級班が無くなっていたら全部に落とす
+    if (state.kyuhan !== 'all' && keys.indexOf(state.kyuhan) < 0) state.kyuhan = 'all';
+    sel.value = state.kyuhan;
   }
 
   function setCount(t) {
@@ -43,6 +85,7 @@ var LIST = (function () {
 
   function filtered() {
     return state.all.filter(function (r) {
+      if (state.kyuhan !== 'all' && String(r.kyuhan || '').trim() !== state.kyuhan) return false;
       if (!KANA.match(r, state.q)) return false;
       if (!state.row) return true;
       var row = KANA.rowOf(r.kana);
@@ -58,7 +101,8 @@ var LIST = (function () {
 
     var box = document.getElementById('rider-list');
     clear(box);
-    setCount(rows.length + '人' + (state.all.length !== rows.length ? '（全' + state.all.length + '人）' : ''));
+    var label = state.kyuhan === 'all' ? '' : (KYUHAN_LABEL[state.kyuhan] || state.kyuhan) + ' ';
+    setCount(label + rows.length + '人' + (state.all.length !== rows.length ? '／名簿全体 ' + state.all.length + '人' : ''));
 
     if (!rows.length) {
       box.appendChild(el('div', 'empty', state.all.length ? '見つかりませんでした。' : '名簿がまだ空です。セットアップ手順の「名簿の種まき」を実行してください。'));
@@ -115,8 +159,9 @@ var LIST = (function () {
     var q = document.getElementById('q');
     q.addEventListener('input', function () { state.q = q.value; render(); });
 
+    // 取り直しは不要＝その場で絞るだけ
     var sel = document.getElementById('kyuhan-sel');
-    sel.addEventListener('change', function () { load(sel.value, true); });
+    sel.addEventListener('change', function () { state.kyuhan = sel.value; state.row = ''; render(); });
   }
 
   /** 名簿の1人ぶんを差し替える（詳細で保存したあと一覧のバッジを合わせる） */

@@ -21,9 +21,13 @@ var DETAIL = (function () {
   var cache = {};     // 登録番号 → 取得済みの詳細。同じ選手を開き直したら往復なしで出す
   var seq = 0;        // 連打したとき、あとから届いた古い返事で上書きしないための番号
   var editing = {};   // メモ欄ごとに「いま書いているか」。既定は読むだけ（下の noteField）
+  // 自動保存。🔑「完了」を押した＝保存された、と読めてしまうので、実際に保存する作りにした
+  //   （9/23 Naoto指摘）。打っている間も1.2秒止まれば勝手に保存する。
+  var saveTimer = null, changeSeq = 0, saveSeq = 0;
 
   /** seed＝一覧や出走表が持っている名前・級班・得点。GASの返事を待たずに見出しだけ先に出す */
   function open(reg, context, seed) {
+    flush();            // 前の選手の書きかけを先に保存する
     ctx = context || null;
     dirty = false;
     editing = {};
@@ -237,9 +241,9 @@ var DETAIL = (function () {
       ta.onkeydown = function (e) { if (e.key === 'Escape') { editing[field] = false; paint(); } };
       wrap.appendChild(ta);
 
-      var done = el('button', 'note-edit is-done', '完了');
+      var done = el('button', 'note-edit is-done', '保存して閉じる');
       done.type = 'button';
-      done.onclick = function () { editing[field] = false; paint(); };
+      done.onclick = function () { editing[field] = false; paint(); saveMemo(false); };
       wrap.appendChild(done);
 
       grow(ta);
@@ -304,29 +308,60 @@ var DETAIL = (function () {
     var st = el('span', 'savestate');
     st.dataset.role = 'savestate';
     st.textContent = dirty ? '未保存' : '';
-    var b = el('button', 'btn btn-primary btn-sm', 'メモを保存');
+    var b = el('button', 'btn btn-sm', '今すぐ保存');
     b.type = 'button';
-    b.onclick = saveMemo;
+    b.onclick = function () { saveMemo(false); };
     bar.appendChild(st);
     bar.appendChild(b);
     return bar;
   }
 
-  function markDirty() {
-    dirty = true;
-    Array.prototype.forEach.call(document.querySelectorAll('[data-role="savestate"]'), function (n) { n.textContent = '未保存'; });
+  function setSaveState(t) {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-role="savestate"]'), function (n) { n.textContent = t; });
   }
 
-  function saveMemo() {
+  /** 何か書き換わった＝1.2秒止まったら勝手に保存する */
+  function markDirty() {
+    dirty = true;
+    changeSeq++;
+    setSaveState('未保存');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { saveMemo(true); }, 1200);
+  }
+
+  /** auto=true は自動保存（成功しても通知を出さない） */
+  function saveMemo(auto) {
+    clearTimeout(saveTimer);
+    if (!cur || !cur.rider) return;
+    if (auto && !dirty) return;
     var reg = cur.rider.reg;
-    API.saveMemo(reg, cur.memo).then(function (j) {
-      cur.memo = j.memo;
-      dirty = false;
-      editing = {};   // 保存したら読むモードへ戻す
-      Array.prototype.forEach.call(document.querySelectorAll('[data-role="savestate"]'), function (n) { n.textContent = '保存しました'; });
-      toast('保存しました');
+    var at = changeSeq;                       // いまの内容の版
+    var mine = ++saveSeq;
+    setSaveState('保存中…');
+
+    API.saveMemo(reg, Object.assign({}, cur.memo)).then(function (j) {
+      if (mine !== saveSeq) return;           // もっと新しい保存が走っている
+      // ⚠️保存中に書き足したぶんを返事で上書きしない。時刻と書き手だけもらう
+      cur.memo.at = j.memo.at;
+      cur.memo.by = j.memo.by;
+      if (changeSeq === at) {
+        dirty = false;
+        setSaveState('保存しました');
+      } else {
+        setSaveState('未保存');               // 保存中にまた書いた＝次の自動保存に任せる
+      }
+      if (!auto) toast('保存しました');
       LIST.touch(reg, { hasMemo: !!(String(cur.memo.feature || '').trim() || String(cur.memo.follow || '').trim()) });
-    }).catch(function (e) { toast(e.message, true); });
+    }).catch(function (e) {
+      if (mine !== saveSeq) return;
+      setSaveState('保存できませんでした');
+      toast(e.message, true);
+    });
+  }
+
+  /** 別の選手へ移る・画面を閉じる前に、書きかけを取りこぼさない */
+  function flush() {
+    if (dirty) saveMemo(false);
   }
 
   /* ── ⑤観察ログ ── */
@@ -601,5 +636,5 @@ var DETAIL = (function () {
     return String(v == null ? '' : v).split(/[,、\s]+/).filter(Boolean);
   }
 
-  return { open: open, isDirty: function () { return dirty; } };
+  return { open: open, flush: flush, isDirty: function () { return dirty; } };
 })();

@@ -17,11 +17,16 @@
     TODAY.bind();
     checkConn();
 
-    // 未保存のまま閉じようとしたら止める
+    // 書きかけは自動保存されるが、間に合っていないときだけ止める
     window.addEventListener('beforeunload', function (e) {
       if (!DETAIL.isDirty()) return;
+      DETAIL.flush();
       e.preventDefault();
       e.returnValue = '';
+    });
+    // タブを離れる・画面を切り替えるときにも書きかけを流し込む
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') DETAIL.flush();
     });
   });
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OKL 選手DB</title>
-<link rel="stylesheet" href="css/style.css?v=20260922-235949">
+<link rel="stylesheet" href="css/style.css?v=20260923-003547">
 </head>
 <body data-view="work">
 
@@ -30,9 +30,9 @@
       <div class="pane" id="pane-list">
         <div class="filters">
           <input type="search" id="q" placeholder="名前・カナ・登録番号でさがす" autocomplete="off" spellcheck="false">
-          <select id="kyuhan-sel" class="sel">
+          <!-- 中身は名簿から作る（list.js renderKyuhanOptions）。使われている級班だけ人数つきで並ぶ -->
+          <select id="kyuhan-sel" class="sel" title="級班でしぼりこむ">
             <option value="A3">A級3班</option>
-            <option value="all">すべての級班</option>
           </select>
         </div>
         <div class="kana-rows" id="kana-rows"></div>
@@ -66,14 +66,14 @@
 <!-- ═══════════ 出力ビュー（OBSブラウザソース・背景透明） ═══════════ -->
 <div class="outcard" id="outcard" hidden></div>
 
-<script src="../autoupdate.js?v=20260922-235949" data-au="output-only"></script>
-<script src="js/config.js?v=20260922-235949"></script>
-<script src="js/api.js?v=20260922-235949"></script>
-<script src="js/kana.js?v=20260922-235949"></script>
-<script src="js/list.js?v=20260922-235949"></script>
-<script src="js/today.js?v=20260922-235949"></script>
-<script src="js/detail.js?v=20260922-235949"></script>
-<script src="js/output.js?v=20260922-235949"></script>
-<script src="js/main.js?v=20260922-235949"></script>
+<script src="../autoupdate.js?v=20260923-003547" data-au="output-only"></script>
+<script src="js/config.js?v=20260923-003547"></script>
+<script src="js/api.js?v=20260923-003547"></script>
+<script src="js/kana.js?v=20260923-003547"></script>
+<script src="js/list.js?v=20260923-003547"></script>
+<script src="js/today.js?v=20260923-003547"></script>
+<script src="js/detail.js?v=20260923-003547"></script>
+<script src="js/output.js?v=20260923-003547"></script>
+<script src="js/main.js?v=20260923-003547"></script>
 </body>
 </html>
