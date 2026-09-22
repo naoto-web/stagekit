@@ -230,13 +230,8 @@ var DETAIL = (function () {
       figure(fig, '走数', rs.n + '走');
       card.appendChild(fig);
 
-      // ②決まり手の段＝その役割ならではの内訳。項目が増えたので段を分けた（9/23 Naoto指定）
-      var det = detailCols(role.key);
-      if (det.length && rs.detail) {
-        var fig2 = el('div', 'role-figs role-figs-sub');
-        det.forEach(function (c) { figure(fig2, c.label, pct(c.get(rs) || 0, rs.n)); });
-        card.appendChild(fig2);
-      }
+      // ②着順の段＝1着〜9着の回数。決まり手の内訳はその着順の下にぶら下げる（9/23 Naoto指定）
+      card.appendChild(rankTable(rs, role.key));
 
       if (rs.n < 20) card.appendChild(el('div', 'muted sm', '⚠️20走を下回るので割合は参考程度に。'));
       card.appendChild(lineRow(role.key));
@@ -357,6 +352,68 @@ var DETAIL = (function () {
       box.appendChild(note);
     }
     return box;
+  }
+
+  /** 着順ごとの回数の表（2026-09-23 Naoto指定）。
+      🔑上の段が「率」なので、ここは**回数だけ**にして実数で見られるようにする。
+         率だけだと「3.7%」が27走中1回なのか分からない。
+      🔑決まり手の内訳は**その着順の真下**に置く＝「1着12回のうち逃7・捲4」が縦に読める。
+         内訳はどれも着順が決まっている（逃/捲＝1着、番手に差されて2着＝2着、ズブズブ＝3着。
+         番手なら 差し1着＝1着、差し2着/マーク＝2着、ハコ3＝3着）。
+      ⚠️9着まで固定で出す＝7車立てでは8・9着が常に0になるが、列がずれないほうが読みやすい。
+         0は薄く（出走表の数字と同じ扱い）。 */
+  function rankTable(rs, roleKey) {
+    var ranks = rs.ranks || [];
+    if (!ranks.length) return el('div', '');
+    var sub = rankSubs(roleKey, rs.detail || {});
+    var hasOther = (ranks[9] || 0) > 0;
+    var nCol = 9 + (hasOther ? 1 : 0);
+
+    var box = el('div', 'split rank');
+    box.style.gridTemplateColumns = 'auto repeat(' + nCol + ', minmax(52px, auto))';
+
+    box.appendChild(el('div', 'split-label', '着順'));
+    for (var i = 0; i < 9; i++) box.appendChild(el('div', 'split-h', (i + 1) + '着'));
+    if (hasOther) box.appendChild(el('div', 'split-h', '他'));
+
+    box.appendChild(el('div', 'split-k', '回数'));
+    for (var k = 0; k < 9; k++) {
+      var v = ranks[k] || 0;
+      box.appendChild(el('div', 'split-v' + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
+    }
+    if (hasOther) box.appendChild(el('div', 'split-v', ranks[9] + '回'));
+
+    if (sub.some(function (x) { return x && x.length; })) {
+      box.appendChild(el('div', 'split-k', '内訳'));
+      for (var m = 0; m < 9; m++) {
+        var cell = el('div', 'rank-sub');
+        (sub[m] || []).forEach(function (x) {
+          var line = el('div', 'rank-sub-i' + (x.v ? '' : ' is-thin'));
+          line.appendChild(el('span', 'rank-sub-k', x.label));
+          line.appendChild(el('span', 'rank-sub-v', x.v + '回'));
+          cell.appendChild(line);
+        });
+        box.appendChild(cell);
+      }
+      if (hasOther) box.appendChild(el('div', 'rank-sub'));
+    }
+    return box;
+  }
+
+  /** 着順（1〜9着）ごとにぶら下げる内訳。配列の添字＝着順−1。
+      ⚠️ここを変えたら build_stats.js の `addRun` と detailCols も揃える。 */
+  function rankSubs(roleKey, d) {
+    var s = [];
+    if (roleKey === 'head') {
+      s[0] = [{ label: '逃', v: d.nige1 || 0 }, { label: '捲', v: d.makuri1 || 0 }];
+      s[1] = [{ label: '番手に差され', v: d.sashed2 || 0 }];
+      s[2] = [{ label: 'ズブズブ', v: d.zubu || 0 }];
+    } else if (roleKey === 'bante') {
+      s[0] = [{ label: '差し', v: d.sashi1 || 0 }];
+      s[1] = [{ label: '差し', v: d.sashi2 || 0 }, { label: 'マーク', v: d.mark || 0 }];
+      s[2] = [{ label: 'ハコ3', v: d.hako3 || 0 }];
+    }
+    return s;
   }
 
   /** その役割ならではの内訳（2026-09-23 Naoto指定）。

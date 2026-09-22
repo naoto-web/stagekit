@@ -247,10 +247,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .fig-v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold); }
 .fig-k { font-size: 10px; color: var(--fg-dim); }
 
-/* 決まり手の段＝着順の段の下にぶら下げる。少し小さく・少し詰めて「別の段」と分かるように
-   （9/23 項目が増えたので1行に並べきれなくなった） */
-.role-figs-sub { margin-top: -4px; gap: 16px; }
-.role-figs-sub .fig-v { font-size: 14px; color: #cfd8e3; }
+/* 着順ごとの回数の表（9/23）。列を詰めたいので .split より狭く、内訳は着順の真下に縦積み */
+.rank .split-v { font-size: 13px; }
+.rank-sub { display: flex; flex-direction: column; gap: 1px; align-items: flex-end; }
+.rank-sub-i { display: flex; gap: 4px; align-items: baseline; white-space: nowrap; }
+.rank-sub-i.is-thin { opacity: .35; }
+.rank-sub-k { font-size: 10px; color: var(--fg-dim); }
+.rank-sub-v { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: #cfd8e3; }
 
 /* ライン決着とレース種別は、戦法別と同じ表（.split）で出す。
    セルの中の走数（小さい灰色）と、出走表から開いたときの「今日の種別」の行（青） */
