@@ -221,14 +221,17 @@ var DETAIL = (function () {
     if (rs && rs.n) {
       var fig = el('div', 'role-figs');
       figure(fig, '1着', pct(rs.win, rs.n));
+      figure(fig, '2着内', pct(rs.top2, rs.n));
       figure(fig, '3着内', pct(rs.top3, rs.n));
       if (role.key === 'head' && rs.detail) {
         figure(fig, '逃げ切り', pct(rs.detail.nigekiri, rs.n));
         figure(fig, '番手に差された', pct(rs.detail.sashed, rs.n));
       }
+      // 番手＝決まり手の内訳。3つは互いに重ならない（9/23 Naoto指定）
       if (role.key === 'bante' && rs.detail) {
-        figure(fig, '差し切り', pct(rs.detail.sashi, rs.n));
-        figure(fig, '連れ込み', pct(rs.detail.hold, rs.n));
+        figure(fig, '差し1着', pct(rs.detail.sashi1, rs.n));
+        figure(fig, '差し2着', pct(rs.detail.sashi2, rs.n));
+        figure(fig, 'マーク', pct(rs.detail.mark, rs.n));
       }
       figure(fig, '走数', rs.n + '走');
       card.appendChild(fig);
@@ -306,6 +309,7 @@ var DETAIL = (function () {
     // 列＝本体（role-figs）と同じ並び。ここを変えるときは roleCard 側も揃えること
     var cols = [
       { label: '1着', get: function (b) { return pct(b.win, b.n); } },
+      { label: '2着内', get: function (b) { return pct(b.top2, b.n); } },
       { label: '3着内', get: function (b) { return pct(b.top3, b.n); } }
     ];
     if (roleKey === 'head') {
@@ -313,8 +317,9 @@ var DETAIL = (function () {
       cols.push({ label: '番手に差された', get: function (b) { return pct((b.detail || {}).sashed || 0, b.n); } });
     }
     if (roleKey === 'bante') {
-      cols.push({ label: '差し切り', get: function (b) { return pct((b.detail || {}).sashi || 0, b.n); } });
-      cols.push({ label: '連れ込み', get: function (b) { return pct((b.detail || {}).hold || 0, b.n); } });
+      cols.push({ label: '差し1着', get: function (b) { return pct((b.detail || {}).sashi1 || 0, b.n); } });
+      cols.push({ label: '差し2着', get: function (b) { return pct((b.detail || {}).sashi2 || 0, b.n); } });
+      cols.push({ label: 'マーク', get: function (b) { return pct((b.detail || {}).mark || 0, b.n); } });
     }
     cols.push({ label: '走数', get: function (b) { return b.n + '走'; } });
 
