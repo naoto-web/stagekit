@@ -52,7 +52,7 @@ var CONFIG = (function () {
     { key: 'third', label: '3番手', hint: 'ラインの3番目' },
     { key: 'fourth', label: '4番手以降', hint: '7車立てではめったに起きない' },
     { key: 'solo', label: '単騎', hint: 'ラインに入らない' },
-    { key: 'seri', label: '競り', hint: '番手を争う形' }
+    { key: 'seri', label: '競り', hint: '番手を争う形＋横の強さ' }
   ];
 
   /* 追走能力の5段階（要件§3.3） */
