@@ -247,6 +247,30 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .fig-v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold); }
 .fig-k { font-size: 10px; color: var(--fg-dim); }
 
+/* 決まり手の段＝着順の段の下にぶら下げる。少し小さく・少し詰めて「別の段」と分かるように
+   （9/23 項目が増えたので1行に並べきれなくなった） */
+.role-figs-sub { margin-top: -4px; gap: 16px; }
+.role-figs-sub .fig-v { font-size: 14px; color: #cfd8e3; }
+
+/* ライン決着。自分のラインの車数ごとに条件が変わるので、戦法別とは別の行に出す */
+.linek {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin: 0 0 10px; padding: 7px 10px;
+  background: rgba(255, 255, 255, .03); border-radius: 7px;
+}
+.linek-label { font-size: 11px; color: var(--fg-dim); }
+.linek-i { display: inline-flex; align-items: baseline; gap: 6px; }
+.linek-i.is-thin { opacity: .45; }
+.linek-k { font-size: 11px; color: var(--fg-dim); }
+.linek-v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.linek-n { font-size: 10px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+
+/* S取り＝車番ごとの回数。内枠ほど取りやすいので並びで見せる */
+.scar { display: flex; gap: 10px; flex-wrap: wrap; margin: 2px 0 10px; }
+.scar-i { display: inline-flex; align-items: center; gap: 4px; }
+.scar-i.is-zero { opacity: .3; }
+.scar-n { font-size: 12px; font-variant-numeric: tabular-nums; }
+
 /* 戦法別（二分戦／三分戦以上）。走数が少ない行は薄くして鵜呑みにさせない。
    9/23：3着内率だけだったのを本体と同じ項目に増やした（Naoto指摘）ので、
    横並びのフレックスから**見出し行つきの表**へ変えた。

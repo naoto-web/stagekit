@@ -89,6 +89,7 @@ var DETAIL = (function () {
     box.appendChild(basics(r));
     box.appendChild(featureSection());
     box.appendChild(rolesSection());
+    box.appendChild(sSection());
     box.appendChild(followSection());
     box.appendChild(obsSection());
     box.appendChild(refSection(r));
@@ -220,28 +221,43 @@ var DETAIL = (function () {
 
     if (rs && rs.n) {
       var fig = el('div', 'role-figs');
+      // ①着順の段＝どの役割でも同じ
       figure(fig, '1着', pct(rs.win, rs.n));
       figure(fig, '2着内', pct(rs.top2, rs.n));
       figure(fig, '3着内', pct(rs.top3, rs.n));
-      if (role.key === 'head' && rs.detail) {
-        figure(fig, '逃げ切り', pct(rs.detail.nigekiri, rs.n));
-        figure(fig, '番手に差された', pct(rs.detail.sashed, rs.n));
-      }
-      // 番手＝決まり手の内訳。3つは互いに重ならない（9/23 Naoto指定）
-      if (role.key === 'bante' && rs.detail) {
-        figure(fig, '差し1着', pct(rs.detail.sashi1, rs.n));
-        figure(fig, '差し2着', pct(rs.detail.sashi2, rs.n));
-        figure(fig, 'マーク', pct(rs.detail.mark, rs.n));
-      }
+      figure(fig, '4着内', pct(rs.top4, rs.n));
       figure(fig, '走数', rs.n + '走');
       card.appendChild(fig);
+
+      // ②決まり手の段＝その役割ならではの内訳。項目が増えたので段を分けた（9/23 Naoto指定）
+      var det = detailCols(role.key);
+      if (det.length && rs.detail) {
+        var fig2 = el('div', 'role-figs role-figs-sub');
+        det.forEach(function (c) { figure(fig2, c.label, pct(c.get(rs) || 0, rs.n)); });
+        card.appendChild(fig2);
+      }
+
       if (rs.n < 20) card.appendChild(el('div', 'muted sm', '⚠️20走を下回るので割合は参考程度に。'));
+      card.appendChild(lineRow(role.key));
       card.appendChild(splitRow(rs, role.key));
     } else {
       card.appendChild(el('div', 'muted sm', 'この役割で走った記録がまだありません。'));
     }
 
-    card.appendChild(noteField('note' + capKey(role.key), role.label + 'のときの動きを書く', true));
+    // 🔑先頭だけメモを3つに分ける（9/23 Naoto指定）＝先行は戦法で全く別の走りになるため。
+    //   ほかの役割はこれまでどおり1つ。
+    if (role.key === 'head') {
+      [
+        { f: 'noteHead2', t: '二分戦の場合' },
+        { f: 'noteHead3', t: '三分戦以上の場合' },
+        { f: 'noteHeadSolo', t: '先行一車の場合' }
+      ].forEach(function (x) {
+        card.appendChild(el('div', 'lbl', x.t));
+        card.appendChild(noteField(x.f, x.t + 'の動きを書く', true));
+      });
+    } else {
+      card.appendChild(noteField('note' + capKey(role.key), role.label + 'のときの動きを書く', true));
+    }
     return card;
   }
 
@@ -310,17 +326,12 @@ var DETAIL = (function () {
     var cols = [
       { label: '1着', get: function (b) { return pct(b.win, b.n); } },
       { label: '2着内', get: function (b) { return pct(b.top2, b.n); } },
-      { label: '3着内', get: function (b) { return pct(b.top3, b.n); } }
+      { label: '3着内', get: function (b) { return pct(b.top3, b.n); } },
+      { label: '4着内', get: function (b) { return pct(b.top4, b.n); } }
     ];
-    if (roleKey === 'head') {
-      cols.push({ label: '逃げ切り', get: function (b) { return pct((b.detail || {}).nigekiri || 0, b.n); } });
-      cols.push({ label: '番手に差された', get: function (b) { return pct((b.detail || {}).sashed || 0, b.n); } });
-    }
-    if (roleKey === 'bante') {
-      cols.push({ label: '差し1着', get: function (b) { return pct((b.detail || {}).sashi1 || 0, b.n); } });
-      cols.push({ label: '差し2着', get: function (b) { return pct((b.detail || {}).sashi2 || 0, b.n); } });
-      cols.push({ label: 'マーク', get: function (b) { return pct((b.detail || {}).mark || 0, b.n); } });
-    }
+    detailCols(roleKey).forEach(function (c) {
+      cols.push({ label: c.short, get: function (b) { return pct(c.get(b) || 0, b.n); } });
+    });
     cols.push({ label: '走数', get: function (b) { return b.n + '走'; } });
 
     var box = el('div', 'split');
@@ -347,6 +358,52 @@ var DETAIL = (function () {
     return box;
   }
 
+  /** その役割ならではの内訳（2026-09-23 Naoto指定）。
+      `short` は戦法別の表の見出し＝横に9列並ぶので短くする。
+      ⚠️ここを変えたら build_stats.js の `addRun` も揃えること（数える側と出す側は必ず対で直す）。 */
+  function detailCols(roleKey) {
+    var d = function (k) { return function (b) { return (b.detail || {})[k] || 0; }; };
+    if (roleKey === 'head') return [
+      { label: '逃げ1着', short: '逃げ1着', get: d('nige1') },
+      { label: '捲り1着', short: '捲り1着', get: d('makuri1') },
+      { label: '番手に差されて2着', short: '差され2着', get: d('sashed2') },
+      { label: 'ズブズブ', short: 'ズブズブ', get: d('zubu') }
+    ];
+    if (roleKey === 'bante') return [
+      { label: '差し1着', short: '差し1着', get: d('sashi1') },
+      { label: '差し2着', short: '差し2着', get: d('sashi2') },
+      { label: 'マーク', short: 'マーク', get: d('mark') },
+      { label: 'ハコ3', short: 'ハコ3', get: d('hako3') }
+    ];
+    return [];
+  }
+
+  /** ライン決着（先頭・番手・3番手）。**自分のラインの車数ごとに条件が変わる**ので分けて出す。
+      2車＝1,2着が自分のライン／3車以上＝1〜3着が自分のライン（2026-09-23 Naoto定義）。
+      ⚠️戦法別（二分戦・三分戦）とは別の軸なので、あちらの表には入れない。 */
+  function lineRow(roleKey) {
+    var st = stats();
+    var lk = st && st.lineK && st.lineK[roleKey];
+    if (!lk) return el('div', '');
+    var defs = [{ k: '2', label: '2車ライン' }, { k: '3', label: '3車ライン' }, { k: '4', label: '4車以上' }];
+    var box = el('div', 'linek');
+    box.appendChild(el('span', 'linek-label', 'ライン決着'));
+    var any = false;
+    defs.forEach(function (df) {
+      var c = lk[df.k];
+      if (!c || !c.n) return;
+      any = true;
+      var item = el('span', 'linek-i' + (c.n >= 10 ? '' : ' is-thin'));
+      item.appendChild(el('span', 'linek-k', df.label));
+      item.appendChild(el('span', 'linek-v', pct(c.hit, c.n)));
+      item.appendChild(el('span', 'linek-n', c.n + '走'));
+      box.appendChild(item);
+    });
+    if (!any) return el('div', '');
+    box.appendChild(el('span', 'muted sm', '2車＝1,2着／3車以上＝1〜3着が自分のライン'));
+    return box;
+  }
+
   function figure(box, label, val) {
     var f = el('div', 'fig');
     f.appendChild(el('span', 'fig-v', val));
@@ -362,6 +419,41 @@ var DETAIL = (function () {
   function featureSection() {
     var s = section('選手特徴', '出力ビュー（配信）には出ません。');
     s.body.appendChild(noteField('feature', '事実と観察を書く。人の評価は書かない', true));
+    s.body.appendChild(saveBar());
+    return s.root;
+  }
+
+  /* ── ④.5 S取り（9/23 Naoto指定・役割別と追走能力の間） ── */
+
+  /** 「どの車番のときにSを取ったか」を出す。
+      🔑内枠ほど取りやすいので、**回数だけでなく車番の並びを見ないと意味がない**
+         （全体では1番3,795回に対し6番458回）。だから車番ごとに出す。 */
+  function sSection() {
+    var s = section('S取り', windowText());
+    var st = stats();
+    var sk = st && st.sTaken;
+
+    if (sk && sk.n) {
+      var top = el('div', 'role-figs');
+      figure(top, 'S取り', sk.n + '回');
+      if (st.n) figure(top, '走数に対して', pct(sk.n, st.n));
+      s.body.appendChild(top);
+
+      var wrap = el('div', 'scar');
+      for (var car = 1; car <= 9; car++) {
+        var v = sk.byCar[car] || sk.byCar[String(car)] || 0;
+        var item = el('span', 'scar-i' + (v ? '' : ' is-zero'));
+        var chip = carChip(car);
+        item.appendChild(chip);
+        item.appendChild(el('span', 'scar-n', v ? v + '回' : '—'));
+        wrap.appendChild(item);
+      }
+      s.body.appendChild(wrap);
+    } else {
+      s.body.appendChild(el('div', 'muted sm', 'この期間にSを取った記録はありません。'));
+    }
+
+    s.body.appendChild(noteField('noteS', 'S取りについて書く（例：3番より内なら8割取りに行く）', true));
     s.body.appendChild(saveBar());
     return s.root;
   }
