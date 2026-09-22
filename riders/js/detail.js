@@ -222,7 +222,7 @@ var DETAIL = (function () {
       figure(fig, '走数', rs.n + '走');
       card.appendChild(fig);
       if (rs.n < 20) card.appendChild(el('div', 'muted sm', '⚠️20走を下回るので割合は参考程度に。'));
-      card.appendChild(splitRow(rs));
+      card.appendChild(splitRow(rs, role.key));
     } else {
       card.appendChild(el('div', 'muted sm', 'この役割で走った記録がまだありません。'));
     }
@@ -280,32 +280,53 @@ var DETAIL = (function () {
     ta.style.height = (ta.scrollHeight + 2) + 'px';
   }
 
-  /** 戦法別（二分戦／三分戦以上）の3着内率。
+  /** 戦法別（二分戦／三分戦以上）。
       🔑A級3班の全体で見ると番手は二分戦52.7%・三分戦以上38.3%（差14.4pt）＝効く軸。
          ただし1人ぶんに割ると走数が減る（番手で中央値10走）ので、
-         **10走を下回るものは薄く出す**＝数字を鵜呑みにさせない。 */
-  function splitRow(rs) {
-    var box = el('div', 'split');
+         **10走を下回る行は薄く出す**＝数字を鵜呑みにさせない。
+      🔑2026-09-23（Naoto「3着内率しか出てない。ちゃんと全部出るようにして」）＝
+         **上の本体と同じ項目を同じ順で出す**。役割ごとの決着内訳（先頭＝逃げ切り／番手に差された、
+         番手＝差し切り／連れ込み）も戦法別に数えるようにしたので、ここで並べられる。 */
+  function splitRow(rs, roleKey) {
     var sp = rs.sp || {};
     var defs = [{ k: '2', label: '二分戦' }, { k: '3', label: '三分戦以上' }];
-    var any = false;
-    box.appendChild(el('span', 'split-label', '戦法別の3着内率'));
+    if (!defs.some(function (d) { return sp[d.k] && sp[d.k].n; })) return el('div', '');
+
+    // 列＝本体（role-figs）と同じ並び。ここを変えるときは roleCard 側も揃えること
+    var cols = [
+      { label: '1着', get: function (b) { return pct(b.win, b.n); } },
+      { label: '3着内', get: function (b) { return pct(b.top3, b.n); } }
+    ];
+    if (roleKey === 'head') {
+      cols.push({ label: '逃げ切り', get: function (b) { return pct((b.detail || {}).nigekiri || 0, b.n); } });
+      cols.push({ label: '番手に差された', get: function (b) { return pct((b.detail || {}).sashed || 0, b.n); } });
+    }
+    if (roleKey === 'bante') {
+      cols.push({ label: '差し切り', get: function (b) { return pct((b.detail || {}).sashi || 0, b.n); } });
+      cols.push({ label: '連れ込み', get: function (b) { return pct((b.detail || {}).hold || 0, b.n); } });
+    }
+    cols.push({ label: '走数', get: function (b) { return b.n + '走'; } });
+
+    var box = el('div', 'split');
+    // 列は中身に合わせて詰める（下限68px）。1frで伸ばすと3列のとき間延びして本体と視線が切れる
+    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(68px, auto))';
+
+    box.appendChild(el('div', 'split-label', '戦法別'));
+    cols.forEach(function (c) { box.appendChild(el('div', 'split-h', c.label)); });
+
     defs.forEach(function (d) {
       var b = sp[d.k];
-      var item = el('span', 'split-i' + (b && b.n >= 10 ? '' : ' is-thin'));
-      item.appendChild(el('span', 'split-k', d.label));
-      if (b && b.n) {
-        any = true;
-        item.appendChild(el('span', 'split-v', pct(b.top3, b.n)));
-        item.appendChild(el('span', 'split-n', b.n + '走'));
-      } else {
-        item.appendChild(el('span', 'split-v', '—'));
-      }
-      box.appendChild(item);
+      var thin = (b && b.n >= 10) ? '' : ' is-thin';
+      box.appendChild(el('div', 'split-k' + thin, d.label));
+      cols.forEach(function (c) {
+        box.appendChild(el('div', 'split-v' + thin, (b && b.n) ? c.get(b) : '—'));
+      });
     });
-    if (!any) return el('div', '');
+
     if (!(sp['2'] && sp['2'].n >= 10) && !(sp['3'] && sp['3'].n >= 10)) {
-      box.appendChild(el('span', 'muted sm', '走数が少ないので目安です'));
+      var note = el('div', 'split-note muted sm', '走数が少ないので目安です');
+      note.style.gridColumn = '1 / -1';
+      box.appendChild(note);
     }
     return box;
   }
