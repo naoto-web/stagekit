@@ -222,6 +222,7 @@ var DETAIL = (function () {
       figure(fig, '走数', rs.n + '走');
       card.appendChild(fig);
       if (rs.n < 20) card.appendChild(el('div', 'muted sm', '⚠️20走を下回るので割合は参考程度に。'));
+      card.appendChild(splitRow(rs));
     } else {
       card.appendChild(el('div', 'muted sm', 'この役割で走った記録がまだありません。'));
     }
@@ -277,6 +278,36 @@ var DETAIL = (function () {
   function grow(ta) {
     ta.style.height = 'auto';
     ta.style.height = (ta.scrollHeight + 2) + 'px';
+  }
+
+  /** 戦法別（二分戦／三分戦以上）の3着内率。
+      🔑A級3班の全体で見ると番手は二分戦52.7%・三分戦以上38.3%（差14.4pt）＝効く軸。
+         ただし1人ぶんに割ると走数が減る（番手で中央値10走）ので、
+         **10走を下回るものは薄く出す**＝数字を鵜呑みにさせない。 */
+  function splitRow(rs) {
+    var box = el('div', 'split');
+    var sp = rs.sp || {};
+    var defs = [{ k: '2', label: '二分戦' }, { k: '3', label: '三分戦以上' }];
+    var any = false;
+    box.appendChild(el('span', 'split-label', '戦法別の3着内率'));
+    defs.forEach(function (d) {
+      var b = sp[d.k];
+      var item = el('span', 'split-i' + (b && b.n >= 10 ? '' : ' is-thin'));
+      item.appendChild(el('span', 'split-k', d.label));
+      if (b && b.n) {
+        any = true;
+        item.appendChild(el('span', 'split-v', pct(b.top3, b.n)));
+        item.appendChild(el('span', 'split-n', b.n + '走'));
+      } else {
+        item.appendChild(el('span', 'split-v', '—'));
+      }
+      box.appendChild(item);
+    });
+    if (!any) return el('div', '');
+    if (!(sp['2'] && sp['2'].n >= 10) && !(sp['3'] && sp['3'].n >= 10)) {
+      box.appendChild(el('span', 'muted sm', '走数が少ないので目安です'));
+    }
+    return box;
   }
 
   function figure(box, label, val) {

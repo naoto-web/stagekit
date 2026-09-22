@@ -222,6 +222,19 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .fig-v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold); }
 .fig-k { font-size: 10px; color: var(--fg-dim); }
 
+/* 戦法別（二分戦／三分戦以上）。走数が少ないものは薄くして鵜呑みにさせない */
+.split {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin: 0 0 10px; padding: 7px 10px;
+  background: rgba(255, 255, 255, .03); border-radius: 7px;
+}
+.split-label { font-size: 11px; color: var(--fg-dim); }
+.split-i { display: inline-flex; align-items: baseline; gap: 6px; }
+.split-i.is-thin { opacity: .45; }
+.split-k { font-size: 11px; color: var(--fg-dim); }
+.split-v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.split-n { font-size: 10px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+
 /* 並び実績など、タグを並べる入れもの（選択式タグは9/23に廃止＝Yが自分で書く方針） */
 .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
 
