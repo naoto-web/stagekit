@@ -1958,6 +1958,7 @@
                  ／tea＝お茶／nicha＝ニチャー／samba＝サンバ／dance＝ダンス
                  ／adjust＝アジャスト／peye＝ピーターズ・アイ／thanks＝選手リスペクト（結果発表・全員共通）
                  ／morotade＝もろたで（9/1・黄の3つ目＝吹き出し2つ・相方の名前入り）
+                 ／entrance＝プロレス入場（9/15・赤の3つ目＝暗転の花道→白フラッシュで両腕を広げるポーズ＋金の札吹雪）
      ⚠️合計100でない／演出名のタイプミスは起動時の自己検査（auditRates）で警告＋テストがFAILする */
   /* ⚠️🚴選手リスペクト（thanks）は**8/29から全色0%＝いったん封印中**（Naoto指示・「みんなの反応が微妙だった」）。
        演出そのものは消していない＝`?fx=thanks`・テスト接続（?gas=）では今までどおり出る。抽選から外しただけ。
@@ -1977,7 +1978,8 @@
     // 9/2夜 Naoto指示＝**眼鏡あり念仏50／眼鏡ありもろたで50**。眼鏡なし念仏（pray_ng）は0%封印
     // （thanksと同じ流儀＝行を消さず0で残す・戻すときは数字だけ）
     yellow: { pray: 50, pray_ng: 0, morotade: 50, thanks: 0 },
-    red:    { samba: 50, dance: 50, thanks: 0 }       // サンバ（FB121）／ダンス（8/25）
+    // 9/15 プロレス入場（entrance）を追加＝3つを等分（ニチャー追加時の橙と同じ流儀・端数0.01は先頭へ）
+    red:    { samba: 33.34, dance: 33.33, entrance: 33.33, thanks: 0 } // サンバ（FB121）／ダンス（8/25）／プロレス入場（9/15）
     // 例）purple: { rain: 50, slot: 30, thanks: 20 }
   };
 
@@ -2486,6 +2488,34 @@
     return t;
   }
 
+  /* プロレス入場の尺（9/15 Naoto依頼・赤メンバーの3つ目＝先方要望「東京ドームの花道入場のような派手さ」）
+     流れ＝①暗転＋レーザーが振れる＋天井スポットの筋（DARK）
+           ②シルエットが花道の奥から近づいてくる（WALK・歩調の上下動つき）。途中で大型ビジョン風の
+             タイトル「〇〇的中！！」が上からドン（TITLE＝発火からのms）
+           ③白フラッシュ＝色つきの本体に変わり、両腕を広げたポーズがズーム＋金の札吹雪が降り続ける
+             ＋回る後光＋ネックレスのきらめき（KIME）
+           ④「配当の雨が降るぞ！！」がドン（KIME＋CAPGAP）⑤HOLDだけ見せて退場（OUT）
+       DARK  …暗転のフェードms／WALK…寄ってくるms／TITLE…タイトルを出す時刻（発火からのms）
+       CAPGAP…フラッシュからキメ文字までのms／HOLD…キメを見せるms／OUT…退場ms
+       STEP  …歩調（上下動1往復）のms
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約7.4秒（サンバ8.4／お茶7.56の帯） */
+  var ENT_BASE = { DARK: 450, WALK: 2600, TITLE: 700, CAPGAP: 520, HOLD: 4300, OUT: 600, STEP: 430 };
+  var ENT_AR = 842 / 1200;  // fx_ent.png の実寸比（横/縦）＝絵を差し替えたら素材加工/fx_ent_make.pyの出力で更新
+  var ENT_NECK_Y = 0.248;   // 首の下端（絵の高さに対する比・同上）＝タイトル帯を顔に被せない検算用（enttest）
+  var ENT_H = 0.84;         // キャラの背丈（ワイプ高に対する比）。上に残す帯がタイトルの居場所
+  var ENT_ZOOM = 1.05;      // キメのズーム倍率（足元原点）。上げるほど頭がタイトル帯に食い込む
+  var ENT_TITLE_K = 0.12;   // タイトルの文字高（ワイプ高に対する比）／ENT_CAP_K＝キメ文字
+  var ENT_CAP_K = 0.145;
+  var ENT_CAP = "配当の雨が降るぞ！！"; // キメ文字（文言はここ1か所）
+  function entTimes() {
+    var t = { TITLE: ENT_BASE.TITLE };          // タイトルが上から降りてくる
+    t.KIME = ENT_BASE.DARK + ENT_BASE.WALK;     // 白フラッシュ＝色つきに変わってポーズ・札吹雪の始まり
+    t.CAP  = t.KIME + ENT_BASE.CAPGAP;          // 「配当の雨が降るぞ！！」
+    t.END  = t.KIME + ENT_BASE.HOLD;            // 退場開始＝ここでバッジにバトンを渡す
+    t.GONE = t.END + ENT_BASE.OUT;
+    return t;
+  }
+
   /* アジャストの尺（8/11 FB130・青メンバーの2つ目の演出＝Naoto案）
        流れ＝①「アジャ・・」が右から左へ流れる（最初は少なく→どんどん多く）②一通り流れたら
              本人が右からてくてく歩いてきて中央で止まる③一拍→しゃがんで溜める
@@ -2624,6 +2654,8 @@
   ["fx_samba1.png", "fx_samba2.png", "fx_samba3.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // サンバは3コマ（8/10 FB121）＝初回的中でコマ落ちしないよう先読み
   });
+  (function () { var im = new Image(); im.src = "fx_ent.png"; })(); // プロレス入場（9/15・赤の3つ目）＝
+  // 暗転の中をシルエットで近づく＝未読込だと花道が無人になり、白フラッシュ明けに突然現れる
   ["fx_slotchar1.png", "fx_slotchar2.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // スロットのキャラ2ポーズ（8/10 FB122）＝入場でコマ落ちしないよう先読み
   });
@@ -3859,6 +3891,136 @@
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
   }
 
+  /* プロレス入場（9/15 Naoto依頼・赤メンバーの3つ目）：段取りはENT_BASEのコメント参照。
+     素材＝web/fx_ent.png（両腕を広げた立ち姿1枚・素材加工/fx_ent_make.py）。歩きのコマは無いので
+     「暗転した花道の奥からシルエットで近づいてくる」を scale＋上下動で作り、白フラッシュの裏で
+     色つきに切り替える（=ギャル神の玉座と同じ「フラッシュで乗り換えを隠す」語彙）。
+     ⚠️タイトルは名簿の名前から組む（rc.name＋"的中！！"）＝人名をコードに書かない方針（サンバと同じ）
+     ⚠️札吹雪・きらめきはsetInterval駆動＋box.isConnectedで自己停止（rAFが来ないOBSの裏画面でも
+        凍らず、除去後のリークもない＝サンバFB121と同系）
+     ⚠️元ネタ（先方が示した入場映像）の団体名・選手名・技名・決め台詞そのものは演出内・ファイル名・
+        コードのどこにも書かない（8/18のダンスと同じ整理＝連想パーツを積まない）。文言はENT_CAPだけ */
+  function spawnEntrance(cam, key, name) {
+    var old = cam.querySelector(".fx-ent");
+    if (old) old.parentNode.removeChild(old);
+    var T = entTimes();
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    var eh = Math.round(ch * ENT_H), ew = Math.round(eh * ENT_AR);
+    var box = document.createElement("div");
+    box.className = ["fx-ent", "m-" + key].join(" ");
+    if (fxLite(cam)) box.classList.add("lite"); // 大きい箱＝レーザーのグロー・札の奥行きfilter・きらめきの影を落とす
+    box.style.setProperty("--ew", ew + "px");
+    box.style.setProperty("--eh", eh + "px");
+    box.style.setProperty("--walk", (ENT_BASE.WALK / 1000) + "s");
+    box.style.setProperty("--dark", (ENT_BASE.DARK / 1000) + "s");
+    box.style.setProperty("--estep", (ENT_BASE.STEP / 1000) + "s");
+    box.style.setProperty("--zoom", ENT_ZOOM);
+    box.style.setProperty("--bw", Math.round(ch * 0.10) + "px");   // 札1枚の横（ワイプ高の10%）
+    box.style.setProperty("--bh", Math.round(ch * 0.05) + "px");   // 札1枚の縦
+    // レーザー4本＝左右2本ずつ・緑と黄を交互に。--lx根元／--la0,--la1振れ幅／--ld周期
+    var LASERS = [
+      { lx: "6%",  a0: "-42deg", a1: "-12deg", c: "#8dff4a", d: "1.7s" },
+      { lx: "22%", a0: "-26deg", a1: "4deg",   c: "#ffe94a", d: "1.45s" },
+      { lx: "78%", a0: "26deg",  a1: "-4deg",  c: "#ffe94a", d: "1.55s" },
+      { lx: "94%", a0: "42deg",  a1: "12deg",  c: "#8dff4a", d: "1.8s" }
+    ];
+    var lasers = LASERS.map(function (l) {
+      return '<i class="fx-ent-laser" style="--lx:' + l.lx + ';--la0:' + l.a0 + ';--la1:' + l.a1 +
+        ';--lc:' + l.c + ';--ld:' + l.d + '"></i>';
+    }).join("");
+    box.innerHTML =
+      '<div class="fx-ent-dark"></div>' +
+      '<div class="fx-ent-stage">' +
+        '<div class="fx-ent-spot"></div>' + lasers + '<div class="fx-ent-rays"></div>' +
+        '<div class="fx-ent-run"><div class="fx-ent-body"><i class="fx-ent-img"></i></div></div>' +
+      "</div>";
+    cam.appendChild(box);
+
+    setTimeout(function () {   // 大型ビジョン風のタイトル＝名簿名＋「的中！！」が上からドン
+      if (!box.isConnected) return;
+      var t = document.createElement("div");
+      t.className = "fx-ent-title";
+      var s = document.createElement("span");
+      s.textContent = (name || "") + "的中！！";
+      t.appendChild(s);
+      box.appendChild(t);
+      fitEntText(s, cw, ch, ENT_TITLE_K);
+    }, T.TITLE);
+
+    var rain = null, glint = null;
+    setTimeout(function () {   // キメ＝白フラッシュ・色つきに切替・ズーム・札吹雪・後光・きらめき
+      if (!box.isConnected) return;
+      box.classList.add("kime");
+      entBills(box, ch, 48, true);                       // まず一斉に
+      rain = setInterval(function () {                   // あとは降り続ける
+        if (!box.isConnected) { clearInterval(rain); return; }
+        entBills(box, ch, 5, false);
+      }, 130);
+      glint = setInterval(function () {
+        if (!box.isConnected) { clearInterval(glint); return; }
+        entGlints(box, cw, ch, ew, eh, 2);
+      }, 240);
+    }, T.KIME);
+    setTimeout(function () {   // キメ文字
+      if (!box.isConnected) return;
+      var c = document.createElement("div");
+      c.className = "fx-ent-cap";
+      var s = document.createElement("span");
+      s.textContent = ENT_CAP;
+      c.appendChild(s);
+      box.appendChild(c);
+      fitEntText(s, cw, ch, ENT_CAP_K);
+    }, T.CAP);
+    setTimeout(function () {
+      if (rain) clearInterval(rain);
+      if (glint) clearInterval(glint);
+      box.classList.add("out");
+    }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+  /** 金の札吹雪（burst＝キメの一斉・それ以外＝降り続け）。約35%は細い短冊、約40%はキャラの奥（.bk）に降る */
+  function entBills(box, ch, n, burst) {
+    for (var i = 0; i < n; i++) {
+      var p = document.createElement("span");
+      var strip = Math.random() < .35, back = Math.random() < .4;
+      p.className = "fx-ent-bill" + (strip ? " s" : "") + (back ? " bk" : "");
+      p.style.left = (Math.random() * 104 - 2) + "%";
+      p.style.setProperty("--k", (.7 + Math.random() * .55).toFixed(2));
+      p.style.setProperty("--d", (burst ? (1.3 + Math.random() * .9) : (1.9 + Math.random() * 1.4)).toFixed(2) + "s");
+      p.style.setProperty("--fall", Math.round(ch * 1.2) + "px");
+      p.style.setProperty("--sx", Math.round((Math.random() - .5) * ch * .45) + "px");
+      p.style.setProperty("--rot", Math.round((Math.random() - .5) * 720) + "deg");
+      if (burst) p.style.animationDelay = (Math.random() * .35).toFixed(2) + "s";
+      box.appendChild(p);
+      p.addEventListener("animationend", function () { this.remove(); });
+    }
+  }
+  /** きらめき＝キャラの上半身（ネックレス・肩）のあたりに「✦」を散らす */
+  function entGlints(box, cw, ch, ew, eh, n) {
+    for (var i = 0; i < n; i++) {
+      var s = document.createElement("span");
+      s.className = "fx-ent-glint";
+      s.textContent = "✦";
+      s.style.left = Math.round(cw / 2 + (Math.random() - .5) * ew * .9) + "px";
+      s.style.top = Math.round(ch - eh * ENT_ZOOM + eh * ENT_ZOOM * (0.10 + Math.random() * 0.5)) + "px";
+      s.style.fontSize = Math.round(ch * (.06 + Math.random() * .06)) + "px";
+      s.style.setProperty("--gd", (.6 + Math.random() * .5).toFixed(2) + "s");
+      box.appendChild(s);
+      s.addEventListener("animationend", function () { this.remove(); });
+    }
+  }
+  /** 文字を枠幅（94%）に収める＝基本の高さは k×ワイプ高・収まらない時だけ段階縮小（fitSambaKimeと同型） */
+  function fitEntText(span, camW, camH, k) {
+    var avail = camW * 0.94;
+    if (avail <= 0) return;
+    var fs = Math.round(camH * k);
+    span.style.fontSize = fs + "px";
+    var guard = 0;
+    while (span.scrollWidth > avail && fs > 14 && guard < 40) {
+      fs -= 2; span.style.fontSize = fs + "px"; guard++;
+    }
+  }
+
   /** その的中で出す専用演出を決める。effects（配列）があれば抽選＝1人で複数の演出を持てる（8/9 FB90）。
       ⚠️抽選は「的中IDのハッシュ」で決める（8/26 FB付・乱数廃止）。
         OBSの①トーク・②レース観戦・③は別ページで、非表示中も裏でそれぞれ発火している。
@@ -3866,7 +4028,7 @@
         同じ的中IDなら全ソースが同じ計算＝どのシーンに切り替えても同じ絵になる。 */
   /* ?fx=<演出キー> … 抽選をやめて指定の演出を必ず出す（検証用。本番のソースURLには付けない）。
        rain＝アイコン走行／yakumono（＋9/4の輝きスキン yakumono_gold／yakumono_rainbow）
-       ／adjust／slot／sumo／pray／tea／nicha／samba／dance／peye
+       ／adjust／slot／sumo／pray／tea／nicha／samba／dance／entrance（9/15）／peye
        ／hitouch・kanpai＝ダブル的中の共演（⚠️本来は2人揃わないと出ない＝これで単独確認できる。
          kanpai＝🍻乾杯・9/11追加→9/14から本番でも出る＝当てたレースがナイター/ミッドナイトの場のとき）
      window.__FX_FORCE … 同じことをリロードなしでやるためのフック（fxlabの「演出」選択が使う）。
@@ -3999,7 +4161,7 @@
      MEMBER_RATESに書くと通常レースでも出てしまう
      ⚠️ori（オリハルコンレース・9/2）も同じ理由で**入れない**＝低倍率限定（正しい置き場はLOWODDS_FX） */
   var FX_KNOWN = { rain: 1, yakumono: 1, slot: 1, sumo: 1, pray: 1, pray_ng: 1, tea: 1, nicha: 1,
-    samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1, morotade: 1 };
+    samba: 1, dance: 1, adjust: 1, peye: 1, thanks: 1, morotade: 1, entrance: 1 };
   function auditRates() {
     Object.keys(MEMBER_RATES).forEach(function (k) {
       var rates = MEMBER_RATES[k], sum = 0;
@@ -4347,7 +4509,7 @@
 
   var fxGen = 0;
   var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea, .fx-moro," +
-    " .fx-ori, .fx-adj, .fx-samba, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
+    " .fx-ori, .fx-adj, .fx-samba, .fx-dance, .fx-ent, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
   function clearHitFx() {
     fxGen++;
     var nodes = document.querySelectorAll(FX_ROOTS);
@@ -4461,6 +4623,7 @@
       : eff === "nicha" ? nichaTimes().END
       : eff === "samba" ? sambaTimes().END
       : eff === "dance" ? danceTimes().END
+      : eff === "entrance" ? entTimes().END   // プロレス入場（9/15・赤の3つ目）
       : eff === "adjust" ? adjTimes().END
       : eff === "peye" ? peyeTimes().END
       : eff === "galgod" ? galgodTimes().END
@@ -4497,6 +4660,7 @@
       else if (eff === "nicha") spawnTea(cam, key, "nicha");  // ニチャー（8/29・お茶の派生＝歩きは共通）
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
       else if (eff === "dance") spawnDance(cam, key);   // ダンス（8/25・赤の2つ目）
+      else if (eff === "entrance") spawnEntrance(cam, key, rc && rc.name); // プロレス入場（9/15・赤の3つ目＝タイトルは名簿名）
       else if (eff === "adjust") spawnAdjust(cam, key);
       else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
       else if (eff === "galgod") spawnGalgod(cam, key);        // ギャル神（9/1・青のガールズレース限定）

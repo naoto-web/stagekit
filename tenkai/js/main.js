@@ -315,13 +315,36 @@
     if (why) setHint(why);
   }
 
+  /** いま読み込んでいる時刻表の日付（yyyyMMdd）＝盤面が「どの日の出走表」で組まれたかの印 */
+  function ttDate() {
+    var tt = RaceCard.timetable;
+    return (tt && tt.date) ? String(tt.date) : '';
+  }
+
+  /** ローカルの今日（yyyyMMdd）。時刻表が届く前に保存データの鮮度を見るためだけに使う */
+  function localDateStr() {
+    var d = new Date();
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return '' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
+  }
+
+  /** 盤面がいま出しているレースと、配信のレースが同じか。
+      ⚠️**必ず日付ごと比べる**。場コードとR番号だけで比べると、翌日の同じ場・同じRを
+         「同じレース」と誤判定して盤面を組み直さない（9/21の事故＝前日の弥彦9Rが配信に出た）。
+      日付の無い旧保存データ（cur.date=''）は常に false ＝1回だけ必ず組み直される */
+  function sameRace(cur, sel) {
+    if (!cur || !sel) return false;
+    return !!cur.date && cur.date === ttDate() &&
+           String(cur.joCode) === sel.joCode && +cur.raceNo === sel.raceNo;
+  }
+
   /** 追従OFFのあいだ「配信は今どこか」を出す。
       OFFにしたこと自体は本人の操作だが、そのまま忘れて盤面だけ取り残される事故が起きる
       （8/12実機＝出走表は松山3R・盤面は松山2Rのまま）。ズレているときだけ赤く出す */
   function showFollowDiff(sel) {
     if (!followDiffEl) return;
     var cur = State.data.sel;
-    var same = !sel || (cur && String(cur.joCode) === sel.joCode && +cur.raceNo === sel.raceNo);
+    var same = !sel || sameRace(cur, sel);
     if (isFollowing() || same || !sel) { followDiffEl.textContent = ''; followDiffEl.hidden = true; return; }
     var v = RaceCard.findVenue(sel.joCode);
     followDiffEl.textContent = '配信は ' + (v ? v.name : '') + ' ' + sel.raceNo + 'R';
@@ -332,9 +355,10 @@
   function applyConsoleSel(sel) {
     if (!sel) return;
     if (!isFollowing()) { showFollowDiff(sel); return; }
-    /* すでに同じレースなら何もしない＝盤面を毎回作り直さない */
+    /* すでに同じレースなら何もしない＝盤面を毎回作り直さない（手で動かした隊列を消さない）。
+       ⚠️同一判定は sameRace＝**日付込み**。ここを場＋Rだけに戻すと前日の盤面が残る（9/21） */
     var cur = State.data.sel;
-    if (cur && String(cur.joCode) === sel.joCode && +cur.raceNo === sel.raceNo) { showFollowDiff(sel); return; }
+    if (sameRace(cur, sel)) { showFollowDiff(sel); return; }
     var v = RaceCard.findVenue(sel.joCode);
     if (!v || !RaceCard.findRace(v, sel.raceNo)) return; // 時刻表にまだ無い＝次の巡回で拾う
     venueSel.value = sel.joCode;
@@ -395,7 +419,8 @@
     var raceCars = RaceCard.carsOf(r);
 
     State.set({
-      sel: { joCode: String(v.joCode), raceNo: +r.no },
+      /* date＝この出走表を読んだ時刻表の日付。翌日の同じ場・同じRと見分ける唯一の手がかり */
+      sel: { date: ttDate(), joCode: String(v.joCode), raceNo: +r.no },
       raceCars: raceCars,
       names: RaceCard.namesOf(r),
       titleMain: v.name + ' ' + r.no + 'R',
@@ -635,6 +660,20 @@
     });
 
     State.load();
+
+    /* 別の日に組んだ盤面は、開いた瞬間に捨てる（9/21の事故の本丸）。
+       ⚠️時刻表の到着を待ってから判断してはいけない。すぐ下の render() が出力ビューへ
+          publish するので、待っているあいだに**前日の絵が配信に出る**。
+          正しい盤面は、時刻表が届いた直後の followTick が組み直す（数秒）。
+       ⚠️出力ビューでも実行する＝ドックを開かずに③へ切り替えたとき、出力は自分の
+          localStorage（＝前回ドックを使った日の盤面）を描くため。ここが最後の砦になる。
+          出力ビューは setPersist(false) 済みなので、捨てても保存は書き換わらない。
+       ・ミッドナイトの日跨ぎ運用中にドックを開き直すと盤面が一度空になる（追従が
+         前日開催の場を今日の時刻表で引けないため）。**空より前日の嘘のほうが害が大きい**
+         ＝この取り違えは承知のうえ。開いたままのドックは時刻表を引き直しても
+         追従が空振りするだけなので、この経路では消えない */
+    if (State.data.sel.date && State.data.sel.date !== localDateStr()) State.clearRace();
+
     buildRiders();
     bindControls();
     applyUrlParams();
@@ -649,7 +688,8 @@
     requestAnimationFrame(applyIconSize);
 
     /* 出走表は非同期で追いかける。取得できるまでは手入力で普通に使える。
-       起動時は選択を復元するだけで、盤面には自動適用しない（前回の配置を消さないため）。
+       起動時は選択を復元するだけで、盤面には自動適用しない（同じ日の続きなら前回の配置を消さない。
+       日が変わっていれば上の clearRace で既に捨ててあり、追従が届き次第ここから組み直される）。
        出力ビューは操作側から状態が流れてくるので、自分では取りにいかない（GASへの無駄打ち防止） */
     if (VIEW === 'control') {
       loadTimetable(false);

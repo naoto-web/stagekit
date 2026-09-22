@@ -45,8 +45,12 @@ var State = (function () {
       showNames: 'on',
       /* 車番→苗字。出走表を読み込むと入る */
       names: {},
-      /* 選択中のレース（再読込時に選び直すため保持） */
-      sel: { joCode: '', raceNo: 0 },
+      /* 選択中のレース（再読込時に選び直すため保持）。
+         date＝この盤面を組んだ時刻表の日付（yyyyMMdd）。
+         ⚠️日付を外さないこと。場コードとR番号だけだと**翌日の同じ場・同じR**を
+            「もう出している同じレース」と誤判定して盤面を組み直さない。
+            2026-09-21の配信で、前日の弥彦9Rの選手名・ラインが③に出たまま映った */
+      sel: { date: '', joCode: '', raceNo: 0 },
       /* 盤面左上に出す見出し。例 '和歌山 12R' / 'G3・Ｓ級決勝・三分戦' */
       titleMain: '',
       titleSub: '',
@@ -94,7 +98,11 @@ var State = (function () {
       }
     }
     if (raw.sel && typeof raw.sel === 'object') {
+      /* 日付の無い旧データ（9/21の修正より前の保存）は date='' になる。
+         呼び出し側は「今日の時刻表と一致しない＝組み直す」と判定するので、
+         初回だけ必ず組み直されて正しい盤面に入れ替わる */
       d.sel = {
+        date: /^\d{8}$/.test(String(raw.sel.date || '')) ? String(raw.sel.date) : '',
         joCode: String(raw.sel.joCode || ''),
         raceNo: parseInt(raw.sel.raceNo, 10) || 0
       };
@@ -194,6 +202,24 @@ var State = (function () {
           y: clamp(p.y, CONFIG.BOUNDS.minY, CONFIG.BOUNDS.maxY)
         };
       }
+      save();
+      emit();
+    },
+
+    /** レース由来のものだけ丸ごと捨てて「まだ何も選んでいない」状態に戻す（表示の好みは残す）。
+        別の日に組んだ盤面を配信に出さないために使う＝**空**より**前日の嘘**のほうが害が大きい。
+        見た目は初めてボードを開いたときと同じ（9車・名前なし・1列）＝人が見て「未設定」と分かる */
+    clearRace: function () {
+      var d0 = defaultData();
+      data.cars = d0.cars;
+      data.raceCars = [];
+      data.names = {};
+      data.lines = [];
+      data.lineupText = '';
+      data.titleMain = '';
+      data.titleSub = '';
+      data.sel = { date: '', joCode: '', raceNo: 0 };
+      data.riders = d0.riders;
       save();
       emit();
     },
