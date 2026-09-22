@@ -443,13 +443,15 @@ var DETAIL = (function () {
     var st = stats();
     var lk = st && st.lineK && st.lineK[roleKey];
     if (!lk) return el('div', '');
-    var rows = [{ k: '2', label: '2車ライン' }, { k: '3', label: '3車ライン' }, { k: '4', label: '4車以上' }]
+    // 🔑横＝自分のラインの車数、縦＝戦法（9/23 Naoto指定で縦横を入れ替え）。
+    //   車数は「その選手が実際に組んだ車数」だけ列に出す＝空の列を作らない。
+    var cols = [{ k: '2', label: '2車ライン' }, { k: '3', label: '3車ライン' }, { k: '4', label: '4車以上' }]
       .filter(function (df) { return lk[df.k] && lk[df.k].n; });
-    if (!rows.length) return el('div', '');
+    if (!cols.length) return el('div', '');
 
-    // 🔑縦＝自分のラインの車数、横＝戦法（9/23 Naoto「Y的に二分戦と三分戦以上で走り方が変わる」）。
-    //   戦法別の表と同じ見た目（.split）にそろえる。セルは「割合＋走数」で、10走未満は薄く
-    var cols = [
+    // 🔑率でなく回数で出す（9/23 Naoto指定）。ただし**分母が列ごとに違う**ので走数を必ず添える。
+    //   「3回」だけだと18走中なのか3走中なのか分からず、着順の表と違って上の段にも母数が無い。
+    var rows = [
       { label: '全体', get: function (c) { return c; } },
       { label: '二分戦', get: function (c) { return (c.sp || {})['2']; } },
       { label: '三分戦以上', get: function (c) { return (c.sp || {})['3']; } }
@@ -457,15 +459,16 @@ var DETAIL = (function () {
     var box = el('div', 'split');
     box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(96px, auto))';
     box.appendChild(el('div', 'split-label', 'ライン決着'));
-    cols.forEach(function (c) { box.appendChild(el('div', 'split-h', c.label)); });
-    rows.forEach(function (df) {
-      var base = lk[df.k];
-      box.appendChild(el('div', 'split-k' + (base.n >= 10 ? '' : ' is-thin'), df.label));
-      cols.forEach(function (c) {
-        var b = c.get(base);
+    cols.forEach(function (df) {
+      box.appendChild(el('div', 'split-h' + (lk[df.k].n >= 10 ? '' : ' is-thin'), df.label));
+    });
+    rows.forEach(function (rw) {
+      box.appendChild(el('div', 'split-k', rw.label));
+      cols.forEach(function (df) {
+        var b = rw.get(lk[df.k]);
         var cell = el('div', 'split-v' + ((b && b.n >= 10) ? '' : ' is-thin'));
         if (b && b.n) {
-          cell.appendChild(document.createTextNode(pct(b.hit, b.n)));
+          cell.appendChild(document.createTextNode(b.hit + '回'));
           cell.appendChild(el('span', 'split-n', b.n + '走'));
         } else cell.textContent = '—';
         box.appendChild(cell);
