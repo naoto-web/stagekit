@@ -95,10 +95,14 @@ function roleLabel(key) {
   return key || '';
 }
 
-/** 「1.2%」のような表示。分母が0なら「—」 */
+/** 「1.2%」のような表示。分母が0なら「—」
+    🔑小数第1位まで必ず出す（2026-09-23 Naoto「50%じゃなくて50.0%。桁を合わせるために」）。
+       `Math.round(…)/10` だけだと 50 や 0 のとき小数が消え、
+       戦法別の表で列の桁がずれて数字を見比べにくくなる。
+       丸め方は変えていない（表示の桁を固定するだけ）。 */
 function pct(n, d) {
   if (!d) return '—';
-  return Math.round((n / d) * 1000) / 10 + '%';
+  return (Math.round((n / d) * 1000) / 10).toFixed(1) + '%';
 }
 
 function toast(msg, isErr) {
