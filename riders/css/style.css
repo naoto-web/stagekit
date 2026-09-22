@@ -132,9 +132,16 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .race-time { font-variant-numeric: tabular-nums; color: var(--gold); }
 .race-cls, .race-line { font-size: 11px; color: var(--fg-dim); }
 
-.narabi { display: flex; align-items: center; gap: 3px; margin-bottom: 6px; flex-wrap: wrap; }
-.narabi-label { font-size: 11px; color: var(--fg-dim); margin-right: 3px; }
-.narabi-sep { color: var(--fg-dim); margin: 0 2px; }
+/* 競りの車を縦に積むので、単独の車は下端にそろえる（下の段が本来の並び） */
+.narabi { display: flex; align-items: flex-end; gap: 3px; margin-bottom: 6px; flex-wrap: wrap; }
+.narabi-label { font-size: 11px; color: var(--fg-dim); margin-right: 3px; padding-bottom: 3px; }
+.narabi-sep { color: var(--fg-dim); margin: 0 2px; padding-bottom: 3px; }
+/* 競り＝上が競りに行く側。細い縦線でつながりを示す */
+.narabi-seri {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 2px; border-radius: 6px; background: rgba(232, 181, 58, .14);
+  outline: 1px solid rgba(232, 181, 58, .45);
+}
 
 .car {
   display: inline-flex; align-items: center; justify-content: center;

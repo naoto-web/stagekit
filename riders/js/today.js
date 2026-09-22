@@ -62,17 +62,25 @@ var TODAY = (function () {
     if (r.lineType) head.appendChild(el('span', 'race-line', r.lineType));
     wrap.appendChild(head);
 
-    if (r.narabi) {
+    var lines = r.lines || [];
+    if (lines.length) {
       var nb = el('div', 'narabi');
       nb.appendChild(el('span', 'narabi-label', '並び'));
-      r.narabi.split(/\s+/).forEach(function (grp, gi) {
-        if (gi) nb.appendChild(el('span', 'narabi-sep', '／'));
-        grp.split('').forEach(function (c) { nb.appendChild(carChip(+c)); });
+      lines.forEach(function (line, li) {
+        if (li) nb.appendChild(el('span', 'narabi-sep', '／'));
+        line.forEach(function (pos) {
+          if (pos.length < 2) { nb.appendChild(carChip(pos[0])); return; }
+          // 競り＝縦に積む。上が競りに行く側（9/23 Naoto指定）
+          var stack = el('span', 'narabi-seri');
+          stack.title = '競り';
+          pos.forEach(function (c) { stack.appendChild(carChip(c)); });
+          nb.appendChild(stack);
+        });
       });
       wrap.appendChild(nb);
     }
 
-    var roleMap = rolesFromNarabi(r.narabi);
+    var roleMap = rolesFromLines(lines);
     var tbl = el('div', 'racers');
     r.racers.forEach(function (s) {
       var row = el('button', 'racer');
@@ -98,15 +106,18 @@ var TODAY = (function () {
     return wrap;
   }
 
-  /** 並び「541 23 6」から 車番→役割 を作る。
+  /** 構造化された並びから 車番→役割 を作る。
+      同じ位置に2人以上いる＝競りなので、その全員を「競り」にする。
       ⚠️これは「予想並び」なので当日の実際とは違うことがある。入力時の初期値にだけ使う。 */
-  function rolesFromNarabi(narabi) {
+  function rolesFromLines(lines) {
     var map = {};
-    String(narabi || '').split(/\s+/).filter(Boolean).forEach(function (grp) {
-      var cars = grp.split('').map(Number).filter(Boolean);
-      if (cars.length === 1) { map[cars[0]] = 'solo'; return; }
-      cars.forEach(function (c, i) {
-        map[c] = i === 0 ? 'head' : (i === 1 ? 'bante' : (i === 2 ? 'third' : 'fourth'));
+    (lines || []).forEach(function (line) {
+      var isSolo = line.length === 1 && line[0].length === 1;
+      line.forEach(function (pos, i) {
+        if (pos.length > 1) { pos.forEach(function (c) { map[c] = 'seri'; }); return; }
+        var car = pos[0];
+        if (isSolo) { map[car] = 'solo'; return; }
+        map[car] = i === 0 ? 'head' : (i === 1 ? 'bante' : (i === 2 ? 'third' : 'fourth'));
       });
     });
     return map;
