@@ -115,7 +115,12 @@ var LIST = (function () {
       row.type = 'button';
       row.dataset.reg = r.reg;
       // 一覧が持っている名前・級班・得点をそのまま渡す＝見出しが即座に出る
-      row.onclick = function () { DETAIL.open(r.reg, null, r); markCurrent(r.reg); };
+      // 出走表側にも同じ印を付ける＝タブを行き来しても「いま誰を見ているか」が変わらない（9/23 Naoto）
+      row.onclick = function () {
+        DETAIL.open(r.reg, null, r);
+        markCurrent(r.reg);
+        if (window.TODAY) TODAY.markCurrent(r.reg);
+      };
 
       var main = el('div', 'rrow-main');
       main.appendChild(el('span', 'rname', r.name || '（氏名未取得）'));

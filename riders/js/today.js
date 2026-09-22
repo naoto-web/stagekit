@@ -6,7 +6,10 @@
 
 var TODAY = (function () {
 
-  var state = { day: '0', data: null, venue: 0, loaded: false };
+  // curReg＝いま右に出している選手。出走表のどの行が選ばれているか分かるようにする
+  // （9/23 Naoto「出走表上で今どの選手選んでるか分かるように。選手一覧と同じように」）。
+  // ⚠️描画のたびに付け直す必要があるので state に持つ（場のタブを切り替えると行は作り直される）
+  var state = { day: '0', data: null, venue: 0, loaded: false, curReg: '' };
 
   function load(force) {
     var box = document.getElementById('racecard');
@@ -84,11 +87,15 @@ var TODAY = (function () {
     var tbl = el('div', 'racers');
     tbl.appendChild(racerHeader());
     r.racers.forEach(function (s) {
-      var row = el('button', 'racer-row racer');
+      var isCur = !!(s.reg && s.reg === state.curReg);
+      var row = el('button', 'racer-row racer' + (isCur ? ' is-current' : ''));
       row.type = 'button';
+      row.dataset.reg = s.reg || '';
       row.disabled = !s.reg;
       row.onclick = function () {
         if (!s.reg) return;
+        markCurrent(s.reg);
+        if (window.LIST) LIST.markCurrent(s.reg);   // 選手一覧へ戻ったときも同じ人が選ばれて見える
         DETAIL.open(s.reg, { jo: v.name, raceDate: (state.data || {}).date, raceNo: r.no, role: roleMap[s.no] || '' }, s);
       };
       row.appendChild(carChip(s.no));
@@ -163,9 +170,22 @@ var TODAY = (function () {
     document.getElementById('card-reload').addEventListener('click', function () { load(true); });
   }
 
+  /** いま選んでいる選手の行に印を付ける（選手一覧の markCurrent と同じ考え方）。
+      同じ人が同じ場で複数レースに出ることは無いが、**場をまたげば同じ登録番号が別のタブに出る**ので、
+      いま描かれている行を総当たりで付け替える。 */
+  function markCurrent(reg) {
+    state.curReg = reg || '';
+    var box = document.getElementById('racecard');
+    if (!box) return;
+    Array.prototype.forEach.call(box.querySelectorAll('.racer-row'), function (n) {
+      n.classList.toggle('is-current', !!state.curReg && n.dataset.reg === state.curReg);
+    });
+  }
+
   return {
     bind: bind,
     load: load,
+    markCurrent: markCurrent,
     ensure: function () { if (!state.loaded) load(false); }
   };
 })();

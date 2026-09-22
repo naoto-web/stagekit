@@ -171,6 +171,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .racer:hover:not(:disabled) { background: var(--panel2); }
 .racer:disabled { opacity: .5; cursor: default; }
+/* いま右に出している選手（9/23 Naoto「出走表上で今どの選手選んでるか分かるように」）。
+   ⚠️選手一覧の .rrow.is-current は「枠線＋panel2」だが、ここは**hoverも panel2** なので
+   同じにすると枠線だけの差になって見分けにくい。出走表だけ薄い青を敷いて区別する。 */
+.racer.is-current {
+  background: rgba(77, 163, 255, .16);
+  border-color: var(--accent);
+}
+.racer.is-current:hover:not(:disabled) { background: rgba(77, 163, 255, .22); }
 .racer-name { display: flex; flex-direction: column; min-width: 0; }
 .racer-name-main { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .racer-sub { font-size: 10px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
