@@ -70,7 +70,8 @@ var LIST = (function () {
       var row = el('button', 'rrow');
       row.type = 'button';
       row.dataset.reg = r.reg;
-      row.onclick = function () { DETAIL.open(r.reg); markCurrent(r.reg); };
+      // 一覧が持っている名前・級班・得点をそのまま渡す＝見出しが即座に出る
+      row.onclick = function () { DETAIL.open(r.reg, null, r); markCurrent(r.reg); };
 
       var main = el('div', 'rrow-main');
       main.appendChild(el('span', 'rname', r.name || '（氏名未取得）'));

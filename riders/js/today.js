@@ -80,7 +80,7 @@ var TODAY = (function () {
       row.disabled = !s.reg;
       row.onclick = function () {
         if (!s.reg) return;
-        DETAIL.open(s.reg, { jo: v.name, raceDate: (state.data || {}).date, raceNo: r.no, role: roleMap[s.no] || '' });
+        DETAIL.open(s.reg, { jo: v.name, raceDate: (state.data || {}).date, raceNo: r.no, role: roleMap[s.no] || '' }, s);
       };
       row.appendChild(carChip(s.no));
       var nm = el('div', 'racer-name');

@@ -18,19 +18,35 @@ var DETAIL = (function () {
   var ctx = null;     // 出走表から開いたときの文脈（場・日付・R・役割）
   var statsAll = null;
   var dirty = false;
+  var cache = {};     // 登録番号 → 取得済みの詳細。同じ選手を開き直したら往復なしで出す
+  var seq = 0;        // 連打したとき、あとから届いた古い返事で上書きしないための番号
 
-  function open(reg, context) {
+  /** seed＝一覧や出走表が持っている名前・級班・得点。GASの返事を待たずに見出しだけ先に出す */
+  function open(reg, context, seed) {
     ctx = context || null;
-    var box = document.getElementById('detail');
-    clear(box);
-    box.appendChild(el('div', 'empty', '読み込み中…'));
     dirty = false;
+    var box = document.getElementById('detail');
+    var my = ++seq;
+
+    if (cache[reg]) {
+      cur = cache[reg];
+      if (!statsAll) API.stats().then(function (s) { statsAll = s || { riders: {} }; if (seq === my) render(); });
+      render();
+      return;
+    }
+
+    clear(box);
+    if (seed) box.appendChild(head(Object.assign({ reg: reg }, seed), true));
+    box.appendChild(el('div', 'empty', '詳細を読み込み中…'));
 
     Promise.all([API.rider(reg), API.stats()]).then(function (res) {
+      if (seq !== my) return;          // すでに別の選手を開いている
       cur = res[0];
+      cache[reg] = cur;
       statsAll = res[1] || { riders: {} };
       render();
     }).catch(function (e) {
+      if (seq !== my) return;
       clear(box);
       box.appendChild(el('div', 'empty', '開けませんでした：' + e.message));
     });
@@ -55,10 +71,11 @@ var DETAIL = (function () {
     box.appendChild(featureSection());
     box.appendChild(obsSection());
     box.appendChild(refSection(r));
-    if (cur.comments && cur.comments.length) box.appendChild(commentsSection());
+    box.appendChild(commentsSection());
   }
 
-  function head(r) {
+  /** skeleton=true は「読み込み中の仮の見出し」＝右側のボタン類は出さない */
+  function head(r, skeleton) {
     var h = el('div', 'dt-head');
     var left = el('div', 'dt-head-l');
     var n = el('div', 'dt-name');
@@ -77,6 +94,7 @@ var DETAIL = (function () {
     tags.appendChild(el('span', 'tag tag-reg', '登録 ' + r.reg));
     left.appendChild(tags);
     h.appendChild(left);
+    if (skeleton) return h;
 
     var right = el('div', 'dt-head-r');
     var sync = el('button', 'btn btn-sm', '公式データを更新');
@@ -489,13 +507,37 @@ var DETAIL = (function () {
 
   /* ── ⑦本人コメント ── */
 
+  /** 本人コメントは開いたときだけ取りに行く（3,430行を毎回読まない＝詳細が速くなる） */
   function commentsSection() {
-    var s = section('本人のレース後コメント', '内部限定。配信・note・SNSには出さないこと。', true);
-    (cur.comments || []).forEach(function (c) {
-      var row = el('div', 'cmt');
-      row.appendChild(el('div', 'cmt-head', [c.date, c.jo, c.raceNo ? c.raceNo + 'R' : '', c.rank ? c.rank + '着' : '', c.kimarite].filter(Boolean).join(' ')));
-      row.appendChild(el('div', 'cmt-body', c.body));
-      s.body.appendChild(row);
+    var s = section('本人のレース後コメント', '内部限定。配信・note・SNSには出さないこと。開くと読み込みます。', true);
+    var reg = cur.rider.reg;
+    var fill = function (list) {
+      clear(s.body);
+      if (!list.length) { s.body.appendChild(el('div', 'muted sm', 'コメントはありません。')); return; }
+      list.forEach(function (c) {
+        var row = el('div', 'cmt');
+        row.appendChild(el('div', 'cmt-head', [c.date, c.jo, c.raceNo ? c.raceNo + 'R' : '', c.rank ? c.rank + '着' : '', c.kimarite].filter(Boolean).join(' ')));
+        row.appendChild(el('div', 'cmt-body', c.body));
+        s.body.appendChild(row);
+      });
+    };
+    if (cur.comments) { fill(cur.comments); return s.root; }
+
+    var loading = false;
+    // section() が先に折りたたみを切り替えるので、ここに来た時点で「開いた直後」かを見る
+    s.root.querySelector('.sec-head').addEventListener('click', function () {
+      if (loading || cur.comments || s.root.dataset.folded === '1') return;
+      loading = true;
+      clear(s.body);
+      s.body.appendChild(el('div', 'muted sm', '読み込み中…'));
+      API.comments(reg).then(function (j) {
+        cur.comments = j.comments || [];
+        fill(cur.comments);
+      }).catch(function (e) {
+        clear(s.body);
+        s.body.appendChild(el('div', 'muted sm', '読み込めませんでした：' + e.message));
+        loading = false;
+      });
     });
     return s.root;
   }

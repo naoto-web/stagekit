@@ -48,6 +48,8 @@
       if (!j || !j.ok) throw new Error('ng');
       n.dataset.ok = 'ok';
       n.textContent = CONFIG.IS_TEST_BACKEND ? '【テスト接続】' : '接続OK';
+      // 役割別の集計（1.4MB）は起動時に裏で取っておく＝最初の1人目を開くときに待たせない
+      API.stats();
       return LIST.load(document.getElementById('kyuhan-sel').value, true);
     }).catch(function () {
       n.dataset.ok = 'ng';

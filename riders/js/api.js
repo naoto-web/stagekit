@@ -52,6 +52,7 @@ var API = (function () {
     stats: stats,
     roster: function (kyuhan) { return get('roster', { kyuhan: kyuhan }); },
     rider: function (reg) { return get('rider', { reg: reg }); },
+    comments: function (reg) { return get('comments', { reg: reg }); },
     card: function (reg) { return get('card', { reg: reg }); },
     racecard: function (day, refresh) { return get('racecard', { day: day, refresh: refresh ? 1 : '' }); },
     ping: function () { return fetch(CONFIG.GAS_URL + '?action=ping').then(function (r) { return r.json(); }); },
