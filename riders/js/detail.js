@@ -89,6 +89,7 @@ var DETAIL = (function () {
     box.appendChild(basics(r));
     box.appendChild(featureSection());
     box.appendChild(rolesSection());
+    box.appendChild(typeSection());
     box.appendChild(sSection());
     box.appendChild(followSection());
     box.appendChild(obsSection());
@@ -385,23 +386,77 @@ var DETAIL = (function () {
     var st = stats();
     var lk = st && st.lineK && st.lineK[roleKey];
     if (!lk) return el('div', '');
-    var defs = [{ k: '2', label: '2車ライン' }, { k: '3', label: '3車ライン' }, { k: '4', label: '4車以上' }];
-    var box = el('div', 'linek');
-    box.appendChild(el('span', 'linek-label', 'ライン決着'));
-    var any = false;
-    defs.forEach(function (df) {
-      var c = lk[df.k];
-      if (!c || !c.n) return;
-      any = true;
-      var item = el('span', 'linek-i' + (c.n >= 10 ? '' : ' is-thin'));
-      item.appendChild(el('span', 'linek-k', df.label));
-      item.appendChild(el('span', 'linek-v', pct(c.hit, c.n)));
-      item.appendChild(el('span', 'linek-n', c.n + '走'));
-      box.appendChild(item);
+    var rows = [{ k: '2', label: '2車ライン' }, { k: '3', label: '3車ライン' }, { k: '4', label: '4車以上' }]
+      .filter(function (df) { return lk[df.k] && lk[df.k].n; });
+    if (!rows.length) return el('div', '');
+
+    // 🔑縦＝自分のラインの車数、横＝戦法（9/23 Naoto「Y的に二分戦と三分戦以上で走り方が変わる」）。
+    //   戦法別の表と同じ見た目（.split）にそろえる。セルは「割合＋走数」で、10走未満は薄く
+    var cols = [
+      { label: '全体', get: function (c) { return c; } },
+      { label: '二分戦', get: function (c) { return (c.sp || {})['2']; } },
+      { label: '三分戦以上', get: function (c) { return (c.sp || {})['3']; } }
+    ];
+    var box = el('div', 'split');
+    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(96px, auto))';
+    box.appendChild(el('div', 'split-label', 'ライン決着'));
+    cols.forEach(function (c) { box.appendChild(el('div', 'split-h', c.label)); });
+    rows.forEach(function (df) {
+      var base = lk[df.k];
+      box.appendChild(el('div', 'split-k' + (base.n >= 10 ? '' : ' is-thin'), df.label));
+      cols.forEach(function (c) {
+        var b = c.get(base);
+        var cell = el('div', 'split-v' + ((b && b.n >= 10) ? '' : ' is-thin'));
+        if (b && b.n) {
+          cell.appendChild(document.createTextNode(pct(b.hit, b.n)));
+          cell.appendChild(el('span', 'split-n', b.n + '走'));
+        } else cell.textContent = '—';
+        box.appendChild(cell);
+      });
     });
-    if (!any) return el('div', '');
-    box.appendChild(el('span', 'muted sm', '2車＝1,2着／3車以上＝1〜3着が自分のライン'));
+    var note = el('div', 'split-note muted sm', '2車＝1,2着／3車以上＝1〜3着が自分のライン。自分が何着かは問わない');
+    note.style.gridColumn = '1 / -1';
+    box.appendChild(note);
     return box;
+  }
+
+  /* ── ④.3 レース種別ごと（9/23 Naoto相談→役割を問わない着順で出す） ── */
+
+  /** 予選／準決勝／決勝…ごとの着順。
+      🔑役割×種別まで割らない＝4ヶ月だと1人の決勝は数走しかなく、役割で割ると全部1〜2走の
+         ノイズになる。役割を問わない「この種別で走ったとき」の着順が、数字として残る限界。
+      🔑出走表から開いたときは**その日のレース種別の行に印**を付ける（役割の初期選択と同じ思想）。
+      ⚠️チャレンジ戦（A3）には特選・初特選が無く「選抜」がある＝無い種別の行は出さない。 */
+  function typeSection() {
+    var s = section('レース種別ごと', '役割を問わず、その種別のレースを走ったときの着順。' + windowText());
+    var st = stats();
+    var bt = st && st.byType;
+    var order = (window.RACETYPE && RACETYPE.RACE_TYPES) || [];
+    var types = order.filter(function (t) { return bt && bt[t] && bt[t].n; });
+    if (!types.length) {
+      s.body.appendChild(el('div', 'muted sm', 'この期間の集計データがありません。'));
+      return s.root;
+    }
+    var curType = (ctx && ctx.cls && window.RACETYPE) ? RACETYPE.raceTypeOf(ctx.cls) : '';
+    var cols = [
+      { label: '1着', get: function (b) { return pct(b.win, b.n); } },
+      { label: '2着内', get: function (b) { return pct(b.top2, b.n); } },
+      { label: '3着内', get: function (b) { return pct(b.top3, b.n); } },
+      { label: '4着内', get: function (b) { return pct(b.top4, b.n); } },
+      { label: '走数', get: function (b) { return b.n + '走'; } }
+    ];
+    var box = el('div', 'split');
+    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(68px, auto))';
+    box.appendChild(el('div', 'split-label', '種別'));
+    cols.forEach(function (c) { box.appendChild(el('div', 'split-h', c.label)); });
+    types.forEach(function (t) {
+      var b = bt[t];
+      var cls = (b.n >= 10 ? '' : ' is-thin') + (t === curType ? ' is-cur' : '');
+      box.appendChild(el('div', 'split-k' + cls, t + (t === curType ? ' ◀ 今日' : '')));
+      cols.forEach(function (c) { box.appendChild(el('div', 'split-v' + cls, c.get(b))); });
+    });
+    s.body.appendChild(box);
+    return s.root;
   }
 
   function figure(box, label, val) {

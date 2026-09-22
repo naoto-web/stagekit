@@ -252,18 +252,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .role-figs-sub { margin-top: -4px; gap: 16px; }
 .role-figs-sub .fig-v { font-size: 14px; color: #cfd8e3; }
 
-/* ライン決着。自分のラインの車数ごとに条件が変わるので、戦法別とは別の行に出す */
-.linek {
-  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
-  margin: 0 0 10px; padding: 7px 10px;
-  background: rgba(255, 255, 255, .03); border-radius: 7px;
-}
-.linek-label { font-size: 11px; color: var(--fg-dim); }
-.linek-i { display: inline-flex; align-items: baseline; gap: 6px; }
-.linek-i.is-thin { opacity: .45; }
-.linek-k { font-size: 11px; color: var(--fg-dim); }
-.linek-v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.linek-n { font-size: 10px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+/* ライン決着とレース種別は、戦法別と同じ表（.split）で出す。
+   セルの中の走数（小さい灰色）と、出走表から開いたときの「今日の種別」の行（青） */
+.split-n { font-size: 10px; color: var(--fg-dim); font-weight: 400; margin-left: 5px; font-variant-numeric: tabular-nums; }
+.split-k.is-cur, .split-v.is-cur { color: var(--accent); }
+.split-k.is-cur { font-weight: 700; }
 
 /* S取り＝車番ごとの回数。内枠ほど取りやすいので並びで見せる */
 .scar { display: flex; gap: 10px; flex-wrap: wrap; margin: 2px 0 10px; }

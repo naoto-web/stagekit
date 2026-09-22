@@ -96,7 +96,8 @@ var TODAY = (function () {
         if (!s.reg) return;
         markCurrent(s.reg);
         if (window.LIST) LIST.markCurrent(s.reg);   // 選手一覧へ戻ったときも同じ人が選ばれて見える
-        DETAIL.open(s.reg, { jo: v.name, raceDate: (state.data || {}).date, raceNo: r.no, role: roleMap[s.no] || '' }, s);
+        // cls（レース種別）も渡す＝詳細の「レース種別ごと」で今日の種別の行に印が付く
+        DETAIL.open(s.reg, { jo: v.name, raceDate: (state.data || {}).date, raceNo: r.no, role: roleMap[s.no] || '', cls: r.cls || '' }, s);
       };
       row.appendChild(carChip(s.no));
 
