@@ -20,11 +20,13 @@ var DETAIL = (function () {
   var dirty = false;
   var cache = {};     // 登録番号 → 取得済みの詳細。同じ選手を開き直したら往復なしで出す
   var seq = 0;        // 連打したとき、あとから届いた古い返事で上書きしないための番号
+  var editing = {};   // メモ欄ごとに「いま書いているか」。既定は読むだけ（下の noteField）
 
   /** seed＝一覧や出走表が持っている名前・級班・得点。GASの返事を待たずに見出しだけ先に出す */
   function open(reg, context, seed) {
     ctx = context || null;
     dirty = false;
+    editing = {};
     var box = document.getElementById('detail');
     var my = ++seq;
 
@@ -200,14 +202,57 @@ var DETAIL = (function () {
     if (!defs.length) chips.appendChild(el('span', 'muted sm', 'タグ未定義（スプレッドシートの「タグ定義」で足せます）'));
     card.appendChild(chips);
 
-    // 1行メモ
-    var inp = el('input', 'role-note');
-    inp.type = 'text';
-    inp.placeholder = role.hint;
-    inp.value = cur.memo['note' + key] || '';
-    inp.oninput = function () { cur.memo['note' + key] = inp.value; markDirty(); };
-    card.appendChild(inp);
+    card.appendChild(noteField('note' + key, role.hint));
     return card;
+  }
+
+  /* ── メモ欄＝ふだんは全文を読むだけ。「編集」を押したその場で書ける ──
+     🔑1行の入力欄だと長い文の後ろが見えなくなる（9/22 Naoto指摘）。
+       読む回数のほうが多いので、既定を「読む」にして、書くときだけ開く。
+       書くときは高さが中身に合わせて伸びるので、ここでも文字が隠れない。 */
+  function noteField(field, placeholder) {
+    var wrap = el('div', 'note-field');
+    paint();
+    return wrap;
+
+    function paint() {
+      clear(wrap);
+      var val = String(cur.memo[field] || '');
+
+      if (!editing[field]) {
+        wrap.appendChild(el('div', 'note-view' + (val ? '' : ' is-empty'), val || placeholder));
+        var b = el('button', 'note-edit', val ? '編集' : '書く');
+        b.type = 'button';
+        b.onclick = function () { editing[field] = true; paint(); };
+        wrap.appendChild(b);
+        return;
+      }
+
+      var ta = el('textarea', 'note-input');
+      ta.rows = 1;
+      ta.placeholder = placeholder;
+      ta.value = val;
+      ta.oninput = function () { cur.memo[field] = ta.value; grow(ta); markDirty(); };
+      // Escで読むモードへ戻す（打ち間違えて開いたときのため）
+      ta.onkeydown = function (e) { if (e.key === 'Escape') { editing[field] = false; paint(); } };
+      wrap.appendChild(ta);
+
+      var done = el('button', 'note-edit is-done', '完了');
+      done.type = 'button';
+      done.onclick = function () { editing[field] = false; paint(); };
+      wrap.appendChild(done);
+
+      grow(ta);
+      setTimeout(function () { grow(ta); }, 0);   // まだ画面に載っていないときの保険
+      ta.focus();
+      try { ta.setSelectionRange(val.length, val.length); } catch (e) {}
+    }
+  }
+
+  /** 中身の高さに合わせて伸ばす（縦スクロールを出さない） */
+  function grow(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = (ta.scrollHeight + 2) + 'px';
   }
 
   function figure(box, label, val) {
@@ -241,22 +286,12 @@ var DETAIL = (function () {
     var st = stats();
     var bs = st && st.roles && st.roles.bante;
     if (bs && bs.n) fl.appendChild(el('div', 'muted sm', '参考：番手' + bs.n + '走で3着内 ' + pct(bs.top3, bs.n)));
-    var note = el('input', 'inp');
-    note.type = 'text';
-    note.placeholder = 'そう判断した根拠（例：9/12小倉7R 番手から離れた）';
-    note.value = cur.memo.followNote || '';
-    note.oninput = function () { cur.memo.followNote = note.value; markDirty(); };
-    fl.appendChild(note);
+    fl.appendChild(noteField('followNote', 'そう判断した根拠（例：9/12小倉7R 番手から離れた）'));
     wrap.appendChild(fl);
 
     var ft = el('div', 'feat-text');
     ft.appendChild(el('div', 'lbl', '選手特徴'));
-    var ta = el('textarea', 'ta');
-    ta.rows = 5;
-    ta.placeholder = '事実と観察を書く。人の評価は書かない（要件§5-2）';
-    ta.value = cur.memo.feature || '';
-    ta.oninput = function () { cur.memo.feature = ta.value; markDirty(); };
-    ft.appendChild(ta);
+    ft.appendChild(noteField('feature', '事実と観察を書く。人の評価は書かない'));
     wrap.appendChild(ft);
 
     s.body.appendChild(wrap);
@@ -287,6 +322,7 @@ var DETAIL = (function () {
     API.saveMemo(reg, cur.memo).then(function (j) {
       cur.memo = j.memo;
       dirty = false;
+      editing = {};   // 保存したら読むモードへ戻す
       Array.prototype.forEach.call(document.querySelectorAll('[data-role="savestate"]'), function (n) { n.textContent = '保存しました'; });
       toast('保存しました');
       LIST.touch(reg, { hasMemo: !!(String(cur.memo.feature || '').trim() || String(cur.memo.follow || '').trim()) });
@@ -361,9 +397,12 @@ var DETAIL = (function () {
     renderChips();
     f.appendChild(chips);
 
-    var body = el('input', 'inp');
-    body.type = 'text';
-    body.placeholder = '見たままを1行で（例：番手から出ないで4着）';
+    // ⚠️ここは「これから書く」欄なので読むモードは付けない。
+    //   代わりに高さが中身に合わせて伸びる（1行の入力欄だと後ろが見えなくなるため）
+    var body = el('textarea', 'inp ta-grow');
+    body.rows = 1;
+    body.placeholder = '見たままを書く（例：番手から出ないで4着）';
+    body.oninput = function () { grow(body); };
     f.appendChild(body);
 
     var bar = el('div', 'obs-form-bar');
