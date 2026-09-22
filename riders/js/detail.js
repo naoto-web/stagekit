@@ -319,20 +319,22 @@ var DETAIL = (function () {
     if (!defs.some(function (d) { return sp[d.k] && sp[d.k].n; })) return el('div', '');
 
     // 列＝本体（role-figs）と同じ並び。ここを変えるときは roleCard 側も揃えること
+    // 🔑率でなく回数で出す（9/23 Naoto指定・着順の表とそろえる）。
+    //   分母は行ごとに1つ（＝右端の走数）なので、ライン決着と違って各セルに走数を添えなくてよい
     var cols = [
-      { label: '1着', get: function (b) { return pct(b.win, b.n); } },
-      { label: '2着内', get: function (b) { return pct(b.top2, b.n); } },
-      { label: '3着内', get: function (b) { return pct(b.top3, b.n); } },
-      { label: '4着内', get: function (b) { return pct(b.top4, b.n); } }
+      { label: '1着', get: function (b) { return b.win; } },
+      { label: '2着内', get: function (b) { return b.top2; } },
+      { label: '3着内', get: function (b) { return b.top3; } },
+      { label: '4着内', get: function (b) { return b.top4; } }
     ];
     detailCols(roleKey).forEach(function (c) {
-      cols.push({ label: c.short, get: function (b) { return pct(c.get(b) || 0, b.n); } });
+      cols.push({ label: c.short, get: function (b) { return c.get(b) || 0; } });
     });
-    cols.push({ label: '走数', get: function (b) { return b.n + '走'; } });
+    cols.push({ label: '走数', unit: '走', get: function (b) { return b.n; } });
 
     var box = el('div', 'split');
-    // 列は中身に合わせて詰める（下限68px）。1frで伸ばすと3列のとき間延びして本体と視線が切れる
-    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(68px, auto))';
+    // 回数は「12回」程度で率より短いので下限を詰める（列が増えても900pxに収まる）
+    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(56px, auto))';
 
     box.appendChild(el('div', 'split-label', '戦法別'));
     cols.forEach(function (c) { box.appendChild(el('div', 'split-h', c.label)); });
@@ -342,7 +344,9 @@ var DETAIL = (function () {
       var thin = (b && b.n >= 10) ? '' : ' is-thin';
       box.appendChild(el('div', 'split-k' + thin, d.label));
       cols.forEach(function (c) {
-        box.appendChild(el('div', 'split-v' + thin, (b && b.n) ? c.get(b) : '—'));
+        if (!(b && b.n)) { box.appendChild(el('div', 'split-v' + thin, '—')); return; }
+        var v = c.get(b);
+        box.appendChild(el('div', 'split-v' + thin + (v ? '' : ' is-zero'), v + (c.unit || '回')));
       });
     });
 
@@ -406,7 +410,8 @@ var DETAIL = (function () {
     var s = [];
     if (roleKey === 'head') {
       s[0] = [{ label: '逃', v: d.nige1 || 0 }, { label: '捲', v: d.makuri1 || 0 }];
-      s[1] = [{ label: '番手に差され', v: d.sashed2 || 0 }];
+      // ⚠️「逃」と「番手に差され」は重なる（逃げて自分の番手に差されたら両方に入る）
+      s[1] = [{ label: '逃', v: d.nige2 || 0 }, { label: '番手に差され', v: d.sashed2 || 0 }];
       s[2] = [{ label: 'ズブズブ', v: d.zubu || 0 }];
     } else if (roleKey === 'bante') {
       s[0] = [{ label: '差し', v: d.sashi1 || 0 }];
@@ -424,6 +429,7 @@ var DETAIL = (function () {
     if (roleKey === 'head') return [
       { label: '逃げ1着', short: '逃げ1着', get: d('nige1') },
       { label: '捲り1着', short: '捲り1着', get: d('makuri1') },
+      { label: '逃げ2着', short: '逃げ2着', get: d('nige2') },
       { label: '番手に差されて2着', short: '差され2着', get: d('sashed2') },
       { label: 'ズブズブ', short: 'ズブズブ', get: d('zubu') }
     ];

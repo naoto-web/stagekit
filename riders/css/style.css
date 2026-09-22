@@ -260,6 +260,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .split-n { font-size: 10px; color: var(--fg-dim); font-weight: 400; margin-left: 5px; font-variant-numeric: tabular-nums; }
 .split-k.is-cur, .split-v.is-cur { color: var(--accent); }
 .split-k.is-cur { font-weight: 700; }
+/* 0回は薄く＝値のあるところだけ目に入るように（出走表の数字と同じ扱い） */
+.split-v.is-zero { opacity: .3; }
 
 /* S取り＝車番ごとの回数。内枠ほど取りやすいので並びで見せる */
 .scar { display: flex; gap: 10px; flex-wrap: wrap; margin: 2px 0 10px; }
