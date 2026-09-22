@@ -392,7 +392,7 @@ var DETAIL = (function () {
       for (var m = 0; m < 9; m++) {
         var cell = el('div', 'rank-sub');
         (sub[m] || []).forEach(function (x) {
-          var line = el('div', 'rank-sub-i' + (x.v ? '' : ' is-thin'));
+          var line = el('div', 'rank-sub-i' + (x.v ? '' : ' is-thin') + (x.sub ? ' is-note' : ''));
           line.appendChild(el('span', 'rank-sub-k', x.label));
           line.appendChild(el('span', 'rank-sub-v', x.v + '回'));
           cell.appendChild(line);
@@ -410,8 +410,12 @@ var DETAIL = (function () {
     var s = [];
     if (roleKey === 'head') {
       s[0] = [{ label: '逃', v: d.nige1 || 0 }, { label: '捲', v: d.makuri1 || 0 }];
-      // ⚠️「逃」と「番手に差され」は重なる（逃げて自分の番手に差されたら両方に入る）
-      s[1] = [{ label: '逃', v: d.nige2 || 0 }, { label: '番手に差され', v: d.sashed2 || 0 }];
+      // 2着は決まり手で排他に並べる（出走表の逃・捲と同じ言葉）。差・マは出たときだけ。
+      // ⚠️「番手に差され」は決まり手と**別の軸**で重なるので、`sub:true` で「うち」と添える
+      s[1] = [{ label: '逃', v: d.nige2 || 0 }, { label: '捲', v: d.makuri2 || 0 }];
+      if (d.sashi2) s[1].push({ label: '差', v: d.sashi2 });
+      if (d.mark) s[1].push({ label: 'マ', v: d.mark });
+      s[1].push({ label: 'うち番手に差され', v: d.sashed2 || 0, sub: true });
       s[2] = [{ label: 'ズブズブ', v: d.zubu || 0 }];
     } else if (roleKey === 'bante') {
       s[0] = [{ label: '差し', v: d.sashi1 || 0 }];
@@ -430,7 +434,8 @@ var DETAIL = (function () {
       { label: '逃げ1着', short: '逃げ1着', get: d('nige1') },
       { label: '捲り1着', short: '捲り1着', get: d('makuri1') },
       { label: '逃げ2着', short: '逃げ2着', get: d('nige2') },
-      { label: '番手に差されて2着', short: '差され2着', get: d('sashed2') },
+      { label: '捲り2着', short: '捲り2着', get: d('makuri2') },
+      { label: 'うち番手に差され', short: '番手差され', get: d('sashed2') },
       { label: 'ズブズブ', short: 'ズブズブ', get: d('zubu') }
     ];
     if (roleKey === 'bante') return [
