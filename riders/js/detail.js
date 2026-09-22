@@ -68,6 +68,15 @@ var DETAIL = (function () {
     return (statsAll && statsAll.riders && statsAll.riders[reg]) || null;
   }
 
+  /** 集計期間の一言（例「数字は直近4ヶ月（2026/05/22〜2026/09/22）を数えたものです。」）。
+      🔑期間は stats.json 側が持つ＝`build_stats.js` の `WINDOW_MONTHS` を変えれば文言も追いつく。
+      古い stats.json（期間を持たない版）が配られても落ちないよう、無ければ何も出さない。 */
+  function windowText() {
+    var w = statsAll && statsAll.window;
+    if (!w || !w.months) return '';
+    return '数字は直近' + w.months + 'ヶ月（' + w.from + '〜' + w.to + '）を数えたものです。';
+  }
+
   /* ══════════ 描画 ══════════ */
 
   function render() {
@@ -158,7 +167,9 @@ var DETAIL = (function () {
       使い方が「今日この人は番手だから番手を見る」なので、全部出すと目的の1つを探すことになる。
       ボタンには走数を出し、メモがある役割には印（右上の点）を付ける。 */
   function rolesSection() {
-    var s = section('役割別の動き', '見たい役割を押すと、その役割の成績とメモが出ます。');
+    // 🔑「いつからいつまでを数えた数字か」を必ず出す（9/23 Naoto指示で全期間→直近4ヶ月に変更）。
+    //   期間は stats.json が持っているので、集計側で期間を変えれば画面の文言も自動で追いつく
+    var s = section('役割別の動き', '見たい役割を押すと、その役割の成績とメモが出ます。' + windowText());
     var tabs = el('div', 'role-tabs');
     var panel = el('div', 'role-panel');
     s.body.appendChild(tabs);
@@ -567,7 +578,8 @@ var DETAIL = (function () {
   /* ── ⑥参考 ── */
 
   function refSection(r) {
-    var s = section('参考', '', true);
+    // 並び実績・落車欠場も同じ期間を数えたもの（9/23 Naoto「他のデータも同様に」）
+    var s = section('参考', windowText(), true);
     var st = stats();
 
     if (st && st.lines && st.lines.length) {
