@@ -4,9 +4,10 @@
    画面の上から順に
      ①見出し（名前・級班・得点・出自）
      ②基礎データ（keirin.jp）
-     ③役割別 6区分＝自動集計の実績＋タグ＋1行メモ
-     ④特徴（自由記述）と追走能力
-     ⑤観察ログ（1件ずつ積む・配信OKの印）
+     ③選手特徴（自由記述）＝いちばん大事な手書きなので上に置く（9/23 Naoto指定）
+     ④役割別 6区分＝自動集計の実績＋タグ＋メモ
+     ⑤追走能力
+     ⑥観察ログ（1件ずつ積む・配信OKの印）
      ⑥参考（級班履歴・出場予定・人間関係・競輪学校）
      ⑦本人コメント（内部限定・折りたたみ）
    ⚠️⑦と④は出力ビューへ出さない。出るのは①②③の数字と、⑤のうち配信OKのものだけ。
@@ -73,8 +74,9 @@ var DETAIL = (function () {
 
     box.appendChild(head(r));
     box.appendChild(basics(r));
-    box.appendChild(rolesSection());
     box.appendChild(featureSection());
+    box.appendChild(rolesSection());
+    box.appendChild(followSection());
     box.appendChild(obsSection());
     box.appendChild(refSection(r));
     box.appendChild(commentsSection());
@@ -214,7 +216,7 @@ var DETAIL = (function () {
      🔑1行の入力欄だと長い文の後ろが見えなくなる（9/22 Naoto指摘）。
        読む回数のほうが多いので、既定を「読む」にして、書くときだけ開く。
        書くときは高さが中身に合わせて伸びるので、ここでも文字が隠れない。 */
-  function noteField(field, placeholder) {
+  function noteField(field, placeholder, big) {
     var wrap = el('div', 'note-field');
     paint();
     return wrap;
@@ -224,7 +226,7 @@ var DETAIL = (function () {
       var val = String(cur.memo[field] || '');
 
       if (!editing[field]) {
-        wrap.appendChild(el('div', 'note-view' + (val ? '' : ' is-empty'), val || placeholder));
+        wrap.appendChild(el('div', 'note-view' + (big ? ' is-big' : '') + (val ? '' : ' is-empty'), val || placeholder));
         var b = el('button', 'note-edit', val ? '編集' : '書く');
         b.type = 'button';
         b.onclick = function () { editing[field] = true; paint(); };
@@ -232,7 +234,7 @@ var DETAIL = (function () {
         return;
       }
 
-      var ta = el('textarea', 'note-input');
+      var ta = el('textarea', 'note-input' + (big ? ' is-big' : ''));
       ta.rows = 1;
       ta.placeholder = placeholder;
       ta.value = val;
@@ -266,14 +268,24 @@ var DETAIL = (function () {
     box.appendChild(f);
   }
 
-  /* ── ④特徴・追走能力 ── */
+  /* ── ③選手特徴 ── */
 
+  /** 🔑いちばん大事な手書き（Naoto「これが重要な情報になる」9/23）。
+      基礎データのすぐ下に単独で置き、幅いっぱいで書けるようにする。
+      以前は「特徴と追走能力」の右半分に押し込んでいて、書く場所が狭かった。 */
   function featureSection() {
-    var s = section('特徴と追走能力', '出力ビュー（配信）には出ません。');
-    var wrap = el('div', 'feat');
+    var s = section('選手特徴', '出力ビュー（配信）には出ません。');
+    s.body.appendChild(noteField('feature', '事実と観察を書く。人の評価は書かない', true));
+    s.body.appendChild(saveBar());
+    return s.root;
+  }
 
-    var fl = el('div', 'feat-follow');
-    fl.appendChild(el('div', 'lbl', '追走能力'));
+  /* ── ⑤追走能力 ── */
+
+  function followSection() {
+    var s = section('追走能力', '番手を回ったときの確かさ。出力ビュー（配信）には出ません。');
+    var wrap = el('div', 'follow');
+
     var sel = el('select', 'sel');
     var opt0 = el('option', '', '—');
     opt0.value = '';
@@ -285,18 +297,12 @@ var DETAIL = (function () {
       sel.appendChild(o);
     });
     sel.onchange = function () { cur.memo.follow = sel.value; markDirty(); };
-    fl.appendChild(sel);
+    wrap.appendChild(sel);
 
     var st = stats();
     var bs = st && st.roles && st.roles.bante;
-    if (bs && bs.n) fl.appendChild(el('div', 'muted sm', '参考：番手' + bs.n + '走で3着内 ' + pct(bs.top3, bs.n)));
-    fl.appendChild(noteField('followNote', 'そう判断した根拠（例：9/12小倉7R 番手から離れた）'));
-    wrap.appendChild(fl);
-
-    var ft = el('div', 'feat-text');
-    ft.appendChild(el('div', 'lbl', '選手特徴'));
-    ft.appendChild(noteField('feature', '事実と観察を書く。人の評価は書かない'));
-    wrap.appendChild(ft);
+    if (bs && bs.n) wrap.appendChild(el('div', 'muted sm', '参考：番手' + bs.n + '走で3着内 ' + pct(bs.top3, bs.n)));
+    wrap.appendChild(noteField('followNote', 'そう判断した根拠（例：9/12小倉7R 番手から離れた）'));
 
     s.body.appendChild(wrap);
     s.body.appendChild(saveBar());
