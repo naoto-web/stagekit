@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OKL 選手DB</title>
+<link rel="stylesheet" href="css/style.css?v=20260922-195927">
+</head>
+<body data-view="work">
+
+<!-- ═══════════ 操作ビュー（事務所PC） ═══════════ -->
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">選手DB</div>
+    <nav class="tabs">
+      <button type="button" class="tab is-on" data-tab="list">選手一覧</button>
+      <button type="button" class="tab" data-tab="today">本日の出走表</button>
+    </nav>
+    <div class="top-right">
+      <span class="conn" id="conn" data-ok="wait">接続中…</span>
+    </div>
+  </header>
+
+  <main class="cols">
+
+    <!-- ── 左：一覧／出走表 ── -->
+    <section class="col-left">
+
+      <div class="pane" id="pane-list">
+        <div class="filters">
+          <input type="search" id="q" placeholder="名前・カナ・登録番号でさがす" autocomplete="off" spellcheck="false">
+          <select id="kyuhan-sel" class="sel">
+            <option value="A3">A級3班</option>
+            <option value="all">すべての級班</option>
+          </select>
+        </div>
+        <div class="kana-rows" id="kana-rows"></div>
+        <div class="list-head"><span id="list-count">—</span></div>
+        <div class="list" id="rider-list"></div>
+      </div>
+
+      <div class="pane is-hidden" id="pane-today">
+        <div class="filters">
+          <select id="day-sel" class="sel">
+            <option value="0">本日</option>
+            <option value="1">明日</option>
+          </select>
+          <button type="button" class="btn" id="card-reload">取り直す</button>
+          <span class="muted" id="card-meta"></span>
+        </div>
+        <div class="venue-tabs" id="venue-tabs"></div>
+        <div class="racecard" id="racecard"></div>
+      </div>
+
+    </section>
+
+    <!-- ── 右：選手詳細 ── -->
+    <section class="col-right" id="detail">
+      <div class="empty">左から選手を選んでください。</div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════ 出力ビュー（OBSブラウザソース・背景透明） ═══════════ -->
+<div class="outcard" id="outcard" hidden></div>
+
+<script src="../autoupdate.js?v=20260922-195927" data-au="output-only"></script>
+<script src="js/config.js?v=20260922-195927"></script>
+<script src="js/api.js?v=20260922-195927"></script>
+<script src="js/kana.js?v=20260922-195927"></script>
+<script src="js/list.js?v=20260922-195927"></script>
+<script src="js/today.js?v=20260922-195927"></script>
+<script src="js/detail.js?v=20260922-195927"></script>
+<script src="js/output.js?v=20260922-195927"></script>
+<script src="js/main.js?v=20260922-195927"></script>
+</body>
+</html>
