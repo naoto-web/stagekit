@@ -10,8 +10,35 @@
     return;
   }
 
+  /* ── 背景の色（黒／白）＝2026-09-23 Naoto「一応見て、すぐ元に戻せるように」──
+     🔑**ここより上（IS_OUTPUT の return）で出力ビューは抜けている**＝配信画面には一切かからない。
+     🔑DOMContentLoaded を待たずにここで当てる（main.js は body の末尾で読まれる）。
+        待つと黒い画面が一瞬見えてから白に変わる。 */
+  applyTheme(readTheme());
+
+  function readTheme() {
+    try { return localStorage.getItem(CONFIG.LS_PREFIX + 'theme') || 'dark'; } catch (e) { return 'dark'; }
+  }
+  function applyTheme(t) {
+    var light = (t === 'light');
+    document.body.dataset.theme = light ? 'light' : 'dark';
+    var b = document.getElementById('theme-btn');
+    if (b) b.textContent = light ? '● 黒背景に戻す' : '○ 白背景にする';
+  }
+  function bindTheme() {
+    var b = document.getElementById('theme-btn');
+    if (!b) return;
+    applyTheme(readTheme());                   // ボタンの文言をいまの状態に合わせる
+    b.addEventListener('click', function () {
+      var next = (document.body.dataset.theme === 'light') ? 'dark' : 'light';
+      applyTheme(next);
+      try { localStorage.setItem(CONFIG.LS_PREFIX + 'theme', next); } catch (e) { /* プライベートモード等 */ }
+    });
+  }
+
   // ── 操作ビュー ──
   document.addEventListener('DOMContentLoaded', function () {
+    bindTheme();
     bindTabs();
     LIST.bind();
     TODAY.bind();

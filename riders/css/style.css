@@ -3,6 +3,11 @@
    出力ビュー（?view=output）だけは背景透明・OBS向けの別スタイル（末尾）
    =========================================================== */
 
+/* ══════════ 配色 ══════════
+   🔑**色は必ずここの変数を通す**（2026-09-23）。黒背景／白背景をボタン1つで切り替えるため、
+      CSSの中に生の色を書くと片方の配色で必ず破綻する。
+   ⚠️白背景は `body[data-view="work"][data-theme="light"]` にだけ効かせる
+      ＝**出力ビュー（OBSブラウザソース）には絶対にかけない**（配信画面の見た目が変わるため）。 */
 :root {
   --bg: #12161c;
   --panel: #1a2029;
@@ -14,6 +19,63 @@
   --gold: #e8b53a;
   --ok: #3ec98a;
   --ng: #ef5f5f;
+
+  --on-accent: #06121f;                 /* アクセント色の上に載せる文字 */
+  --fg-strong: #cfd8e3;                 /* 本文よりわずかに強い数字（内訳の回数） */
+  --role-fg: #a9cdf5;                   /* 役割の青（出走表の右端・タグ） */
+  --fill-soft: rgba(255, 255, 255, .03);   /* 表の地 */
+  --fill-soft2: rgba(255, 255, 255, .035); /* メモ欄の地 */
+  --cur-bg: rgba(77, 163, 255, .16);       /* いま選んでいる行 */
+  --cur-bg-hover: rgba(77, 163, 255, .22);
+  --car-ring: rgba(255, 255, 255, .22);    /* 車番の丸のふち（1番＝白が地に溶けないように） */
+  --seri-bg: rgba(232, 181, 58, .14);
+  --seri-line: rgba(232, 181, 58, .45);
+  --tag-role-bg: #2b3a4d;  --tag-role-fg: #a9cdf5;  --tag-role-line: #3a5170;
+  --tag-new-bg: #163a2a;   --tag-new-fg: #6fe0a8;   --tag-new-line: #245c42;
+  --tag-down-bg: #3a2416;  --tag-down-fg: #f0b183;  --tag-down-line: #5c3a24;
+  --tag-stay-bg: #232a35;
+  --badge-obs-bg: #1d3550; --badge-obs-fg: #93c5fd;
+  --badge-memo-bg: #2d2a16; --badge-memo-fg: #e6d07a;
+  --badge-wait-bg: #2a2a2a; --badge-wait-fg: #9a9a9a;
+  --on-bg: #16543a;        --on-fg: #aef0cd;        /* 「配信OK」が押された状態 */
+  --toast-bg: #0c1017;     --toast-fg: #e8edf4;     --toast-err-fg: #ffd7d7;
+}
+
+/* ── 白背景（2026-09-23 Naoto「一応見て、すぐ元に戻せるように」）──
+   画面右上のボタンで切り替え・このブラウザだけが覚える。既定は黒のまま。
+   🔑金（得点）と緑・赤は**白地だと飛ぶので濃く**する。明度だけ入れ替えると読めなくなる。 */
+body[data-view="work"][data-theme="light"] {
+  --bg: #f2f4f7;
+  --panel: #ffffff;
+  --panel2: #eef1f5;
+  --line: #ccd3dc;
+  --fg: #1b2028;
+  --fg-dim: #5a6472;
+  --accent: #1668cc;
+  --gold: #91630a;
+  --ok: #147a45;
+  --ng: #c12f26;
+
+  --on-accent: #ffffff;
+  --fg-strong: #2a323d;
+  --role-fg: #1b5fa8;
+  --fill-soft: rgba(0, 0, 0, .035);
+  --fill-soft2: rgba(0, 0, 0, .045);
+  --cur-bg: rgba(22, 104, 204, .12);
+  --cur-bg-hover: rgba(22, 104, 204, .18);
+  --car-ring: rgba(0, 0, 0, .28);
+  --seri-bg: rgba(200, 140, 10, .16);
+  --seri-line: rgba(150, 103, 8, .6);
+  --tag-role-bg: #e3edfa;  --tag-role-fg: #1b5fa8;  --tag-role-line: #b9d3f0;
+  --tag-new-bg: #e0f5ea;   --tag-new-fg: #12724a;   --tag-new-line: #b2e0c8;
+  --tag-down-bg: #fceadb;  --tag-down-fg: #8d4b14;  --tag-down-line: #efcaa8;
+  --tag-stay-bg: #eceff3;
+  --badge-obs-bg: #e1ecfb; --badge-obs-fg: #1a5aa8;
+  --badge-memo-bg: #f7efcf; --badge-memo-fg: #74600f;
+  --badge-wait-bg: #ebedf0; --badge-wait-fg: #6b7280;
+  --on-bg: #dcf3e6;        --on-fg: #12643f;
+  /* トーストは白地でも浮くよう濃いまま＝色を反転させない */
+  --toast-bg: #2b3341;     --toast-fg: #ffffff;     --toast-err-fg: #ffd7d7;
 }
 
 * { box-sizing: border-box; }
@@ -49,7 +111,9 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 }
 .tab:hover { color: var(--fg); }
 .tab.is-on { background: var(--panel2); border-color: var(--line); color: var(--fg); font-weight: 600; }
-.top-right { margin-left: auto; }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.theme-btn { white-space: nowrap; font-size: 12px; padding: 4px 10px; color: var(--fg-dim); }
+.theme-btn:hover { color: var(--fg); }
 .conn { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--panel2); }
 .conn[data-ok="ok"] { color: var(--ok); }
 .conn[data-ok="ng"] { color: var(--ng); }
@@ -81,7 +145,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   min-width: 34px; padding: 5px 8px; border-radius: 6px; cursor: pointer;
 }
 .kana:hover { color: var(--fg); }
-.kana.is-on { background: var(--accent); border-color: var(--accent); color: #06121f; font-weight: 700; }
+.kana.is-on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
 
 .list-head { padding: 0 14px 6px; font-size: 12px; color: var(--fg-dim); }
 
@@ -107,15 +171,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .tag-kyuhan { color: var(--fg); font-weight: 600; }
 .tag-score { color: var(--gold); font-variant-numeric: tabular-nums; }
 .tag-reg { font-variant-numeric: tabular-nums; }
-.tag-role { background: #2b3a4d; color: #a9cdf5; border-color: #3a5170; }
-.tag-new { background: #163a2a; color: #6fe0a8; border-color: #245c42; }
-.tag-down { background: #3a2416; color: #f0b183; border-color: #5c3a24; }
-.tag-stay { background: #232a35; color: var(--fg-dim); }
+.tag-role { background: var(--tag-role-bg); color: var(--tag-role-fg); border-color: var(--tag-role-line); }
+.tag-new { background: var(--tag-new-bg); color: var(--tag-new-fg); border-color: var(--tag-new-line); }
+.tag-down { background: var(--tag-down-bg); color: var(--tag-down-fg); border-color: var(--tag-down-line); }
+.tag-stay { background: var(--tag-stay-bg); color: var(--fg-dim); }
 
 .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
-.badge-obs { background: #1d3550; color: #93c5fd; }
-.badge-memo { background: #2d2a16; color: #e6d07a; }
-.badge-wait { background: #2a2a2a; color: #9a9a9a; }
+.badge-obs { background: var(--badge-obs-bg); color: var(--badge-obs-fg); }
+.badge-memo { background: var(--badge-memo-bg); color: var(--badge-memo-fg); }
+.badge-wait { background: var(--badge-wait-bg); color: var(--badge-wait-fg); }
 
 .empty { padding: 28px 16px; color: var(--fg-dim); text-align: center; }
 
@@ -125,7 +189,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   background: var(--panel2); border: 1px solid var(--line); color: var(--fg-dim);
   padding: 5px 10px; border-radius: 7px; cursor: pointer; display: flex; gap: 6px; align-items: baseline;
 }
-.vtab.is-on { background: var(--accent); border-color: var(--accent); color: #06121f; }
+.vtab.is-on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .vtab-name { font-weight: 600; }
 /* 開催区分（モ／デ／ナ／ミ）。場名とグレードの間。グレードより少し強く出す＝
    並び順（1R発走の早い順）と合わせて「いま何枠か」を一目で見るための印 */
@@ -146,15 +210,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* 競り＝上が競りに行く側。細い縦線でつながりを示す */
 .narabi-seri {
   display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 2px; border-radius: 6px; background: rgba(232, 181, 58, .14);
-  outline: 1px solid rgba(232, 181, 58, .45);
+  padding: 2px; border-radius: 6px; background: var(--seri-bg);
+  outline: 1px solid var(--seri-line);
 }
 
 .car {
   display: inline-flex; align-items: center; justify-content: center;
   width: 21px; height: 21px; border-radius: 5px;
   font-weight: 700; font-size: 13px; flex: 0 0 auto;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.22) inset;
+  box-shadow: 0 0 0 1px var(--car-ring) inset;
 }
 
 .racers { display: flex; flex-direction: column; gap: 1px; }
@@ -201,16 +265,16 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    ⚠️選手一覧の .rrow.is-current は「枠線＋panel2」だが、ここは**hoverも panel2** なので
    同じにすると枠線だけの差になって見分けにくい。出走表だけ薄い青を敷いて区別する。 */
 .racer.is-current {
-  background: rgba(77, 163, 255, .16);
+  background: var(--cur-bg);
   border-color: var(--accent);
 }
-.racer.is-current:hover:not(:disabled) { background: rgba(77, 163, 255, .22); }
+.racer.is-current:hover:not(:disabled) { background: var(--cur-bg-hover); }
 .racer-name { display: flex; flex-direction: column; min-width: 0; }
 .racer-name-main { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .racer-sub { font-size: 10px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .racer-kyuhan, .racer-kyaku { font-size: 11px; color: var(--fg-dim); }
 .racer-score { font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; text-align: right; }
-.racer-role { font-size: 10px; color: #a9cdf5; text-align: right; }
+.racer-role { font-size: 10px; color: var(--role-fg); text-align: right; }
 /* 直近4ヶ月成績の数字。0は薄くして、値のあるところだけ目に入るようにする */
 .n { font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
 .n-rate { color: var(--fg); }
@@ -253,14 +317,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   border-radius: 9px; padding: 7px 15px;
 }
 .role-tab:hover { color: var(--fg); border-color: var(--accent); }
-.role-tab.is-on { background: var(--accent); border-color: var(--accent); color: #06121f; }
+.role-tab.is-on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .role-tab-label { font-weight: 700; font-size: 14px; }
 .role-tab-n { font-size: 10px; opacity: .8; font-variant-numeric: tabular-nums; }
 .role-tab.has-note::after {
   content: ""; position: absolute; top: 5px; right: 6px;
   width: 6px; height: 6px; border-radius: 50%; background: var(--gold);
 }
-.role-tab.is-on.has-note::after { background: #06121f; }
+.role-tab.is-on.has-note::after { background: var(--on-accent); }
 
 .role-panel { min-height: 32px; }
 .role-body { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 12px; }
@@ -287,7 +351,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .rank-sub-i.is-note .rank-sub-k { font-size: 9px; line-height: 1.2; }
 .rank-sub-k { font-size: 10px; color: var(--fg-dim); }
-.rank-sub-v { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: #cfd8e3; }
+.rank-sub-v { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--fg-strong); }
 
 /* ライン決着とレース種別は、戦法別と同じ表（.split）で出す。
    セルの中の走数（小さい灰色）と、出走表から開いたときの「今日の種別」の行（青） */
@@ -311,7 +375,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   justify-content: start;          /* 列を詰めて左に寄せる＝上の本体の数字と視線がつながる */
   column-gap: 18px; row-gap: 4px;
   margin: 0 0 10px; padding: 8px 10px;
-  background: rgba(255, 255, 255, .03); border-radius: 7px;
+  background: var(--fill-soft); border-radius: 7px;
 }
 .split-label { font-size: 11px; color: var(--fg-dim); white-space: nowrap; }
 /* 着順の表（本体・戦法別・種別）は**左端の列を同じ幅にする**＝縦に並べたとき
@@ -359,7 +423,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   font-size: 13px; line-height: 1.65;
   white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
   padding: 6px 9px; border-radius: 7px;
-  background: rgba(255, 255, 255, .035); border: 1px solid transparent;
+  background: var(--fill-soft2); border: 1px solid transparent;
 }
 .note-view.is-empty { color: var(--fg-dim); font-size: 12px; background: transparent; }
 /* 選手特徴＝重要な手書きなので、空でも書く場所があると分かる大きさにする */
@@ -379,7 +443,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   border-radius: 6px; padding: 4px 9px; font-size: 11px;
 }
 .note-edit:hover { color: var(--fg); border-color: var(--accent); }
-.note-edit.is-done { color: #06121f; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.note-edit.is-done { color: var(--on-accent); background: var(--accent); border-color: var(--accent); font-weight: 700; }
 
 /* 観察の入力欄＝これから書く欄なので常に書ける。高さだけ伸びる */
 .ta-grow { resize: none; overflow: hidden; min-height: 34px; line-height: 1.65; font-family: inherit; }
@@ -426,21 +490,21 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .btn:hover { border-color: var(--accent); }
 .btn:disabled { opacity: .5; cursor: default; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #06121f; font-weight: 700; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
 .btn-sm { padding: 5px 11px; font-size: 13px; }
 .btn-xs { padding: 3px 8px; font-size: 11px; }
-.btn-xs.is-on { background: #16543a; border-color: var(--ok); color: #aef0cd; }
+.btn-xs.is-on { background: var(--on-bg); border-color: var(--ok); color: var(--on-fg); }
 .btn-danger:hover { border-color: var(--ng); color: var(--ng); }
 
 /* トースト */
 .toast {
   position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(14px);
-  background: #0c1017; border: 1px solid var(--line); color: var(--fg);
+  background: var(--toast-bg); border: 1px solid var(--line); color: var(--toast-fg);
   padding: 9px 18px; border-radius: 9px; opacity: 0; pointer-events: none;
   transition: opacity .16s, transform .16s; z-index: 50; max-width: 70vw;
 }
 .toast.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast[data-err="1"] { border-color: var(--ng); color: #ffd7d7; }
+.toast[data-err="1"] { border-color: var(--ng); color: var(--toast-err-fg); }
 
 /* ═══════════ 出力ビュー（OBSブラウザソース） ═══════════
    背景は完全透明。触れない。文字は映像の上でも読めるよう縁取りを付ける。 */
