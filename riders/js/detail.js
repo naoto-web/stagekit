@@ -28,6 +28,8 @@ var DETAIL = (function () {
   // いま開いている役割。出走表から開いたときは、その日その人が回る役割を最初から開く
   // （9/23 Naoto「この人が今日番手走るから番手の情報見よう、となる」）
   var openRole = null;
+  // 表の左端の列幅。着順の表（本体・戦法別・種別）とライン決着で共通にして列をそろえる
+  var LABEL_W = '96px';
 
   /** seed＝一覧や出走表が持っている名前・級班・得点。GASの返事を待たずに見出しだけ先に出す */
   function open(reg, context, seed) {
@@ -89,7 +91,8 @@ var DETAIL = (function () {
     box.appendChild(basics(r));
     box.appendChild(featureSection());
     box.appendChild(rolesSection());
-    box.appendChild(typeSection());
+    // ※レース種別ごとは独立した枠をやめ、役割別の中（ライン決着の下）へ入れた
+    //   （2026-09-23 Naoto「役割別の中に入れ込んでください」）
     box.appendChild(sSection());
     box.appendChild(followSection());
     box.appendChild(obsSection());
@@ -233,9 +236,11 @@ var DETAIL = (function () {
       // ②着順の段＝1着〜9着の回数。決まり手の内訳はその着順の下にぶら下げる（9/23 Naoto指定）
       card.appendChild(rankTable(rs, role.key));
 
-      if (rs.n < 20) card.appendChild(el('div', 'muted sm', '⚠️20走を下回るので割合は参考程度に。'));
+      // 並び順＝戦法別 → ライン決着 → レース種別ごと（2026-09-23 Naoto指定）。
+      // 🔑どれも同じ「1着〜9着の回数」の表なので、上から下へ同じ読み方で追える
+      card.appendChild(splitRanks(rs, role.key));
       card.appendChild(lineRow(role.key));
-      card.appendChild(splitRow(rs, role.key));
+      card.appendChild(typeRanks(rs));
     } else {
       card.appendChild(el('div', 'muted sm', 'この役割で走った記録がまだありません。'));
     }
@@ -308,54 +313,31 @@ var DETAIL = (function () {
 
   /** 戦法別（二分戦／三分戦以上）。
       🔑A級3班の全体で見ると番手は二分戦52.7%・三分戦以上38.3%（差14.4pt）＝効く軸。
-         ただし1人ぶんに割ると走数が減る（番手で中央値10走）ので、
-         **10走を下回る行は薄く出す**＝数字を鵜呑みにさせない。
-      🔑2026-09-23（Naoto「3着内率しか出てない。ちゃんと全部出るようにして」）＝
-         **上の本体と同じ項目を同じ順で出す**。役割ごとの決着内訳（先頭＝逃げ切り／番手に差された、
-         番手＝差し切り／連れ込み）も戦法別に数えるようにしたので、ここで並べられる。 */
-  function splitRow(rs, roleKey) {
+      🔑2026-09-23：本体と同じ「着順の表」で出す（Naoto「上の記載方法に合わせて」）。
+      ⚠️2026-09-23（第2版）Naoto「走数が少ない、的な注意書きは全部消して」＝
+         **走数による薄字も注意文も出さない**。走数は表の左上に必ず出ているので、
+         母数は読み手が見て判断できる。薄字に残したのは「記録が0のマス」だけ。 */
+  function splitRanks(rs, roleKey) {
     var sp = rs.sp || {};
     var defs = [{ k: '2', label: '二分戦' }, { k: '3', label: '三分戦以上' }];
     if (!defs.some(function (d) { return sp[d.k] && sp[d.k].n; })) return el('div', '');
 
-    // 列＝本体（role-figs）と同じ並び。ここを変えるときは roleCard 側も揃えること
-    // 🔑率でなく回数で出す（9/23 Naoto指定・着順の表とそろえる）。
-    //   分母は行ごとに1つ（＝右端の走数）なので、ライン決着と違って各セルに走数を添えなくてよい
-    var cols = [
-      { label: '1着', get: function (b) { return b.win; } },
-      { label: '2着内', get: function (b) { return b.top2; } },
-      { label: '3着内', get: function (b) { return b.top3; } },
-      { label: '4着内', get: function (b) { return b.top4; } }
-    ];
-    detailCols(roleKey).forEach(function (c) {
-      cols.push({ label: c.short, get: function (b) { return c.get(b) || 0; } });
-    });
-    cols.push({ label: '走数', unit: '走', get: function (b) { return b.n; } });
-
-    var box = el('div', 'split');
-    // 回数は「12回」程度で率より短いので下限を詰める（列が増えても900pxに収まる）
-    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(56px, auto))';
-
-    box.appendChild(el('div', 'split-label', '戦法別'));
-    cols.forEach(function (c) { box.appendChild(el('div', 'split-h', c.label)); });
-
+    var today = (ctx && ctx.bunsen) || '';
+    var wrap = el('div', '');
+    wrap.appendChild(el('div', 'lbl', '戦法別'));
     defs.forEach(function (d) {
       var b = sp[d.k];
-      var thin = (b && b.n >= 10) ? '' : ' is-thin';
-      box.appendChild(el('div', 'split-k' + thin, d.label));
-      cols.forEach(function (c) {
-        if (!(b && b.n)) { box.appendChild(el('div', 'split-v' + thin, '—')); return; }
-        var v = c.get(b);
-        box.appendChild(el('div', 'split-v' + thin + (v ? '' : ' is-zero'), v + (c.unit || '回')));
-      });
+      if (!(b && b.n)) return;
+      wrap.appendChild(rankTable(b, roleKey, {
+        label: d.label,
+        showN: true,
+        // 今日の戦法には印を付けて太字にする（種別の「◀ 今日」と同じ考え方）
+        cur: d.k === today
+      }));
     });
-
-    if (!(sp['2'] && sp['2'].n >= 10) && !(sp['3'] && sp['3'].n >= 10)) {
-      var note = el('div', 'split-note muted sm', '走数が少ないので目安です');
-      note.style.gridColumn = '1 / -1';
-      box.appendChild(note);
-    }
-    return box;
+    // ※「走数が少ないので目安です」は廃止（2026-09-23 Naoto「注意書きは全部消して」）。
+    //   走数は表の左上に必ず出ているので、母数は見れば分かる
+    return wrap;
   }
 
   /** 着順ごとの回数の表（2026-09-23 Naoto指定）。
@@ -366,7 +348,13 @@ var DETAIL = (function () {
          番手なら 差し1着＝1着、差し2着/マーク＝2着、ハコ3＝3着）。
       ⚠️9着まで固定で出す＝7車立てでは8・9着が常に0になるが、列がずれないほうが読みやすい。
          0は薄く（出走表の数字と同じ扱い）。 */
-  function rankTable(rs, roleKey) {
+  /** opts＝{ label, showN, thin, cur }
+      🔑2026-09-23（第2版）：**戦法別も同じ表で出す**（Naoto「上の記載方法に合わせて」）。
+         左上のマスを『着順』から『二分戦 12走』のように差し替えるだけで、
+         列（1着〜9着）は本体とまったく同じ＝上下に並べると縦に見比べられる。
+         走数を列に足さずラベルへ入れたのは、この「列を揃える」ためだけの理由。 */
+  function rankTable(rs, roleKey, opts) {
+    opts = opts || {};
     var ranks = rs.ranks || [];
     if (!ranks.length) return el('div', '');
     var sub = rankSubs(roleKey, rs.detail || {});
@@ -374,9 +362,13 @@ var DETAIL = (function () {
     var nCol = 9 + (hasOther ? 1 : 0);
 
     var box = el('div', 'split rank');
-    box.style.gridTemplateColumns = 'auto repeat(' + nCol + ', minmax(52px, auto))';
+    // 左端は固定幅＝本体と戦法別を縦に並べたとき、1着・2着…の列がぴたり重なる
+    box.style.gridTemplateColumns = LABEL_W + ' repeat(' + nCol + ', minmax(52px, auto))';
 
-    box.appendChild(el('div', 'split-label', '着順'));
+    var lab = el('div', 'split-label' + (opts.cur ? ' is-cur' : '') + (opts.label ? ' is-strong' : ''),
+      (opts.label || '着順') + (opts.cur ? ' ◀ 今日' : ''));
+    if (opts.showN) lab.appendChild(el('span', 'split-n', rs.n + '走'));
+    box.appendChild(lab);
     for (var i = 0; i < 9; i++) box.appendChild(el('div', 'split-h', (i + 1) + '着'));
     if (hasOther) box.appendChild(el('div', 'split-h', '他'));
 
@@ -405,7 +397,7 @@ var DETAIL = (function () {
   }
 
   /** 着順（1〜9着）ごとにぶら下げる内訳。配列の添字＝着順−1。
-      ⚠️ここを変えたら build_stats.js の `addRun` と detailCols も揃える。 */
+      ⚠️ここを変えたら build_stats.js の `addRun` も揃える（数える側と出す側は必ず対で直す）。 */
   function rankSubs(roleKey, d) {
     var s = [];
     if (roleKey === 'head') {
@@ -425,27 +417,9 @@ var DETAIL = (function () {
     return s;
   }
 
-  /** その役割ならではの内訳（2026-09-23 Naoto指定）。
-      `short` は戦法別の表の見出し＝横に9列並ぶので短くする。
-      ⚠️ここを変えたら build_stats.js の `addRun` も揃えること（数える側と出す側は必ず対で直す）。 */
-  function detailCols(roleKey) {
-    var d = function (k) { return function (b) { return (b.detail || {})[k] || 0; }; };
-    if (roleKey === 'head') return [
-      { label: '逃げ1着', short: '逃げ1着', get: d('nige1') },
-      { label: '捲り1着', short: '捲り1着', get: d('makuri1') },
-      { label: '逃げ2着', short: '逃げ2着', get: d('nige2') },
-      { label: '捲り2着', short: '捲り2着', get: d('makuri2') },
-      { label: 'うち番手に差され', short: '番手差され', get: d('sashed2') },
-      { label: 'ズブズブ', short: 'ズブズブ', get: d('zubu') }
-    ];
-    if (roleKey === 'bante') return [
-      { label: '差し1着', short: '差し1着', get: d('sashi1') },
-      { label: '差し2着', short: '差し2着', get: d('sashi2') },
-      { label: 'マーク', short: 'マーク', get: d('mark') },
-      { label: 'ハコ3', short: 'ハコ3', get: d('hako3') }
-    ];
-    return [];
-  }
+  /* ※旧 detailCols（戦法別を横1行の「率／回数」で出すための列定義）は廃止。
+        2026-09-23に戦法別も rankTable（着順の表＋内訳）へ寄せたので、
+        内訳の定義は rankSubs 1か所だけになった。 */
 
   /** ライン決着（先頭・番手・3番手）。**自分のラインの車数ごとに条件が変わる**ので分けて出す。
       2車＝1,2着が自分のライン／3車以上＝1〜3着が自分のライン（2026-09-23 Naoto定義）。
@@ -463,21 +437,30 @@ var DETAIL = (function () {
     // 🔑率でなく回数で出す（9/23 Naoto指定）。ただし**分母が列ごとに違う**ので走数を必ず添える。
     //   「3回」だけだと18走中なのか3走中なのか分からず、着順の表と違って上の段にも母数が無い。
     var rows = [
-      { label: '全体', get: function (c) { return c; } },
-      { label: '二分戦', get: function (c) { return (c.sp || {})['2']; } },
-      { label: '三分戦以上', get: function (c) { return (c.sp || {})['3']; } }
+      { k: '', label: '全体', get: function (c) { return c; } },
+      { k: '2', label: '二分戦', get: function (c) { return (c.sp || {})['2']; } },
+      { k: '3', label: '三分戦以上', get: function (c) { return (c.sp || {})['3']; } }
     ];
+    /* 🔑太字＝今日の並びに当たる列と行（2026-09-23 Naoto
+       「ライン決着・全体は太字。今回3車ラインの二分戦なので、その文字も太字に」）。
+       今日の車数・戦法は出走表から開いたときだけ分かる（ctx）。
+       ⚠️太字は「走数が少ない＝薄字」より強くする＝今日の欄が薄いと目で探せなくなるため。 */
+    var todaySize = (ctx && ctx.lineSize) ? String(ctx.lineSize >= 4 ? 4 : ctx.lineSize) : '';
+    var todayBun = (ctx && ctx.bunsen) || '';
+
     var box = el('div', 'split');
-    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(96px, auto))';
-    box.appendChild(el('div', 'split-label', 'ライン決着'));
+    box.style.gridTemplateColumns = LABEL_W + ' repeat(' + cols.length + ', minmax(96px, auto))';
+    box.appendChild(el('div', 'split-label is-strong', 'ライン決着'));
     cols.forEach(function (df) {
-      box.appendChild(el('div', 'split-h' + (lk[df.k].n >= 10 ? '' : ' is-thin'), df.label));
+      box.appendChild(el('div', 'split-h' + (df.k === todaySize ? ' is-strong' : ''), df.label));
     });
     rows.forEach(function (rw) {
-      box.appendChild(el('div', 'split-k', rw.label));
+      var strongRow = (rw.k === '' || rw.k === todayBun);   // 「全体」は常に太字
+      box.appendChild(el('div', 'split-k' + (strongRow ? ' is-strong' : ''), rw.label));
       cols.forEach(function (df) {
         var b = rw.get(lk[df.k]);
-        var cell = el('div', 'split-v' + ((b && b.n >= 10) ? '' : ' is-thin'));
+        // 薄字は「記録が無いマス」だけ＝走数の多い少ないでは薄くしない（9/23 Naoto）
+        var cell = el('div', 'split-v' + ((b && b.n) ? '' : ' is-thin'));
         if (b && b.n) {
           cell.appendChild(document.createTextNode(b.hit + '回'));
           cell.appendChild(el('span', 'split-n', b.n + '走'));
@@ -485,7 +468,13 @@ var DETAIL = (function () {
         box.appendChild(cell);
       });
     });
-    var note = el('div', 'split-note muted sm', '2車＝1,2着／3車以上＝1〜3着が自分のライン。自分が何着かは問わない');
+    var noteText = '2車＝1,2着／3車以上＝1〜3着が自分のライン。自分が何着かは問わない';
+    if (todaySize || todayBun) {
+      noteText += '／太字＝今日の並び（'
+        + [todaySize ? (todaySize === '4' ? '4車以上' : todaySize + '車ライン') : '',
+           todayBun ? (todayBun === '2' ? '二分戦' : '三分戦以上') : ''].filter(Boolean).join('・') + '）';
+    }
+    var note = el('div', 'split-note muted sm', noteText);
     note.style.gridColumn = '1 / -1';
     box.appendChild(note);
     return box;
@@ -498,36 +487,44 @@ var DETAIL = (function () {
          ノイズになる。役割を問わない「この種別で走ったとき」の着順が、数字として残る限界。
       🔑出走表から開いたときは**その日のレース種別の行に印**を付ける（役割の初期選択と同じ思想）。
       ⚠️チャレンジ戦（A3）には特選・初特選が無く「選抜」がある＝無い種別の行は出さない。 */
-  function typeSection() {
-    var s = section('レース種別ごと', '役割を問わず、その種別のレースを走ったときの着順。' + windowText());
-    var st = stats();
-    var bt = st && st.byType;
+  /** レース種別ごとの着順。
+      🔑2026-09-23（第2版）Naoto「ノイズになっていいので、レース種別もそれぞれの役割の回数を」
+         ＝**開いている役割の中の種別**になった（`rs.byType`）。
+         1マスが数走しかないことはあるが、走数を種別名の右に必ず出しているので読み手に見えている。 */
+  function typeRanks(rs) {
+    var bt = rs && rs.byType;
     var order = (window.RACETYPE && RACETYPE.RACE_TYPES) || [];
     var types = order.filter(function (t) { return bt && bt[t] && bt[t].n; });
-    if (!types.length) {
-      s.body.appendChild(el('div', 'muted sm', 'この期間の集計データがありません。'));
-      return s.root;
-    }
+    var wrap = el('div', '');
+    wrap.appendChild(el('div', 'lbl', 'レース種別ごと'));
+    if (!types.length) return wrap;
+
     var curType = (ctx && ctx.cls && window.RACETYPE) ? RACETYPE.raceTypeOf(ctx.cls) : '';
-    var cols = [
-      { label: '1着', get: function (b) { return pct(b.win, b.n); } },
-      { label: '2着内', get: function (b) { return pct(b.top2, b.n); } },
-      { label: '3着内', get: function (b) { return pct(b.top3, b.n); } },
-      { label: '4着内', get: function (b) { return pct(b.top4, b.n); } },
-      { label: '走数', get: function (b) { return b.n + '走'; } }
-    ];
-    var box = el('div', 'split');
-    box.style.gridTemplateColumns = 'auto repeat(' + cols.length + ', minmax(68px, auto))';
-    box.appendChild(el('div', 'split-label', '種別'));
-    cols.forEach(function (c) { box.appendChild(el('div', 'split-h', c.label)); });
+    // 列は着順の表とそろえる。「他」は1つでも出た種別があれば全行に出す（列をずらさない）
+    var hasOther = types.some(function (t) { return (bt[t].ranks || [])[9] > 0; });
+    var nCol = 9 + (hasOther ? 1 : 0);
+
+    var box = el('div', 'split rank is-compact');
+    box.style.gridTemplateColumns = LABEL_W + ' repeat(' + nCol + ', minmax(44px, auto))';
+    box.appendChild(el('div', 'split-label is-strong', '種別'));
+    for (var i = 0; i < 9; i++) box.appendChild(el('div', 'split-h', (i + 1) + '着'));
+    if (hasOther) box.appendChild(el('div', 'split-h', '他'));
+
     types.forEach(function (t) {
       var b = bt[t];
-      var cls = (b.n >= 10 ? '' : ' is-thin') + (t === curType ? ' is-cur' : '');
-      box.appendChild(el('div', 'split-k' + cls, t + (t === curType ? ' ◀ 今日' : '')));
-      cols.forEach(function (c) { box.appendChild(el('div', 'split-v' + cls, c.get(b))); });
+      var isCur = (t === curType);
+      var cls = isCur ? ' is-cur' : '';     // 走数の多い少ないでは薄くしない（9/23 Naoto）
+      var k = el('div', 'split-k' + cls, t + (isCur ? ' ◀ 今日' : ''));
+      k.appendChild(el('span', 'split-n', b.n + '走'));
+      box.appendChild(k);
+      var ranks = b.ranks || [];
+      for (var j = 0; j < nCol; j++) {
+        var v = ranks[j] || 0;
+        box.appendChild(el('div', 'split-v' + cls + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
+      }
     });
-    s.body.appendChild(box);
-    return s.root;
+    wrap.appendChild(box);
+    return wrap;
   }
 
   function figure(box, label, val) {

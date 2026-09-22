@@ -56,8 +56,10 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 
 .cols { display: flex; flex: 1 1 auto; min-height: 0; }
 .col-left { width: 460px; flex: 0 0 460px; border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-/* 出走表タブは直近4ヶ月成績まで10列出すので、そのときだけ左を広げる（選手一覧は460pxのまま） */
-.app[data-tab="today"] .col-left { width: 712px; flex: 0 0 712px; }
+/* 出走表タブは直近4ヶ月成績まで10列出すので、そのときだけ左を広げる（選手一覧は460pxのまま）。
+   🔑幅は「固定列の合計＋選手名に必要な分＋スクロールバー」で決める（9/23 Naoto「名前の右の空白を詰めて
+   右の詳細を広げたい」）。712px だと余りが全部 .racer-name の 1fr に流れて名前の右に約90pxの空白ができていた。 */
+.app[data-tab="today"] .col-left { width: 640px; flex: 0 0 640px; }
 .col-right { flex: 1 1 auto; overflow-y: auto; padding: 16px 20px 60px; min-width: 0; }
 .pane { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 
@@ -125,6 +127,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .vtab.is-on { background: var(--accent); border-color: var(--accent); color: #06121f; }
 .vtab-name { font-weight: 600; }
+/* 開催区分（モ／デ／ナ／ミ）。場名とグレードの間。グレードより少し強く出す＝
+   並び順（1R発走の早い順）と合わせて「いま何枠か」を一目で見るための印 */
+.vtab-kubun { font-size: 11px; opacity: .95; }
 .vtab-grade { font-size: 10px; opacity: .8; }
 
 .racecard { overflow-y: auto; flex: 1 1 auto; padding: 0 12px 24px; }
@@ -154,17 +159,38 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 
 .racers { display: flex; flex-direction: column; gap: 1px; }
 
-/* 車番・選手名・級班・脚質・得点／逃捲差マ／BHS／勝率2連3連／役割 */
+/* 車番・選手名・級班・脚質・得点／逃捲差マ／BHS／勝率2連3連／役割
+   選手名は minmax(100px, 1fr)＝スクロールバーの有無で余る数pxを吸わせるための 1fr。
+   ⚠️各行が別々のgridなので、選手名以外は必ず固定px（max-contentにすると行ごとに列位置がずれる） */
 .racer-row {
   display: grid;
-  grid-template-columns: 24px minmax(112px, 1fr) 28px 18px 46px
+  grid-template-columns: 24px minmax(100px, 1fr) 28px 18px 46px
                          repeat(4, 17px) repeat(3, 17px) repeat(3, 30px) 56px;
   gap: 5px; align-items: center; width: 100%; text-align: left;
 }
 .racer-head {
   font-size: 10px; color: var(--fg-dim); padding: 0 6px 3px;
-  border-bottom: 1px solid var(--line); margin-bottom: 3px;
+  /* 明細の行は border:1px transparent を持つので、見出しにも同じ幅の枠を入れないと列が2pxずれる
+     （1fr がその差を吸うため。縦線を引くとこのズレが見えてしまう） */
+  border: 1px solid transparent; border-bottom-color: var(--line);
+  margin-bottom: 3px;
 }
+
+/* ── 列のまとまりを区切る縦線（9/23 Naoto「得点と逃／マとB／Sと勝率／3連の右側」） ──
+   線を引く場所は today.js の SEP_AT が唯一の出どころ＝見出しと明細で必ず同じ列に付く。
+   ⚠️行は上下3pxのpadding＋1pxのborder＋1pxのgapで区切られているので、セルにborderを引くだけだと
+   線が行ごとに細切れになる。セルを行の高さいっぱいに伸ばし、::before を上下4pxはみ出させて1本につなぐ。 */
+.racer-row > .col-sep {
+  position: relative; align-self: stretch;
+  display: flex; align-items: center; justify-content: center;
+}
+.racer-row > .col-sep::before {
+  content: ''; position: absolute; left: -3px; top: -4px; bottom: -4px;
+  width: 2px; background: var(--line);   /* 9/23 Naoto「太さを倍に」＝1px→2px */
+}
+.racer-row > .racer-role.col-sep { justify-content: flex-end; }
+/* 見出しは上へはみ出させない。下は罫線まで伸ばして明細の線とつなげる */
+.racer-head > .col-sep::before { top: 0; bottom: -3px; }
 .racer {
   cursor: pointer; background: transparent;
   border: 1px solid transparent; border-radius: 6px; padding: 3px 6px;
@@ -266,8 +292,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* ライン決着とレース種別は、戦法別と同じ表（.split）で出す。
    セルの中の走数（小さい灰色）と、出走表から開いたときの「今日の種別」の行（青） */
 .split-n { font-size: 10px; color: var(--fg-dim); font-weight: 400; margin-left: 5px; font-variant-numeric: tabular-nums; }
-.split-k.is-cur, .split-v.is-cur { color: var(--accent); }
-.split-k.is-cur { font-weight: 700; }
+/* ※is-cur / is-strong の指定は .is-thin より後ろ（下のほう）にまとめてある */
 /* 0回は薄く＝値のあるところだけ目に入るように（出走表の数字と同じ扱い） */
 .split-v.is-zero { opacity: .3; }
 
@@ -277,11 +302,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .scar-i.is-zero { opacity: .3; }
 .scar-n { font-size: 12px; font-variant-numeric: tabular-nums; }
 
-/* 戦法別（二分戦／三分戦以上）。走数が少ない行は薄くして鵜呑みにさせない。
-   9/23：3着内率だけだったのを本体と同じ項目に増やした（Naoto指摘）ので、
-   横並びのフレックスから**見出し行つきの表**へ変えた。
-   列数は役割で変わる（先頭・番手は決着の内訳が2つ増える）ので、
-   grid-template-columns は detail.js 側から流し込む。 */
+/* 戦法別・ライン決着・レース種別ごとの表。
+   列数は中身で変わるので grid-template-columns は detail.js 側から流し込む。
+   ⚠️2026-09-23（第2版）Naoto指示で **走数による薄字は廃止**。
+     .is-thin が残っているのは「記録が0のマス」だけ。 */
 .split {
   display: grid; align-items: baseline;
   justify-content: start;          /* 列を詰めて左に寄せる＝上の本体の数字と視線がつながる */
@@ -289,15 +313,39 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   margin: 0 0 10px; padding: 8px 10px;
   background: rgba(255, 255, 255, .03); border-radius: 7px;
 }
-.split-label { font-size: 11px; color: var(--fg-dim); }
+.split-label { font-size: 11px; color: var(--fg-dim); white-space: nowrap; }
+/* 着順の表（本体・戦法別・種別）は**左端の列を同じ幅にする**＝縦に並べたとき
+   1着・2着…の列がそろって見比べられる（2026-09-23 これが戦法別を同じ形にした理由）。
+   列が9〜11本あるので、この表だけ列の間も詰める。 */
+.split.rank { column-gap: 14px; }
+/* 「二分戦 ◀ 今日」と「11走」は縦に積む＝横に並べると左端の列が広がって列がずれる */
+.split.rank > .split-label { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.split.rank > .split-label .split-n { margin-left: 0; }
 .split-h { font-size: 10px; color: var(--fg-dim); text-align: right; }
 .split-k { font-size: 11px; color: var(--fg-dim); white-space: nowrap; }
 .split-v {
   font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.split-k.is-thin, .split-v.is-thin { opacity: .45; }
+.split-label.is-thin, .split-k.is-thin, .split-v.is-thin, .rank-sub.is-thin { opacity: .45; }
 .split-note { margin-top: 2px; }
+
+/* ── 強調（2026-09-23 Naoto）──
+   ⚠️この2つは **.is-thin より後ろに置く**こと。同じ強さの指定なので、先に書くと
+     「走数が少ない＝薄字」に負けて、いちばん見たい今日の欄が薄いままになる。
+   is-strong＝見出し・「全体」・今日の並びに当たる行/列（太字）
+   is-cur   ＝今日そのもの（青＋太字・薄字にしない）。
+             9/23 Naoto「予選が白太字で、今日の一般が薄いのが気になる。普通は今日を太字にするのでは」 */
+.split-label.is-strong, .split-k.is-strong, .split-h.is-strong { color: var(--fg); font-weight: 700; }
+/* 今日に当たる行・列だけは「走数が少ない＝薄字」に負けない（見出しは薄字のままでよい） */
+.split-k.is-strong, .split-h.is-strong { opacity: 1; }
+.split-label.is-cur, .split-k.is-cur, .split-v.is-cur { color: var(--accent); opacity: 1; }
+.split-label.is-cur, .split-k.is-cur { font-weight: 700; }
+/* 今日の行でも「0回（—）」は薄いままにする＝青い棒が並ぶと数字のあるマスが埋もれる。
+   .is-cur より指定を1つ強くして勝たせている */
+.split-v.is-cur.is-thin { opacity: .4; }
+/* 種別は列が11本まで増えるので、この表だけ列の間を詰める */
+.split.is-compact { column-gap: 12px; }
 
 /* 並び実績など、タグを並べる入れもの（選択式タグは9/23に廃止＝Yが自分で書く方針） */
 .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
