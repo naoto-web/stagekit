@@ -25,6 +25,9 @@ var DETAIL = (function () {
   // 自動保存。🔑「完了」を押した＝保存された、と読めてしまうので、実際に保存する作りにした
   //   （9/23 Naoto指摘）。打っている間も1.2秒止まれば勝手に保存する。
   var saveTimer = null, changeSeq = 0, saveSeq = 0;
+  // いま開いている役割。出走表から開いたときは、その日その人が回る役割を最初から開く
+  // （9/23 Naoto「この人が今日番手走るから番手の情報見よう、となる」）
+  var openRole = null;
 
   /** seed＝一覧や出走表が持っている名前・級班・得点。GASの返事を待たずに見出しだけ先に出す */
   function open(reg, context, seed) {
@@ -32,6 +35,7 @@ var DETAIL = (function () {
     ctx = context || null;
     dirty = false;
     editing = {};
+    openRole = (ctx && ctx.role) || null;
     var box = document.getElementById('detail');
     var my = ++seq;
 
@@ -150,27 +154,59 @@ var DETAIL = (function () {
 
   /* ── ③役割別 ── */
 
+  /** 役割は6つ全部を並べず、ボタンで選んだ1つだけ開く（9/23 Naoto指定）。
+      使い方が「今日この人は番手だから番手を見る」なので、全部出すと目的の1つを探すことになる。
+      ボタンには走数を出し、メモがある役割には印（右上の点）を付ける。 */
   function rolesSection() {
-    var s = section('役割別の動き', '自動の数字は手元のレースDBの集計。タグとメモはYの観察。');
-    var st = stats();
-    var grid = el('div', 'roles');
-    CONFIG.ROLES.forEach(function (role) {
-      grid.appendChild(roleCard(role, st));
-    });
-    s.body.appendChild(grid);
+    var s = section('役割別の動き', '見たい役割を押すと、その役割の成績とメモが出ます。');
+    var tabs = el('div', 'role-tabs');
+    var panel = el('div', 'role-panel');
+    s.body.appendChild(tabs);
+    s.body.appendChild(panel);
     s.body.appendChild(saveBar());
+    paint();
     return s.root;
+
+    function paint() {
+      var st = stats();
+      clear(tabs);
+      CONFIG.ROLES.forEach(function (role) {
+        var rs = st && st.roles && st.roles[role.key];
+        var hasNote = !!String(cur.memo['note' + capKey(role.key)] || '').trim();
+        var b = el('button', 'role-tab' + (openRole === role.key ? ' is-on' : '') + (hasNote ? ' has-note' : ''));
+        b.type = 'button';
+        b.title = role.hint + (hasNote ? '（メモあり）' : '');
+        b.appendChild(el('span', 'role-tab-label', role.label));
+        b.appendChild(el('span', 'role-tab-n', rs && rs.n ? rs.n + '走' : '記録なし'));
+        b.onclick = function () {
+          openRole = (openRole === role.key) ? null : role.key;
+          paint();
+        };
+        tabs.appendChild(b);
+      });
+
+      clear(panel);
+      if (!openRole) {
+        panel.appendChild(el('div', 'muted sm', '上のボタンを押すと、その役割の成績とメモが出ます。点が付いている役割にはメモがあります。'));
+        return;
+      }
+      var role = null;
+      CONFIG.ROLES.forEach(function (r) { if (r.key === openRole) role = r; });
+      if (role) panel.appendChild(rolePanel(role, st));
+    }
   }
 
-  function roleCard(role, st) {
-    var card = el('div', 'role-card');
+  function capKey(k) { return k.charAt(0).toUpperCase() + k.slice(1); }
+
+  function rolePanel(role, st) {
+    var card = el('div', 'role-body');
+    var rs = st && st.roles && st.roles[role.key];
+
     var h = el('div', 'role-head');
     h.appendChild(el('span', 'role-label', role.label));
-    var rs = st && st.roles && st.roles[role.key];
-    if (rs && rs.n) h.appendChild(el('span', 'role-n', rs.n + '走'));
+    h.appendChild(el('span', 'role-hint', role.hint));
     card.appendChild(h);
 
-    // 自動集計（あれば）
     if (rs && rs.n) {
       var fig = el('div', 'role-figs');
       figure(fig, '1着', pct(rs.win, rs.n));
@@ -183,32 +219,14 @@ var DETAIL = (function () {
         figure(fig, '差し切り', pct(rs.detail.sashi, rs.n));
         figure(fig, '連れ込み', pct(rs.detail.hold, rs.n));
       }
+      figure(fig, '走数', rs.n + '走');
       card.appendChild(fig);
+      if (rs.n < 20) card.appendChild(el('div', 'muted sm', '⚠️20走を下回るので割合は参考程度に。'));
     } else {
-      card.appendChild(el('div', 'role-figs muted sm', '集計データなし'));
+      card.appendChild(el('div', 'muted sm', 'この役割で走った記録がまだありません。'));
     }
 
-    // タグ
-    var key = role.key.charAt(0).toUpperCase() + role.key.slice(1);
-    var chosen = splitTags(cur.memo['tags' + key]);
-    var defs = (cur.tags || []).filter(function (t) { return t.role === role.key; });
-    var chips = el('div', 'chips');
-    defs.forEach(function (t) {
-      var b = el('button', 'chip' + (chosen.indexOf(t.tag) >= 0 ? ' is-on' : ''), t.tag);
-      b.type = 'button';
-      b.onclick = function () {
-        var i = chosen.indexOf(t.tag);
-        if (i >= 0) chosen.splice(i, 1); else chosen.push(t.tag);
-        cur.memo['tags' + key] = chosen.join(',');
-        b.classList.toggle('is-on');
-        markDirty();
-      };
-      chips.appendChild(b);
-    });
-    if (!defs.length) chips.appendChild(el('span', 'muted sm', 'タグ未定義（スプレッドシートの「タグ定義」で足せます）'));
-    card.appendChild(chips);
-
-    card.appendChild(noteField('note' + key, role.hint));
+    card.appendChild(noteField('note' + capKey(role.key), role.label + 'のときの動きを書く', true));
     return card;
   }
 
@@ -384,8 +402,6 @@ var DETAIL = (function () {
 
   function obsForm() {
     var f = el('div', 'obs-form');
-    var picked = [];
-
     var top = el('div', 'obs-form-top');
     var roleSel = el('select', 'sel');
     var o0 = el('option', '', '役割を選ぶ');
@@ -418,26 +434,6 @@ var DETAIL = (function () {
     top.appendChild(rn);
     f.appendChild(top);
 
-    var chips = el('div', 'chips');
-    function renderChips() {
-      clear(chips);
-      var defs = (cur.tags || []).filter(function (t) { return t.role === roleSel.value; });
-      if (!roleSel.value) { chips.appendChild(el('span', 'muted sm', '役割を選ぶとタグが出ます')); return; }
-      defs.forEach(function (t) {
-        var b = el('button', 'chip' + (picked.indexOf(t.tag) >= 0 ? ' is-on' : ''), t.tag);
-        b.type = 'button';
-        b.onclick = function () {
-          var i = picked.indexOf(t.tag);
-          if (i >= 0) picked.splice(i, 1); else picked.push(t.tag);
-          b.classList.toggle('is-on');
-        };
-        chips.appendChild(b);
-      });
-    }
-    roleSel.onchange = function () { picked.length = 0; renderChips(); };
-    renderChips();
-    f.appendChild(chips);
-
     // ⚠️ここは「これから書く」欄なので読むモードは付けない。
     //   代わりに高さが中身に合わせて伸びる（1行の入力欄だと後ろが見えなくなるため）
     var body = el('textarea', 'inp ta-grow');
@@ -459,7 +455,7 @@ var DETAIL = (function () {
     add.onclick = function () {
       add.disabled = true;
       API.addObs({
-        reg: cur.rider.reg, role: roleSel.value, tags: picked, body: body.value,
+        reg: cur.rider.reg, role: roleSel.value, body: body.value,
         jo: jo.value, raceDate: rd.value, raceNo: rn.value, pub: pubIn.checked ? 1 : ''
       }).then(function (j) {
         cur.obs = j.obs;
@@ -636,10 +632,6 @@ var DETAIL = (function () {
     root.appendChild(h);
     root.appendChild(body);
     return { root: root, body: body };
-  }
-
-  function splitTags(v) {
-    return String(v == null ? '' : v).split(/[,、\s]+/).filter(Boolean);
   }
 
   return { open: open, flush: flush, isDirty: function () { return dirty; } };
