@@ -112,9 +112,18 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 /* ── 全体の骨格 ── */
 .app { display: flex; flex-direction: column; height: 100%; }
 
+/* 🔴上のバーは **時計・電池の下に潜らせない**（2026-09-23 Yの実機＝時計と「選手一覧」が重なっていた）。
+   iPhoneのホーム画面アプリは `viewport-fit=cover` で画面の端まで広がるので、
+   `env(safe-area-inset-top)` の分だけ上に余白を足し、その分だけバーの高さも伸ばす。
+   🔑**画面幅で分岐しない**＝ノッチの無い端末・PC・OBSでは `env()` が 0 になるので1pxも変わらない
+     （§38で決めた「CSSを変えてもJSが黙ってずれない」考え方と同じ）。
+   🔑`flex-basis` は **auto** にする＝列方向のflexでは basis が高さより優先されるので、
+     `0 0 48px` のままだと `height` の calc が効かない。
+   ⚠️横向きの左右インセットは足していない＝横向きは幅700px超でPCの2カラムに戻る（取説§9）。 */
 .topbar {
   display: flex; align-items: center; gap: 18px;
-  padding: 0 16px; height: 48px; flex: 0 0 48px;
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  height: calc(48px + env(safe-area-inset-top, 0px)); flex: 0 0 auto;
   background: var(--panel); border-bottom: 1px solid var(--line);
 }
 .brand { font-weight: 700; font-size: 17px; letter-spacing: .04em; }
@@ -128,9 +137,12 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .top-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .theme-btn { white-space: nowrap; font-size: 12px; padding: 4px 10px; color: var(--fg-dim); }
 .theme-btn:hover { color: var(--fg); }
-.conn { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--panel2); }
+.conn { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--panel2); white-space: nowrap; }
 .conn[data-ok="ok"] { color: var(--ok); }
-.conn[data-ok="ng"] { color: var(--ng); }
+/* 🔴つながらないときは**押せる**＝キーを入れ直す唯一の入口（§39）。
+   ⚠️文言は必ず短く＝長い文（旧「APIキーがありません（URLに ?k=… を付けて開く）」）は
+      360pxで2行に折り返し、バーの高さを壊してタブまで潰した（Yの実機スクショ）。 */
+.conn[data-ok="ng"] { color: var(--ng); cursor: pointer; border: 1px solid var(--ng); }
 
 .cols { display: flex; flex: 1 1 auto; min-height: 0; }
 .col-left { width: 460px; flex: 0 0 460px; border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
@@ -554,6 +566,41 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .toast.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast[data-err="1"] { border-color: var(--ng); color: var(--toast-err-fg); }
 
+/* ═══════════ APIキーの入力（要件§39） ═══════════
+   iPhoneのホーム画面アプリは `?k=` を落として起動し、Safariとは保存場所も別
+   ＝URL以外にキーを入れる道。`hidden` の出し入れは keygate.js だけが触る。
+   🔑**画面全部を覆う**＝後ろの「つながりません」を触らせない・何をすればよいか1つだけにする。
+   ⚠️色は全部変数から取る（§27＝生の色を1つでも書くと白背景で破綻する）。
+   ⚠️上下の余白に safe-area を足す＝ホーム画面アプリでは時計とホームバーに食われる。 */
+.keygate {
+  position: fixed; inset: 0; z-index: 60;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+}
+/* 🔴**`display` を書いたら `[hidden]` を必ず自分で効かせる**（2026-09-23に実際に踏んだ）。
+   `hidden` 属性はブラウザ既定の `[hidden]{display:none}` で効いているだけなので、
+   クラスの `display:flex`（詳細度が上）に**黙って負ける**＝キーが入っているのに
+   入力画面が画面全部を覆ったままになっていた。
+   🔑**症状が見えにくい**＝JSからは `el.hidden === true` と正しく返るので、
+      属性だけ見る検査は通ってしまう。**確かめるなら描かれた結果**（`getComputedStyle().display`）を見る。 */
+.keygate[hidden] { display: none; }
+.kg-box {
+  width: 100%; max-width: 420px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 20px 18px;
+}
+.kg-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+.kg-lead { font-size: 14px; line-height: 1.7; margin: 0 0 14px; }
+/* 🔴幅は `.kg-box` を頭に付けて指定する＝`.inp` の既定に負けないため
+   （§30で `.obs-form .inp{width:100%}` の詳細度に負けて縦に崩れたのと同じ罠）。 */
+.kg-box .kg-inp { width: 100%; box-sizing: border-box; font-size: 16px; padding: 11px 12px; }
+/* ⚠️`font-size:16px` 未満だと iOS Safari が**勝手に画面を拡大する**（戻せない）。 */
+.kg-box .kg-go { width: 100%; margin-top: 12px; padding: 12px; font-size: 15px; }
+.kg-err { color: var(--ng); font-size: 13px; line-height: 1.6; margin: 12px 0 0; }
+.kg-note { color: var(--fg-dim); font-size: 12px; line-height: 1.7; margin: 16px 0 0; }
+
 /* ═══════════ スマホ（1カラム）＝要件§35 ═══════════
    PCの2カラム（左＝さがす／右＝選手）を、狭い画面では **2つの画面に分けて行き来する**。
    🔑ここは全部 `.app`（操作ビュー）と `body[data-view="work"]` の中の指定
@@ -576,7 +623,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .cols { display: block; min-height: 0; }
   .col-left,
   .app[data-tab="today"] .col-left { width: auto; flex: none; border-right: 0; }
-  .col-right { padding: 8px 12px 64px; overflow-y: visible; }
+  /* ⚠️下の余白は **ホームバーの分（`safe-area-inset-bottom`）を足す**＝
+     足さないと一番下の行がiPhoneの横棒に隠れて押せない。 */
+  .col-right { padding: 8px 12px calc(64px + env(safe-area-inset-bottom, 0px)); overflow-y: visible; }
   .list, .racecard { overflow-y: visible; }
 
   /* ── 「さがす」か「選手」のどちらかだけを出す ──
@@ -592,8 +641,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
     border-radius: 8px; padding: 9px 14px; font-size: 14px; cursor: pointer;
   }
 
-  /* ── 上のバー：360pxに収める ── */
-  .topbar { padding: 0 10px; gap: 8px; }
+  /* ── 上のバー：360pxに収める ──
+     🔴左右だけを詰める指定なので **`padding` の一括指定で上の safe-area を消さない**
+        （消すとホーム画面アプリで時計とタブが重なる＝2026-09-23 Yの実機）。 */
+  .topbar { padding: env(safe-area-inset-top, 0px) 10px 0; gap: 8px; }
   .brand { display: none; }              /* タブを見れば何の画面か分かる */
   .tab { padding: 6px 10px; font-size: 13px; }
   .top-right { gap: 6px; }
@@ -604,7 +655,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
      🔴列を**作らない**のは today.js 側。ここは列の型だけ。
         **両方そろえないと列がずれる**（片方だけ直すと見出しと明細がずれて読めなくなる）。 */
   .racer-row { grid-template-columns: 24px minmax(90px, 1fr) 28px 18px 46px 56px; }
-  .racecard { padding: 0 8px 20px; }
+  .racecard { padding: 0 8px calc(20px + env(safe-area-inset-bottom, 0px)); }
   /* 🔴場のタブは**上に貼り付ける**（2026-09-23）。
      スマホはページ全体がスクロールするので、場を押して目的のレースまで送ると
      **タブが画面外へ出てしまう**（実測＝青森を押すと3,481px上）＝別の場に移るのに
@@ -620,7 +671,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   /* 検索窓と級班メニューを横に並べると窓が狭くて説明文が切れる＝窓を1行使わせて下に落とす */
   .filters input[type="search"] { flex: 1 1 100%; }
   .kana-rows { padding: 0 8px 8px; }
-  .list { padding: 0 6px 20px; }
+  .list { padding: 0 6px calc(20px + env(safe-area-inset-bottom, 0px)); }
 
   /* ── 枠の見出し ──
      🔴PCは「見出し｜説明」の横並び。狭い画面だと説明に押されて**見出しのほうが折り返す**

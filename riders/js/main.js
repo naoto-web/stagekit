@@ -103,6 +103,7 @@ var MOBILE = (window.CONFIG && CONFIG.IS_OUTPUT) ? null : (function () {
   // ── 操作ビュー ──
   document.addEventListener('DOMContentLoaded', function () {
     bindTheme();
+    KEYGATE.bind();
     bindTabs();
     bindMobile();
     LIST.bind();
@@ -160,11 +161,26 @@ var MOBILE = (window.CONFIG && CONFIG.IS_OUTPUT) ? null : (function () {
     b.textContent = (tab === 'today') ? '← 出走表へ' : '← 一覧へ';
   }
 
+  /** 接続の表示と、キーの入れ直し口（§39）。
+      🔴文言は**短く**保つ＝旧「APIキーがありません（URLに ?k=… を付けて開く）」は
+         360pxで2行に折り返し、上のバーを押し広げてタブまで潰していた（Yの実機スクショ）。
+      🔑キーが無いときは**画面いっぱいの入力**を出す＝スマホのホーム画面アプリでは
+         URLを直せないので、これが唯一の入口（keygate.js の説明）。
+      🔑つながらないときは**赤い印を押せば入れ直せる**＝キーを間違えて覚えたまま
+         二度と直せなくなるのを防ぐ。⚠️自動では開かない（一時的な通信断で驚かせない）。 */
   function checkConn() {
     var n = document.getElementById('conn');
+
+    n.addEventListener('click', function () {
+      if (n.dataset.ok !== 'ng') return;
+      KEYGATE.show(CONFIG.KEY ? 'つながらないときは、LINEのURLをもう一度貼ってみてください。' : '');
+    });
+
     if (!CONFIG.KEY) {
       n.dataset.ok = 'ng';
-      n.textContent = 'APIキーがありません（URLに ?k=… を付けて開く）';
+      n.textContent = 'キー未設定';
+      n.title = 'APIキーが入っていません。押すと入力できます';
+      KEYGATE.show();
       return;
     }
     API.ping().then(function (j) {
@@ -176,7 +192,8 @@ var MOBILE = (window.CONFIG && CONFIG.IS_OUTPUT) ? null : (function () {
       return LIST.load(document.getElementById('kyuhan-sel').value, true);
     }).catch(function () {
       n.dataset.ok = 'ng';
-      n.textContent = 'バックエンドに繋がりません';
+      n.textContent = 'つながりません';
+      n.title = 'キーが違うかもしれません。押すと入れ直せます';
     });
   }
 })();

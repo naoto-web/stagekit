@@ -4,17 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OKL 選手DB</title>
-<!-- ホーム画面のアプリとして開くための指定（要件§35・③PWA）。
-     ⚠️iPhoneは manifest の start_url を見ない＝**「ホーム画面に追加」したときのURL**で起動する。
-        だから初回は `?k=<キー>` を付けたまま追加してもらう（取扱説明書に手順あり）。 -->
+<!-- ホーム画面のアプリとして開くための指定（要件§35・③PWA／§39で訂正）。
+     🔴**iPhoneは manifest の `start_url`（"./"）で起動する**＝「追加したときのURL」ではない。
+        だから `?k=` を付けたまま追加しても**キーは落ちる**。さらにホーム画面アプリは
+        Safariと localStorage が別なので、Safariで覚えたキーも届かない。
+        ⇒ キーは画面から入れてもらう（`#keygate`／`js/keygate.js`）。
+     ⚠️`start_url` を消せば前者は直るが、**Chromeのインストール要件から外れてAndroidが
+        「アプリをインストール」を出さなくなる**ので消さない。 -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a2029">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- 🔴`black-translucent` は**画面が時計・電池の下まで広がる**指定＝上のバーと時計が重なっていた
+     （2026-09-23 Yの実機）。`black` はOSが status bar の場所を空けてくれる。
+     ⚠️保険として CSS 側にも `env(safe-area-inset-top)` の余白を入れてある（効かない版への備え）。 -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="選手DB">
-<link rel="apple-touch-icon" href="icon-180.png?v=20260923-194559">
-<link rel="icon" href="icon-192.png?v=20260923-194559">
-<link rel="stylesheet" href="css/style.css?v=20260923-194559">
+<link rel="apple-touch-icon" href="icon-180.png?v=20260923-202701">
+<link rel="icon" href="icon-192.png?v=20260923-202701">
+<link rel="stylesheet" href="css/style.css?v=20260923-202701">
 </head>
 <body data-view="work">
 
@@ -84,18 +91,38 @@
   </main>
 </div>
 
+<!-- ═══════════ APIキーの入力（要件§39） ═══════════
+     iPhoneのホーム画面アプリは `?k=` を落として起動し、Safariとは保存場所も別
+     （head のコメント参照）＝**URL以外にキーを入れる道**が要る。
+     ⚠️既定は hidden。出し入れするのは keygate.js だけ（出力ビューからは呼ばれない）。
+     ⚠️`#app` の外に置く＝出力ビューは `#app` を remove するが、こちらは元々出さないので無害。 -->
+<div class="keygate" id="keygate" hidden>
+  <div class="kg-box">
+    <div class="kg-title">はじめに1回だけ設定します</div>
+    <p class="kg-lead">LINEで送られた<b>URLをそのまま貼り付けて</b>ください。<br>
+      長押し →「ペースト」で入ります。</p>
+    <input type="text" class="inp kg-inp" id="kg-inp" placeholder="https://…/riders/?k=…"
+           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button type="button" class="btn btn-primary kg-go" id="kg-go">保存して開く</button>
+    <p class="kg-err" id="kg-err" hidden></p>
+    <p class="kg-note">この設定はこの端末にだけ残ります。<br>
+      URLはパスワードと同じなので、チームの外には出さないでください。</p>
+  </div>
+</div>
+
 <!-- ═══════════ 出力ビュー（OBSブラウザソース・背景透明） ═══════════ -->
 <div class="outcard" id="outcard" hidden></div>
 
-<script src="../autoupdate.js?v=20260923-194559" data-au="output-only"></script>
-<script src="js/config.js?v=20260923-194559"></script>
-<script src="js/racetype.js?v=20260923-194559"></script>
-<script src="js/api.js?v=20260923-194559"></script>
-<script src="js/kana.js?v=20260923-194559"></script>
-<script src="js/list.js?v=20260923-194559"></script>
-<script src="js/today.js?v=20260923-194559"></script>
-<script src="js/detail.js?v=20260923-194559"></script>
-<script src="js/output.js?v=20260923-194559"></script>
-<script src="js/main.js?v=20260923-194559"></script>
+<script src="../autoupdate.js?v=20260923-202701" data-au="output-only"></script>
+<script src="js/config.js?v=20260923-202701"></script>
+<script src="js/keygate.js?v=20260923-202701"></script>
+<script src="js/racetype.js?v=20260923-202701"></script>
+<script src="js/api.js?v=20260923-202701"></script>
+<script src="js/kana.js?v=20260923-202701"></script>
+<script src="js/list.js?v=20260923-202701"></script>
+<script src="js/today.js?v=20260923-202701"></script>
+<script src="js/detail.js?v=20260923-202701"></script>
+<script src="js/output.js?v=20260923-202701"></script>
+<script src="js/main.js?v=20260923-202701"></script>
 </body>
 </html>
