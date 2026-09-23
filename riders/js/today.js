@@ -103,7 +103,7 @@ var TODAY = (function () {
 
     var roleMap = rolesFromLines(lines);
     var sizeMap = sizesFromLines(lines);
-    var bunsen = bunsenOf(lines);
+    var bunsen = bunsenOf(r);
     var tbl = el('div', 'racers');
     tbl.appendChild(racerHeader());
     r.racers.forEach(function (s) {
@@ -239,16 +239,30 @@ var TODAY = (function () {
     return map;
   }
 
-  /** 戦法＝**2車以上のラインの本数**。2本なら二分戦、3本以上なら三分戦以上。
-      🔴単騎は数えない。出走表の「二分戦」も、集計側の `race.n_lines`（＝2車以上の組数）も
-         同じ数え方＝ここを揃えないと、画面の言葉と集計の中身が食い違う。
-         （例：並び「1 4 6 ／ 5 2 3 ／ 7」は7が単騎なので**二分戦**） */
-  function bunsenOf(lines) {
+  /** 今日の戦法（'2'＝二分戦／'3'＝三分戦以上／''＝どちらとも言えない）。
+      🔑**出走表の見出しに出ている文字をそのまま読む**（2026-09-23 Naoto「出走表の言葉に合わせる」）。
+         こうしておけば、Yが見出しで読む言葉と、詳細で「今日」と印が付く表が**必ず一致する**。
+         自分で数え直すと、keirin.jpの数え方とわずかでも違ったときに食い違う。
+      ⚠️文字が取れないときだけ、集計と同じ数え方（**2車以上のラインの本数**）で補う。
+      ⚠️一分戦は「どちらとも言えない」＝印を付けない（集計でも二分戦にも三分戦以上にも入れていない）。
+      🪤2026-09-23に「自力の単騎も1つと数える」説を立てて検証したが、その日の全場51レースで
+        **94.1%→86.3%と悪化**したので採らなかった（`選手DB案件/実装/verify_bunsen.js`）。
+        表示は並びから機械的に決まる値ではない（同じ形でも場によって割れる）＝だから文字を読む。 */
+  function bunsenOf(r) {
+    var t = String((r || {}).lineType || '');
+    if (/^二/.test(t)) return '2';
+    if (/^[三四五六七八九十]/.test(t)) return '3';
+    if (/^一/.test(t)) return '';
+    return bunsenFromLines(r);
+  }
+
+  /** 予備＝並びから数える（2車以上のラインの本数）。見出しの文字が無いレース用 */
+  function bunsenFromLines(r) {
     var n = 0;
-    (lines || []).forEach(function (line) {
-      var c = 0;
-      line.forEach(function (pos) { c += pos.length; });
-      if (c >= 2) n++;
+    ((r || {}).lines || []).forEach(function (line) {
+      var cars = 0;
+      line.forEach(function (pos) { cars += pos.length; });
+      if (cars >= 2) n++;
     });
     return n === 2 ? '2' : (n >= 3 ? '3' : '');
   }

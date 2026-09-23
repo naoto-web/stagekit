@@ -397,23 +397,35 @@ var DETAIL = (function () {
   }
 
   /** 着順（1〜9着）ごとにぶら下げる内訳。配列の添字＝着順−1。
+      🔑2026-09-23（第2版・Naoto指摘）：**役割で項目を決め打ちしない**。
+         1着・2着とも「逃・捲・差・マ」のうち**実際に出たものだけ**を並べる。
+         🔴以前は先頭＝1着は逃・捲だけ／番手＝1着は差だけ、と決め打ちしていたので、
+            **先頭で差して1着（全体の9.8%）・番手で捲って1着が画面から消えていた**。
+            登録014578は先頭で1着2回とも「差」で、内訳が全部0に見えていた。
+         決まり手は排他なので **合計＝その着順の回数**＝上の段と足し算が合う（検算できる）。
       ⚠️ここを変えたら build_stats.js の `addRun` も揃える（数える側と出す側は必ず対で直す）。 */
+  var KIM = [['nige', '逃'], ['makuri', '捲'], ['sashi', '差'], ['mark', 'マ']];
+
   function rankSubs(roleKey, d) {
     var s = [];
-    if (roleKey === 'head') {
-      s[0] = [{ label: '逃', v: d.nige1 || 0 }, { label: '捲', v: d.makuri1 || 0 }];
-      // 2着は決まり手で排他に並べる（出走表の逃・捲と同じ言葉）。差・マは出たときだけ。
-      // ⚠️「番手に差され」は決まり手と**別の軸**で重なるので、`sub:true` で「うち」と添える
-      s[1] = [{ label: '逃', v: d.nige2 || 0 }, { label: '捲', v: d.makuri2 || 0 }];
-      if (d.sashi2) s[1].push({ label: '差', v: d.sashi2 });
-      if (d.mark) s[1].push({ label: 'マ', v: d.mark });
-      s[1].push({ label: 'うち番手に差され', v: d.sashed2 || 0, sub: true });
-      s[2] = [{ label: 'ズブズブ', v: d.zubu || 0 }];
-    } else if (roleKey === 'bante') {
-      s[0] = [{ label: '差し', v: d.sashi1 || 0 }];
-      s[1] = [{ label: '差し', v: d.sashi2 || 0 }, { label: 'マーク', v: d.mark || 0 }];
-      s[2] = [{ label: 'ハコ3', v: d.hako3 || 0 }];
-    }
+    // 1着・2着＝決まり手のうち**実際に出たものだけ**。合計＝その着順の回数になる
+    [1, 2].forEach(function (rank) {
+      var arr = [];
+      KIM.forEach(function (k) {
+        var v = d[k[0] + rank] || 0;
+        if (v) arr.push({ label: k[1], v: v });
+      });
+      // 「うち番手に差され」は決まり手と**別の軸**で重なるので、点線の下に内数として添える
+      if (rank === 2 && roleKey === 'head' && d.sashed2) {
+        arr.push({ label: 'うち番手に差され', v: d.sashed2, sub: true });
+      }
+      if (arr.length) s[rank - 1] = arr;
+    });
+    // 3着の下＝先頭はズブズブ・番手はハコ3（どちらもめったに出ないので、出たときだけ）
+    var third = [];
+    if (roleKey === 'head' && d.zubu) third.push({ label: 'ズブズブ', v: d.zubu });
+    if (roleKey === 'bante' && d.hako3) third.push({ label: 'ハコ3', v: d.hako3 });
+    if (third.length) s[2] = third;
     return s;
   }
 
@@ -459,8 +471,10 @@ var DETAIL = (function () {
       box.appendChild(el('div', 'split-k' + (strongRow ? ' is-strong' : ''), rw.label));
       cols.forEach(function (df) {
         var b = rw.get(lk[df.k]);
-        // 薄字は「記録が無いマス」だけ＝走数の多い少ないでは薄くしない（9/23 Naoto）
-        var cell = el('div', 'split-v' + ((b && b.n) ? '' : ' is-thin'));
+        // 薄字は「記録が無いマス」だけ＝走数の多い少ないでは薄くしない（9/23 Naoto）。
+        // 🔑今日の車数でない列は**太字にしない**（9/23 Naoto「関係ないやつは太字にしないで」）
+        var off = (todaySize && df.k !== todaySize) ? ' is-off' : '';
+        var cell = el('div', 'split-v' + off + ((b && b.n) ? '' : ' is-thin'));
         if (b && b.n) {
           cell.appendChild(document.createTextNode(b.hit + '回'));
           cell.appendChild(el('span', 'split-n', b.n + '走'));
@@ -514,13 +528,15 @@ var DETAIL = (function () {
       var b = bt[t];
       var isCur = (t === curType);
       var cls = isCur ? ' is-cur' : '';     // 走数の多い少ないでは薄くしない（9/23 Naoto）
+      // 🔑今日の種別でない行は**太字にしない**（9/23 Naoto「関係ないやつは太字にしないで」）
+      var off = (curType && !isCur) ? ' is-off' : '';
       var k = el('div', 'split-k' + cls, t + (isCur ? ' ◀ 今日' : ''));
       k.appendChild(el('span', 'split-n', b.n + '走'));
       box.appendChild(k);
       var ranks = b.ranks || [];
       for (var j = 0; j < nCol; j++) {
         var v = ranks[j] || 0;
-        box.appendChild(el('div', 'split-v' + cls + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
+        box.appendChild(el('div', 'split-v' + cls + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
       }
     });
     wrap.appendChild(box);

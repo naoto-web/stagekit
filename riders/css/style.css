@@ -243,18 +243,21 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* ── 列のまとまりを区切る縦線（9/23 Naoto「得点と逃／マとB／Sと勝率／3連の右側」） ──
    線を引く場所は today.js の SEP_AT が唯一の出どころ＝見出しと明細で必ず同じ列に付く。
    ⚠️行は上下3pxのpadding＋1pxのborder＋1pxのgapで区切られているので、セルにborderを引くだけだと
-   線が行ごとに細切れになる。セルを行の高さいっぱいに伸ばし、::before を上下4pxはみ出させて1本につなぐ。 */
+   線が行ごとに細切れになる。セルを行の高さいっぱいに伸ばし、::before を上下にはみ出させて1本につなぐ。
+   🔴はみ出しは**隣の行と重なる量**にすること（2026-09-23 Naoto「なんか縦線おかしくない？」）。
+     実測＝セルの高さ33px・セルとセルの隙間9px。±4pxでは 8px しか埋まらず**1pxずつ切れて破線に見える**。
+     ±7px（計14px＞9px）にして重ねる。下へ3px余るが `.race` の padding 9px の内側なので出ない。 */
 .racer-row > .col-sep {
   position: relative; align-self: stretch;
   display: flex; align-items: center; justify-content: center;
 }
 .racer-row > .col-sep::before {
-  content: ''; position: absolute; left: -3px; top: -4px; bottom: -4px;
+  content: ''; position: absolute; left: -3px; top: -7px; bottom: -7px;
   width: 2px; background: var(--line);   /* 9/23 Naoto「太さを倍に」＝1px→2px */
 }
 .racer-row > .racer-role.col-sep { justify-content: flex-end; }
-/* 見出しは上へはみ出させない。下は罫線まで伸ばして明細の線とつなげる */
-.racer-head > .col-sep::before { top: 0; bottom: -3px; }
+/* 見出しは上へはみ出させない。下は罫線を越えるところまで伸ばして明細の線とつなげる */
+.racer-head > .col-sep::before { top: 0; bottom: -4px; }
 .racer {
   cursor: pointer; background: transparent;
   border: 1px solid transparent; border-radius: 6px; padding: 3px 6px;
@@ -392,6 +395,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   text-align: right;
 }
 .split-label.is-thin, .split-k.is-thin, .split-v.is-thin, .rank-sub.is-thin { opacity: .45; }
+/* 今日に当たらない列・行の数字は太字にしない（2026-09-23 Naoto「関係ないやつは太字にしないで」）。
+   ⚠️走数の多い少ないでは変えない＝**今日かどうかだけ**で決める。
+     出走表から開いていないとき（今日が分からないとき）は付けない＝全部そろった太さのまま */
+.split-v.is-off { font-weight: 500; }
 .split-note { margin-top: 2px; }
 
 /* ── 強調（2026-09-23 Naoto）──
