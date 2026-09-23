@@ -36,14 +36,24 @@ var API = (function () {
       });
   }
 
-  /* ── 自前集計（静的ファイル）。無くてもアプリは動く ── */
-  var statsCache = null;
-  function stats() {
-    if (statsCache) return Promise.resolve(statsCache);
-    return fetch(CONFIG.STATS_URL + '?cb=' + Date.now(), { cache: 'no-store' })
+  /* ── 自前集計（静的ファイル）。無くてもアプリは動く ──
+     🔑期間（4／8／12ヶ月）ごとに別ファイル・別キャッシュ（2026-09-24 §41）。
+        同じセッションで一度読んだ窓は読み直さない＝切り替えを行き来しても通信は窓ごとに1回。
+     ⚠️取れなかったとき（まだ公開されていない窓など）は**キャッシュしない**＝次に押したらもう一度取りに行く。
+        返す箱に `missing: true` を立てるので、画面はそれを見て「この期間の集計はまだありません」と出せる。 */
+  var statsCache = {};
+  function stats(months) {
+    var m = String(months || '4');
+    if (statsCache[m]) return Promise.resolve(statsCache[m]);
+    var url = (CONFIG.STATS_URLS && CONFIG.STATS_URLS[m]) || CONFIG.STATS_URL;
+    return fetch(url + '?cb=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })
-      .then(function (j) { statsCache = j || { riders: {} }; return statsCache; });
+      .then(function (j) {
+        if (!j) return { riders: {}, missing: true, months: m };
+        statsCache[m] = j;
+        return j;
+      });
   }
 
   return {

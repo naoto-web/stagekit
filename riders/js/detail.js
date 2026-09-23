@@ -54,7 +54,7 @@ var DETAIL = (function () {
 
     if (cache[reg]) {
       cur = cache[reg];
-      if (!statsAll) API.stats().then(function (s) { statsAll = s || { riders: {} }; if (seq === my) render(); });
+      if (!statsAll) API.stats(win).then(function (s) { statsAll = s || { riders: {} }; if (seq === my) render(); });
       render();
       return;
     }
@@ -63,7 +63,7 @@ var DETAIL = (function () {
     if (seed) box.appendChild(head(Object.assign({ reg: reg }, seed), true));
     box.appendChild(el('div', 'empty', '詳細を読み込み中…'));
 
-    Promise.all([API.rider(reg), API.stats()]).then(function (res) {
+    Promise.all([API.rider(reg), API.stats(win)]).then(function (res) {
       if (seq !== my) return;          // すでに別の選手を開いている
       cur = res[0];
       cache[reg] = cur;
@@ -95,9 +95,88 @@ var DETAIL = (function () {
       🔑期間は stats.json 側が持つ＝`build_stats.js` の `WINDOW_MONTHS` を変えれば文言も追いつく。
       古い stats.json（期間を持たない版）が配られても落ちないよう、無ければ何も出さない。 */
   function windowText() {
+    if (statsAll && statsAll.missing) return 'この期間の集計はまだ公開されていません。';
     var w = statsAll && statsAll.window;
     if (!w || !w.months) return '';
-    return '数字は直近' + w.months + 'ヶ月（' + w.from + '〜' + w.to + '）を数えたものです。';
+    // 12ヶ月はボタンの文言（1年）にそろえる＝「直近12ヶ月」と「1年」が同じものだと読めるように
+    var span = (+w.months === 12) ? '1年' : (w.months + 'ヶ月');
+    return '数字は直近' + span + '（' + w.from + '〜' + w.to + '）を数えたものです。';
+  }
+
+  /* ══════════ 集計期間の切り替え（2026-09-24 Naoto「4ヶ月・8ヶ月・1年で見られるように」・§41）══════════
+     🔑置き場所＝**役割別の動きの枠の中・いちばん上**（Naoto決定「役割別の見出しの行」）。
+        「いま何ヶ月の数字か」と「切り替え」が同じ場所にある。S取り・参考の見出しの文言も同じ選択に追従する。
+        ⚠️枠の見出し（.sec-head）は折りたたみの**ボタン**なので、その中にボタンは置けない＝本体の先頭に置く。
+     🔑選んだ期間は**このブラウザが覚える**（白背景と同じ・Naoto決定）。既定は4ヶ月。
+     🔴**既定を4ヶ月から動かさない**＝出走表の10列（逃・捲・差・マ…）は keirin.jp の「直近4ヶ月成績」
+        そのもので、こちらの切り替えでは**変わらない**。8ヶ月・1年にすると出走表と役割別の数字が
+        同じ期間でなくなる（§17で4ヶ月にした理由）。だから期間の文言は常に出す。
+     ⚠️切り替えると選手ページの「数えた数字」は全部変わる＝役割別の全表・S取り・落車欠場・並び実績。 */
+  var WIN_LS = CONFIG.LS_PREFIX + 'window';
+  var win = readWin();
+
+  function readWin() {
+    var v = '';
+    try { v = localStorage.getItem(WIN_LS) || ''; } catch (e) { /* プライベートモード等 */ }
+    return (CONFIG.STATS_URLS && CONFIG.STATS_URLS[v]) ? v : '4';
+  }
+
+  /** 期間の切り替えの行。役割別の本体の先頭に置く */
+  function winBar() {
+    var bar = el('div', 'win-bar');
+    bar.appendChild(el('span', 'win-k', '期間'));
+    (CONFIG.STATS_WINDOWS || []).forEach(function (w) {
+      var b = el('button', 'win-btn' + (w.k === win ? ' is-on' : ''), w.label);
+      b.type = 'button';
+      b.onclick = function () { switchWin(w.k, bar); };
+      bar.appendChild(b);
+    });
+    var wd = statsAll && statsAll.window;
+    bar.appendChild(el('span', 'win-range', statsAll && statsAll.missing
+      ? 'この期間の集計はまだ公開されていません'
+      : (wd && wd.from ? wd.from + '〜' + wd.to : '')));
+    return bar;
+  }
+
+  /** 期間を切り替える＝その窓のファイルを読んで描き直す。
+      🔑描き直しても見ていた位置が飛ばないよう、スクロール位置を保って戻す
+         （切り替えの行はページの途中にあるので、先頭へ戻ると押した場所を見失う）。
+      ⚠️読んでいる間はボタンを押せなくする＝連打で古い応答が後から上書きするのを防ぐ。 */
+  function switchWin(k, bar) {
+    if (k === win) return;
+    win = k;
+    try { localStorage.setItem(WIN_LS, k); } catch (e) { /* 覚えられなくても動く */ }
+    if (bar) {
+      Array.prototype.forEach.call(bar.querySelectorAll('.win-btn'), function (b) {
+        b.disabled = true;
+        b.classList.toggle('is-on', b.textContent === labelOfWin(k));
+      });
+      var r = bar.querySelector('.win-range');
+      if (r) r.textContent = '読み込み中…';
+    }
+    var my = ++seq;
+    API.stats(k).then(function (s) {
+      if (seq !== my) return;          // その間に別の選手を開いた
+      statsAll = s || { riders: {} };
+      keepScroll(render);
+    });
+  }
+
+  function labelOfWin(k) {
+    var hit = (CONFIG.STATS_WINDOWS || []).filter(function (w) { return w.k === k; })[0];
+    return hit ? hit.label : '';
+  }
+
+  /** 描き直しの前後でスクロール位置を保つ。
+      🔴入れ物がPCとスマホで違う（§38と同じ）＝PCは `.col-right` の内部スクロール、スマホはページ全体。 */
+  function keepScroll(fn) {
+    var col = document.querySelector('.col-right');
+    var inner = !!(col && col.scrollHeight - col.clientHeight > 1);
+    var y = inner ? col.scrollTop : window.pageYOffset;
+    fn();
+    requestAnimationFrame(function () {
+      if (inner) col.scrollTop = y; else window.scrollTo(0, y);
+    });
   }
 
   /* ══════════ 描画 ══════════ */
@@ -195,9 +274,11 @@ var DETAIL = (function () {
   function rolesSection() {
     // 🔑「いつからいつまでを数えた数字か」を必ず出す（9/23 Naoto指示で全期間→直近4ヶ月に変更）。
     //   期間は stats.json が持っているので、集計側で期間を変えれば画面の文言も自動で追いつく
-    var s = section('役割別の動き', '見たい役割を押すと、その役割の成績とメモが出ます。' + windowText());
+    // 期間の文言は見出しから外し、本体の先頭の切り替えの行（winBar）に移した（2026-09-24 §41）
+    var s = section('役割別の動き', '見たい役割を押すと、その役割の成績とメモが出ます。');
     var tabs = el('div', 'role-tabs');
     var panel = el('div', 'role-panel');
+    s.body.appendChild(winBar());
     s.body.appendChild(tabs);
     s.body.appendChild(panel);
     s.body.appendChild(saveBar());

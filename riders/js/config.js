@@ -92,6 +92,17 @@ var CONFIG = (function () {
     /* 自前集計（役割別の実績）の置き場所。Naoto PCの定時タスクが作る静的ファイル。
        🔴公開リポジトリに載るので、ここへ本人コメントや手書きを入れないこと */
     STATS_URL: 'data/stats.json',
+    /* 集計期間の切り替え（2026-09-24 Naoto「4ヶ月・8ヶ月・1年で見られるように」）。
+       🔑窓ごとに**別ファイル**＝1つにまとめると約16MBで重すぎる（実測 4.2＋5.4＋6.1MB）。
+          既定の4ヶ月はいままでどおり stats.json。切り替えたときだけ、その窓のファイルを1回読む。
+       ⚠️キーは build_stats.js の `--months` と同じ数字。ファイル名は 集計ジョブ.ps1 と 公開_統計のみ.ps1 が
+          同じ表を持つので、足すときは3か所そろえる。 */
+    STATS_URLS: { '4': 'data/stats.json', '8': 'data/stats_8.json', '12': 'data/stats_12.json' },
+    STATS_WINDOWS: [
+      { k: '4', label: '直近4ヶ月' },
+      { k: '8', label: '8ヶ月' },
+      { k: '12', label: '1年' }
+    ],
     LS_PREFIX: 'riders:'
   };
 })();
