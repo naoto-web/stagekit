@@ -39,6 +39,8 @@
   --badge-wait-bg: #2a2a2a; --badge-wait-fg: #9a9a9a;
   --on-bg: #16543a;        --on-fg: #aef0cd;        /* 「配信OK」が押された状態 */
   --toast-bg: #0c1017;     --toast-fg: #e8edf4;     --toast-err-fg: #ffd7d7;
+  /* 出走表の「0」の文字。🔴opacityで薄くしてはいけない（下の .n.is-zero の説明） */
+  --fg-faint: #565d66;
 }
 
 /* ── 白背景（2026-09-23 Naoto「一応見て、すぐ元に戻せるように」）──
@@ -76,6 +78,7 @@ body[data-view="work"][data-theme="light"] {
   --on-bg: #dcf3e6;        --on-fg: #12643f;
   /* トーストは白地でも浮くよう濃いまま＝色を反転させない */
   --toast-bg: #2b3341;     --toast-fg: #ffffff;     --toast-err-fg: #ffd7d7;
+  --fg-faint: #bbbcbf;
 }
 
 * { box-sizing: border-box; }
@@ -281,7 +284,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* 直近4ヶ月成績の数字。0は薄くして、値のあるところだけ目に入るようにする */
 .n { font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
 .n-rate { color: var(--fg); }
-.n.is-zero { opacity: .3; }
+/* 🔴**opacity で薄くしてはいけない**（2026-09-23 Naoto「他の3本が途中薄くなってる」）。
+   opacity はその要素の `::before`＝**列の区切り線まで**薄くするので、
+   0が並ぶ行だけ縦線がかすれて見える。0が出ない「直近4ヶ月」の列だけ線が濃いままだったのがその証拠。
+   ⇒ **文字の色だけ**を薄くする（`--fg-faint`＝以前の opacity .3 と同じ見え方の色）。 */
+.n.is-zero { color: var(--fg-faint); }
 
 /* ── 詳細 ── */
 .dt-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
