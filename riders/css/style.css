@@ -483,8 +483,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .ta-grow { resize: none; overflow: hidden; min-height: 34px; line-height: 1.65; font-family: inherit; }
 
 /* 特徴 */
-/* 追走能力＝縦に積むだけ。幅は読みやすい範囲で止める */
-.follow { display: flex; flex-direction: column; gap: 8px; max-width: 560px; }
+/* 追走能力＝縦に積むだけ。
+   🔴**ここに max-width を付けない**（2026-09-23 Naoto「根拠の枠が狭い・書くの位置が真ん中より」）。
+      560pxで止めていたせいで、中の「そう判断した根拠」だけ枠が半分になり、
+      「書く」ボタンも画面の真ん中に来て、**S取りの同じ欄と位置がそろっていなかった**。
+   🔑幅を絞るのは**中身ごと**に決める（選ぶ欄は260pxで足りるが、書く欄は広いほうがよい）。 */
+.follow { display: flex; flex-direction: column; gap: 8px; }
 .follow .sel { max-width: 260px; }
 
 .savebar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 12px; }
