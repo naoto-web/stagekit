@@ -430,18 +430,18 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    ⚠️この2つは **.is-thin より後ろに置く**こと。同じ強さの指定なので、先に書くと
      「走数が少ない＝薄字」に負けて、いちばん見たい今日の欄が薄いままになる。
    is-strong＝見出し・「全体」・今日の並びに当たる行/列（太字）
-   is-cur   ＝今日そのもの（青＋太字・薄字にしない）。
-             9/23 Naoto「予選が白太字で、今日の一般が薄いのが気になる。普通は今日を太字にするのでは」 */
+   is-cur   ＝今日そのものの**見出しと行ラベル**（青＋太字・薄字にしない）。
+             9/23 Naoto「予選が白太字で、今日の一般が薄いのが気になる。普通は今日を太字にするのでは」
+   🔑**役割分担（2026-09-23 Naoto「回数のところは青字ではなく白太字に。他と合わせて」）**
+     ＝**青い「◀ 今日」が「どこを見るか」を指し、白い太字とグレーが「どのマスか」を指す**。
+     だから **`is-cur` は数字のマス（.split-v）には付けない**。行をまるごと青く塗ると、
+     その行の数字がどれも同じ重みに見えて、いちばん見たいマスが埋もれる。 */
 .split-label.is-strong, .split-k.is-strong, .split-h.is-strong { color: var(--fg); font-weight: 700; }
 /* 今日に当たる行・列だけは「走数が少ない＝薄字」に負けない（見出しは薄字のままでよい） */
 .split-k.is-strong, .split-h.is-strong { opacity: 1; }
 /* ⚠️`.split-h.is-cur` が無いと、ライン決着の列見出し（「3車ライン ◀ 今日」）だけ青くならない
    ＝is-strong の白のまま。行ラベルだけ青くなって片方だけ浮く（2026-09-23 に追加） */
-.split-label.is-cur, .split-k.is-cur, .split-h.is-cur, .split-v.is-cur { color: var(--accent); opacity: 1; }
-.split-label.is-cur, .split-k.is-cur, .split-h.is-cur { font-weight: 700; }
-/* 今日の行でも「0回（—）」は薄いままにする＝青い棒が並ぶと数字のあるマスが埋もれる。
-   .is-cur より指定を1つ強くして勝たせている */
-.split-v.is-cur.is-thin { opacity: .4; }
+.split-label.is-cur, .split-k.is-cur, .split-h.is-cur { color: var(--accent); opacity: 1; font-weight: 700; }
 /* 種別は列が11本まで増えるので、この表だけ列の間を詰める */
 .split.is-compact { column-gap: 12px; }
 

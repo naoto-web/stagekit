@@ -573,7 +573,11 @@ var DETAIL = (function () {
       var ranks = b.ranks || [];
       for (var j = 0; j < nCol; j++) {
         var v = ranks[j] || 0;
-        box.appendChild(el('div', 'split-v' + cls + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
+        /* 🔑**数字は青にしない＝白い太字のまま**（2026-09-23 Naoto「回数のところは青字ではなく白太字に。他と合わせて」）。
+           青いのは行ラベルの「◀ 今日」だけ＝ライン決着と同じ分担で、
+           **印（青）が「どこを見るか」を指し、白とグレーが「どのマスか」を指す**。
+           ⚠️ここで `cls`（is-cur）を足すと行がまるごと青く塗られ、数字がどれも同じ重みに見える。 */
+        box.appendChild(el('div', 'split-v' + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
       }
     });
     wrap.appendChild(box);
