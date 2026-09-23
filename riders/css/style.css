@@ -435,8 +435,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .split-label.is-strong, .split-k.is-strong, .split-h.is-strong { color: var(--fg); font-weight: 700; }
 /* 今日に当たる行・列だけは「走数が少ない＝薄字」に負けない（見出しは薄字のままでよい） */
 .split-k.is-strong, .split-h.is-strong { opacity: 1; }
-.split-label.is-cur, .split-k.is-cur, .split-v.is-cur { color: var(--accent); opacity: 1; }
-.split-label.is-cur, .split-k.is-cur { font-weight: 700; }
+/* ⚠️`.split-h.is-cur` が無いと、ライン決着の列見出し（「3車ライン ◀ 今日」）だけ青くならない
+   ＝is-strong の白のまま。行ラベルだけ青くなって片方だけ浮く（2026-09-23 に追加） */
+.split-label.is-cur, .split-k.is-cur, .split-h.is-cur, .split-v.is-cur { color: var(--accent); opacity: 1; }
+.split-label.is-cur, .split-k.is-cur, .split-h.is-cur { font-weight: 700; }
 /* 今日の行でも「0回（—）」は薄いままにする＝青い棒が並ぶと数字のあるマスが埋もれる。
    .is-cur より指定を1つ強くして勝たせている */
 .split-v.is-cur.is-thin { opacity: .4; }

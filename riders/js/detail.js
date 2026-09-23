@@ -492,12 +492,18 @@ var DETAIL = (function () {
        ⚠️「全体」行には付けない＝今日の戦法ではなく、いつも見る行だから。 */
     cols.forEach(function (df) {
       var on = (df.k === todaySize);
-      box.appendChild(el('div', 'split-h' + (on ? ' is-strong' : ''), df.label + (on ? ' ◀ 今日' : '')));
+      box.appendChild(el('div', 'split-h' + (on ? ' is-strong is-cur' : ''),
+        df.label + (on ? ' ◀ 今日' : '')));
     });
     rows.forEach(function (rw) {
       var strongRow = (rw.k === '' || rw.k === todayBun);   // 「全体」は常に太字
       var rowOn = (rw.k !== '' && rw.k === todayBun);
-      box.appendChild(el('div', 'split-k' + (strongRow ? ' is-strong' : ''),
+      /* 🔑「◀ 今日」が付く見出しと行ラベルは**青**（2026-09-23 Naoto「他のところと合わせて青色に」）
+         ＝レース種別の表の「◀ 今日」と同じ色。
+         ⚠️**セル（数字）は青にしない**＝種別の表は行がまるごと今日だが、ここは列×行の2軸で、
+           行を青く塗ると「今日の列と交わるどのマスを見るのか」が分からなくなる。
+           交わるマスは白い太字、関係ないマスはグレーのまま（§31 第3版）。 */
+      box.appendChild(el('div', 'split-k' + (strongRow ? ' is-strong' : '') + (rowOn ? ' is-cur' : ''),
         rw.label + (rowOn ? ' ◀ 今日' : '')));
       cols.forEach(function (df) {
         var b = rw.get(lk[df.k]);
