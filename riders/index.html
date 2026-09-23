@@ -2,9 +2,19 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OKL 選手DB</title>
-<link rel="stylesheet" href="css/style.css?v=20260923-180654">
+<!-- ホーム画面のアプリとして開くための指定（要件§35・③PWA）。
+     ⚠️iPhoneは manifest の start_url を見ない＝**「ホーム画面に追加」したときのURL**で起動する。
+        だから初回は `?k=<キー>` を付けたまま追加してもらう（取扱説明書に手順あり）。 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a2029">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="選手DB">
+<link rel="apple-touch-icon" href="icon-180.png?v=20260923-181533">
+<link rel="icon" href="icon-192.png?v=20260923-181533">
+<link rel="stylesheet" href="css/style.css?v=20260923-181533">
 </head>
 <body data-view="work">
 
@@ -75,15 +85,15 @@
 <!-- ═══════════ 出力ビュー（OBSブラウザソース・背景透明） ═══════════ -->
 <div class="outcard" id="outcard" hidden></div>
 
-<script src="../autoupdate.js?v=20260923-180654" data-au="output-only"></script>
-<script src="js/config.js?v=20260923-180654"></script>
-<script src="js/racetype.js?v=20260923-180654"></script>
-<script src="js/api.js?v=20260923-180654"></script>
-<script src="js/kana.js?v=20260923-180654"></script>
-<script src="js/list.js?v=20260923-180654"></script>
-<script src="js/today.js?v=20260923-180654"></script>
-<script src="js/detail.js?v=20260923-180654"></script>
-<script src="js/output.js?v=20260923-180654"></script>
-<script src="js/main.js?v=20260923-180654"></script>
+<script src="../autoupdate.js?v=20260923-181533" data-au="output-only"></script>
+<script src="js/config.js?v=20260923-181533"></script>
+<script src="js/racetype.js?v=20260923-181533"></script>
+<script src="js/api.js?v=20260923-181533"></script>
+<script src="js/kana.js?v=20260923-181533"></script>
+<script src="js/list.js?v=20260923-181533"></script>
+<script src="js/today.js?v=20260923-181533"></script>
+<script src="js/detail.js?v=20260923-181533"></script>
+<script src="js/output.js?v=20260923-181533"></script>
+<script src="js/main.js?v=20260923-181533"></script>
 </body>
 </html>

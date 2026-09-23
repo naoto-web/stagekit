@@ -59,6 +59,17 @@ var MOBILE = (window.CONFIG && CONFIG.IS_OUTPUT) ? null : (function () {
     return;
   }
 
+  /* ── ホーム画面のアプリとして開けるようにする（要件§35・③PWA）──
+     🔑Service Worker は**何もキャッシュしない**（`sw.js` の説明）＝
+        `autoupdate.js` の自動更新を邪魔しない。登録するのは「アプリとして入れられる」ようにするためだけ。
+     ⚠️出力ビュー（OBS）では**ここより上で return している**＝配信画面には一切関わらない。
+     ⚠️`file://` で開いたとき（手元の確認用）は使えないので、黙って見送る。 */
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* 入らなくてもアプリは動く */ });
+    });
+  }
+
   /* ── 背景の色（黒／白）＝2026-09-23 Naoto「一応見て、すぐ元に戻せるように」──
      🔑**ここより上（IS_OUTPUT の return）で出力ビューは抜けている**＝配信画面には一切かからない。
      🔑DOMContentLoaded を待たずにここで当てる（main.js は body の末尾で読まれる）。
