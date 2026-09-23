@@ -30,6 +30,15 @@ var DETAIL = (function () {
   var openRole = null;
   // 表の左端の列幅。着順の表（本体・戦法別・種別）とライン決着で共通にして列をそろえる
   var LABEL_W = '96px';
+  /* 着順の表（本体・戦法別・種別）の 1着〜9着 の列幅。🔴**固定幅**（`minmax(52px, auto)` にしない）。
+     2026-09-23 Naoto「1着〜9着の位置が着順・戦法別・種別でずれている」＝実測で2つの原因が重なっていた：
+       ①種別だけ 44px＋隙間12px の別の型だった（9着で99pxずれ）
+       ②`auto` だと**中身の広いマスがその列だけ押し広げる**＝「うち番手に差され」のある表だけ2着が61pxになり、
+         同じ型のはずの二分戦（52px）と3着から9pxずれていた
+     ⇒ 4つの表の列の型を**この1か所**から出す（`rankCols`）。中身が広くなっても列は動かない（はみ出す側が折り返す）。
+     ⚠️幅を変えるときは 1370px のPCで入るか見る＝96＋52×9＋隙間14×9＝690px がいまの上限ぎりぎり。 */
+  var RANK_COL = '52px';
+  function rankCols(nCol) { return LABEL_W + ' repeat(' + nCol + ', ' + RANK_COL + ')'; }
 
   /** seed＝一覧や出走表が持っている名前・級班・得点。GASの返事を待たずに見出しだけ先に出す */
   function open(reg, context, seed) {
@@ -103,8 +112,8 @@ var DETAIL = (function () {
     box.appendChild(basics(r));
     box.appendChild(featureSection());
     box.appendChild(rolesSection());
-    // ※レース種別ごとは独立した枠をやめ、役割別の中（ライン決着の下）へ入れた
-    //   （2026-09-23 Naoto「役割別の中に入れ込んでください」）
+    // ※レース種別は独立した枠をやめ、役割別の中（戦法別の下・ライン決着の上）へ入れた
+    //   （2026-09-23 Naoto「役割別の中に入れ込んでください」→ 同日「ライン決着の上に」）
     box.appendChild(sSection());
     box.appendChild(followSection());
     box.appendChild(obsSection());
@@ -251,12 +260,13 @@ var DETAIL = (function () {
         card.appendChild(rankTableV(rs, role.key));
       } else {
         card.appendChild(rankTable(rs, role.key));
-        // 並び順＝戦法別 → ライン決着 → レース種別ごと（2026-09-23 Naoto指定）。
-        // 🔑どれも同じ「1着〜9着の回数」の表なので、上から下へ同じ読み方で追える
         card.appendChild(splitRanks(rs, role.key));
       }
-      card.appendChild(lineRow(role.key));
+      // 並び順＝着順 → 戦法別 → レース種別 → ライン決着（2026-09-23 Naoto「レース種別をライン決着の上に」）。
+      // 🔑1着〜9着の表（着順・戦法別・種別）を続けて置く＝列が同じ位置なので上から下へ縦に見比べられる。
+      //    ライン決着だけ列の意味が違う（車数）ので、いちばん下に離す。PCもスマホも同じ順
       card.appendChild(typeRanks(rs));
+      card.appendChild(lineRow(role.key));
     } else {
       card.appendChild(el('div', 'muted sm', 'この役割で走った記録がまだありません。'));
     }
@@ -402,8 +412,8 @@ var DETAIL = (function () {
     var nCol = 9 + (hasOther ? 1 : 0);
 
     var box = el('div', 'split rank');
-    // 左端は固定幅＝本体と戦法別を縦に並べたとき、1着・2着…の列がぴたり重なる
-    box.style.gridTemplateColumns = LABEL_W + ' repeat(' + nCol + ', minmax(52px, auto))';
+    // 列の型は種別の表と同じ1か所（rankCols）から＝縦に並べたとき、1着・2着…の列がぴたり重なる
+    box.style.gridTemplateColumns = rankCols(nCol);
 
     var lab = el('div', 'split-label' + (opts.cur ? ' is-cur' : '') + (opts.label ? ' is-strong' : ''),
       (opts.label || '着順') + (opts.cur ? ' ◀ 今日' : ''));
@@ -425,7 +435,9 @@ var DETAIL = (function () {
         var cell = el('div', 'rank-sub');
         (sub[m] || []).forEach(function (x) {
           var line = el('div', 'rank-sub-i' + (x.v ? '' : ' is-thin') + (x.sub ? ' is-note' : ''));
-          line.appendChild(el('span', 'rank-sub-k', x.label));
+          // 🔑列は52px固定（RANK_COL）＝長い注記は短い形で出し、全文はホバーの説明に残す（スマホと同じ扱い）
+          line.appendChild(el('span', 'rank-sub-k', x.short || x.label));
+          if (x.short) line.title = x.label + ' ' + x.v + '回';
           line.appendChild(el('span', 'rank-sub-v', x.v + '回'));
           cell.appendChild(line);
         });
@@ -538,9 +550,11 @@ var DETAIL = (function () {
         var v = d[k[0] + rank] || 0;
         if (v) arr.push({ label: k[1], v: v });
       });
-      // 「うち番手に差され」は決まり手と**別の軸**で重なるので、点線の下に内数として添える
+      // 「うち番手に差され」は決まり手と**別の軸**で重なるので、点線の下に内数として添える。
+      // ⚠️全文（8文字）は 52px の列に入らず**その列だけ61pxに広がって隣の表と列がずれた**（2026-09-23 Naoto指摘）
+      //    ⇒ PCは `short`（説明書の用語表と同じ「番手に差され」）で出す。スマホは「差され」（rankTableV）
       if (rank === 2 && roleKey === 'head' && d.sashed2) {
-        arr.push({ label: 'うち番手に差され', v: d.sashed2, sub: true });
+        arr.push({ label: 'うち番手に差され', short: '番手に差され', v: d.sashed2, sub: true });
       }
       if (arr.length) s[rank - 1] = arr;
     });
@@ -634,7 +648,7 @@ var DETAIL = (function () {
     return box;
   }
 
-  /* ── ④.3 レース種別ごと（9/23 Naoto相談→役割を問わない着順で出す） ── */
+  /* ── ④.3 レース種別（9/23 Naoto相談→役割を問わない着順で出す） ── */
 
   /** 予選／準決勝／決勝…ごとの着順。
       🔑役割×種別まで割らない＝4ヶ月だと1人の決勝は数走しかなく、役割で割ると全部1〜2走の
@@ -650,7 +664,7 @@ var DETAIL = (function () {
     var order = (window.RACETYPE && RACETYPE.RACE_TYPES) || [];
     var types = order.filter(function (t) { return bt && bt[t] && bt[t].n; });
     var wrap = el('div', '');
-    wrap.appendChild(el('div', 'lbl', 'レース種別ごと'));
+    wrap.appendChild(el('div', 'lbl', 'レース種別'));   // 「レース種別ごと」→「レース種別」（2026-09-23 Naoto・PC/スマホ共通）
     if (!types.length) return wrap;
 
     var curType = (ctx && ctx.cls && window.RACETYPE) ? RACETYPE.raceTypeOf(ctx.cls) : '';
@@ -662,10 +676,13 @@ var DETAIL = (function () {
     var nar = narrow();
     var nCol = nar ? 4 : 9 + (hasOther ? 1 : 0);
 
-    var box = el('div', 'split rank is-compact');
+    /* 🔴PCの列の型は着順の表と**同じ1か所**（rankCols）から出す。
+       以前はこの表だけ `minmax(44px, auto)`＋`is-compact`（隙間12px）で、1着〜9着が上の表と
+       ずれていた（9着で99px・2026-09-23 Naoto指摘）。総幅は着順の表と同じなので入る幅も同じ。 */
+    var box = el('div', 'split rank');
     box.style.gridTemplateColumns = nar
       ? '72px repeat(4, minmax(0, 1fr))'
-      : LABEL_W + ' repeat(' + nCol + ', minmax(44px, auto))';
+      : rankCols(nCol);
     box.appendChild(el('div', 'split-label is-strong', '種別'));
     if (nar) {
       ['1着', '2着', '3着', '4着以下'].forEach(function (t) { box.appendChild(el('div', 'split-h', t)); });

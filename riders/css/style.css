@@ -365,8 +365,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 
 /* 着順ごとの回数の表（9/23）。列を詰めたいので .split より狭く、内訳は着順の真下に縦積み */
 .rank .split-v { font-size: 13px; }
-.rank-sub { display: flex; flex-direction: column; gap: 1px; align-items: flex-end; }
-.rank-sub-i { display: flex; gap: 4px; align-items: baseline; white-space: nowrap; }
+/* 🔴列は52px固定（detail.js の RANK_COL）＝中身が広くても列を押し広げない。
+   min-width:0 が無いとflexの子は縮まず、はみ出しが左（前の列）へ流れる。
+   内訳の1行（ラベル＋回数）は入らなければ2行に折る（横に溢れて隣の列に重ならない）。 */
+.rank-sub { display: flex; flex-direction: column; gap: 1px; align-items: flex-end; min-width: 0; }
+.rank-sub-i { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; align-items: baseline; white-space: nowrap; }
 .rank-sub-i.is-thin { opacity: .35; }
 /* 「うち番手に差され」＝決まり手とは別の軸で上の行と重なる。
    ⚠️ラベルが長く列からはみ出して見えるので、**2段組み**にして列の幅に収める。
@@ -404,9 +407,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   background: var(--fill-soft); border-radius: 7px;
 }
 .split-label { font-size: 11px; color: var(--fg-dim); white-space: nowrap; }
-/* 着順の表（本体・戦法別・種別）は**左端の列を同じ幅にする**＝縦に並べたとき
-   1着・2着…の列がそろって見比べられる（2026-09-23 これが戦法別を同じ形にした理由）。
-   列が9〜11本あるので、この表だけ列の間も詰める。 */
+/* 着順の表（本体・戦法別・種別）は**列の型を全部同じにする**（左端96px＋52px固定×9・detail.js の rankCols）
+   ＝縦に並べたとき 1着・2着…の列がそろって見比べられる（2026-09-23 これが戦法別を同じ形にした理由）。
+   列が9〜11本あるので、この表だけ列の間も詰める。🔴隙間もここ1か所＝表ごとに変えない
+   （種別だけ12pxにしていたのが列ずれの原因の1つだった・2026-09-23 Naoto指摘） */
 .split.rank { column-gap: 14px; }
 /* 「二分戦 ◀ 今日」と「11走」は縦に積む＝横に並べると左端の列が広がって列がずれる */
 .split.rank > .split-label { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
@@ -444,8 +448,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* ⚠️`.split-h.is-cur` が無いと、ライン決着の列見出し（「3車ライン ◀ 今日」）だけ青くならない
    ＝is-strong の白のまま。行ラベルだけ青くなって片方だけ浮く（2026-09-23 に追加） */
 .split-label.is-cur, .split-k.is-cur, .split-h.is-cur { color: var(--accent); opacity: 1; font-weight: 700; }
-/* 種別は列が11本まで増えるので、この表だけ列の間を詰める */
-.split.is-compact { column-gap: 12px; }
+/* ※旧 `.split.is-compact`（種別だけ隙間12px）は廃止＝列がずれる原因だった（2026-09-23） */
 
 /* 並び実績など、タグを並べる入れもの（選択式タグは9/23に廃止＝Yが自分で書く方針） */
 .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
