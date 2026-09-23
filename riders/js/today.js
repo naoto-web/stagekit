@@ -297,6 +297,12 @@ var TODAY = (function () {
     bind: bind,
     load: load,
     markCurrent: markCurrent,
-    ensure: function () { if (!state.loaded) load(false); }
+    ensure: function () { if (!state.loaded) load(false); },
+    /* 今日の出走表に出ている場の名前（観察ログの「場」の上に出すため・2026-09-23）。
+       出走表をまだ読んでいなければ空を返す＝呼び出し側は40場の一覧だけで普通に動く */
+    venueNames: function () {
+      return ((state.data || {}).venues || []).map(function (v) { return v.name; })
+        .filter(Boolean);
+    }
   };
 })();

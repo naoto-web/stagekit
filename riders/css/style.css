@@ -43,6 +43,13 @@
   --fg-faint: #565d66;
 }
 
+/* 🔴`input type="date"` のカレンダーアイコンとカレンダー本体は**ブラウザが描くので色を直接いじれない**。
+   これが無いと、暗い背景に黒いアイコンが載って見えなくなる（2026-09-23 観察ログの開催日）。
+   ⚠️**`:root` ではなく work ビューに書く**＝出力ビュー（OBS）には絶対に効かせない（§27と同じ約束）。
+      `color-scheme` はブラウザのキャンバス色を変える指定なので、「背景は完全透明」が命の配信画面には触れない。
+   🔑`color-scheme` は継承されるので、body に置けば中の入力欄まで届く。 */
+body[data-view="work"] { color-scheme: dark; }
+
 /* ── 白背景（2026-09-23 Naoto「一応見て、すぐ元に戻せるように」）──
    画面右上のボタンで切り替え・このブラウザだけが覚える。既定は黒のまま。
    🔑金（得点）と緑・赤は**白地だと飛ぶので濃く**する。明度だけ入れ替えると読めなくなる。 */
@@ -79,6 +86,10 @@ body[data-view="work"][data-theme="light"] {
   /* トーストは白地でも浮くよう濃いまま＝色を反転させない */
   --toast-bg: #2b3341;     --toast-fg: #ffffff;     --toast-err-fg: #ffd7d7;
   --fg-faint: #bbbcbf;
+
+  /* カレンダーのアイコンと日付ピッカーも白地用に。⚠️ここ（work＋light）にだけ書く
+     ＝出力ビュー（OBS）は :root の dark のまま */
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -139,6 +150,9 @@ input[type="search"], .inp, .sel, .ta, .role-note {
 }
 .inp-sm { width: 90px; }
 .inp-xs { width: 62px; }
+/* 観察ログの「場」と「開催日」（2026-09-23 Naoto）。
+   ⚠️type=date は中に「2026/09/23」＋カレンダーのボタンが入るので、90pxだと日付が切れる */
+.sel-sm { width: 112px; }
 .ta { width: 100%; resize: vertical; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
@@ -474,6 +488,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .obs-form { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 10px; margin-bottom: 12px; }
 .obs-form-top { display: flex; gap: 7px; margin-bottom: 8px; flex-wrap: wrap; }
 .obs-form .inp { width: 100%; }
+/* 🔴上の `.obs-form .inp` のほうが詳細度が高いので、幅を決める行は **.obs-form を頭に付ける**。
+   付け忘れると日付欄が1行まるごと占領して、役割・場・開催日・Rが縦に崩れる（2026-09-23に実際そうなった）。
+   ⚠️type=date は中に「2026/09/23」＋カレンダーのボタンが入るので156px要る */
+.obs-form .inp-date { width: 156px; }
+.obs-form .inp-xs { width: 62px; }
 .obs-form-bar { display: flex; align-items: center; gap: 14px; margin-top: 9px; }
 .chk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-dim); cursor: pointer; }
 .obs-list { display: flex; flex-direction: column; gap: 7px; }

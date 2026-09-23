@@ -311,6 +311,30 @@ var DETAIL = (function () {
     ta.style.height = (ta.scrollHeight + 2) + 'px';
   }
 
+  /* ── 開催日の3つの形（2026-09-23 Naoto）──────────────────────
+     保存＝`20260923`（今までどおり・GASもスプレッドシートも触らない）
+     入力＝`2026-09-23`（`input type="date"` の決まり。これ以外の形は**黙って空欄になる**）
+     表示＝`2026/9/23`（Naoto指定。`20260923` は読めない）
+     ⚠️どれか1つでも通し忘れると、入力欄が空で開くか、保存が消える。変換はこの3つの関数だけを通す。 */
+
+  /** `20260923` / `2026/09/23` → `2026-09-23`（input type=date が受け取れる形） */
+  function toDateInput(s) {
+    var m = /^(\d{4})[-\/]?(\d{2})[-\/]?(\d{2})$/.exec(String(s || '').trim());
+    return m ? (m[1] + '-' + m[2] + '-' + m[3]) : '';
+  }
+
+  /** `2026-09-23` → `20260923`（保存する形）。空欄はそのまま空欄 */
+  function fromDateInput(s) {
+    return String(s || '').replace(/-/g, '');
+  }
+
+  /** `20260923` / `2026-09-23` → `2026/9/23`（画面に出す形）。
+      ⚠️読めない値はそのまま返す＝手入力時代の値が消えない */
+  function fmtObsDate(s) {
+    var m = /^(\d{4})[-\/]?(\d{2})[-\/]?(\d{2})$/.exec(String(s || '').trim());
+    return m ? (m[1] + '/' + (+m[2]) + '/' + (+m[3])) : String(s || '');
+  }
+
   /** 戦法別（二分戦／三分戦以上）。
       🔑A級3班の全体で見ると番手は二分戦52.7%・三分戦以上38.3%（差14.4pt）＝効く軸。
       🔑2026-09-23：本体と同じ「着順の表」で出す（Naoto「上の記載方法に合わせて」）。
@@ -714,16 +738,46 @@ var DETAIL = (function () {
     });
     top.appendChild(roleSel);
 
-    var jo = el('input', 'inp inp-sm');
-    jo.type = 'text';
-    jo.placeholder = '場';
-    jo.value = (ctx && ctx.jo) || '';
+    /* ── 場＝プルダウン（2026-09-23 Naoto）──
+       🔑**今日開催している場を上に固めて出す**＝観察はたいてい当日書くので、40場から探さずに済む。
+       ⚠️選択肢に無い値（過去に手入力したもの・新しい場）は先頭に足してから選ぶ＝黙って消えない。 */
+    var jo = el('select', 'sel sel-sm');
+    var cv = (ctx && ctx.jo) || '';
+    var j0 = el('option', '', '場を選ぶ');
+    j0.value = '';
+    jo.appendChild(j0);
+
+    var todays = (window.TODAY && TODAY.venueNames) ? TODAY.venueNames() : [];
+    var seen = {};
+    function joOpt(name, parent) {
+      if (!name || seen[name]) return;
+      seen[name] = 1;
+      var o = el('option', '', name);
+      o.value = name;
+      parent.appendChild(o);
+    }
+    if (cv && CONFIG.VENUES.indexOf(cv) < 0) joOpt(cv, jo);   // 一覧に無い既存値
+    if (todays.length) {
+      var g1 = el('optgroup');
+      g1.label = '今日開催';
+      todays.forEach(function (n) { joOpt(n, g1); });
+      if (g1.childNodes.length) jo.appendChild(g1);
+      var g2 = el('optgroup');
+      g2.label = 'そのほか';
+      CONFIG.VENUES.forEach(function (n) { joOpt(n, g2); });
+      if (g2.childNodes.length) jo.appendChild(g2);
+    } else {
+      CONFIG.VENUES.forEach(function (n) { joOpt(n, jo); });
+    }
+    jo.value = cv;
     top.appendChild(jo);
 
-    var rd = el('input', 'inp inp-sm');
-    rd.type = 'text';
-    rd.placeholder = '開催日';
-    rd.value = (ctx && ctx.raceDate) || '';
+    /* ── 開催日＝カレンダーで選ぶ（2026-09-23 Naoto）──
+       🔴入れ物は `YYYY-MM-DD`（type=date の決まり）だが、**保存は今までどおり `YYYYMMDD`**。
+          GAS・スプレッドシート・既存の1件を一切触らずに済む。変換は toDateInput / fromDateInput の2か所だけ。 */
+    var rd = el('input', 'inp inp-date');
+    rd.type = 'date';
+    rd.value = toDateInput((ctx && ctx.raceDate) || '');
     top.appendChild(rd);
 
     var rn = el('input', 'inp inp-xs');
@@ -755,7 +809,7 @@ var DETAIL = (function () {
       add.disabled = true;
       API.addObs({
         reg: cur.rider.reg, role: roleSel.value, body: body.value,
-        jo: jo.value, raceDate: rd.value, raceNo: rn.value, pub: pubIn.checked ? 1 : ''
+        jo: jo.value, raceDate: fromDateInput(rd.value), raceNo: rn.value, pub: pubIn.checked ? 1 : ''
       }).then(function (j) {
         cur.obs = j.obs;
         toast('追加しました');
@@ -776,7 +830,7 @@ var DETAIL = (function () {
     var top = el('div', 'obs-top');
     if (o.role) top.appendChild(el('span', 'tag tag-role', roleLabel(o.role)));
     (o.tags || []).forEach(function (t) { top.appendChild(el('span', 'tag', t)); });
-    var where = [o.jo, o.raceDate, o.raceNo ? o.raceNo + 'R' : ''].filter(Boolean).join(' ');
+    var where = [o.jo, fmtObsDate(o.raceDate), o.raceNo ? o.raceNo + 'R' : ''].filter(Boolean).join(' ');
     if (where) top.appendChild(el('span', 'muted sm', where));
     row.appendChild(top);
 
