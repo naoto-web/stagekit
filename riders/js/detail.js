@@ -122,14 +122,16 @@ var DETAIL = (function () {
     return (CONFIG.STATS_URLS && CONFIG.STATS_URLS[v]) ? v : '4';
   }
 
-  /** 期間の切り替えの行。役割別の本体の先頭に置く */
+  /** 期間の切り替えの行。**役割別とバンク別の本体の先頭**に置く（§44・2026-09-24 Naoto）。
+      🔑同じ行を2つ出すので、押したときは**画面に出ている行を全部**同じ状態にする（switchWin を参照）。
+         片方だけ「読み込み中…」になると、もう片方が古い選択のまま押せてしまう。 */
   function winBar() {
     var bar = el('div', 'win-bar');
     bar.appendChild(el('span', 'win-k', '期間'));
     (CONFIG.STATS_WINDOWS || []).forEach(function (w) {
       var b = el('button', 'win-btn' + (w.k === win ? ' is-on' : ''), w.label);
       b.type = 'button';
-      b.onclick = function () { switchWin(w.k, bar); };
+      b.onclick = function () { switchWin(w.k); };
       bar.appendChild(b);
     });
     var wd = statsAll && statsAll.window;
@@ -142,19 +144,22 @@ var DETAIL = (function () {
   /** 期間を切り替える＝その窓のファイルを読んで描き直す。
       🔑描き直しても見ていた位置が飛ばないよう、スクロール位置を保って戻す
          （切り替えの行はページの途中にあるので、先頭へ戻ると押した場所を見失う）。
-      ⚠️読んでいる間はボタンを押せなくする＝連打で古い応答が後から上書きするのを防ぐ。 */
-  function switchWin(k, bar) {
+      ⚠️読んでいる間はボタンを押せなくする＝連打で古い応答が後から上書きするのを防ぐ。
+      🔴**画面に出ている切り替えの行を全部そろえる**（§44）＝役割別とバンク別の2か所に同じ行があるので、
+         押されたほうだけ「読み込み中…」にすると、**もう片方は古い選択のまま押せる**状態で残る。
+         ⇒ どの行から押しても見た目が1つに揃う（読み終われば render で作り直される）。 */
+  function switchWin(k) {
     if (k === win) return;
     win = k;
     try { localStorage.setItem(WIN_LS, k); } catch (e) { /* 覚えられなくても動く */ }
-    if (bar) {
+    Array.prototype.forEach.call(document.querySelectorAll('.win-bar'), function (bar) {
       Array.prototype.forEach.call(bar.querySelectorAll('.win-btn'), function (b) {
         b.disabled = true;
         b.classList.toggle('is-on', b.textContent === labelOfWin(k));
       });
       var r = bar.querySelector('.win-range');
       if (r) r.textContent = '読み込み中…';
-    }
+    });
     var my = ++seq;
     API.stats(k).then(function (s) {
       if (seq !== my) return;          // その間に別の選手を開いた
@@ -997,7 +1002,11 @@ var DETAIL = (function () {
        古い stats.json（byVenue を持たない版）が配られても、見出しだけが残らない。 */
     if (!bvRaw || !Object.keys(bvRaw).length) return el('div', '');
 
-    var s = section('バンク別', windowText(), mFold());
+    /* 🔑見出しの hint に期間を書かない＝**切り替えの行（winBar）が期間を出す**（§41と同じ分担）。
+       両方に出すと「直近4ヶ月」と「2025/09/22〜2026/09/22」が同時に見えて食い違って読める。
+       代わりに hint には**この枠だけ％であること**を書く（いちばん誤読しやすい点）。 */
+    var s = section('バンク別', '数字は％です。すぐ下の小さい数字が回数（母数）です。', mFold());
+    s.body.appendChild(winBar());
     var laps = (statsAll && statsAll.venues) || {};
     // 出走表から開いたときだけ「今日の場」が分かる（選手一覧から開いたときは空）
     var curV = (ctx && ctx.jo && window.BANK) ? BANK.normalize(ctx.jo) : '';
