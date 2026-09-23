@@ -51,7 +51,9 @@ var TODAY = (function () {
   function render(scroll) {
     var meta = document.getElementById('card-meta');
     var d = state.data || { venues: [] };
-    meta.textContent = d.venues.length ? (fmtDate(d.date) + '・' + d.venues.length + '場') : '';
+    // 🔑0件でも**どの日付を見たか**は出す（2026-09-24）＝「何も出ない」だけだと原因が分からない
+    meta.textContent = d.venues.length ? (fmtDate(d.date) + '・' + d.venues.length + '場')
+      : (d.date ? fmtDate(d.date) : '');
 
     var tabs = document.getElementById('venue-tabs');
     clear(tabs);
@@ -74,7 +76,7 @@ var TODAY = (function () {
     clear(box);
     var v = d.venues[state.venue];
     if (!v) {
-      box.appendChild(el('div', 'empty', '開催がありません。'));
+      emptyNote(box, d);
       return;
     }
 
@@ -89,6 +91,29 @@ var TODAY = (function () {
       var idx = firstRaceIdx(v);
       requestAnimationFrame(function () { scrollToRace(idx); });
     }
+  }
+
+  /* 出走表が空のときの説明（2026-09-24 Naoto「今日も明日も『開催がありません』になるのはなぜ？」）。
+     🔴**3つは別の話なので言い分ける**＝どれも「開催がありません」だと、こちらの不具合なのか
+        向こうが止まっているのかが読み手に分からない。実際に深夜にkeirin.jpがメンテ中で踏んだ。
+       ①取れなかった（メンテ・通信断）… GASが `unavailable` を返す
+       ②取れたが、その日ぶんがまだ公開されていない … `avail`（公開されている日付）に入っていない
+       ③取れて、その日は本当に開催が無い … めったに無い（競輪はほぼ毎日ある）
+     ⚠️`avail` は古いGASだと返ってこないので、無いときは②の判定をしない（黙って③に倒す）。 */
+  function emptyNote(box, d) {
+    var wrap = el('div', 'empty');
+    if (d.unavailable) {
+      wrap.appendChild(el('div', '', 'keirin.jp から出走表を取得できませんでした。'));
+      wrap.appendChild(el('div', 'sm muted', 'メンテナンス中かもしれません（深夜に多い）。'
+        + '少し待ってから「取り直す」を押してください。こちら側の不具合ではありません。'));
+    } else if (d.avail && d.avail.length && d.avail.indexOf(String(d.date)) < 0) {
+      wrap.appendChild(el('div', '', fmtDate(d.date) + ' の出走表はまだ公開されていません。'));
+      wrap.appendChild(el('div', 'sm muted', 'keirin.jp が出しているのは '
+        + d.avail.map(fmtDate).join('・') + ' の分です。'));
+    } else {
+      wrap.appendChild(el('div', '', (d.date ? fmtDate(d.date) + ' は' : '') + '開催がありません。'));
+    }
+    box.appendChild(wrap);
   }
 
   function raceBlock(v, r) {
