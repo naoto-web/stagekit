@@ -77,7 +77,10 @@ var DETAIL = (function () {
       🔑呼び出し側で明示的に渡す＝`section()` の中でタイトルの文字列から判断すると、
         タイトルを変えた日に黙って全部開く（文字列一致は静かに壊れる）。
       ⚠️PCの見え方は変えない＝広い画面では今までどおり全部開いている。 */
-  function mFold() { return !!(window.MOBILE && MOBILE.isNarrow()); }
+  function mFold() { return narrow(); }
+
+  /** スマホ（1カラム）か＝§35。**表の形**と**折りたたみの既定**がこれで変わる。 */
+  function narrow() { return !!(window.MOBILE && MOBILE.isNarrow()); }
 
   /** 集計期間の一言（例「数字は直近4ヶ月（2026/05/22〜2026/09/22）を数えたものです。」）。
       🔑期間は stats.json 側が持つ＝`build_stats.js` の `WINDOW_MONTHS` を変えれば文言も追いつく。
@@ -243,11 +246,15 @@ var DETAIL = (function () {
       card.appendChild(fig);
 
       // ②着順の段＝1着〜9着の回数。決まり手の内訳はその着順の下にぶら下げる（9/23 Naoto指定）
-      card.appendChild(rankTable(rs, role.key));
-
-      // 並び順＝戦法別 → ライン決着 → レース種別ごと（2026-09-23 Naoto指定）。
-      // 🔑どれも同じ「1着〜9着の回数」の表なので、上から下へ同じ読み方で追える
-      card.appendChild(splitRanks(rs, role.key));
+      // 🔑スマホは横に9列取れないので、**本体と戦法別を1つの縦表にまとめる**（§35-4 案A）
+      if (narrow()) {
+        card.appendChild(rankTableV(rs, role.key));
+      } else {
+        card.appendChild(rankTable(rs, role.key));
+        // 並び順＝戦法別 → ライン決着 → レース種別ごと（2026-09-23 Naoto指定）。
+        // 🔑どれも同じ「1着〜9着の回数」の表なので、上から下へ同じ読み方で追える
+        card.appendChild(splitRanks(rs, role.key));
+      }
       card.appendChild(lineRow(role.key));
       card.appendChild(typeRanks(rs));
     } else {
@@ -429,6 +436,89 @@ var DETAIL = (function () {
     return box;
   }
 
+  /** 【スマホ】着順の表を**縦**にする（§35-4 案A・2026-09-23）。
+      PCは「横＝1着〜9着／縦＝全体・二分戦・三分戦以上」で表を3つ縦に並べる。
+      スマホは横に9列も取れないので **90度回して1つの表にまとめる**（縦＝着順／横＝戦法）。
+      🔑読み方は変わらない＝PCで覚えた「回数で見る・母数は走数で見る」がそのまま効く。
+      🔑**情報は1つも減らさない**（決まり手の内訳も走数も出す）＝
+         「4着以下をまとめる」案は**負け方が隠れる**ので採らなかった（検討メモ§4.1）。
+      ⚠️列幅は `minmax(0,1fr)` の均等割＝端末の幅に合わせて縮む。
+         固定pxにすると、いちばん狭い360pxで溢れる。 */
+  function rankTableV(rs, roleKey) {
+    var ranks = rs.ranks || [];
+    if (!ranks.length) return el('div', '');
+    var sp = rs.sp || {};
+    var today = (ctx && ctx.bunsen) || '';
+
+    var cols = [{ k: '', label: '全体', d: rs }];
+    [['2', '二分戦'], ['3', '三分戦以上']].forEach(function (p) {
+      var d = sp[p[0]];
+      if (d && d.n) cols.push({ k: p[0], label: p[1], d: d });
+    });
+
+    /* 出す着順＝どこかの列に記録がある最大着順まで。
+       ⚠️PCは9着まで固定（列がそろうほうが読みやすい）だが、縦型で9行固定にすると
+         7車立てでは常に空の行が2つ増えて縦に伸びるだけになる。 */
+    var maxRank = 0;
+    cols.forEach(function (c) {
+      (c.d.ranks || []).forEach(function (v, i) { if (v && i < 9) maxRank = Math.max(maxRank, i + 1); });
+    });
+    if (maxRank < 3) maxRank = 3;
+    var hasOther = cols.some(function (c) { return ((c.d.ranks || [])[9] || 0) > 0; });
+
+    var tmpl = 'repeat(' + cols.length + ', minmax(0, 1fr))';
+    var box = el('div', 'split rank rank-v');
+    box.style.gridTemplateColumns = '46px ' + tmpl;
+
+    box.appendChild(el('div', 'split-label is-strong', '着順'));
+    cols.forEach(function (c) {
+      var on = !!(c.k && c.k === today);
+      box.appendChild(el('div', 'split-h' + (on ? ' is-strong is-cur' : ''), c.label + (on ? ' ◀ 今日' : '')));
+    });
+
+    var subs = cols.map(function (c) { return rankSubs(roleKey, c.d.detail || {}); });
+
+    for (var i = 0; i < maxRank; i++) {
+      box.appendChild(el('div', 'split-k', (i + 1) + '着'));
+      cols.forEach(function (c) { box.appendChild(rankCellV(c, today, (c.d.ranks || [])[i] || 0)); });
+      // 決まり手の内訳＝その着順の**すぐ下**に、列の並びをそろえて小さく出す（PCと同じ考え方）
+      if (subs.some(function (s) { return s[i] && s[i].length; })) {
+        var sub = el('div', 'rank-v-sub');
+        sub.style.gridTemplateColumns = tmpl;
+        cols.forEach(function (c, ci) {
+          var cell = el('div', '');
+          (subs[ci][i] || []).forEach(function (x) {
+            // ⚠️「うち番手に差され」は縦型では長すぎる＝短くして、全文はホバーの説明に残す
+            var sp2 = el('span', 'rank-v-i' + (x.sub ? ' is-note' : ''), (x.sub ? '差され' : x.label) + x.v);
+            if (x.sub) sp2.title = 'うち番手に差され ' + x.v + '回';
+            cell.appendChild(sp2);
+          });
+          sub.appendChild(cell);
+        });
+        box.appendChild(sub);
+      }
+    }
+    if (hasOther) {
+      box.appendChild(el('div', 'split-k', '他'));
+      cols.forEach(function (c) { box.appendChild(rankCellV(c, today, (c.d.ranks || [])[9] || 0)); });
+    }
+    box.appendChild(el('div', 'split-k is-strong', '走数'));
+    cols.forEach(function (c) {
+      box.appendChild(el('div', 'split-v' + cellOffV(c, today), c.d.n + '走'));
+    });
+    return box;
+  }
+
+  function rankCellV(c, today, v) {
+    return el('div', 'split-v' + cellOffV(c, today) + (v ? '' : ' is-thin'), v ? v + '回' : '—');
+  }
+
+  /** 今日の戦法でない列は落とす（§33の決まり）。
+      ⚠️「全体」列（k が空）はいつも見る列なので落とさない＝ライン決着の「全体」行と同じ扱い。 */
+  function cellOffV(c, today) {
+    return (today && c.k && c.k !== today) ? ' is-off' : '';
+  }
+
   /** 着順（1〜9着）ごとにぶら下げる内訳。配列の添字＝着順−1。
       🔑2026-09-23（第2版・Naoto指摘）：**役割で項目を決め打ちしない**。
          1着・2着とも「逃・捲・差・マ」のうち**実際に出たものだけ**を並べる。
@@ -494,7 +584,11 @@ var DETAIL = (function () {
     var todayBun = (ctx && ctx.bunsen) || '';
 
     var box = el('div', 'split');
-    box.style.gridTemplateColumns = LABEL_W + ' repeat(' + cols.length + ', minmax(96px, auto))';
+    /* ⚠️スマホはPCの寸法（96px＋96px×3＝約400px）では入らない。
+       ラベルを詰めて列は均等割にする（§35）＝端末の幅に合わせて縮む。 */
+    box.style.gridTemplateColumns = narrow()
+      ? '72px repeat(' + cols.length + ', minmax(0, 1fr))'
+      : LABEL_W + ' repeat(' + cols.length + ', minmax(96px, auto))';
     box.appendChild(el('div', 'split-label is-strong', 'ライン決着'));
     /* 🔑今日に当たる列と行には「◀ 今日」を出す（2026-09-23 Naoto 第3版）。
        レース種別の表と同じ印＝**どこを見ればいいかを文字で言い切る**（太字や色の濃淡だけに頼らない）。
@@ -562,13 +656,23 @@ var DETAIL = (function () {
     var curType = (ctx && ctx.cls && window.RACETYPE) ? RACETYPE.raceTypeOf(ctx.cls) : '';
     // 列は着順の表とそろえる。「他」は1つでも出た種別があれば全行に出す（列をずらさない）
     var hasOther = types.some(function (t) { return (bt[t].ranks || [])[9] > 0; });
-    var nCol = 9 + (hasOther ? 1 : 0);
+    /* 🔑スマホは「1着・2着・3着・4着以下」の4列にまとめる（§35-4）。
+       種別は行が5〜7本あるので、着順まで9列出すとどう詰めても入らない。
+       ⚠️「4着以下」には**「他」も足す**＝どこにも数えられない走が黙って消えないように。 */
+    var nar = narrow();
+    var nCol = nar ? 4 : 9 + (hasOther ? 1 : 0);
 
     var box = el('div', 'split rank is-compact');
-    box.style.gridTemplateColumns = LABEL_W + ' repeat(' + nCol + ', minmax(44px, auto))';
+    box.style.gridTemplateColumns = nar
+      ? '72px repeat(4, minmax(0, 1fr))'
+      : LABEL_W + ' repeat(' + nCol + ', minmax(44px, auto))';
     box.appendChild(el('div', 'split-label is-strong', '種別'));
-    for (var i = 0; i < 9; i++) box.appendChild(el('div', 'split-h', (i + 1) + '着'));
-    if (hasOther) box.appendChild(el('div', 'split-h', '他'));
+    if (nar) {
+      ['1着', '2着', '3着', '4着以下'].forEach(function (t) { box.appendChild(el('div', 'split-h', t)); });
+    } else {
+      for (var i = 0; i < 9; i++) box.appendChild(el('div', 'split-h', (i + 1) + '着'));
+      if (hasOther) box.appendChild(el('div', 'split-h', '他'));
+    }
 
     types.forEach(function (t) {
       var b = bt[t];
@@ -580,14 +684,21 @@ var DETAIL = (function () {
       k.appendChild(el('span', 'split-n', b.n + '走'));
       box.appendChild(k);
       var ranks = b.ranks || [];
-      for (var j = 0; j < nCol; j++) {
-        var v = ranks[j] || 0;
+      var vals = [];
+      if (nar) {
+        var rest = 0;
+        for (var q = 3; q < ranks.length; q++) rest += ranks[q] || 0;   // 4着以下＋「他」
+        vals = [ranks[0] || 0, ranks[1] || 0, ranks[2] || 0, rest];
+      } else {
+        for (var j = 0; j < nCol; j++) vals.push(ranks[j] || 0);
+      }
+      vals.forEach(function (v) {
         /* 🔑**数字は青にしない＝白い太字のまま**（2026-09-23 Naoto「回数のところは青字ではなく白太字に。他と合わせて」）。
            青いのは行ラベルの「◀ 今日」だけ＝ライン決着と同じ分担で、
            **印（青）が「どこを見るか」を指し、白とグレーが「どのマスか」を指す**。
            ⚠️ここで `cls`（is-cur）を足すと行がまるごと青く塗られ、数字がどれも同じ重みに見える。 */
         box.appendChild(el('div', 'split-v' + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
-      }
+      });
     });
     wrap.appendChild(box);
     return wrap;

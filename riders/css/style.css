@@ -622,6 +622,29 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .dt-head-r { flex-direction: row; align-items: center; gap: 10px; }
   .dt-name-main { font-size: 22px; }
 
+  /* ── 表（§35-4）──
+     🔴PCは見出し・ラベルを1行に固定（nowrap）しているが、スマホは列が狭いので**折り返させる**。
+        折り返しを許さないと「三分戦以上 ◀ 今日」が列からはみ出して、右に横スクロールが出る。 */
+  .split { column-gap: 10px; padding: 8px; }
+  .split.rank { column-gap: 10px; }
+  .split-k, .split-h, .split-label { white-space: normal; }
+  .split-v { font-size: 13px; }
+  .rank .split-v { font-size: 13px; }
+  /* 🔴行ラベルの走数は**縦に積む**＝「予選 ◀ 今日」と「8走」を横に並べると72pxに入らず、
+     「8」と「走」が離れて改行する（実機幅で確認）。PCは横並びのままでよい（ラベル列が96px） */
+  .split.rank > .split-k { display: flex; flex-direction: column; align-items: flex-start; }
+  .split.rank > .split-k .split-n { margin-left: 0; }
+
+  /* 縦型（着順を縦・戦法を横）の内訳＝着順の行の下に、列の並びをそろえて小さく出す。
+     ⚠️`grid-column: 2 / -1` で左のラベル列を除いた全幅に敷き、中を親と同じ列数で割る
+       （列の幅は detail.js が流し込む＝上の数字と縦にそろう）。 */
+  .rank-v-sub { grid-column: 2 / -1; display: grid; column-gap: 10px; margin: -3px 0 2px; }
+  /* ⚠️数字（.split-v）が右寄せなので、内訳も**右に寄せる**＝上下で右端がそろって視線が縦につながる。
+     左寄せのままだと「5回」の下の「逃1 捲3 差1」が左にずれて、どの数字の内訳か追いにくい */
+  .rank-v-sub > div { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+  .rank-v-i { font-size: 10px; color: var(--fg-dim); white-space: nowrap; }
+  .rank-v-i.is-note { color: var(--fg-faint); }
+
   /* ── 観察ログの入力：指で押せる大きさに ── */
   .obs-form .sel, .obs-form .inp { min-height: 38px; }
   .obs-form-bar { flex-wrap: wrap; row-gap: 8px; }
