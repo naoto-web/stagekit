@@ -262,10 +262,13 @@ var DETAIL = (function () {
         card.appendChild(rankTable(rs, role.key));
         card.appendChild(splitRanks(rs, role.key));
       }
-      // 並び順＝着順 → 戦法別 → レース種別 → ライン決着（2026-09-23 Naoto「レース種別をライン決着の上に」）。
-      // 🔑1着〜9着の表（着順・戦法別・種別）を続けて置く＝列が同じ位置なので上から下へ縦に見比べられる。
-      //    ライン決着だけ列の意味が違う（車数）ので、いちばん下に離す。PCもスマホも同じ順
-      card.appendChild(typeRanks(rs));
+      /* 並び順＝着順 → 戦法別 → レース種別 → **グレード** → ライン決着
+         （2026-09-23 Naoto「レース種別をライン決着の上に」／2026-09-24「レース種別の下にグレード」）。
+         🔑1着〜9着の表（着順・戦法別・種別・グレード）を続けて置く
+            ＝列が同じ位置なので上から下へ縦に見比べられる。
+            ライン決着だけ列の意味が違う（車数）ので、いちばん下に離す。PCもスマホも同じ順 */
+      card.appendChild(typeRanks(rs, role.key));
+      card.appendChild(gradeRanks(rs, role.key));
       card.appendChild(lineRow(role.key));
     } else {
       card.appendChild(el('div', 'muted sm', 'この役割で走った記録がまだありません。'));
@@ -648,30 +651,62 @@ var DETAIL = (function () {
     return box;
   }
 
-  /* ── ④.3 レース種別（9/23 Naoto相談→役割を問わない着順で出す） ── */
+  /* ── ④.3 レース種別／④.4 グレード（記念以上） ──────────────────────
+     どちらも「行＝区分／列＝1着〜9着の回数＋決まり手の内訳」で同じ形なので、
+     **1つの関数（catRanks）で作る**。§33で決めた「新しい表を足すときはこの表のとおりに作る」を
+     コードの側でも1か所にした＝表ごとに強調や列の型が散らばるのを止める。 */
 
-  /** 予選／準決勝／決勝…ごとの着順。
-      🔑役割×種別まで割らない＝4ヶ月だと1人の決勝は数走しかなく、役割で割ると全部1〜2走の
-         ノイズになる。役割を問わない「この種別で走ったとき」の着順が、数字として残る限界。
-      🔑出走表から開いたときは**その日のレース種別の行に印**を付ける（役割の初期選択と同じ思想）。
-      ⚠️チャレンジ戦（A3）には特選・初特選が無く「選抜」がある＝無い種別の行は出さない。 */
   /** レース種別ごとの着順。
       🔑2026-09-23（第2版）Naoto「ノイズになっていいので、レース種別もそれぞれの役割の回数を」
-         ＝**開いている役割の中の種別**になった（`rs.byType`）。
-         1マスが数走しかないことはあるが、走数を種別名の右に必ず出しているので読み手に見えている。 */
-  function typeRanks(rs) {
-    var bt = rs && rs.byType;
-    var order = (window.RACETYPE && RACETYPE.RACE_TYPES) || [];
-    var types = order.filter(function (t) { return bt && bt[t] && bt[t].n; });
-    var wrap = el('div', '');
-    wrap.appendChild(el('div', 'lbl', 'レース種別'));   // 「レース種別ごと」→「レース種別」（2026-09-23 Naoto・PC/スマホ共通）
-    if (!types.length) return wrap;
+         ＝**開いている役割の中の種別**（`rs.byType`）。
+         1マスが数走しかないことはあるが、走数を種別名の右に必ず出しているので読み手に見えている。
+      ⚠️チャレンジ戦（A3）には特選・初特選が無く「選抜」がある＝無い種別の行は出さない。 */
+  function typeRanks(rs, roleKey) {
+    return catRanks({
+      boxes: rs && rs.byType,
+      order: (window.RACETYPE && RACETYPE.RACE_TYPES) || [],
+      roleKey: roleKey,
+      title: 'レース種別',
+      corner: '種別',
+      cur: (ctx && ctx.cls && window.RACETYPE) ? RACETYPE.raceTypeOf(ctx.cls) : ''
+    });
+  }
 
-    var curType = (ctx && ctx.cls && window.RACETYPE) ? RACETYPE.raceTypeOf(ctx.cls) : '';
-    // 列は着順の表とそろえる。「他」は1つでも出た種別があれば全行に出す（列をずらさない）
-    var hasOther = types.some(function (t) { return (bt[t].ranks || [])[9] > 0; });
+  /** グレード（記念以上）の勝ち上がりごとの着順（2026-09-24 えーすさんの要望・§40）。
+      🔴**G1/G2/G3の区別は出せない**＝グレードそのものがデータに無い（`racetype.js` の説明）。
+         「一次予選がある開催＝記念以上」で絞ってまとめて数えている。
+      ⚠️**記念以上にA級は出ない**ので、A級の選手ではこの枠は見出しだけになる（表は出ない）。
+      ⚠️4段階の走数を足しても**その役割の走数にはならない**（記念以外の走が入らないため）。
+         行ごとに走数を出しているので、分母はそこを見る。 */
+  function gradeRanks(rs, roleKey) {
+    /* 今日の印＝出走表から開いていて、**その開催がグレードレース**のときだけ。
+       🔑グレードは出走表（keirin.jp の開催一覧）が持っている生の値（F1/F2/G3…）＝
+          過去ぶんは推測しているが、今日ぶんは公式の値をそのまま読める。 */
+    var isG = /^G/i.test(String((ctx && ctx.grade) || ''));
+    return catRanks({
+      boxes: rs && rs.byGrade,
+      order: (window.RACETYPE && RACETYPE.GRADE_STAGES) || [],
+      roleKey: roleKey,
+      title: 'グレード（記念以上）',
+      corner: '段階',
+      cur: (isG && ctx.cls && window.RACETYPE) ? (RACETYPE.gradeStageOf(ctx.cls) || '') : ''
+    });
+  }
+
+  /** 行＝区分／列＝1着〜9着 の表。レース種別とグレードで共用（2026-09-24）。
+      opts＝{ boxes:区分→箱, order:出す順, roleKey, title:枠の見出し, corner:左上のマス, cur:今日の区分 } */
+  function catRanks(opts) {
+    var bx = (opts.boxes) || {};
+    var cats = (opts.order || []).filter(function (t) { return bx[t] && bx[t].n; });
+    var wrap = el('div', '');
+    wrap.appendChild(el('div', 'lbl', opts.title));
+    if (!cats.length) return wrap;
+
+    var cur = opts.cur || '';
+    // 列は着順の表とそろえる。「他」は1つでも出た区分があれば全行に出す（列をずらさない）
+    var hasOther = cats.some(function (t) { return (bx[t].ranks || [])[9] > 0; });
     /* 🔑スマホは「1着・2着・3着・4着以下」の4列にまとめる（§35-4）。
-       種別は行が5〜7本あるので、着順まで9列出すとどう詰めても入らない。
+       行が4〜7本あるので、着順まで9列出すとどう詰めても入らない。
        ⚠️「4着以下」には**「他」も足す**＝どこにも数えられない走が黙って消えないように。 */
     var nar = narrow();
     var nCol = nar ? 4 : 9 + (hasOther ? 1 : 0);
@@ -683,7 +718,7 @@ var DETAIL = (function () {
     box.style.gridTemplateColumns = nar
       ? '72px repeat(4, minmax(0, 1fr))'
       : rankCols(nCol);
-    box.appendChild(el('div', 'split-label is-strong', '種別'));
+    box.appendChild(el('div', 'split-label is-strong', opts.corner));
     if (nar) {
       ['1着', '2着', '3着', '4着以下'].forEach(function (t) { box.appendChild(el('div', 'split-h', t)); });
     } else {
@@ -691,34 +726,60 @@ var DETAIL = (function () {
       if (hasOther) box.appendChild(el('div', 'split-h', '他'));
     }
 
-    types.forEach(function (t) {
-      var b = bt[t];
-      var isCur = (t === curType);
-      var cls = isCur ? ' is-cur' : '';     // 走数の多い少ないでは薄くしない（9/23 Naoto）
-      // 🔑今日の種別でない行は**太字にしない**（9/23 Naoto「関係ないやつは太字にしないで」）
-      var off = (curType && !isCur) ? ' is-off' : '';
-      var k = el('div', 'split-k' + cls, t + (isCur ? ' ◀ 今日' : ''));
+    cats.forEach(function (t) {
+      var b = bx[t];
+      var isCur = (t === cur);
+      // 🔑今日の区分でない行は**太字にしない**（9/23 Naoto「関係ないやつは太字にしないで」）
+      var off = (cur && !isCur) ? ' is-off' : '';
+      var k = el('div', 'split-k' + (isCur ? ' is-cur' : ''), t + (isCur ? ' ◀ 今日' : ''));
       k.appendChild(el('span', 'split-n', b.n + '走'));
       box.appendChild(k);
+
+      /* 決まり手の内訳（2026-09-24 Naoto「着順みたいに決まりても書いてほしい」）。
+         🔑着順の表と**同じ rankSubs を通す**＝言葉も並びも必ず同じになる。
+            種別・グレードの箱は決まり手（逃捲差マ）しか持たないので、
+            「番手に差され」などの別の軸はここには出ない（集計側で持たせていない）。 */
+      var sub = rankSubs(opts.roleKey, b.detail || {});
       var ranks = b.ranks || [];
-      var vals = [];
+      var vals = [], subs = [];
       if (nar) {
         var rest = 0;
         for (var q = 3; q < ranks.length; q++) rest += ranks[q] || 0;   // 4着以下＋「他」
         vals = [ranks[0] || 0, ranks[1] || 0, ranks[2] || 0, rest];
+        subs = [sub[0], sub[1], sub[2], null];   // 4着以下はまとめた列＝内訳は出さない
       } else {
-        for (var j = 0; j < nCol; j++) vals.push(ranks[j] || 0);
+        for (var j = 0; j < nCol; j++) { vals.push(ranks[j] || 0); subs.push(sub[j]); }
       }
-      vals.forEach(function (v) {
-        /* 🔑**数字は青にしない＝白い太字のまま**（2026-09-23 Naoto「回数のところは青字ではなく白太字に。他と合わせて」）。
-           青いのは行ラベルの「◀ 今日」だけ＝ライン決着と同じ分担で、
-           **印（青）が「どこを見るか」を指し、白とグレーが「どのマスか」を指す**。
-           ⚠️ここで `cls`（is-cur）を足すと行がまるごと青く塗られ、数字がどれも同じ重みに見える。 */
-        box.appendChild(el('div', 'split-v' + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
-      });
+      /* 🔑**数字は青にしない＝白い太字のまま**（2026-09-23 Naoto「回数のところは青字ではなく白太字に」）。
+         青いのは行ラベルの「◀ 今日」だけ＝**印（青）が「どこを見るか」、白とグレーが「どのマスか」**。 */
+      vals.forEach(function (v, i2) { box.appendChild(catCell(v, subs[i2], off, nar)); });
     });
     wrap.appendChild(box);
     return wrap;
+  }
+
+  /** 数字のマス＋その真下に決まり手の内訳。
+      🔑着順の表（rankTable）は内訳を専用の「内訳」行にまとめて出すが、こちらは**行ごとに区分が違う**
+         ので、内訳はその数字のすぐ下に入れる＝どの数字の内訳かが縦に読める。
+      ⚠️スマホは列が狭いので「逃2」の形に縮める（PCは「逃 2回」）。 */
+  function catCell(v, subList, off, nar) {
+    var cell = el('div', 'rank-cell');
+    cell.appendChild(el('div', 'split-v' + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
+    if (subList && subList.length) {
+      var s = el('div', nar ? 'rank-cell-sub' : 'rank-sub');
+      subList.forEach(function (x) {
+        if (nar) {
+          s.appendChild(el('span', 'rank-v-i', (x.short || x.label) + x.v));
+        } else {
+          var line = el('div', 'rank-sub-i');
+          line.appendChild(el('span', 'rank-sub-k', x.short || x.label));
+          line.appendChild(el('span', 'rank-sub-v', x.v + '回'));
+          s.appendChild(line);
+        }
+      });
+      cell.appendChild(s);
+    }
+    return cell;
   }
 
   function figure(box, label, val) {

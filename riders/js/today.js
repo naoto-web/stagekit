@@ -135,12 +135,14 @@ var TODAY = (function () {
         if (!s.reg) return;
         markCurrent(s.reg);
         if (window.LIST) LIST.markCurrent(s.reg);   // 選手一覧へ戻ったときも同じ人が選ばれて見える
-        // cls（レース種別）も渡す＝詳細の「レース種別ごと」で今日の種別の行に印が付く。
+        // cls（レース種別）も渡す＝詳細の「レース種別」で今日の種別の行に印が付く。
         // lineSize・bunsen＝ライン決着と戦法別で「今日はここ」を太字にするため（9/23 Naoto）
+        // grade（F1/F2/G3…）＝グレードの表で「今日はこの段階」の印を出すため（9/24）。
+        //   🔑開催一覧（keirin.jp）の生の値をそのまま渡す＝画面側が G で始まるかだけを見る
         DETAIL.open(s.reg, {
           jo: v.name, raceDate: (state.data || {}).date, raceNo: r.no,
           role: roleMap[s.no] || '', cls: r.cls || '',
-          lineSize: sizeMap[s.no] || 0, bunsen: bunsen
+          lineSize: sizeMap[s.no] || 0, bunsen: bunsen, grade: v.grade || ''
         }, s);
       };
       row.appendChild(carChip(s.no));

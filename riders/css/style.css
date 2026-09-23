@@ -381,6 +381,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    min-width:0 が無いとflexの子は縮まず、はみ出しが左（前の列）へ流れる。
    内訳の1行（ラベル＋回数）は入らなければ2行に折る（横に溢れて隣の列に重ならない）。 */
 .rank-sub { display: flex; flex-direction: column; gap: 1px; align-items: flex-end; min-width: 0; }
+/* レース種別・グレードの表のマス＝**数字の真下に決まり手の内訳**を入れる（2026-09-24）。
+   🔑着順の表は内訳を専用の行にまとめるが、こちらは行ごとに区分が違うので
+      「どの数字の内訳か」が縦に読めるよう、同じマスの中に積む。
+   ⚠️`min-width: 0` が無いと、内訳の文字が列（52px固定）を押し広げて表どうしの列がずれる（§36）。 */
+.rank-cell { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; }
+.rank-cell-sub { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
 .rank-sub-i { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; align-items: baseline; white-space: nowrap; }
 .rank-sub-i.is-thin { opacity: .35; }
 /* 「うち番手に差され」＝決まり手とは別の軸で上の行と重なる。

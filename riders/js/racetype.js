@@ -44,7 +44,44 @@
     return 'その他';
   }
 
-  var api = { raceTypeOf: raceTypeOf, RACE_TYPES: RACE_TYPES };
+  /* ══════════ グレードレース（記念以上）の勝ち上がり ══════════
+     2026-09-24 Naoto（えーすさんの要望）＝「G3（記念）の一次予選／二次予選／準決勝／決勝ごとに
+     着順と決まり手が見たい」。
+
+     🔴**グレード（G1/G2/G3）そのものはデータに無い**（2026-09-24に確認）。
+        `keirin.sqlite` に grade 列は無く、生データのキャッシュ（kj・winticket・backfill）にも残っていない。
+        競輪予想アプリ側も同じ結論に達している（`model/segment_probe.js`）。
+        選手プロフィールには節ごとのグレード（`09/07 平Ｆ１`）があるが**直近8節ぶんだけ**＝
+        2〜3ヶ月しか遡れず、集計の窓を埋められない。
+     🔑**だから判定しない。**「一次予選／二次予選」という種別名は**記念以上でしか使われない**
+        （F1・F2は単に「予選」）ので、〈一次予選がある開催〉で絞ればそれが記念以上になる。
+        推測ではなく種別名そのものを読むので、誤判定しにくい。開催の判定は集計側（build_stats.js）。
+     ⚠️**G1/G2/G3の内訳は出せない**＝まとめて「記念以上」として数える。
+        実データ（2025/09〜2026/09）＝該当52開催・10,398走・909人。
+     ⚠️取りこぼす開催が6つある＝グランプリ（平塚2025/12/28）・高松宮記念杯（岸和田2026/06/16＝
+        東西予選制で「一予選」が無い）など、日程が特殊なG1。いずれもトップ層だけなので実害は小さい。
+     ⚠️**記念以上にA級は出ない**（実測＝S2 690人／S1 277人／L1 57人／SS 14人・A級0人）
+        ＝A級の選手を開くとこの枠は空になる。 */
+  var GRADE_STAGES = ['一次予選', '二次予選', '準決勝', '決勝'];
+
+  /** 記念以上の開催の中で、その `cls` が勝ち上がりのどの段階か。4つ以外（特選・一般・選抜…）は null。
+      判定順＝一予 → 二予 → 準 → 決（前が優先）。
+      ⚠️「Ｓ級特選予」は 予 を含むが 一予/二予 ではないので null（＝この表には出さない）。
+      ⚠️「Ｓ級西二予」「Ｓ級東準決」のような東西別も拾える。 */
+  function gradeStageOf(cls) {
+    var s = String(cls || '');
+    if (!s) return null;
+    if (s.indexOf('一予') >= 0) return '一次予選';
+    if (s.indexOf('二予') >= 0) return '二次予選';
+    if (s.indexOf('準') >= 0) return '準決勝';
+    if (s.indexOf('決') >= 0) return '決勝';
+    return null;
+  }
+
+  var api = {
+    raceTypeOf: raceTypeOf, RACE_TYPES: RACE_TYPES,
+    gradeStageOf: gradeStageOf, GRADE_STAGES: GRADE_STAGES
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;   // Node（build_stats.js）
   else root.RACETYPE = api;                                                     // ブラウザ
 })(typeof globalThis !== 'undefined' ? globalThis : this);
