@@ -39,7 +39,7 @@ var TODAY = (function () {
     return API.racecard(state.day, force).then(function (j) {
       state.data = j.card || { venues: [] };
       sortVenues(state.data.venues);
-      state.venue = 0;
+      state.venue = defaultVenue(state.data);
       state.loaded = true;
       render();
     }).catch(function (e) {
@@ -228,6 +228,51 @@ var TODAY = (function () {
     var rs = (v || {}).races || [];
     for (var i = 0; i < rs.length; i++) if (rs[i].start) return String(rs[i].start).trim();
     return '';
+  }
+
+  /* ── 最初に開く場（2026-09-23 Naoto「出走が残っている中で一番左をデフォルトに」）──────
+     場は1R発走の早い順に並んでいる（sortVenues）ので、
+     「まだ発走していないレースが残っている場のうち、いちばん左」＝
+     **いま走っている開催のうち、いちばん進んでいるもの**になる。
+     朝ならモーニング、昼過ぎならデイ、夜ならナイターが自然に開く。
+     ⚠️「明日」を選んだときは時刻で絞らない（全部これからなので、いちばん左＝1Rが早い場でよい）。
+        判定は**選択肢（本日/明日）でなくカードの日付**で行う＝日付が変わった直後に開いても取り違えない。
+     ⚠️深夜などで全部終わっているときは0に戻す＝どこも残っていないなら左端でよい。 */
+
+  /** 0:00からの分で「いま」 */
+  function nowMin() {
+    var d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  /** その場の**最終**レースの発走時刻（分）。時刻が1つも取れなければ -1。
+      ⚠️レースは番号順なので最後の要素が最終レース。時刻の無い行があってもいいよう後ろから探す */
+  function lastStartMin(v) {
+    var rs = (v || {}).races || [];
+    for (var i = rs.length - 1; i >= 0; i--) {
+      var m = /^(\d{1,2}):(\d{2})$/.exec(String(rs[i].start || '').trim());
+      if (m) return (+m[1]) * 60 + (+m[2]);
+    }
+    return -1;
+  }
+
+  /** カードの日付が今日か（`20260923` 形式） */
+  function isToday(d) {
+    var s = String((d || {}).date || '');
+    if (!/^\d{8}$/.test(s)) return false;
+    var n = new Date();
+    var p2 = function (x) { return ('0' + x).slice(-2); };
+    return s === (n.getFullYear() + p2(n.getMonth() + 1) + p2(n.getDate()));
+  }
+
+  function defaultVenue(d) {
+    var venues = (d || {}).venues || [];
+    if (!isToday(d)) return 0;
+    var now = nowMin();
+    for (var i = 0; i < venues.length; i++) {
+      if (lastStartMin(venues[i]) >= now) return i;
+    }
+    return 0;
   }
 
   var KUBUN_FULL = { 'モ': 'モーニング', 'デ': 'デイ', 'ナ': 'ナイター', 'ミ': 'ミッドナイト' };

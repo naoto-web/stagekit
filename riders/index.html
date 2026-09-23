@@ -12,9 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="選手DB">
-<link rel="apple-touch-icon" href="icon-180.png?v=20260923-184910">
-<link rel="icon" href="icon-192.png?v=20260923-184910">
-<link rel="stylesheet" href="css/style.css?v=20260923-184910">
+<link rel="apple-touch-icon" href="icon-180.png?v=20260923-192031">
+<link rel="icon" href="icon-192.png?v=20260923-192031">
+<link rel="stylesheet" href="css/style.css?v=20260923-192031">
 </head>
 <body data-view="work">
 
@@ -42,9 +42,11 @@
       <div class="pane" id="pane-list">
         <div class="filters">
           <input type="search" id="q" placeholder="名前・カナ・登録番号でさがす" autocomplete="off" spellcheck="false">
-          <!-- 中身は名簿から作る（list.js renderKyuhanOptions）。使われている級班だけ人数つきで並ぶ -->
+          <!-- 中身は名簿から作る（list.js renderKyuhanOptions）。使われている級班だけ人数つきで並ぶ。
+               ⚠️ここは実データが来るまでの仮の1つ。**list.js の state.kyuhan と同じ値にする**
+                  （main.js の初回 load がこのセレクトの値を読むため） -->
           <select id="kyuhan-sel" class="sel" title="級班でしぼりこむ">
-            <option value="A3">A級3班</option>
+            <option value="all">すべての級班</option>
           </select>
         </div>
         <div class="kana-rows" id="kana-rows"></div>
@@ -85,15 +87,15 @@
 <!-- ═══════════ 出力ビュー（OBSブラウザソース・背景透明） ═══════════ -->
 <div class="outcard" id="outcard" hidden></div>
 
-<script src="../autoupdate.js?v=20260923-184910" data-au="output-only"></script>
-<script src="js/config.js?v=20260923-184910"></script>
-<script src="js/racetype.js?v=20260923-184910"></script>
-<script src="js/api.js?v=20260923-184910"></script>
-<script src="js/kana.js?v=20260923-184910"></script>
-<script src="js/list.js?v=20260923-184910"></script>
-<script src="js/today.js?v=20260923-184910"></script>
-<script src="js/detail.js?v=20260923-184910"></script>
-<script src="js/output.js?v=20260923-184910"></script>
-<script src="js/main.js?v=20260923-184910"></script>
+<script src="../autoupdate.js?v=20260923-192031" data-au="output-only"></script>
+<script src="js/config.js?v=20260923-192031"></script>
+<script src="js/racetype.js?v=20260923-192031"></script>
+<script src="js/api.js?v=20260923-192031"></script>
+<script src="js/kana.js?v=20260923-192031"></script>
+<script src="js/list.js?v=20260923-192031"></script>
+<script src="js/today.js?v=20260923-192031"></script>
+<script src="js/detail.js?v=20260923-192031"></script>
+<script src="js/output.js?v=20260923-192031"></script>
+<script src="js/main.js?v=20260923-192031"></script>
 </body>
 </html>

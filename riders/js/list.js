@@ -4,7 +4,12 @@
 
 var LIST = (function () {
 
-  var state = { all: [], row: '', q: '', kyuhan: 'A3', loaded: false };
+  /* 🔑既定は**すべての級班**（2026-09-23 Naoto）。名簿はもともと全級班を1回で取って
+     画面側で絞るだけなので（load の `API.roster('all')`）、**読み込みの往復は増えない**。
+     増えるのは描く行数だけ（A3 494人 → 全1,010人）。
+     ⚠️`index.html` の仮の選択肢（実データが来るまでの1つ）も all にそろえる＝
+        main.js の初回 load はそのセレクトの値を読むので、片方だけ直すと既定が食い違う。 */
+  var state = { all: [], row: '', q: '', kyuhan: 'all', loaded: false };
 
   /* 級班の並び順（上が強い）。ここに無い値は最後にまとめて出す */
   var KYUHAN_ORDER = ['SS', 'S1', 'S2', 'A1', 'A2', 'A3', 'L1'];
