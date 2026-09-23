@@ -29,10 +29,6 @@ var DETAIL = (function () {
   // いま開いている役割。出走表から開いたときは、その日その人が回る役割を最初から開く
   // （9/23 Naoto「この人が今日番手走るから番手の情報見よう、となる」）
   var openRole = null;
-  /* バンク別の「場別」を開いているか（§45）。既定は閉じる。
-     🔑`render()` をまたいで覚える＝**期間を切り替えても開いたまま**（母数を増やして見たくて
-        切り替えるので、そのたびに閉じては用をなさない）。選手を変えたら open() が false に戻す。 */
-  var bankOpen = false;
   // 表の左端の列幅。着順の表（本体・戦法別・種別）とライン決着で共通にして列をそろえる
   var LABEL_W = '96px';
   /* 着順の表（本体・戦法別・種別）の 1着〜9着 の列幅。🔴**固定幅**（`minmax(52px, auto)` にしない）。
@@ -54,7 +50,6 @@ var DETAIL = (function () {
     dirty = false;
     editing = {};
     openRole = (ctx && ctx.role) || null;
-    bankOpen = false;                     // 選手を変えたら「場別」は閉じた状態から（§45・既定）
     var box = document.getElementById('detail');
     var my = ++seq;
 
@@ -87,12 +82,16 @@ var DETAIL = (function () {
     return (statsAll && statsAll.riders && statsAll.riders[reg]) || null;
   }
 
-  /** スマホでは枠を既定で閉じる（§35）。開いたままにするのは**役割別の動き**と**観察ログ**だけ
-      ＝Yの用途が「見る＋書く」なので、この2つが最初から見えていれば指を動かさずに済む。
+  /** 枠を既定で閉じる。開いたままにするのは**役割別の動き**と**観察ログ**だけ
+      ＝Yの用途が「見る＋書く」なので、この2つが最初から見えていれば手を動かさずに済む。
+      🔴**2026-09-24（§46）PCもスマホと同じ「既定は閉じる」にした**（Naoto）。
+         §35でスマホだけ閉じたが、そのあと枠が増え（S取り・バンク別）PCでも縦に長くなった
+         ＝いちばん使う観察ログが下へ押し出される。**どちらの画面でも開く枠は同じ2つ**にそろえる。
+         ⚠️だから名前も `mFold`（m＝mobile）から `defFold` に変えた
+           ＝名前が実態とずれたまま残ると、次に読む人が「スマホだけの話」と読む。
       🔑呼び出し側で明示的に渡す＝`section()` の中でタイトルの文字列から判断すると、
-        タイトルを変えた日に黙って全部開く（文字列一致は静かに壊れる）。
-      ⚠️PCの見え方は変えない＝広い画面では今までどおり全部開いている。 */
-  function mFold() { return narrow(); }
+        タイトルを変えた日に黙って全部開く（文字列一致は静かに壊れる）。 */
+  function defFold() { return true; }
 
   /** スマホ（1カラム）か＝§35。**表の形**と**折りたたみの既定**がこれで変わる。 */
   function narrow() { return !!(window.MOBILE && MOBILE.isNarrow()); }
@@ -258,7 +257,7 @@ var DETAIL = (function () {
   }
 
   function basics(r) {
-    var s = section('基礎データ', '', mFold());
+    var s = section('基礎データ', '', defFold());
     var g = el('div', 'kv');
     var add = function (k, v) {
       if (!v && v !== 0) return;
@@ -892,7 +891,7 @@ var DETAIL = (function () {
       基礎データのすぐ下に単独で置き、幅いっぱいで書けるようにする。
       以前は「特徴と追走能力」の右半分に押し込んでいて、書く場所が狭かった。 */
   function featureSection() {
-    var s = section('選手特徴', '出力ビュー（配信）には出ません。', mFold());
+    var s = section('選手特徴', '出力ビュー（配信）には出ません。', defFold());
     s.body.appendChild(noteField('feature', '事実と観察を書く。人の評価は書かない', true));
     s.body.appendChild(saveBar());
     return s.root;
@@ -904,7 +903,7 @@ var DETAIL = (function () {
       🔑内枠ほど取りやすいので、**回数だけでなく車番の並びを見ないと意味がない**
          （全体では1番3,795回に対し6番458回）。だから車番ごとに出す。 */
   function sSection() {
-    var s = section('S取り', windowText(), mFold());
+    var s = section('S取り', windowText(), defFold());
     var st = stats();
     var sk = st && st.sTaken;
 
@@ -936,7 +935,7 @@ var DETAIL = (function () {
   /* ── ⑤追走能力 ── */
 
   function followSection() {
-    var s = section('追走能力', '番手を回ったときの確かさ。出力ビュー（配信）には出ません。', mFold());
+    var s = section('追走能力', '番手を回ったときの確かさ。出力ビュー（配信）には出ません。', defFold());
     var wrap = el('div', 'follow');
 
     var sel = el('select', 'sel');
@@ -1010,7 +1009,7 @@ var DETAIL = (function () {
     /* 🔑見出しの hint に期間を書かない＝**切り替えの行（winBar）が期間を出す**（§41と同じ分担）。
        両方に出すと「直近4ヶ月」と「2025/09/22〜2026/09/22」が同時に見えて食い違って読める。
        代わりに hint には**この枠だけ％であること**を書く（いちばん誤読しやすい点）。 */
-    var s = section('バンク別', '数字は％です。すぐ下の小さい数字が回数（母数）です。', mFold());
+    var s = section('バンク別', '数字は％です。すぐ下の小さい数字が回数（母数）です。', defFold());
     s.body.appendChild(winBar());
     var laps = (statsAll && statsAll.venues) || {};
     // 出走表から開いたときだけ「今日の場」が分かる（選手一覧から開いたときは空）
@@ -1066,27 +1065,12 @@ var DETAIL = (function () {
       list.unshift({ name: curV, b: vbox([]), w: window.BANK ? BANK.weightOf(curV) : 'other', none: true });
     }
 
-    /* 折りたたみ（§45・Naoto「既定は閉じた状態で」）＝4ヶ月で18行・1年で31行あり、
-       開きっぱなしだと下の観察ログまで遠い。
-       🔑**閉じていても中身の量が分かるよう見出しに場数を出す**（開くかどうかを判断できる）。
-       🔴**閉じていても「今日の場」だけは見出しに要約を出す**＝出走表から選手を開くのは
-          「今日この場でどうなのか」を見るためなので（§37で既定タブまで今日に寄せてある）、
-          そこが折りたたみの中に隠れると、この枠を開いた意味がいちばん薄いところで消える。
-       ⚠️開いたかどうかは `bankOpen` が覚える＝**期間を切り替えても開いたまま**
-          （母数を増やして見たくて切り替えるので、そのたび閉じては用をなさない）。
-          選手を変えたときは open() が false に戻す＝既定は閉じたまま。 */
-    var sub = subFold('場別（走数の多い順）' + list.length + '場', !bankOpen);
-    sub.head.onclick = function () {
-      bankOpen = !bankOpen;
-      sub.root.dataset.folded = bankOpen ? '' : '1';
-    };
-    var cur = curV ? list.filter(function (r) { return r.name === curV; })[0] : null;
-    if (cur) {
-      sub.head.appendChild(el('span', 'sub-cur', '今日＝' + cur.name + '（'
-        + (cur.none ? 'この期間は走っていません' : cur.b.n + '走・3着内 ' + pct(cur.b.top3, cur.b.n)) + '）'));
-    }
-
-    var wrap = sub.body;
+    /* ⚠️2026-09-24（§46）＝**この表だけの折りたたみ（§45）は撤去した**（Naoto「なくして大丈夫」）。
+       同じ日に**枠そのものが既定で閉じる**ようになった（defFold）ので、
+       折りたたみが二重になり「開いたのにまた閉じている」と読める形だった。
+       🔑**入れ子の折りたたみは作らない**＝開く操作が2回要る時点で、畳んだ意味より迷いのほうが大きい。 */
+    var wrap = el('div', '');
+    wrap.appendChild(el('div', 'lbl', '場別（走数の多い順）' + list.length + '場'));
     var box = bankGrid('場');
     list.forEach(function (r) {
       var isCur = (r.name === curV);
@@ -1097,7 +1081,7 @@ var DETAIL = (function () {
       bankCells(box, r.b, (curV && !isCur) ? ' is-off' : '');
     });
     wrap.appendChild(box);
-    return sub.root;          // ⚠️返すのは折りたたみの入れ物（sub.body を返すと見出しが消える）
+    return wrap;
   }
 
   /** 見出しの行まで作った空の表。列の型と見出しを2つの表で必ずそろえる */
@@ -1452,23 +1436,6 @@ var DETAIL = (function () {
   }
 
   /* ── 枠 ── */
-
-  /** 枠（section）の**中**に置く小さな折りたたみ（§45・2026-09-24 Naoto「場別を折りたためるように」）。
-      🔑見た目と操作は枠の折りたたみと**同じ**にする（▾／▸・見出しを押す・`data-folded`）
-         ＝折りたたみのやり方を2つ持つと、どこを押せば開くのか覚え直しになる（§33と同じ理屈）。
-      ⚠️`hidden` 属性は使わない＝CSSに `display` を書くと属性が詳細度で負ける（§39で踏んだ罠）。
-         枠と同じ `data-folded` 方式にそろえてあるので、この罠は構造的に起きない。 */
-  function subFold(title, folded) {
-    var root = el('div', 'sub');
-    var h = el('button', 'sub-head');
-    h.type = 'button';
-    h.appendChild(el('span', 'sub-title', title));
-    var body = el('div', 'sub-body');
-    if (folded) root.dataset.folded = '1';
-    root.appendChild(h);
-    root.appendChild(body);
-    return { root: root, body: body, head: h };
-  }
 
   function section(title, hint, folded) {
     var root = el('section', 'sec');

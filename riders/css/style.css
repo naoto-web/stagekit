@@ -479,23 +479,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .split.bank > .split-k { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .bank-meta { font-size: 9px; color: var(--fg-dim); font-weight: 400; white-space: nowrap; }
 
-/* 枠の中の小さな折りたたみ（§45）＝「場別」用。
-   🔑▾／▸ も操作も**枠の折りたたみ（.sec）と同じ**にそろえる＝押し方を覚え直さずに済む。
-   ⚠️`hidden` 属性ではなく `data-folded` で閉じる（.sec と同じ）＝CSSの display に負ける罠を避ける（§39）。 */
-.sub { margin: 10px 0 5px; }
-.sub-head {
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-  width: 100%; text-align: left; background: transparent; border: 0; padding: 0; cursor: pointer;
-}
-.sub-title { font-size: 12px; color: var(--fg-dim); }
-.sub-title::before { content: "▾ "; }
-.sub[data-folded="1"] .sub-title::before { content: "▸ "; }
-.sub[data-folded="1"] .sub-body { display: none; }
-.sub-body { margin-top: 5px; }
-/* 閉じているときだけ「今日の場」の要約を見出しに出す＝畳んでもいちばん見たい行が消えない。
-   色は青＝画面共通の「どこを見るか」の印（§33）。 */
-.sub-cur { display: none; font-size: 11px; color: var(--accent); font-weight: 700; }
-.sub[data-folded="1"] .sub-cur { display: inline; }
+/* ※旧 `.sub*`（場別だけの折りたたみ・§45）は 2026-09-24 に撤去した（§46）。
+   同じ日に枠そのものが既定で閉じるようになり、折りたたみが二重になったため。 */
 
 /* ── 強調（2026-09-23 Naoto）──
    ⚠️この2つは **.is-thin より後ろに置く**こと。同じ強さの指定なので、先に書くと
