@@ -24,6 +24,14 @@ var TODAY = (function () {
         8=モーニング(1R 8:30〜8:40) / 1=デイ(10:45〜11:01) / 3=ナイター(15:50〜16:04) / 5=ミッドナイト(20:40〜20:50) */
   var KUBUN = { '8': 'モ', '1': 'デ', '3': 'ナ', '5': 'ミ' };
 
+  /* 画面に出す印（2026-09-23 Naoto「（モ）とかの代わりに絵文字を付けたら幅を狭められるんじゃない？」）。
+     🔑**デイだけ印を出さない**＝4区分でいちばん多いので、無印にすると幅がいちばん縮む。
+        「印が無い＝ふつうの昼」と読む。今日の6場で **631px→475px（25%減）** を実測して案を選んだ。
+     ⚠️1文字の記号（◐○●★）や全区分に絵文字を付ける案も測ったが、この形がいちばん狭かった。
+     ⚠️内部のキー（モ/デ/ナ/ミ）は変えない＝ホバーの説明（KUBUN_FULL）と時刻からの予備判定が
+        そのまま使える。**見せ方だけをここで差し替える。** */
+  var KUBUN_MARK = { 'モ': '☀️', 'デ': '', 'ナ': '🌙', 'ミ': '⭐' };
+
   function load(force) {
     var box = document.getElementById('racecard');
     clear(box);
@@ -52,7 +60,8 @@ var TODAY = (function () {
       b.type = 'button';
       b.appendChild(el('span', 'vtab-name', v.name));
       var kb = kubunLabel(v);
-      if (kb) b.appendChild(el('span', 'vtab-kubun', '（' + kb + '）'));
+      // ⚠️デイは印なし（KUBUN_MARK が空文字）＝タブに余計な要素を足さない
+      if (kb && KUBUN_MARK[kb]) b.appendChild(el('span', 'vtab-kubun', KUBUN_MARK[kb]));
       if (v.grade) b.appendChild(el('span', 'vtab-grade', v.grade));
       b.title = [v.name, kb ? KUBUN_FULL[kb] : '', v.grade, '1R ' + (startText(v) || '—')]
         .filter(Boolean).join('・');

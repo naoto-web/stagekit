@@ -208,9 +208,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .vtab.is-on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .vtab-name { font-weight: 600; }
-/* 開催区分（モ／デ／ナ／ミ）。場名とグレードの間。グレードより少し強く出す＝
-   並び順（1R発走の早い順）と合わせて「いま何枠か」を一目で見るための印 */
-.vtab-kubun { font-size: 11px; opacity: .95; }
+/* 開催区分の印（☀️モーニング／🌙ナイター／⭐ミッドナイト。デイは無印）。場名とグレードの間。
+   並び順（1R発走の早い順）と合わせて「いま何枠か」を一目で見るための印。
+   ⚠️絵文字は字より下に沈んで見えるので、ベースラインでなく中央でそろえる（`align-self: center`）。
+     ⚠️`.vtab` が `align-items: baseline` なので、ここで上書きしないと印だけ下がる */
+.vtab-kubun { font-size: 11px; opacity: .95; align-self: center; line-height: 1; }
 .vtab-grade { font-size: 10px; opacity: .8; }
 
 .racecard { overflow-y: auto; flex: 1 1 auto; padding: 0 12px 24px; }
