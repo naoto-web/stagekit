@@ -465,6 +465,20 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .split-v.is-off { font-weight: 400; color: var(--fg-dim); }
 .split-note { margin-top: 2px; }
 
+/* ── バンク別（§43・2026-09-24）＝この枠だけ数字が％ ──
+   ほかの表は「1人の中での散らばり」を見るので回数だが、ここは**行どうしを比べる**
+   （軽い vs 重い／場と場）ので％。ただし1場あたり中央値3走しかないため、
+   **％の真下に必ず回数**を出して母数を消さない。
+   ⚠️列の型は detail.js の `bankCols()` の1か所から流し込む（着順の表とは別の型でよい＝
+     並べて見比べる相手がいない。2つのバンクの表どうしだけがそろっていればよい）。 */
+.bank-cell { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; }
+.bank-n { font-size: 10px; color: var(--fg-dim); font-variant-numeric: tabular-nums; line-height: 1.3; }
+/* 行ラベルは2段＝1段目に場名（＋青い「◀ 今日」）、2段目に周長・区分・走数。
+   ⚠️`.split` は align-items:baseline なので、2段にするには行ラベル側で縦積みを指定する
+     （`.split.rank > .split-label` と同じ作り）。 */
+.split.bank > .split-k { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.bank-meta { font-size: 9px; color: var(--fg-dim); font-weight: 400; white-space: nowrap; }
+
 /* ── 強調（2026-09-23 Naoto）──
    ⚠️この2つは **.is-thin より後ろに置く**こと。同じ強さの指定なので、先に書くと
      「走数が少ない＝薄字」に負けて、いちばん見たい今日の欄が薄いままになる。

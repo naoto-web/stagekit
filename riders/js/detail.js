@@ -7,6 +7,7 @@
      ③選手特徴（自由記述）＝いちばん大事な手書きなので上に置く（9/23 Naoto指定）
      ④役割別 6区分＝自動集計の実績＋タグ＋メモ
      ⑤追走能力
+     ⑤.5 バンク別（軽い／重い／その他・場別。この枠だけ数字が％＝行どうしを比べる表だから）
      ⑥観察ログ（1件ずつ積む・配信OKの印）
      ⑥参考（級班履歴・出場予定・人間関係・競輪学校）
      ⑦本人コメント（内部限定・折りたたみ）
@@ -195,6 +196,7 @@ var DETAIL = (function () {
     //   （2026-09-23 Naoto「役割別の中に入れ込んでください」→ 同日「ライン決着の上に」）
     box.appendChild(sSection());
     box.appendChild(followSection());
+    box.appendChild(bankSection());
     box.appendChild(obsSection());
     box.appendChild(refSection(r));
     box.appendChild(commentsSection());
@@ -948,6 +950,151 @@ var DETAIL = (function () {
     s.body.appendChild(wrap);
     s.body.appendChild(saveBar());
     return s.root;
+  }
+
+  /* ── ⑤.5 バンク別（§43・2026-09-24 えーすさんの要望③④／置き場所はNaoto指定＝追走能力と観察ログの間）──
+
+     🔑**この枠だけ数字が％**（ほかの表は回数）。理由は「何を読む表か」が違うから＝
+        着順の表は**1人の中での散らばり**を見る（だから回数）が、ここは**行どうしを比べる**
+        （軽い vs 重い／場と場）。9走の4回と15走の7回は、回数のままでは並べても比べられない。
+     🔑**％の真下に必ず回数を出す**（Naoto 2026-09-24）＝1場あたりの走数は中央値3走しかないので、
+        ％だけだと「66.7%」が3走中2回のことだと分からない。母数を消さずに比べられる形にした。
+        ⚠️走数が少ないことを**薄字では表さない**（§25で全廃したまま）。母数は回数の行で見せる。
+     🔑**役割では割らない**（S取りと同じ選手単位）＝実データで1場あたり中央値3走・
+        重いバンクは2割の選手が0走。6区分に割ると全部のマスが「—」になる。
+     🔑軽い／重い／その他の3行は**場別を足して作る**＝集計側は場別しか持たない（数を2回数えない）。
+     ⚠️えーすさんの要望⑤「バンク別の決まり手」はここには入れていない（2026-09-24 Naoto「決まり手の％は
+        さすがにいらない」）。入れるなら1着の下に逃捲差マをぶら下げる形で足せる。 */
+
+  /* 表の列の型は**この1か所**から出す（§36の教訓＝2つの表で列がずれない）。
+     🔴**左端の幅は「いちばん長い行ラベル」から決める**＝「いわき平 ◀ 今日」（83px）と
+        その下の「400m その他・3走」（79px）。スマホで最初 72px にしたら
+        **「小松島 ◀ 今日」が2行に折れた**（実機幅390pxで実測・2026-09-24）。
+        §36の「固定幅にするならはみ出す側を先に決める」がそのまま当てはまる。
+     ⚠️スマホは左端を広げたぶん数字の列が痩せるので、**この表だけ列の隙間も詰める**
+        （既定18px→10px）。詰めないと「100.0%」が入らない。
+        🔑隙間もここで一緒に決める＝CSSのメディアクエリに散らさない（§38＝画面幅でJSが分岐しない）。 */
+  var BANK_LABEL_W = '120px';   // 「いわき平 ◀ 今日」＋「400m 軽い・3走」が入る幅
+  var BANK_COL = '56px';        // 「33.3%」＋その下の「10回」が入る幅
+  function applyBankCols(box) {
+    var nar = narrow();
+    box.style.gridTemplateColumns = nar ? '92px repeat(4, minmax(0, 1fr))'
+                                        : BANK_LABEL_W + ' repeat(4, ' + BANK_COL + ')';
+    if (nar) box.style.columnGap = '10px';
+  }
+
+  /** stats.json の場別は場所を食わないよう配列で入っている＝ここで名前に戻す。
+      並びは build_stats.js の書き出しと同じ **[走数, 1着, 2着内, 3着内, 4着内]**。 */
+  function vbox(a) {
+    a = a || [];
+    return { n: a[0] || 0, win: a[1] || 0, top2: a[2] || 0, top3: a[3] || 0, top4: a[4] || 0 };
+  }
+
+  function bankSection() {
+    var st = stats();
+    var bvRaw = st && st.byVenue;
+    /* 🔑**中身が無いときは枠ごと出さない**（§40.1と同じ）。
+       古い stats.json（byVenue を持たない版）が配られても、見出しだけが残らない。 */
+    if (!bvRaw || !Object.keys(bvRaw).length) return el('div', '');
+
+    var s = section('バンク別', windowText(), mFold());
+    var laps = (statsAll && statsAll.venues) || {};
+    // 出走表から開いたときだけ「今日の場」が分かる（選手一覧から開いたときは空）
+    var curV = (ctx && ctx.jo && window.BANK) ? BANK.normalize(ctx.jo) : '';
+
+    var rows = Object.keys(bvRaw).map(function (name) {
+      return { name: name, b: vbox(bvRaw[name]), w: window.BANK ? BANK.weightOf(name) : 'other' };
+    });
+
+    s.body.appendChild(weightTable(rows, curV));
+    s.body.appendChild(venueTable(rows, curV, laps));
+    s.body.appendChild(el('div', 'muted sm',
+      '「軽い／重い」はえーすさんの分類です。天候や季節では動かしていません（表に無い場は「その他」）。'));
+    return s.root;
+  }
+
+  /** ①軽い／重い／その他。3行は**走数が0でも必ず出す**＝「重いバンクは走っていない」も情報になる。 */
+  function weightTable(rows, curV) {
+    var wrap = el('div', '');
+    wrap.appendChild(el('div', 'lbl', '軽い・重い・その他'));
+
+    var sum = {};
+    (window.BANK ? BANK.WEIGHTS : []).forEach(function (w) { sum[w.key] = { n: 0, win: 0, top2: 0, top3: 0, top4: 0 }; });
+    rows.forEach(function (r) {
+      var t = sum[r.w];
+      if (!t) return;
+      t.n += r.b.n; t.win += r.b.win; t.top2 += r.b.top2; t.top3 += r.b.top3; t.top4 += r.b.top4;
+    });
+
+    var curW = curV && window.BANK ? BANK.weightOf(curV) : '';
+    var box = bankGrid('区分');
+    (window.BANK ? BANK.WEIGHTS : []).forEach(function (w) {
+      var t = sum[w.key];
+      var isCur = (w.key === curW);
+      box.appendChild(bankLabel(w.label, t.n + '走', isCur));
+      bankCells(box, t, (curW && !isCur) ? ' is-off' : '');
+    });
+    wrap.appendChild(box);
+    return wrap;
+  }
+
+  /** ②場別＝走った場を全部、走数の多い順（2026-09-24 Naoto決定）。
+      🔑「得意トップ3／苦手トップ3」は採らなかった＝1場あたり中央値3走で、実データでは
+         **88%の選手で「3着内率1位の場」が3走以下**になる。1回の着順で入れ替わる数字に
+         「得意」「苦手」という評価の言葉を付けると、Yの判断をこちらが固定してしまう。
+      🔴**今日の場に走った記録が無いときは 0走の行を足して出す**＝出走表から開いたのに
+         その場が一覧に無いと「出るはずのものが出ていない」と読める（データ無しと不具合の区別がつかない）。 */
+  function venueTable(rows, curV, laps) {
+    var wrap = el('div', '');
+    wrap.appendChild(el('div', 'lbl', '場別（走数の多い順）'));
+
+    var list = rows.slice().sort(function (a, b) {
+      return b.b.n - a.b.n || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    });
+    if (curV && !list.some(function (r) { return r.name === curV; })) {
+      list.unshift({ name: curV, b: vbox([]), w: window.BANK ? BANK.weightOf(curV) : 'other', none: true });
+    }
+
+    var box = bankGrid('場');
+    list.forEach(function (r) {
+      var isCur = (r.name === curV);
+      var lap = laps[r.name];
+      var meta = (lap ? lap + 'm ' : '') + (window.BANK ? BANK.weightLabel(r.w) : '')
+        + '・' + (r.none ? 'この期間は走っていません' : r.b.n + '走');
+      box.appendChild(bankLabel(r.name, meta, isCur));
+      bankCells(box, r.b, (curV && !isCur) ? ' is-off' : '');
+    });
+    wrap.appendChild(box);
+    return wrap;
+  }
+
+  /** 見出しの行まで作った空の表。列の型と見出しを2つの表で必ずそろえる */
+  function bankGrid(corner) {
+    var box = el('div', 'split bank');
+    applyBankCols(box);
+    box.appendChild(el('div', 'split-label is-strong', corner));
+    ['1着', '2着内', '3着内', '4着内'].forEach(function (t) { box.appendChild(el('div', 'split-h', t)); });
+    return box;
+  }
+
+  /** 行の左端＝1行目に名前（＋今日の印）、2行目に小さく周長・区分・走数。
+      🔑`is-cur`（青）は**行ラベルにだけ**付ける＝数字のマスには付けない（§33）。 */
+  function bankLabel(name, meta, isCur) {
+    var k = el('div', 'split-k' + (isCur ? ' is-cur' : ''));
+    k.appendChild(el('span', '', name + (isCur ? ' ◀ 今日' : '')));
+    k.appendChild(el('span', 'bank-meta', meta));
+    return k;
+  }
+
+  /** 1着・2着内・3着内・4着内の4マス。％の下に回数。
+      ⚠️0回は薄い「—」＝画面共通の決まり（回数が0のマスだけ薄くする）。 */
+  function bankCells(box, b, off) {
+    [b.win, b.top2, b.top3, b.top4].forEach(function (v) {
+      var cell = el('div', 'bank-cell');
+      cell.appendChild(el('div', 'split-v' + off + (v ? '' : ' is-thin'), v ? pct(v, b.n) : '—'));
+      if (v) cell.appendChild(el('div', 'bank-n', v + '回'));
+      box.appendChild(cell);
+    });
   }
 
   function saveBar() {
