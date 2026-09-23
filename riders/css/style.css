@@ -605,7 +605,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
         **両方そろえないと列がずれる**（片方だけ直すと見出しと明細がずれて読めなくなる）。 */
   .racer-row { grid-template-columns: 24px minmax(90px, 1fr) 28px 18px 46px 56px; }
   .racecard { padding: 0 8px 20px; }
-  .venue-tabs { padding: 0 8px 8px; }
+  /* 🔴場のタブは**上に貼り付ける**（2026-09-23）。
+     スマホはページ全体がスクロールするので、場を押して目的のレースまで送ると
+     **タブが画面外へ出てしまう**（実測＝青森を押すと3,481px上）＝別の場に移るのに
+     10レース分スクロールして戻ることになり、「押したら近いレースが上」の機能が半端になる。
+     PCは `.racecard` の中だけが動くのでタブは元から残る＝この指定はスマホだけでよい。
+     ⚠️貼り付けた分だけ送り先をずらす（today.js の `scrollToRace` が sticky を見て高さを引く）。
+     ⚠️地の色を敷かないと、下を流れるレースがタブに透ける。 */
+  .venue-tabs {
+    padding: 8px 8px; position: sticky; top: 0; z-index: 3;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+  }
   .filters { padding: 8px; }
   /* 検索窓と級班メニューを横に並べると窓が狭くて説明文が切れる＝窓を1行使わせて下に落とす */
   .filters input[type="search"] { flex: 1 1 100%; }

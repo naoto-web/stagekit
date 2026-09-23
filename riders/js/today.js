@@ -41,14 +41,14 @@ var TODAY = (function () {
       sortVenues(state.data.venues);
       state.venue = defaultVenue(state.data);
       state.loaded = true;
-      render();
+      render(true);
     }).catch(function (e) {
       clear(box);
       box.appendChild(el('div', 'empty', '取れませんでした：' + e.message));
     });
   }
 
-  function render() {
+  function render(scroll) {
     var meta = document.getElementById('card-meta');
     var d = state.data || { venues: [] };
     meta.textContent = d.venues.length ? (fmtDate(d.date) + '・' + d.venues.length + '場') : '';
@@ -65,7 +65,8 @@ var TODAY = (function () {
       if (v.grade) b.appendChild(el('span', 'vtab-grade', v.grade));
       b.title = [v.name, kb ? KUBUN_FULL[kb] : '', v.grade, '1R ' + (startText(v) || '—')]
         .filter(Boolean).join('・');
-      b.onclick = function () { state.venue = i; render(); };
+      // 場を押したら、その場の「いま見たいレース」まで送る（scroll=true）
+      b.onclick = function () { state.venue = i; render(true); };
       tabs.appendChild(b);
     });
 
@@ -80,10 +81,19 @@ var TODAY = (function () {
     var frag = document.createDocumentFragment();
     v.races.forEach(function (r) { frag.appendChild(raceBlock(v, r)); });
     box.appendChild(frag);
+
+    /* 🔑スクロールするのは**場を選んだときだけ**（読み込み・タブを押した・日付を変えた）。
+       `redraw()`（幅の境目をまたいだとき）では動かさない＝見ていた位置が勝手に飛ぶのを防ぐ。
+       ⚠️1フレーム待つ＝いま作ったばかりの要素の位置を測るため。 */
+    if (scroll) {
+      var idx = firstRaceIdx(v);
+      requestAnimationFrame(function () { scrollToRace(idx); });
+    }
   }
 
   function raceBlock(v, r) {
     var wrap = el('div', 'race');
+    wrap.dataset.no = r.no;          // どのレースまで送ったかを外から確かめられるように
 
     var head = el('div', 'race-head');
     head.appendChild(el('span', 'race-no', r.no + 'R'));
@@ -273,6 +283,71 @@ var TODAY = (function () {
       if (lastStartMin(venues[i]) >= now) return i;
     }
     return 0;
+  }
+
+  /* ── 場を開いたときに先頭に出すレース（2026-09-23 Naoto
+       「押したら、いまから出走が近いレース＝**ラインの情報が消えてないやつ**が一番上に。
+         そこから上へスクロールすれば前のレースも見られる」）─────────────────
+
+     🔑**判定の主役は「並びが残っているか」であって時刻ではない**。
+        keirin.jp は**発走したレースの並び予想を落とす**ので、`lines` の有無が
+        「まだ走っていない／いま走っている」の印になる＝Naotoの言葉そのまま。
+        実測（2026-09-23 19:39）＝青森10R（19:38発走）は**時刻では「済」なのに並びは3本残っていた**
+        ＝時刻だけで切ると、いままさに走っているレースを飛ばして11Rを出してしまう。
+     🔑**このDBにとって並びの無いレースは使えない**（誰が先頭で誰が番手か取れない＝役割が決まらない）
+        ので、「並びのある先頭」を出すのは用途とも合っている。
+     🔴ただし**ガールズ（L級）と KEIRIN ADVANCE は走る前から並びが無い**（規則としてライン無し）。
+        並びだけで決めると、これから走るレースがあるのに1Rへ戻ってしまう ⇒ 時刻で拾い直す。
+     ⚠️全部終わっている場は1R（＝いままでどおり先頭）。レースは消さないので上へ送れば過去も見られる。 */
+  function firstRaceIdx(v) {
+    var rs = (v || {}).races || [];
+    for (var i = 0; i < rs.length; i++) {
+      if ((rs[i].lines || []).length) return i;            // ①並びが残っている最初のレース
+    }
+    if (isToday(state.data)) {                             // ②並びが無い開催（ガールズ・アドバンス）の救済
+      var now = nowMin();
+      for (var j = 0; j < rs.length; j++) {
+        var m = startMinOf(rs[j]);
+        if (m >= 0 && m >= now) return j;
+      }
+    }
+    return 0;                                              // ③全部終わっている／時刻が取れない＝1R
+  }
+
+  function startMinOf(r) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String((r || {}).start || '').trim());
+    return m ? (+m[1]) * 60 + (+m[2]) : -1;
+  }
+
+  /** そのレースを見える範囲の先頭へ送る。
+      🔴**スクロールする入れ物がPCとスマホで違う**＝
+         PCは `.racecard` が内部スクロール（`overflow-y:auto`）／スマホは `overflow-y:visible` で
+         **ページ全体**が動く（§35で1カラムにしたときにそうした）。
+         入れ物の側で判定する（幅で分岐しない）＝CSSを変えてもここは追従する。
+      ⚠️位置は `getBoundingClientRect` の差で出す＝`offsetTop` は親の取り方で狂う。 */
+  function scrollToRace(idx) {
+    var box = document.getElementById('racecard');
+    if (!box) return;
+    var target = box.children[idx];                        // レースは並び順に1つずつ入っている
+    if (!target || !target.getBoundingClientRect) return;
+    var gap = target.getBoundingClientRect().top - box.getBoundingClientRect().top;
+    if (box.scrollHeight - box.clientHeight > 1) {         // PC＝入れ物の中だけ動かす（タブは動かない）
+      box.scrollTop += gap;
+    } else {                                                // スマホ＝ページごと動かす
+      var y = window.pageYOffset + target.getBoundingClientRect().top - stickyTop();
+      window.scrollTo(0, Math.max(0, y));
+    }
+  }
+
+  /** 上に貼り付いている場のタブの高さ（スマホ）。貼り付いていなければ0。
+      🔑CSSの `position: sticky` を**読んで**決める＝画面幅で分岐しない。
+         CSS側を変えてもJSが黙ってずれない（片方だけ直す事故を防ぐ）。 */
+  function stickyTop() {
+    var t = document.getElementById('venue-tabs');
+    if (!t) return 0;
+    var pos = '';
+    try { pos = window.getComputedStyle(t).position; } catch (e) { return 0; }
+    return (pos === 'sticky') ? t.getBoundingClientRect().height : 0;
   }
 
   var KUBUN_FULL = { 'モ': 'モーニング', 'デ': 'デイ', 'ナ': 'ナイター', 'ミ': 'ミッドナイト' };
