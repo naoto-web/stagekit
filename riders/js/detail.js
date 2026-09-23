@@ -496,8 +496,12 @@ var DETAIL = (function () {
       cols.forEach(function (df) {
         var b = rw.get(lk[df.k]);
         // 薄字は「記録が無いマス」だけ＝走数の多い少ないでは薄くしない（9/23 Naoto）。
-        // 🔑今日の車数でない列は**太字にしない**（9/23 Naoto「関係ないやつは太字にしないで」）
-        var off = (todaySize && df.k !== todaySize) ? ' is-off' : '';
+        /* 🔴太字にするのは**今日の列と今日の行が交わるマスだけ**（2026-09-23 Naoto
+           「3車ラインと三分戦以上も太字になってる気がする」）。
+           ⚠️**列だけで決めていたのが原因**＝今日が2車ライン・二分戦でも
+             「三分戦以上×2車ライン」まで太字になっていた（西本1番車で14走のマスが目立っていた）。
+           🔑「全体」行はいつも見る行なので、今日の列との交点は太字のままにする。 */
+        var off = (todaySize && !(strongRow && df.k === todaySize)) ? ' is-off' : '';
         var cell = el('div', 'split-v' + off + ((b && b.n) ? '' : ' is-thin'));
         if (b && b.n) {
           cell.appendChild(document.createTextNode(b.hit + '回'));
@@ -506,13 +510,10 @@ var DETAIL = (function () {
         box.appendChild(cell);
       });
     });
-    var noteText = '2車＝1,2着／3車以上＝1〜3着が自分のライン。自分が何着かは問わない';
-    if (todaySize || todayBun) {
-      noteText += '／太字＝今日の並び（'
-        + [todaySize ? (todaySize === '4' ? '4車以上' : todaySize + '車ライン') : '',
-           todayBun ? (todayBun === '2' ? '二分戦' : '三分戦以上') : ''].filter(Boolean).join('・') + '）';
-    }
-    var note = el('div', 'split-note muted sm', noteText);
+    /* ⚠️「太字＝今日の並び（◯車ライン・◯分戦）」の但し書きは**書かない**（2026-09-23 Naoto「いらない」）。
+       同じことが表の見出しと行ラベルの太字で見えているので、文字で繰り返す必要がない。 */
+    var note = el('div', 'split-note muted sm',
+      '2車＝1,2着／3車以上＝1〜3着が自分のライン。自分が何着かは問わない');
     note.style.gridColumn = '1 / -1';
     box.appendChild(note);
     return box;
