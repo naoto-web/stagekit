@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OKL 選手DB</title>
-<link rel="stylesheet" href="css/style.css?v=20260923-115702">
+<link rel="stylesheet" href="css/style.css?v=20260923-174900">
 </head>
 <body data-view="work">
 
@@ -58,8 +58,15 @@
     </section>
 
     <!-- ── 右：選手詳細 ── -->
-    <section class="col-right" id="detail">
-      <div class="empty">左から選手を選んでください。</div>
+    <section class="col-right">
+      <!-- スマホ（1カラム）でだけ出る戻りバー。§35
+           ⚠️`#detail` の外に置く＝detail.js が中身を描き直しても消えない -->
+      <div class="m-bar">
+        <button type="button" class="m-back" id="m-back">← もどる</button>
+      </div>
+      <div id="detail">
+        <div class="empty">左から選手を選んでください。</div>
+      </div>
     </section>
 
   </main>
@@ -68,15 +75,15 @@
 <!-- ═══════════ 出力ビュー（OBSブラウザソース・背景透明） ═══════════ -->
 <div class="outcard" id="outcard" hidden></div>
 
-<script src="../autoupdate.js?v=20260923-115702" data-au="output-only"></script>
-<script src="js/config.js?v=20260923-115702"></script>
-<script src="js/racetype.js?v=20260923-115702"></script>
-<script src="js/api.js?v=20260923-115702"></script>
-<script src="js/kana.js?v=20260923-115702"></script>
-<script src="js/list.js?v=20260923-115702"></script>
-<script src="js/today.js?v=20260923-115702"></script>
-<script src="js/detail.js?v=20260923-115702"></script>
-<script src="js/output.js?v=20260923-115702"></script>
-<script src="js/main.js?v=20260923-115702"></script>
+<script src="../autoupdate.js?v=20260923-174900" data-au="output-only"></script>
+<script src="js/config.js?v=20260923-174900"></script>
+<script src="js/racetype.js?v=20260923-174900"></script>
+<script src="js/api.js?v=20260923-174900"></script>
+<script src="js/kana.js?v=20260923-174900"></script>
+<script src="js/list.js?v=20260923-174900"></script>
+<script src="js/today.js?v=20260923-174900"></script>
+<script src="js/detail.js?v=20260923-174900"></script>
+<script src="js/output.js?v=20260923-174900"></script>
+<script src="js/main.js?v=20260923-174900"></script>
 </body>
 </html>

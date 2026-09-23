@@ -34,6 +34,8 @@ var DETAIL = (function () {
   /** seed＝一覧や出走表が持っている名前・級班・得点。GASの返事を待たずに見出しだけ先に出す */
   function open(reg, context, seed) {
     flush();            // 前の選手の書きかけを先に保存する
+    // スマホは1カラム＝「さがす」画面から「選手」画面へ移る（§35）。PCでは data-m が付くだけで見た目は変わらない
+    if (window.MOBILE) MOBILE.toDetail();
     ctx = context || null;
     dirty = false;
     editing = {};
@@ -69,6 +71,13 @@ var DETAIL = (function () {
     var reg = cur && cur.rider && cur.rider.reg;
     return (statsAll && statsAll.riders && statsAll.riders[reg]) || null;
   }
+
+  /** スマホでは枠を既定で閉じる（§35）。開いたままにするのは**役割別の動き**と**観察ログ**だけ
+      ＝Yの用途が「見る＋書く」なので、この2つが最初から見えていれば指を動かさずに済む。
+      🔑呼び出し側で明示的に渡す＝`section()` の中でタイトルの文字列から判断すると、
+        タイトルを変えた日に黙って全部開く（文字列一致は静かに壊れる）。
+      ⚠️PCの見え方は変えない＝広い画面では今までどおり全部開いている。 */
+  function mFold() { return !!(window.MOBILE && MOBILE.isNarrow()); }
 
   /** 集計期間の一言（例「数字は直近4ヶ月（2026/05/22〜2026/09/22）を数えたものです。」）。
       🔑期間は stats.json 側が持つ＝`build_stats.js` の `WINDOW_MONTHS` を変えれば文言も追いつく。
@@ -146,7 +155,7 @@ var DETAIL = (function () {
   }
 
   function basics(r) {
-    var s = section('基礎データ');
+    var s = section('基礎データ', '', mFold());
     var g = el('div', 'kv');
     var add = function (k, v) {
       if (!v && v !== 0) return;
@@ -597,7 +606,7 @@ var DETAIL = (function () {
       基礎データのすぐ下に単独で置き、幅いっぱいで書けるようにする。
       以前は「特徴と追走能力」の右半分に押し込んでいて、書く場所が狭かった。 */
   function featureSection() {
-    var s = section('選手特徴', '出力ビュー（配信）には出ません。');
+    var s = section('選手特徴', '出力ビュー（配信）には出ません。', mFold());
     s.body.appendChild(noteField('feature', '事実と観察を書く。人の評価は書かない', true));
     s.body.appendChild(saveBar());
     return s.root;
@@ -609,7 +618,7 @@ var DETAIL = (function () {
       🔑内枠ほど取りやすいので、**回数だけでなく車番の並びを見ないと意味がない**
          （全体では1番3,795回に対し6番458回）。だから車番ごとに出す。 */
   function sSection() {
-    var s = section('S取り', windowText());
+    var s = section('S取り', windowText(), mFold());
     var st = stats();
     var sk = st && st.sTaken;
 
@@ -641,7 +650,7 @@ var DETAIL = (function () {
   /* ── ⑤追走能力 ── */
 
   function followSection() {
-    var s = section('追走能力', '番手を回ったときの確かさ。出力ビュー（配信）には出ません。');
+    var s = section('追走能力', '番手を回ったときの確かさ。出力ビュー（配信）には出ません。', mFold());
     var wrap = el('div', 'follow');
 
     var sel = el('select', 'sel');

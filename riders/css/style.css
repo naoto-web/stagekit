@@ -551,6 +551,82 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .toast.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast[data-err="1"] { border-color: var(--ng); color: var(--toast-err-fg); }
 
+/* ═══════════ スマホ（1カラム）＝要件§35 ═══════════
+   PCの2カラム（左＝さがす／右＝選手）を、狭い画面では **2つの画面に分けて行き来する**。
+   🔑ここは全部 `.app`（操作ビュー）と `body[data-view="work"]` の中の指定
+      ＝**出力ビュー（OBS）には一切かからない**（§27・§30と同じ約束）。
+   ⚠️700px＝タブレット縦（768px）より下。PCのウィンドウを狭めたときも同じ形になる。
+   ⚠️iPhone 375〜430px／Android 360〜412px ＝ **いちばん狭い360pxで設計**して、
+      広い端末では余白が増えるだけにする。使える幅は余白を引いた316px（検討メモ§1）。 */
+
+/* 戻りバーはPCでは出さない（2カラムなので戻る先がない） */
+.m-bar { display: none; }
+
+@media (max-width: 700px) {
+
+  /* ── 骨格：上から下へ流れる普通のページにする ──
+     PCは「画面を固定して各カラムが内部スクロール」。スマホでこれをやると
+     アドレスバーの出入りと喧嘩して下が見切れる端末がある。
+     ⚠️`html` は触らない＝出力ビューに影響させないため（`body[data-view="work"]` に限定）。 */
+  body[data-view="work"] { height: auto; min-height: 100%; }
+  .app { height: auto; min-height: 100%; }
+  .cols { display: block; min-height: 0; }
+  .col-left,
+  .app[data-tab="today"] .col-left { width: auto; flex: none; border-right: 0; }
+  .col-right { padding: 8px 12px 64px; overflow-y: visible; }
+  .list, .racecard { overflow-y: visible; }
+
+  /* ── 「さがす」か「選手」のどちらかだけを出す ──
+     `data-m` は main.js の MOBILE が付ける（detail＝選手を開いている）。
+     ⚠️`:not([data-m="detail"])` ＝ 起動直後（属性が無い）でも一覧が出る。 */
+  .app[data-m="detail"] .col-left { display: none; }
+  .app:not([data-m="detail"]) .col-right { display: none; }
+
+  /* ── 戻りバー ── */
+  .m-bar { display: block; padding: 2px 0 10px; }
+  .m-back {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--fg);
+    border-radius: 8px; padding: 9px 14px; font-size: 14px; cursor: pointer;
+  }
+
+  /* ── 上のバー：360pxに収める ── */
+  .topbar { padding: 0 10px; gap: 8px; }
+  .brand { display: none; }              /* タブを見れば何の画面か分かる */
+  .tab { padding: 6px 10px; font-size: 13px; }
+  .top-right { gap: 6px; }
+  .conn { font-size: 11px; padding: 3px 8px; }
+  .theme-btn { padding: 4px 8px; }       /* 文言は main.js が「○」だけに縮める */
+
+  /* ── 出走表：成績10列を出さない（§35-4）＝車・名前・級班・脚・得点・役割の6列 ──
+     🔴列を**作らない**のは today.js 側。ここは列の型だけ。
+        **両方そろえないと列がずれる**（片方だけ直すと見出しと明細がずれて読めなくなる）。 */
+  .racer-row { grid-template-columns: 24px minmax(90px, 1fr) 28px 18px 46px 56px; }
+  .racecard { padding: 0 8px 20px; }
+  .venue-tabs { padding: 0 8px 8px; }
+  .filters { padding: 8px; }
+  /* 検索窓と級班メニューを横に並べると窓が狭くて説明文が切れる＝窓を1行使わせて下に落とす */
+  .filters input[type="search"] { flex: 1 1 100%; }
+  .kana-rows { padding: 0 8px 8px; }
+  .list { padding: 0 6px 20px; }
+
+  /* ── 枠の見出し ──
+     🔴PCは「見出し｜説明」の横並び。狭い画面だと説明に押されて**見出しのほうが折り返す**
+        （「役割 別の動 き」「本人のレース後 コメント」と割れる）。⇒ 縦に積む。 */
+  .sec-head { flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; }
+  .sec-title { white-space: nowrap; }
+  .sec-body { padding: 0 12px 12px; }
+  .sec { margin-bottom: 10px; }
+
+  /* ── 選手の見出し：名前の右に「公式データを更新」を置く幅が無い＝下へ回して横に並べる ── */
+  .dt-head { flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .dt-head-r { flex-direction: row; align-items: center; gap: 10px; }
+  .dt-name-main { font-size: 22px; }
+
+  /* ── 観察ログの入力：指で押せる大きさに ── */
+  .obs-form .sel, .obs-form .inp { min-height: 38px; }
+  .obs-form-bar { flex-wrap: wrap; row-gap: 8px; }
+}
+
 /* ═══════════ 出力ビュー（OBSブラウザソース） ═══════════
    背景は完全透明。触れない。文字は映像の上でも読めるよう縁取りを付ける。 */
 body[data-view="output"] { background: transparent; }

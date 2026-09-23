@@ -146,12 +146,17 @@ var TODAY = (function () {
       row.appendChild(el('span', 'racer-score', s.score || ''));
 
       // 直近4ヶ月成績。0は薄くして、数字のあるところが目に入るようにする
-      NUM_KEYS.forEach(function (k, i) {
-        var v2 = String(s[k] == null ? '' : s[k]).trim();
-        var cls = 'n' + (i >= 7 ? ' n-rate' : '') + (!v2 || v2 === '0' ? ' is-zero' : '')
-                + (SEP_AT[i] ? ' col-sep' : '');
-        row.appendChild(el('span', cls, v2 === '' ? '-' : v2));
-      });
+      // 🔴スマホでは出さない（§35-4）＝10列で551px要るので横スクロールなしに収まらない。
+      //   同じ数字は選手を開けば役割別の表にある＝**同じものを2か所に出さない**。
+      //   ⚠️CSSの `.racer-row` の列の型（@media）と**必ずセットで直す**。片方だけだと列がずれる。
+      if (!narrow()) {
+        NUM_KEYS.forEach(function (k, i) {
+          var v2 = String(s[k] == null ? '' : s[k]).trim();
+          var cls = 'n' + (i >= 7 ? ' n-rate' : '') + (!v2 || v2 === '0' ? ' is-zero' : '')
+                  + (SEP_AT[i] ? ' col-sep' : '');
+          row.appendChild(el('span', cls, v2 === '' ? '-' : v2));
+        });
+      }
 
       row.appendChild(el('span', 'racer-role col-sep', roleMap[s.no] ? roleLabel(roleMap[s.no]) : ''));
       tbl.appendChild(row);
@@ -169,15 +174,21 @@ var TODAY = (function () {
     h.appendChild(el('span', '', '級班'));
     h.appendChild(el('span', '', '脚'));
     h.appendChild(el('span', 'racer-score', '得点'));
-    ['逃', '捲', '差', 'マ', 'B', 'H', 'S'].forEach(function (t, i) {
-      h.appendChild(el('span', 'n' + (SEP_AT[i] ? ' col-sep' : ''), t));
-    });
-    ['勝率', '2連', '3連'].forEach(function (t, i) {
-      h.appendChild(el('span', 'n n-rate' + (SEP_AT[i + 7] ? ' col-sep' : ''), t));
-    });
-    h.appendChild(el('span', 'racer-role col-sep', '直近4ヶ月'));
+    if (!narrow()) {
+      ['逃', '捲', '差', 'マ', 'B', 'H', 'S'].forEach(function (t, i) {
+        h.appendChild(el('span', 'n' + (SEP_AT[i] ? ' col-sep' : ''), t));
+      });
+      ['勝率', '2連', '3連'].forEach(function (t, i) {
+        h.appendChild(el('span', 'n n-rate' + (SEP_AT[i + 7] ? ' col-sep' : ''), t));
+      });
+    }
+    // 見出しの右端＝PCは「直近4ヶ月」（その左10列の説明）。スマホはその10列が無いので「役割」
+    h.appendChild(el('span', 'racer-role col-sep', narrow() ? '役割' : '直近4ヶ月'));
     return h;
   }
+
+  /** スマホ（1カラム）か。出走表は幅で列数が変わる＝§35-4 */
+  function narrow() { return !!(window.MOBILE && MOBILE.isNarrow()); }
 
   /** 構造化された並びから 車番→役割 を作る。
       同じ位置に2人以上いる＝競りなので、その全員を「競り」にする。
@@ -307,6 +318,9 @@ var TODAY = (function () {
     load: load,
     markCurrent: markCurrent,
     ensure: function () { if (!state.loaded) load(false); },
+    /* 幅の境目をまたいだときに作り直す（§35）＝成績10列を出すか出さないかが変わるので、
+       描き直さないと見出しと明細で列がずれる。取り直しは不要＝手元の state から組み直すだけ */
+    redraw: function () { if (state.loaded) render(); },
     /* 今日の出走表に出ている場の名前（観察ログの「場」の上に出すため・2026-09-23）。
        出走表をまだ読んでいなければ空を返す＝呼び出し側は40場の一覧だけで普通に動く */
     venueNames: function () {
