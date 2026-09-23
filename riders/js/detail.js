@@ -487,12 +487,18 @@ var DETAIL = (function () {
     var box = el('div', 'split');
     box.style.gridTemplateColumns = LABEL_W + ' repeat(' + cols.length + ', minmax(96px, auto))';
     box.appendChild(el('div', 'split-label is-strong', 'ライン決着'));
+    /* 🔑今日に当たる列と行には「◀ 今日」を出す（2026-09-23 Naoto 第3版）。
+       レース種別の表と同じ印＝**どこを見ればいいかを文字で言い切る**（太字や色の濃淡だけに頼らない）。
+       ⚠️「全体」行には付けない＝今日の戦法ではなく、いつも見る行だから。 */
     cols.forEach(function (df) {
-      box.appendChild(el('div', 'split-h' + (df.k === todaySize ? ' is-strong' : ''), df.label));
+      var on = (df.k === todaySize);
+      box.appendChild(el('div', 'split-h' + (on ? ' is-strong' : ''), df.label + (on ? ' ◀ 今日' : '')));
     });
     rows.forEach(function (rw) {
       var strongRow = (rw.k === '' || rw.k === todayBun);   // 「全体」は常に太字
-      box.appendChild(el('div', 'split-k' + (strongRow ? ' is-strong' : ''), rw.label));
+      var rowOn = (rw.k !== '' && rw.k === todayBun);
+      box.appendChild(el('div', 'split-k' + (strongRow ? ' is-strong' : ''),
+        rw.label + (rowOn ? ' ◀ 今日' : '')));
       cols.forEach(function (df) {
         var b = rw.get(lk[df.k]);
         // 薄字は「記録が無いマス」だけ＝走数の多い少ないでは薄くしない（9/23 Naoto）。

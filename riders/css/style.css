@@ -409,19 +409,21 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* 「二分戦 ◀ 今日」と「11走」は縦に積む＝横に並べると左端の列が広がって列がずれる */
 .split.rank > .split-label { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .split.rank > .split-label .split-n { margin-left: 0; }
-.split-h { font-size: 10px; color: var(--fg-dim); text-align: right; }
+/* ⚠️nowrap＝「3車ライン ◀ 今日」で折り返させない（2026-09-23） */
+.split-h { font-size: 10px; color: var(--fg-dim); text-align: right; white-space: nowrap; }
 .split-k { font-size: 11px; color: var(--fg-dim); white-space: nowrap; }
 .split-v {
   font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
   text-align: right;
 }
 .split-label.is-thin, .split-k.is-thin, .split-v.is-thin, .rank-sub.is-thin { opacity: .45; }
-/* 今日に当たらない列・行の数字は太字にしない（2026-09-23 Naoto「関係ないやつは太字にしないで」）。
-   ⚠️走数の多い少ないでは変えない＝**今日かどうかだけ**で決める。
-     出走表から開いていないとき（今日が分からないとき）は付けない＝全部そろった太さのまま
-   🔴500では700との差が見えず、Naotoに「今日でないところも太字に見える」と言われた（2026-09-23 第2版）。
-     **400まで落として初めて差が分かる**。色は変えない（薄字は「記録が0のマス」だけ、の決まりを守る）。 */
-.split-v.is-off { font-weight: 400; }
+/* 今日に当たらない列・行の数字は**グレーにして細くする**（2026-09-23 Naoto 第3版
+   「太字になってはいるけど差があまり分からないから、逆に対象のやつをグレーで表示するのがいい」）。
+   🔴太さだけでは差が出なかった＝700対500はもちろん、**700対400でも並べないと分からない**。
+     色を落とすと一目で分かる＝見出しと行ラベルが最初からこの方式（`--fg-dim`）だったのと同じ理屈。
+   ⚠️「走数が少ないから薄く」ではない＝**今日かどうかだけ**で決める。走数による薄字は§25で全廃したまま。
+     出走表から開いていないとき（今日が分からないとき）は付けない＝全部そろった見た目のまま */
+.split-v.is-off { font-weight: 400; color: var(--fg-dim); }
 .split-note { margin-top: 2px; }
 
 /* ── 強調（2026-09-23 Naoto）──
