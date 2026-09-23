@@ -698,9 +698,13 @@ var DETAIL = (function () {
   function catRanks(opts) {
     var bx = (opts.boxes) || {};
     var cats = (opts.order || []).filter(function (t) { return bx[t] && bx[t].n; });
+    /* 🔑**1行も無いときは見出しごと出さない**（2026-09-24 Naoto「出走データがゼロなら
+       タイトルも表示させないでいい」）＝グレード（記念以上）はA級の選手では必ず空になるので、
+       見出しだけが残ると「あるはずのものが出ていない」と読めてしまう。
+       ⚠️レース種別は走れば必ずどれかに入るので空にならない（役割の箱があるときだけ呼ばれる）。 */
+    if (!cats.length) return el('div', '');
     var wrap = el('div', '');
     wrap.appendChild(el('div', 'lbl', opts.title));
-    if (!cats.length) return wrap;
 
     var cur = opts.cur || '';
     // 列は着順の表とそろえる。「他」は1つでも出た区分があれば全行に出す（列をずらさない）
