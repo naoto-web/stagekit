@@ -630,16 +630,18 @@ body.debug .video-ph { display: flex; }
 #scene-tenkai .tk-band { top: 668px; }
 
 /* 1人配信でも枠は2つ出す（8/12 Naoto指定）。
+   🔄9/25 Naoto「②と同じにして問題ない」＝空席の予想枠は畳み、相方を全幅に（②と同じ）。空席の出走表（seatcard-on）と一緒に出す＝
+   いまはテストGAS接続時だけ・本番（seatcard-on なし）は下の8/12の挙動のまま。本番化で seatcard が既定ONになればこの上書きは効かなくなる。
    カメラ穴は①②と同じ扱いでよい＝あちらも「外形・位置は変えず不透明で塞ぐ」なので枠は残る。
    ③で上書きが要るのは予想パネルだけ（display:noneだと相方が全幅へ広がりレイアウトが動く）。
    空席側は色も文言も付けない＝畳まない以上「名前の無い緑の『予想』帯」が出てしまうため */
-body.seat-a-off #scene-tenkai .panel.slot-a,
-body.seat-b-off #scene-tenkai .panel.slot-b { display: flex; }
-body.seat-a-off #scene-tenkai .panel.slot-a .band-head,
-body.seat-b-off #scene-tenkai .panel.slot-b .band-head { background: transparent; }
+body:not(.seatcard-on).seat-a-off #scene-tenkai .panel.slot-a,
+body:not(.seatcard-on).seat-b-off #scene-tenkai .panel.slot-b { display: flex; }
+body:not(.seatcard-on).seat-a-off #scene-tenkai .panel.slot-a .band-head,
+body:not(.seatcard-on).seat-b-off #scene-tenkai .panel.slot-b .band-head { background: transparent; }
 /* 枠線もメンバーカラー既定（--acc）のままだと空枠だけが派手に光る→カメラ穴の空席と同じ静けさに */
-body.seat-a-off #scene-tenkai .panel.slot-a,
-body.seat-b-off #scene-tenkai .panel.slot-b { border-color: var(--panel-line); }
+body:not(.seatcard-on).seat-a-off #scene-tenkai .panel.slot-a,
+body:not(.seatcard-on).seat-b-off #scene-tenkai .panel.slot-b { border-color: var(--panel-line); }
 
 /* レイアウト確認用（?debug=1 のときだけ）＝中身が空の枠を破線で見せる。
    実運用ではタイマーは常に埋まるので出ない */
