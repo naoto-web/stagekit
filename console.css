@@ -188,11 +188,32 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .parse-info .pl-memo { color: #6d7480; }
 /* 買目欄（左・細く縦長）＋読み取り結果（右・行の高さをそろえる）9/25 Naoto「横が長すぎる」。
    右列の行は .inp と同じ字の大きさ・行間・上の余白（padding 7px＋枠1px）＝左の1行と真横に並ぶ */
-.pf-body { display: grid; grid-template-columns: minmax(10em, 42%) 1fr; gap: 10px; align-items: start; }
+.pf-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+/* 9/25 2人の予想カードを左右に並べる（Naoto）。1人配信は1枚が全幅。狭い画面（520px以下）は縦積み */
+#pred-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 10px; }
+#pred-forms .pred-form { margin-top: 0; min-width: 0; padding: 10px; }
+/* 並び（予想入力の入力先と予想カードの間・9/25）。車番の色は overlay.css の .c1〜.c9 と同じ */
+.pred-narabi { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 10px; padding: 8px 10px;
+  border-radius: 8px; background: #1a1c21; border: 1px solid #363a43; }
+.pred-narabi .pn-lbl { font-size: 13px; font-weight: 700; color: #9aa0ab; }
+.pred-narabi .pn-none { font-size: 13px; color: #6d7480; }
+.pred-narabi .pn-manual { font-size: 11px; font-weight: 700; color: #d9a441; border: 1px solid #d9a441; border-radius: 4px; padding: 0 4px; }
+.pred-narabi .pn-group { display: inline-flex; gap: 2px; }
+.pred-narabi .pn-car { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+  border-radius: 4px; font-style: normal; font-size: 17px; font-weight: 900; border: 1px solid transparent; }
+.pn-car.c1 { background: #fff; color: #16181c; }
+.pn-car.c2 { background: #17181c; color: #fff; border-color: rgba(255,255,255,.5); }
+.pn-car.c3 { background: #d63b3b; color: #fff; }
+.pn-car.c4 { background: #2f66d0; color: #fff; }
+.pn-car.c5 { background: #e8c22e; color: #16181c; }
+.pn-car.c6 { background: #2e9e4f; color: #fff; }
+.pn-car.c7 { background: #ef7f1a; color: #fff; }
+.pn-car.c8 { background: #e77fae; color: #16181c; }
+.pn-car.c9 { background: #7d4fc9; color: #fff; }
 .pf-body .pf-text { resize: none; overflow-y: hidden; white-space: pre; }
 .pf-body .pf-info { margin-top: 0; padding-top: 8px; font-size: 14px; line-height: 1.6; min-width: 0; }
 .pf-body .pl-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 520px) { .pf-body { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { #pred-forms { grid-template-columns: 1fr; } }
 .parse-total { margin-top: 4px; font-size: 13px; font-weight: 900; color: #e8e8ec; }
 .pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 /* 予想入力のカード内の注意書き（⚠投資額未入力／俺たち目未入力・買目外／✏️未保存／切り目の書き方）は非表示（9/25 Naoto「いったん予想入力のタブのみ」）。
@@ -215,6 +236,14 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 /* 俺たち目＝見出しと買目欄の間（9/24 Naoto） */
 .pred-opts.pf-ore-row { margin-top: 2px; margin-bottom: 8px; }
 .pred-opts .lbl { margin: 0; }
+/* 2人を左右に並べた細いカードでも1行に収める（9/25）：俺たち目は行の残り幅いっぱい・投資額の行は折り返さず欄だけ縮む */
+#pred-forms .pf-ore-row .lbl { flex: 1; min-width: 0; }
+#pred-forms .pf-ore { flex: 1; min-width: 0; }
+#pred-forms .pred-opts:not(.pf-ore-row) { flex-wrap: nowrap; }
+#pred-forms .pred-opts .lbl { white-space: nowrap; }
+#pred-forms .pred-opts:not(.pf-ore-row) .lbl { flex: 1; min-width: 0; }
+#pred-forms .pf-invest { flex: 1; min-width: 3em; max-width: 8em; padding-left: 6px; padding-right: 6px; }
+#pred-forms .btn.pf-invstep { width: 32px; flex: none; }
 .unit-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffb3b3; line-height: 2; }
 /* 未保存の下書きがある予想フォーム（8/8 FB75）＝入力は保持されるが放送には出ていない状態 */
 .draft-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffd88a; line-height: 2; }

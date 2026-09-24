@@ -158,7 +158,7 @@
     var parts = String(key || "").split("|");
     return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
       '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span>' +
-      (withLabel ? '<span class="pf-note-tag' + (isNote ? "" : " off") + '">note勝負レース</span>' : "") + "</span>";
+      (withLabel ? '<span class="pf-note-tag' + (isNote ? "" : " off") + '">note予想</span>' : "") + "</span>"; // 9/25「note勝負レース」→「note予想」
   }
   /** そのレースで誰か1人でも note予想（勝負レース）にチェックが入っているか（結果入力の🔥用）。
       9/24 Naoto「予想入力のチェックと同じタイミングで」＝未保存の下書きのチェックも見る（下書き＞保存値。
@@ -376,6 +376,7 @@
     if (!state.narabi) state.narabi = {};
     state.narabi[key] = $("narabi-input").value.trim();
     save();
+    renderPredNarabi(key); // 予想入力の並び表示もすぐ手修正の値に（9/25）
   });
 
   // 出しっぱなし警告バー：タップで次レースへ切替（旧「次のレースへ」ボタンの代替）
@@ -521,6 +522,45 @@
     div.querySelector(".og-skip").addEventListener("click", function () { div.remove(); doSave(); });
   }
 
+  /* ---------- 予想入力の並び（9/25 Naoto「入力先のレースと予想の間に並びを」） ----------
+     優先順は overlay.js renderNarabi と同じ＝手修正（state.narabi）＞時刻表に同梱の並び＞GASの action=narabi。
+     GASは読むだけ（OBS・stateには影響なし）。1レース1回・失敗したら次の描画で取り直す */
+  var predNarabiAuto = {}; // raceKey → { val, pending }
+  function renderPredNarabi(key) {
+    var box = $("pred-narabi");
+    if (!box) return;
+    if (!key) { box.classList.add("hidden"); return; }
+    var parts = key.split("|"), vName = parts[0], rNo = +parts[1];
+    var manual = (state.narabi || {})[key] || "";
+    var tt = "";
+    venueRaces(vName).forEach(function (r) { if (r.no === rNo && r.narabi) tt = r.narabi; });
+    var ent = predNarabiAuto[key];
+    if (!manual && !tt && !ent) {
+      var jo = joCodeOfName(vName);
+      if (jo) {
+        predNarabiAuto[key] = { val: "", pending: true };
+        window.Sync.fetchNarabi(jo, rNo).then(function (info) {
+          predNarabiAuto[key] = { val: info.narabi || "" };
+          if (predKey() === key) renderPredNarabi(key);
+        }).catch(function () { delete predNarabiAuto[key]; });
+      }
+    }
+    var src = manual || tt || (ent ? ent.val : "");
+    var groups = window.Keirin.normalize(src).split(/[^0-9]+/).filter(Boolean);
+    box.classList.remove("hidden");
+    if (!groups.length) {
+      box.innerHTML = '<span class="pn-lbl">並び</span><span class="pn-none">' +
+        (ent && ent.pending ? "取得中…" : "未発表") + "</span>";
+      return;
+    }
+    box.innerHTML = '<span class="pn-lbl">並び</span>' + (manual ? '<span class="pn-manual" title="「並びを手で直す」で入れた並び">手修正</span>' : "") +
+      groups.map(function (g) {
+        return '<span class="pn-group">' + g.split("").map(function (n) {
+          return '<i class="pn-car c' + n + '">' + n + "</i>";
+        }).join("") + "</span>";
+      }).join("");
+  }
+
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
     // 固定中は「どこに固定しているか」＋「放送は今どこか」を出す（8/27 FB139）。
@@ -532,6 +572,7 @@
     }
     $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）") + pinNote;
     $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
+    renderPredNarabi(key);
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }
     var race = state.preds[key] || { cars: 9 };
@@ -592,7 +633,8 @@
         // 端数（例3500）を手打ちするのは従来どおり可（フォーム送信が無いのでstep不一致でも保存に影響しない）。
         // ⚠️回収・払戻は実額＝端数が当たり前なのでstepを付けない
         // 9/25 Naoto＝欄内の上下矢印をやめ、「円」の右に −／＋ ボタン（1000円ずつ）。手打ちの端数はこれまでどおり可
-        '<label class="lbl inline">投資額 <input type="number" step="1000" min="0" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '">円</label>' +
+        // 9/25 左右2列にしたので見出しは「投資」（「投資額」だと細いカードで欄が数字1〜2桁ぶんまで潰れる）
+        '<label class="lbl inline">投資 <input type="number" step="1000" min="0" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '">円</label>' +
         '<button type="button" class="btn pf-invstep pf-invdown" data-tip="1,000円減らす">−</button>' +
         '<button type="button" class="btn pf-invstep pf-invup" data-tip="1,000円増やす">＋</button>' +
         "</div>" +
@@ -702,15 +744,15 @@
         cutWarn = '<div class="unit-warn">⚠ 切り目は1行に1つずつ（「切 1-2-3」と「切 4-5-6」の2行に分けてください。' +
           "1行に並べると別の目として読まれます）</div>";
       }
-      if (!l.ok) return '<div class="pl-row pl-memo">→ メモ行（点数外）</div>';
-      if (l.cut) return '<div class="pl-row pl-memo">→ 切り目（除外・判定外）</div>';
-      if (l.allDup) return '<div class="pl-row pl-memo">→ 全部かぶり/切り目（0点・画面に出ません）</div>';
-      var dispNote = l.disp && l.disp !== window.Keirin.normalize(l.raw).replace(/\s+/g, "")
-        ? '　<span class="pl-memo">画面 ' + esc(l.disp) + "</span>" : "";
-      var dupNote = l.dupCount ? '　<span class="pl-memo">かぶり/切り' + l.dupCount + "点除外</span>" : "";
-      // 列が狭いと末尾が「…」で切れる＝マウスを乗せれば全文（title）
-      var tip = l.type + " " + l.points + "点" + (l.dupCount ? "　かぶり/切り" + l.dupCount + "点除外" : "") + (dispNote ? "　画面 " + l.disp : "");
-      return '<div class="pl-row pl-ok" title="' + esc(tip) + '">→ ' + esc(l.type) + " <b>" + l.points + "点</b>" + dupNote + dispNote + "</div>";
+      /* 9/25 2人の予想を左右に並べたので右列は細く＝点数だけ（Naoto「→3連単1点は無くてもいい」）。
+         式別・かぶり除外・画面表示はマウスを乗せると出る（title）。3連単以外は式別の頭文字を添える（見落とし防止） */
+      if (!l.ok) return '<div class="pl-row pl-memo" title="メモ行（点数外）">メモ</div>';
+      if (l.cut) return '<div class="pl-row pl-memo" title="切り目（買目から除外・的中判定外）">切り目</div>';
+      if (l.allDup) return '<div class="pl-row pl-memo" title="全部かぶり/切り目（0点・画面に出ません）">0点</div>';
+      var showDisp = l.disp && l.disp !== window.Keirin.normalize(l.raw).replace(/\s+/g, "");
+      var tip = l.type + " " + l.points + "点" + (l.dupCount ? "　かぶり/切り" + l.dupCount + "点除外" : "") + (showDisp ? "　画面 " + l.disp : "");
+      var typeMark = l.type !== "3連単" ? '<span class="pl-memo">' + esc(l.type) + "</span> " : "";
+      return '<div class="pl-row pl-ok" title="' + esc(tip) + '">' + typeMark + "<b>" + l.points + "点</b>" + (l.dupCount ? '<span class="pl-memo">*</span>' : "") + "</div>";
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;
     var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) + cutWarn;
