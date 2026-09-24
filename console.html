@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260925-050304">
+<link rel="stylesheet" href="console.css?v=20260925-051424">
 </head>
 <body>
 
@@ -112,17 +112,9 @@
       （それぞれ別に「何枚買ったか」を入れられます）</div>
   </div>
 
-  <!-- 選手名（1〜3着）・決まり手・上がりの手入力欄は8/27 FB143で撤去（Naoto「手で入れない」）。
-       ⚠️データとしては残す＝自動取得の結果からstate.results[].names/kimariteに入り、
-       的中演出（選手リスペクト）が名前に使う。確定時の引き継ぎはDerive.carryResultMetaが担当。
-       ここに欄を戻す必要はない（戻すならcarryResultMeta側も直すこと） -->
-
-  <label class="lbl">払戻（100円あたり・円）</label>
-  <!-- 8/27 FB146の入れ方の説明（公式の払戻をそのまま・回収は枚数）は9/25 Naoto「消して」で撤去 -->
-  <div id="payout-rows"></div>
   <!-- 8/27 FB144：式別セレクタ＋組合せ＋行を追加は常時表示をやめ、この折りたたみの中へ。
        買い方は3連単が基本で、行の追加が要るのは他式別で買った時だけ（＝押した時だけ出す）。
-       9/25 開くボタンは「同着」と同じ丸いボタンの見た目（.exp.btn-sum） -->
+       9/25 開くボタンは「同着」と同じ丸いボタンの見た目（.exp.btn-sum）。置き場所は同着ボタンの下（9/25 Naoto・同着欄の下＝同着を開いていないときは同着のすぐ下） -->
   <details class="exp btn-sum">
     <summary>3連単以外の場合</summary>
     <div class="hint">ワイド・2車複などで買った時だけ使います。式別と買い目を指定して決定すると、
@@ -137,6 +129,16 @@
       <button class="btn small" id="btn-payout-add">決定</button>
     </div>
   </details>
+
+  <!-- 選手名（1〜3着）・決まり手・上がりの手入力欄は8/27 FB143で撤去（Naoto「手で入れない」）。
+       ⚠️データとしては残す＝自動取得の結果からstate.results[].names/kimariteに入り、
+       的中演出（選手リスペクト）が名前に使う。確定時の引き継ぎはDerive.carryResultMetaが担当。
+       ここに欄を戻す必要はない（戻すならcarryResultMeta側も直すこと） -->
+
+  <label class="lbl">払戻（100円あたり・円）</label>
+  <!-- 8/27 FB146の入れ方の説明（公式の払戻をそのまま・回収は枚数）は9/25 Naoto「消して」で撤去 -->
+  <div id="payout-rows"></div>
+
 
   <div class="settle-preview" id="settle-preview"></div>
   <button class="btn primary" id="btn-settle">結果を確定（的中・回収を自動更新）</button>
@@ -245,11 +247,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260925-050304" data-au="banner"></script>
-<script src="config.js?v=20260925-050304"></script>
-<script src="keirin.js?v=20260925-050304"></script>
-<script src="derive.js?v=20260925-050304"></script>
-<script src="sync.js?v=20260925-050304"></script>
-<script src="console.js?v=20260925-050304"></script>
+<script src="autoupdate.js?v=20260925-051424" data-au="banner"></script>
+<script src="config.js?v=20260925-051424"></script>
+<script src="keirin.js?v=20260925-051424"></script>
+<script src="derive.js?v=20260925-051424"></script>
+<script src="sync.js?v=20260925-051424"></script>
+<script src="console.js?v=20260925-051424"></script>
 </body>
 </html>
