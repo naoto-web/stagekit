@@ -1208,6 +1208,15 @@
         if (who) {
           var rk = window.Derive.raceKey(v, r);
           var ent = (((state.preds || {})[rk] || {}).byRacer || {})[who.id];
+          /* 9/25 Naoto「コンソールはチェックが付くのにOBSが勝負レース判定されていない」＝
+             OBSの🔥（レースラベル）は**保存済みの予想の isNote だけ**を見る（overlay.js resolvePred）。
+             まだ保存していない予想は下書きにしかチェックが無く、OBSには届いていなかった。
+             → 選んだ瞬間に予想の器を作って isNote だけ保存する（買目は空のまま＝本番にも同じ形の空エントリが普通にある。
+               投資・点数・的中計算は text/investInput しか見ないので影響なし）。外したときは器があれば false にするだけ */
+          if (!ent && on) {
+            ent = ensurePredEntry(rk, who.id);
+            state.preds[rk].cars = autoCars(rk);
+          }
           if (ent) ent.isNote = on;
           var dd = predDrafts[draftKey(rk, who.id)];
           if (dd) dd.note = on;
