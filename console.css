@@ -210,6 +210,9 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   background: #1a1c21; color: #d6d9de;
 }
 .vp.sel { background: #29c7d6; border-color: #29c7d6; color: #04181b; }
+/* 開催区分の印（9/24・☀️モーニング／🌙ナイター／⭐ミッドナイト・デイは無印）＝場名の右。
+   本日設定（.vp）と場・レース（.vbtn）で共用。絵文字は字より大きく見えるので一回り小さく */
+.vp .kb, .vbtn .kb { margin-left: 3px; font-size: .8em; vertical-align: 1px; }
 
 .exp { margin-top: 10px; }
 .exp summary { font-size: 12px; color: #9aa0ab; cursor: pointer; }

@@ -119,6 +119,38 @@
     return rs.length ? rs[0] : null;
   }
 
+  /* 開催区分の印（9/24 Naoto「選手DBと同じ感じで」）＝☀️モーニング／🌙ナイター／⭐ミッドナイト・デイは無印。
+     本日設定の場ボタンと「場・レース」の場ボタンで場名の右に付ける（選手DB riders/js/today.js の KUBUN_MARK と同じ絵文字）。
+     判定＝タイムテーブルのグレード表記（GASの kjGrade_ が1R発走時刻から「モーニング」等を付けている）→
+     手入力のグレード → 1R発走時刻（kjGrade_ と同じ境目：10時前＝モーニング／15時〜＝ナイター／20時〜＝ミッドナイト）。
+     ⚠️ミッドナイトを先に見る（順番の保険。「ミッドナイト」は「ナイター」を含まないが、判定順を明示しておく） */
+  var KUBUN_MARKS = [[/モーニング/, "☀️", "モーニング"], [/ミッドナイト/, "⭐", "ミッドナイト"], [/ナイター/, "🌙", "ナイター"]];
+  function kubunOf(name) {
+    var tv = (timetable && timetable.venues || []).filter(function (x) { return x.name === name; })[0];
+    var texts = [tv && tv.grade, state.grade && state.grade[name]];
+    for (var t = 0; t < texts.length; t++) {
+      for (var k = 0; k < KUBUN_MARKS.length; k++) {
+        if (KUBUN_MARKS[k][0].test(String(texts[t] || ""))) return KUBUN_MARKS[k];
+      }
+    }
+    var races = tv ? tv.races || [] : [];
+    var s = races.length ? timeToSec(races[0].start) : null;
+    if (s === null) return null;
+    if (s < 10 * 3600) return KUBUN_MARKS[0];
+    if (s >= 20 * 3600) return KUBUN_MARKS[1];
+    if (s >= 15 * 3600) return KUBUN_MARKS[2];
+    return null; // デイ＝無印
+  }
+  function kubunMarkHtml(name) {
+    var kb = kubunOf(name);
+    return kb ? '<span class="kb" title="' + kb[2] + '">' + kb[1] + "</span>" : "";
+  }
+  /** ボタンの小さい字からは時間帯の語を外す（印と二重になるため）。⚠️表示だけ＝state.grade は触らない
+      （オーバーレイのグレード表示と乾杯/ハイタッチの判定 pairBandOf がこの語を読んでいる） */
+  function gradeNoKubun(g) {
+    return String(g || "").replace(/\s*(モーニング|ミッドナイト|ナイター)/g, "").trim();
+  }
+
   /* ---------- 場・レース ---------- */
   function activeVenueName() {
     var v = state.venues[state.activeVenue];
@@ -164,7 +196,7 @@
     el.innerHTML = state.venues.map(function (v, i) {
       var rNo = state.currentRace[v.name];
       return '<button class="vbtn' + (i === state.activeVenue ? " active" : "") + '" data-i="' + i + '">' +
-        esc(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "　" + esc(state.grade[v.name] || "") + "</small></button>";
+        esc(v.name) + kubunMarkHtml(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "　" + esc(gradeNoKubun(state.grade[v.name])) + "</small></button>";
     }).join("");
     el.querySelectorAll(".vbtn").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -1026,7 +1058,7 @@
     var selected = state.venues.map(function (v) { return v.name; });
     el.innerHTML = names.length
       ? names.map(function (n) {
-          return '<button class="vp' + (selected.indexOf(n) >= 0 ? " sel" : "") + '" data-n="' + esc(n) + '">' + esc(n) + "</button>";
+          return '<button class="vp' + (selected.indexOf(n) >= 0 ? " sel" : "") + '" data-n="' + esc(n) + '">' + esc(n) + kubunMarkHtml(n) + "</button>";
         }).join("")
       : '<div class="hint">タイムテーブル読込中（または本日の開催なし）</div>';
     el.querySelectorAll(".vp").forEach(function (b) {
