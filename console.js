@@ -315,13 +315,17 @@
     }
     if (!state.venues.length || !state.racers.length) { el.innerHTML = ""; return; }
     var names = state.venues.map(function (v) { return v.name; });
+    /* メインの場はサブの選択肢から外す（9/25 Naoto）＝同じ場を選んでもOBSのNEXT枠は中身が出ない（丸かぶり）。
+       ⚠️表示だけ＝保存値は触らない。自動追従でサブ＝メインになった配信者は「どれも選ばれていない」見た目になる
+       （OBSは丸かぶりとして枠を残す＝SUB_KEEP_OVERLAP・「なし」を押した扱いにはしない＝カメラ穴の幾何を変えない） */
+    var mainV = activeVenueName();
     el.innerHTML = '<div class="lbl">②サブ予想（ワイプ左のNEXT枠）：配信者ごとに場を選択</div>' +
       state.racers.map(function (rc) {
         var cur = state.raceSubBy[rc.id];
         if (cur && names.indexOf(cur) < 0) cur = null;
         return personRowHtml(rc,
           '<button class="vp' + (!cur ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="">なし</button>' +
-          state.venues.map(function (v) {
+          state.venues.filter(function (v) { return v.name !== mainV; }).map(function (v) {
             var rNo = state.currentRace[v.name];
             return '<button class="vp' + (cur === v.name ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
               esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
