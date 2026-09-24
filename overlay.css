@@ -333,7 +333,9 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 body.seatcard-on.seat-a-off #scene-talk .cam.slot-a .seat-card,
 body.seatcard-on.seat-b-off #scene-talk .cam.slot-b .seat-card {
   display: flex; flex-direction: column; position: absolute; inset: 0; overflow: hidden;
-  background: var(--panel); border: 2px solid var(--panel-line); color: var(--txt);
+  background: var(--panel); border: 2px solid var(--stc-line); color: var(--txt);
+  /* 線は全部この1色（9/25 Naoto「縦横の線は全部濃ゆく」＝半透明の --panel-line をやめて不透明の濃い色） */
+  --stc-line: #2a2f38;
 }
 .stc-hd { flex: 0 0 38px; height: 38px; display: flex; align-items: center; gap: 12px; padding: 0 12px;
   background: var(--acc); color: var(--acc-text); font-weight: 900; white-space: nowrap; }
@@ -346,20 +348,21 @@ body.seatcard-on.seat-b-off #scene-talk .cam.slot-b .seat-card {
 .stc-row > * { display: flex; align-items: center; white-space: nowrap; }
 .stc-row > .n, .stc-row > .sc { justify-content: flex-end; font-variant-numeric: tabular-nums; }
 .stc-row > .role { justify-content: center; }
-.stc-th { flex: 0 0 22px; height: 22px; font-size: 13px; color: var(--sub); border-bottom: 2px solid var(--panel-line); }
+.stc-th { flex: 0 0 22px; height: 22px; font-size: 14px; font-weight: 900; color: #000; border-bottom: 2px solid var(--stc-line); } /* 列名＝真っ黒（9/25 Naoto） */
 .stc-tr { flex: 0 0 var(--stc-rh, 36px); height: var(--stc-rh, 36px); font-size: 17px; }
 .stc-gap { flex: 0 0 7px; height: 7px;
-  background: linear-gradient(var(--panel-line), var(--panel-line)) 6px 50% / calc(100% - 12px) 2px no-repeat; }
+  background: linear-gradient(var(--stc-line), var(--stc-line)) 6px 50% / calc(100% - 12px) 2px no-repeat; }
 .stc-tr .car { width: 26px; height: 26px; font-size: 22px; border-radius: 4px; border-width: 1px; }
 .stc-row > .nm { display: block; align-self: center; overflow: hidden; font-size: 18px; font-weight: 900; line-height: 1.05; }
 .stc-row > .nm small { display: block; font-size: 12px; font-weight: 700; color: var(--sub); }
 .stc-tr .sc { font-weight: 900; }
 .stc-tr .sc.top1 { color: #d63b3b; }
 .stc-tr .sc.top2 { color: #2f66d0; }
-.stc-tr .n.z { opacity: .3; }
+/* 0は薄く＝文字の色だけで薄める。⚠️opacity にすると同じマスの ::before（縦線）まで薄くなる（9/25 Naoto「縦線が薄い部分がある」の真因） */
+.stc-tr .n.z { color: rgba(22, 32, 46, .3); }
 .stc-tr .role { font-size: 14px; }
 .stc-row > .sep { position: relative; padding-left: 8px; }
-.stc-row > .sep::before { content: ""; position: absolute; left: 1px; top: 0; bottom: 0; width: 2px; background: var(--panel-line); }
+.stc-row > .sep::before { content: ""; position: absolute; left: 1px; top: 0; bottom: 0; width: 2px; background: var(--stc-line); }
 .stc-th > .sep::before { bottom: -2px; }
 
 .nameplate {
