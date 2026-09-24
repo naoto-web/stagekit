@@ -579,7 +579,10 @@
         // 上下ボタンは1000円刻み（8/27 FB141・Naoto依頼）。⚠️stepはスピナーの刻みなので
         // 端数（例3500）を手打ちするのは従来どおり可（フォーム送信が無いのでstep不一致でも保存に影響しない）。
         // ⚠️回収・払戻は実額＝端数が当たり前なのでstepを付けない
+        // 9/25 Naoto＝欄内の上下矢印をやめ、「円」の右に −／＋ ボタン（1000円ずつ）。手打ちの端数はこれまでどおり可
         '<label class="lbl inline">投資額 <input type="number" step="1000" min="0" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '" placeholder="実際に買った総額">円</label>' +
+        '<button type="button" class="btn pf-invstep pf-invdown" title="1000円減らす">−</button>' +
+        '<button type="button" class="btn pf-invstep pf-invup" title="1000円増やす">＋</button>' +
         "</div>" +
         '<div class="parse-total pf-total"></div>' +
         '<button class="btn small pf-save">この予想を保存</button>' +
@@ -601,6 +604,16 @@
         form.querySelector("." + cls).addEventListener("input", update);
       });
       form.querySelector(".pf-note").addEventListener("change", update);
+      // 投資額の −／＋（9/25）：1000円ずつ。0以下は空欄（＝未入力。保存値の「投資なし」と同じ扱い＝未保存にならない）。
+      // 値を入れたら input を発火＝手打ちと同じ経路（下書き退避・合計・未保存表示）に乗せる
+      [[".pf-invdown", -1000], [".pf-invup", 1000]].forEach(function (pair) {
+        form.querySelector(pair[0]).addEventListener("click", function () {
+          var inp = form.querySelector(".pf-invest");
+          var nv = Math.max(0, (+inp.value || 0) + pair[1]);
+          inp.value = nv > 0 ? String(nv) : "";
+          inp.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+      });
       form.querySelector(".pf-note").addEventListener("change", function () {
         form.querySelector(".pf-fire").classList.toggle("off", !this.checked);
         refreshResultFire(); // 結果入力の見出しの🔥も同時に（update→stash で下書きに入った後に呼ぶ）

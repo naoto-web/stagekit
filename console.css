@@ -185,6 +185,14 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .parse-info .pl-memo { color: #6d7480; }
 .parse-total { margin-top: 4px; font-size: 13px; font-weight: 900; color: #e8e8ec; }
 .pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+/* 投資額（9/25 Naoto）＝欄内の上下矢印を消し、「円」の右の −／＋ ボタン（1000円ずつ）で増減 */
+.pf-invest::-webkit-outer-spin-button,
+.pf-invest::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pf-invest { -moz-appearance: textfield; }
+.btn.pf-invstep {
+  width: 40px; height: 36px; padding: 0; font-size: 20px; font-weight: 900; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 /* 俺たち目＝見出しと買目欄の間（9/24 Naoto） */
 .pred-opts.pf-ore-row { margin-top: 2px; margin-bottom: 8px; }
 .pred-opts .lbl { margin: 0; }
