@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>overlay</title>
-<link rel="stylesheet" href="overlay.css?v=20260925-060201">
+<link rel="stylesheet" href="overlay.css?v=20260925-065054">
 </head>
 <body class="scene-talk" data-theme="a">
 
@@ -12,7 +12,7 @@
 
   <!-- ==== 全シーン共通ヘッダー ==== -->
   <header class="gbar">
-    <div class="sp-logo"><img src="sponsor_black.png?v=20260925-060201" alt="競輪公式投票CTC"></div>
+    <div class="sp-logo"><img src="sponsor_black.png?v=20260925-065054" alt="競輪公式投票CTC"></div>
     <div class="venue-tabs" id="vtabs"></div>
     <div class="camp-box hidden" id="camp-box"><span class="camp-label">本日のキャンペーン応募人数</span><span class="camp-num" id="camp-num"></span></div>
     <div class="clock-box"><span class="clock-date" data-clock-date></span><span class="clock-time" data-clock-time></span></div>
@@ -21,8 +21,9 @@
   <!-- ================= ①トークシーン ================= -->
   <section class="scene" id="scene-talk">
     <div class="talk-cams">
-      <div class="cam slot-a" data-hole><div class="cam-ph">👤</div><div class="nameplate letter"><i class="np-dot"></i><span id="np-talk-a"></span></div></div>
-      <div class="cam slot-b" data-hole><div class="cam-ph">👤</div><div class="nameplate letter"><i class="np-dot alt"></i><span id="np-talk-b"></span></div></div>
+      <!-- .seat-card＝1人配信の空席に出す出走表（9/25・&seatcard）。見えるのは空いている席だけ -->
+      <div class="cam slot-a" data-hole><div class="cam-ph">👤</div><div class="nameplate letter"><i class="np-dot"></i><span id="np-talk-a"></span></div><div class="seat-card" id="seatcard-a"></div></div>
+      <div class="cam slot-b" data-hole><div class="cam-ph">👤</div><div class="nameplate letter"><i class="np-dot alt"></i><span id="np-talk-b"></span></div><div class="seat-card" id="seatcard-b"></div></div>
     </div>
 
     <!-- 予想帯＝②レース観戦と同じ様式（メンバーカラーヘッダー＋投資/回収・買い目チップ） -->
@@ -172,7 +173,7 @@
   <!-- ================= ⑤広告シーン ================= -->
   <section class="scene" id="scene-ad">
     <div class="panel ad-panel">
-      <div class="ad-logo"><img src="sponsor.png?v=20260925-060201" alt="競輪公式投票CTC"></div>
+      <div class="ad-logo"><img src="sponsor.png?v=20260925-065054" alt="競輪公式投票CTC"></div>
       <div class="ad-title" id="ad-title"></div>
       <ul class="ad-list" id="ad-list"></ul>
       <div class="ad-progress" id="ad-progress">
@@ -193,11 +194,11 @@
 
 <div class="dbg" id="dbg"></div>
 
-<script src="autoupdate.js?v=20260925-060201" data-au="reload"></script>
-<script src="config.js?v=20260925-060201"></script>
-<script src="keirin.js?v=20260925-060201"></script>
-<script src="derive.js?v=20260925-060201"></script>
-<script src="sync.js?v=20260925-060201"></script>
-<script src="overlay.js?v=20260925-060201"></script>
+<script src="autoupdate.js?v=20260925-065054" data-au="reload"></script>
+<script src="config.js?v=20260925-065054"></script>
+<script src="keirin.js?v=20260925-065054"></script>
+<script src="derive.js?v=20260925-065054"></script>
+<script src="sync.js?v=20260925-065054"></script>
+<script src="overlay.js?v=20260925-065054"></script>
 </body>
 </html>

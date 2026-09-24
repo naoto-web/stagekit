@@ -323,6 +323,45 @@ body.seat-a-off .cam.slot-a .nameplate, body.seat-a-off .cam.slot-a .cam-ph,
 body.seat-b-off .cam.slot-b .nameplate, body.seat-b-off .cam.slot-b .cam-ph { display: none !important; }
 body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
 
+/* ---------- 空席ワイプの出走表（9/25 Naoto・🧪&seatcard・①トークのみ） ----------
+   見た目の正本＝モック/空席出走表_試作5.png（Naoto OK）。縦線は選手DBと同じ作り＝
+   列は全部整数px・区切りは各マスの ::before に2px（小数pxだと線の太さがまちまちになった＝試作2で踏んだ）。
+   区切りの右の列（逃・B・勝率・役割）は8px広げて左に余白＝線を左右の数字のまん中へ（試作4〜5）。
+   高さ＝見出し38＋列名22＋行×n＋ラインの切れ目7×本数（行の高さはJSが --stc-rh で決める・上限36）。
+   ⚠️JSの STC_HD / STC_TH / STC_GAP / STC_ROW と同じ値にそろえる */
+.seat-card { display: none; }
+body.seatcard-on.seat-a-off #scene-talk .cam.slot-a .seat-card,
+body.seatcard-on.seat-b-off #scene-talk .cam.slot-b .seat-card {
+  display: flex; flex-direction: column; position: absolute; inset: 0; overflow: hidden;
+  background: var(--panel); border: 2px solid var(--panel-line); color: var(--txt);
+}
+.stc-hd { flex: 0 0 38px; height: 38px; display: flex; align-items: center; gap: 12px; padding: 0 12px;
+  background: var(--acc); color: var(--acc-text); font-weight: 900; white-space: nowrap; }
+.stc-vr { font-size: 24px; }
+.stc-cls { font-size: 16px; }
+.stc-lt { margin-left: auto; font-size: 16px; }
+.stc-empty { padding: 16px; font-size: 18px; font-weight: 700; color: var(--sub); }
+.stc-row { display: grid; column-gap: 4px; align-items: stretch; padding: 0 6px; font-weight: 800;
+  grid-template-columns: 26px 140px 34px 22px 60px 34px 26px 26px 26px 34px 26px 26px 50px 42px 42px 54px; }
+.stc-row > * { display: flex; align-items: center; white-space: nowrap; }
+.stc-row > .n, .stc-row > .sc { justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.stc-row > .role { justify-content: center; }
+.stc-th { flex: 0 0 22px; height: 22px; font-size: 13px; color: var(--sub); border-bottom: 2px solid var(--panel-line); }
+.stc-tr { flex: 0 0 var(--stc-rh, 36px); height: var(--stc-rh, 36px); font-size: 17px; }
+.stc-gap { flex: 0 0 7px; height: 7px;
+  background: linear-gradient(var(--panel-line), var(--panel-line)) 6px 50% / calc(100% - 12px) 2px no-repeat; }
+.stc-tr .car { width: 26px; height: 26px; font-size: 22px; border-radius: 4px; border-width: 1px; }
+.stc-row > .nm { display: block; align-self: center; overflow: hidden; font-size: 18px; font-weight: 900; line-height: 1.05; }
+.stc-row > .nm small { display: block; font-size: 12px; font-weight: 700; color: var(--sub); }
+.stc-tr .sc { font-weight: 900; }
+.stc-tr .sc.top1 { color: #d63b3b; }
+.stc-tr .sc.top2 { color: #2f66d0; }
+.stc-tr .n.z { opacity: .3; }
+.stc-tr .role { font-size: 14px; }
+.stc-row > .sep { position: relative; padding-left: 8px; }
+.stc-row > .sep::before { content: ""; position: absolute; left: 1px; top: 0; bottom: 0; width: 2px; background: var(--panel-line); }
+.stc-th > .sep::before { bottom: -2px; }
+
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
   font-size: 22px; font-weight: 900; padding: 6px 16px; border-radius: 8px;

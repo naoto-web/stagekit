@@ -54,10 +54,17 @@
   // 9/25 Naoto「本番反映お願いします」＝本番も既定ON（試作→本番）。&nfire=0 で消せる・&nfire=all は全枠点灯の確認用
   var NFIRE = params.get("nfire") || "1";
   if (NFIRE === "0") NFIRE = "";
+  /* 1人配信の空席ワイプに出走表（9/25 Naoto・🧪試作）。①トークの空席（752×423）＝ライン順・直近4ヶ月の10列つき。
+     テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（&seatcard=1 で出す／&seatcard=0 で消す）。
+     ⚠️10列・級班・競り込みの並びは GAS の narabi 応答の新項目（lines/cards）＝本番GASが未更新の間は本番でONにしても空欄が出る */
+  var SEATCARD = params.get("seatcard") ||
+    (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND ? "1" : "");
+  if (SEATCARD === "0") SEATCARD = "";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
-    (params.get("wm") === "0" ? "" : " wm-on"); // CTC透かし＝既定ON（8/6）・&wm=0で非表示
+    (params.get("wm") === "0" ? "" : " wm-on") + // CTC透かし＝既定ON（8/6）・&wm=0で非表示
+    (SEATCARD ? " seatcard-on" : "");
   // テーマ：①トーク・②レース観戦は白（w）が既定（7/30 FB10）。
   // URLの &theme=a|b|c|w が最優先＝OBS側だけで即時に戻せる保険
   var THEMES = ["a", "b", "c", "w"];
@@ -1588,6 +1595,7 @@
     var vName = v ? v.name : "";
     var rNo = v ? state.currentRace[v.name] : null;
     renderStartListInto(SL_TALK, vName, rNo);
+    if (SEATCARD && SCENE === "talk") renderSeatCard(vName, rNo);
     // ③は①とまったく同じレースを描く（8/12設計変更）。中央の展開図はボード側が
     // 同じコンソールに追従するので揃う＝ここに専用の分岐は要らない
     if (SCENE === "tenkai") renderStartListInto(SL_TK, vName, rNo);
@@ -1656,6 +1664,137 @@
     fitSlist(ids.list); // ライン表示で高さが変わった後に9車の収まりを確認（8/6 FB30）
   }
 
+  /* ---------- 空席ワイプの出走表（9/25 Naoto・🧪SEATCARD） ----------
+     ①トークで席が1つ空いたとき、その穴（752×423・不透明で塞いである）に「ライン順の出走表＋直近4ヶ月の10列」。
+     見た目の正本＝モック/空席出走表_試作5.png（Naoto OK）。並べ方・役割は選手DB（riders/js/today.js の
+     lineOrder / rolesFromLines）の写し＝選手DBと同じ順・同じ言葉で出す。
+     描くのは両方の席の箱（#seatcard-a/b）で、見えるのは空いている席だけ（CSS body.seat-*-off）。 */
+  var seatLinesMemo = {}; // raceKey → lines（一度取れた並びは当日中は空で上書きしない＝keirin.jpは発走後に並びを落とす）
+  var STC_ROLE = { head: "先頭", bante: "番手", third: "3番手", fourth: "4番手〜", solo: "単騎", seri: "競り" };
+  // 箱の高さの配分（px）＝CSSの .stc-hd / .stc-th / .stc-gap と同じ値。行の高さだけJSで決める
+  // 行の高さ＝残りを車数で割る（9車・5ラインで36px＝試作5）。7車立て等で下が余らないよう最大46pxまで伸ばす
+  var STC_H = 420 - 4, STC_HD = 38, STC_TH = 22, STC_GAP = 7, STC_ROW = 46;
+
+  /** 「25 417 36」→ [[[2],[5]],[[4],[1],[7]],[[3],[6]]]（競りは分からない＝全部1人ずつ） */
+  function linesFromText(t) {
+    return window.Keirin.normalize(t || "").split(/[^0-9]+/).filter(Boolean).map(function (g) {
+      return g.split("").map(function (c) { return [+c]; });
+    });
+  }
+  /** 使う並び＝手修正（state.narabi）＞構造版（時刻表 r.lines ／ narabi応答 lines）＞当日の記憶＞文字列版 */
+  function seatLinesOf(key, race) {
+    var manual = key ? ((state.narabi || {})[key] || "") : "";
+    if (manual) return linesFromText(manual);
+    var na = key ? narabiAuto[key] : null;
+    var L = (race && race.lines && race.lines.length) ? race.lines
+      : (na && na.lines && na.lines.length) ? na.lines
+      : linesFromText((race && race.narabi) || (na && na.val) || "");
+    if (L.length) { seatLinesMemo[key] = L; return L; }
+    return seatLinesMemo[key] || [];
+  }
+  function stcRoles(lines) {
+    var map = {};
+    lines.forEach(function (line) {
+      var isSolo = line.length === 1 && line[0].length === 1;
+      line.forEach(function (pos, i) {
+        if (pos.length > 1) { pos.forEach(function (c) { map[c] = "seri"; }); return; }
+        map[pos[0]] = isSolo ? "solo" : i === 0 ? "head" : i === 1 ? "bante" : i === 2 ? "third" : "fourth";
+      });
+    });
+    return map;
+  }
+  /** 行の順＝並び順（ラインの切れ目に gap）。並びに無い車は末尾に車番順＝黙って消さない */
+  function stcOrder(racers, lines) {
+    if (!lines.length) return racers.map(function (p) { return { p: p, gap: false }; });
+    var byNo = {}, used = {}, out = [];
+    racers.forEach(function (p) { byNo[p.no] = p; });
+    lines.forEach(function (line) {
+      var first = true;
+      line.forEach(function (pos) {
+        pos.forEach(function (c) {
+          if (!byNo[c] || used[c]) return;
+          used[c] = 1;
+          out.push({ p: byNo[c], gap: first && out.length > 0 });
+          first = false;
+        });
+      });
+    });
+    racers.filter(function (p) { return !used[p.no]; }).forEach(function (p, i) {
+      out.push({ p: p, gap: i === 0 && out.length > 0 });
+    });
+    return out;
+  }
+  function renderSeatCard(vName, rNo) {
+    var boxes = [$("seatcard-a"), $("seatcard-b")].filter(Boolean);
+    if (!boxes.length) return;
+    var race = null;
+    if (vName && rNo && timetable) {
+      (timetable.venues || []).forEach(function (tv) {
+        if (tv.name !== vName) return;
+        (tv.races || []).forEach(function (r) { if (r.no === +rNo) race = r; });
+      });
+    }
+    var html;
+    if (!race || !race.racers || !race.racers.length) {
+      html = '<div class="stc-hd"><b class="stc-vr">' + esc(vName && rNo ? vName + " " + rNo + "R" : "") +
+        '</b></div><div class="stc-empty">出走表データ取得待ち</div>';
+    } else {
+      var key = window.Derive.raceKey(vName, rNo);
+      if (!narabiAuto[key]) ensureNarabi(vName, rNo, key);
+      var na = narabiAuto[key] || {};
+      var scores = na.scores || {}, ages = na.ages || {}, cards = na.cards || {};
+      var lines = seatLinesOf(key, race);
+      var roles = stcRoles(lines);
+      var ord = stcOrder(race.racers, lines);
+      // 得点1位＝赤・2位＝青（同点は同色）＝右レールの出走表と同じ
+      var vals = [];
+      race.racers.forEach(function (p) {
+        var v = parseFloat(scores[String(p.no)]);
+        if (!isNaN(v) && vals.indexOf(v) < 0) vals.push(v);
+      });
+      vals.sort(function (a, b) { return b - a; });
+      var gaps = ord.filter(function (o) { return o.gap; }).length;
+      var rh = Math.min(STC_ROW, Math.floor((STC_H - STC_HD - STC_TH - gaps * STC_GAP) / ord.length));
+      // 列の区切り（mid＝右の列を広げて線を左右の数字のまん中へ・試作4〜5のNaoto指定）
+      var SEP = { 0: 1, 4: 1, 7: 1 };
+      var gapRow = '<div class="stc-row stc-gap">' + new Array(6).join("<span></span>") +
+        '<span class="sep"></span><span></span><span></span><span></span><span class="sep"></span>' +
+        '<span></span><span></span><span class="sep"></span><span></span><span></span><span class="sep"></span></div>';
+      var body = ord.map(function (o) {
+        var p = o.p, c = cards[String(p.no)] || {};
+        var st = c.st || [];
+        var sc = scores[String(p.no)] || "";
+        var sv = parseFloat(sc);
+        var scls = sv === vals[0] ? " top1" : (vals.length > 1 && sv === vals[1]) ? " top2" : "";
+        var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
+        var sub = [p.pref, c.t ? c.t + "期" : "", age].filter(Boolean).join(" ");
+        var nums = "";
+        for (var i = 0; i < 10; i++) {
+          var v = String(st[i] == null ? "" : st[i]).trim();
+          nums += '<span class="n' + (SEP[i] ? " sep" : "") + (!v || v === "0" ? " z" : "") + '">' +
+            esc(v === "" ? "-" : v) + "</span>";
+        }
+        return (o.gap ? gapRow : "") +
+          '<div class="stc-row stc-tr"><span><i class="car c' + p.no + '">' + p.no + "</i></span>" +
+          '<span class="nm">' + esc(p.name) + "<small>" + esc(sub) + "</small></span>" +
+          "<span>" + esc(c.c || "") + "</span><span>" + esc(c.k || p.kyaku || "") + "</span>" +
+          '<span class="sc' + scls + '">' + esc(sc) + "</span>" + nums +
+          '<span class="role sep">' + esc(STC_ROLE[roles[p.no]] || "") + "</span></div>";
+      }).join("");
+      html = '<div class="stc-hd"><b class="stc-vr">' + esc(vName + " " + rNo + "R") + "</b>" +
+        (race.cls ? '<span class="stc-cls">' + esc(race.cls) + "</span>" : "") +
+        (race.lineType ? '<span class="stc-lt">' + esc(race.lineType) + "</span>" : "") + "</div>" +
+        '<div class="stc-row stc-th"><span>車</span><span>選手名</span><span>級</span><span>脚</span>' +
+        '<span class="sc">得点</span><span class="n sep">逃</span><span class="n">捲</span><span class="n">差</span>' +
+        '<span class="n">マ</span><span class="n sep">B</span><span class="n">H</span><span class="n">S</span>' +
+        '<span class="n sep">勝率</span><span class="n">2連</span><span class="n">3連</span>' +
+        '<span class="role sep">役割</span></div>' + body;
+      boxes.forEach(function (b) { b.style.setProperty("--stc-rh", rh + "px"); });
+    }
+    // 同じ中身なら触らない（毎回innerHTMLを差し替えると描画が無駄に走る）
+    boxes.forEach(function (b) { if (b._html !== html) { b.innerHTML = html; b._html = html; } });
+  }
+
   /** ライン（並び予想）＋競走得点＋年齢＝GAS経由でkeirin.jpから自動取得。並びは手入力があれば優先（修正用） */
   var narabiAuto = {}; // raceKey → { val, scores, ages, pending, at }
   var narabiDate = ""; // narabiAutoに入っている値の取得日（yyyyMMdd）＝日跨ぎ検知用
@@ -1676,7 +1815,8 @@
     if (!jo) return; // 時刻表の取得待ち
     narabiAuto[key] = { val: "", scores: {}, ages: {}, pending: true };
     window.Sync.fetchNarabi(jo, rNo).then(function (info) {
-      narabiAuto[key] = { val: info.narabi, scores: info.scores, ages: info.ages, at: Date.now() };
+      narabiAuto[key] = { val: info.narabi, scores: info.scores, ages: info.ages,
+        lines: info.lines, cards: info.cards, at: Date.now() };
       if (hasRaceInfo(narabiAuto[key])) renderStartList();
     }).catch(function () { delete narabiAuto[key]; }); // 失敗時は次の描画で再試行
   }
@@ -4996,6 +5136,7 @@
       // 開きっぱなしにすると前日の同じ場・同じRの値が残り続ける（8/8・視聴者指摘で発覚）
       if (t && t.date && t.date !== narabiDate) {
         narabiAuto = {};
+        seatLinesMemo = {};
         narabiDate = t.date;
       }
       var now = Date.now();

@@ -104,7 +104,9 @@
       return getJson(url)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "narabi fetch failed");
-          return { narabi: j.narabi || "", scores: j.scores || {}, ages: j.ages || {} };
+          // lines＝競り込みの並び構造／cards＝車番→{c:級班,t:期別,k:脚質,st:直近4ヶ月10列}（9/25・空席の出走表用。旧GASは返さない＝空）
+          return { narabi: j.narabi || "", scores: j.scores || {}, ages: j.ages || {},
+            lines: j.lines || [], cards: j.cards || {} };
         });
     },
 
