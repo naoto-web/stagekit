@@ -158,11 +158,25 @@
     return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
       '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span></span>';
   }
-  /** そのレースで誰か1人でも note予想（勝負レース）にチェックを入れて保存しているか（結果入力の🔥用） */
+  /** そのレースで誰か1人でも note予想（勝負レース）にチェックが入っているか（結果入力の🔥用）。
+      9/24 Naoto「予想入力のチェックと同じタイミングで」＝未保存の下書きのチェックも見る（下書き＞保存値。
+      予想入力カードの🔥と同じ優先順位）。保存値だけだと、チェックしてから保存するまで結果入力の🔥が遅れていた */
   function raceHasNote(key) {
-    var r = key && state.preds && state.preds[key];
+    if (!key) return false;
+    var r = state.preds && state.preds[key];
     var by = (r && r.byRacer) || {};
-    return Object.keys(by).some(function (id) { return by[id] && by[id].isNote; });
+    var ids = {};
+    Object.keys(by).forEach(function (id) { ids[id] = 1; });
+    (state.racers || []).forEach(function (rc) { ids[rc.id] = 1; });
+    return Object.keys(ids).some(function (id) {
+      var d = predDrafts[draftKey(key, id)];
+      return d ? !!d.note : !!(by[id] && by[id].isNote);
+    });
+  }
+  /** 結果入力の見出しの🔥だけを出し入れする（予想入力のチェック操作から呼ぶ＝結果入力フォームは作り直さない） */
+  function refreshResultFire() {
+    var f = document.querySelector("#result-target .pf-fire");
+    if (f) f.classList.toggle("off", !raceHasNote(resultKey()));
   }
 
   /* ①トーク・②サブ予想の行（9/24 Naoto）＝名前をメンバーカラーの字に／右の場ボタン群をメンバーカラーの枠で囲む／
@@ -589,6 +603,7 @@
       form.querySelector(".pf-note").addEventListener("change", update);
       form.querySelector(".pf-note").addEventListener("change", function () {
         form.querySelector(".pf-fire").classList.toggle("off", !this.checked);
+        refreshResultFire(); // 結果入力の見出しの🔥も同時に（update→stash で下書きに入った後に呼ぶ）
       });
       // 保存本体（8/10 FB118で分離）：extraLine＝【追加して保存】で俺たち目を買目に足す1行
       var doSave = function (extraLine) {
