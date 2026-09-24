@@ -768,10 +768,22 @@
         （NEXT枠は幅182pxで判読不能・メイン帯も帯全体の倍率を引き下げる）。
         FB77で①トークにも展開＝同じ買い目が①と②で違う見た目になるのを解消した。
         ⚠️かぶり目が削られた行（dupCount>0）は元記法と実際の点数がズレるので対象外＝展開表示のまま */
+  /* 書きかけの買目（9/25 Naoto・コンソールのリアルタイム保存に合わせて）：
+     コンソールは1文字ごとに保存する＝「1」「1-」「1-2-」のような打ちかけが画面に届く。
+     ・数字と区切り記号だけの行（「1」「1-」「２→」）＝買目として不成立（メモ扱い）だが、メモの小さな字でなく
+       車番チップで描く＝打っているそばからバッジが並んで見える
+     ・成立している行でも末尾が区切り記号（「1-2-」は2車単1-2として読める）＝整形表示（disp）だと
+       最後の「−」が消えるので、打ったとおりの形で描く
+     ⚠️点数・的中・投資の計算（derive）は触らない＝見た目だけの扱い */
+  var TYPING_RE = /^[\s0-9０-９\-－ー=＝→>＞]+$/;
+  var TRAIL_SEP_RE = /[\-－ー=＝→>＞]\s*$/;
+  function isTypingLine(l) { return !l.ok && !l.cut && TYPING_RE.test(l.raw || "") && /[0-9０-９]/.test(l.raw || ""); }
   function raceBuyHtml(rc, k, small, noMeta, keepAll) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
-    var okLines = rp ? rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }) : [];
-    var memos = rp ? rp.parsed.memos : [];
+    // 表示する行＝成立した買目＋書きかけ（チップで描く）。メモ＝それ以外の不成立行（書きかけは除く）
+    var okLines = rp ? rp.parsed.lines.filter(function (l) { return (l.ok && !l.allDup) || isTypingLine(l); }) : [];
+    var memos = rp ? rp.parsed.lines.filter(function (l) { return !l.ok && !isTypingLine(l) && l.memo; })
+      .map(function (l) { return l.memo; }) : [];
     var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";
     // 合計・投資の行：買い目が無くても投資額が入っていれば表示する（メモだけの運用対応・8/6）
     var metaLine = "";
@@ -797,6 +809,7 @@
           return '<div class="pred-line chips cut-line"><span class="pl-cut' + (small ? " sm" : "") + '">切り目</span>' +
             lineChips(/全/.test(l.rawRest || "") ? l.rawRest : (l.disp || l.rawRest || l.raw), small) + "</div>";
         }
+        if (!l.ok) return '<div class="pred-line chips">' + lineChips(String(l.raw).trim(), small) + "</div>"; // 書きかけ
         var g = [];
         glows.forEach(function (gl) {
           // 俺たち目の的中＝FB53の重複排除でhitsは俺たち目名義だけになるが、同じ目を持つ
@@ -807,6 +820,7 @@
           });
         });
         var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
+        if (!l.dupCount && TRAIL_SEP_RE.test(l.raw || "")) src = String(l.raw).trim(); // 末尾が区切り＝打ちかけの形のまま
         return '<div class="pred-line chips">' + lineChips(src, small, g) + "</div>";
       }).join("") +
       (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
@@ -1161,8 +1175,9 @@
   function predRowCount(rc, k) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     if (!rp) return 0;
-    var lines = rp.parsed.lines.filter(function (l) { return l.ok && !l.allDup; }).length;
-    return (rp.entry.oreTachi ? 1 : 0) + lines + (rp.parsed.memos.length ? 1 : 0) +
+    var lines = rp.parsed.lines.filter(function (l) { return (l.ok && !l.allDup) || isTypingLine(l); }).length;
+    var memoN = rp.parsed.lines.filter(function (l) { return !l.ok && !isTypingLine(l) && l.memo; }).length;
+    return (rp.entry.oreTachi ? 1 : 0) + lines + (memoN ? 1 : 0) +
       ((rp.points || rp.invest > 0) ? 1 : 0);
   }
 
