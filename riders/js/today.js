@@ -150,7 +150,11 @@ var TODAY = (function () {
     var bunsen = bunsenOf(r);
     var tbl = el('div', 'racers');
     tbl.appendChild(racerHeader());
-    r.racers.forEach(function (s) {
+    var ord = lineOrder(r.racers, lines);
+    ord.forEach(function (it) {
+      var s = it.s;
+      // ラインの切れ目に区切り線（最初のラインの上には引かない）
+      if (it.lineStart) tbl.appendChild(el('div', 'line-gap'));
       var isCur = !!(s.reg && s.reg === state.curReg);
       var row = el('button', 'racer-row racer' + (isCur ? ' is-current' : ''));
       row.type = 'button';
@@ -230,6 +234,40 @@ var TODAY = (function () {
   /** 構造化された並びから 車番→役割 を作る。
       同じ位置に2人以上いる＝競りなので、その全員を「競り」にする。
       ⚠️これは「予想並び」なので当日の実際とは違うことがある。入力時の初期値にだけ使う。 */
+  /** 出走表の行の順＝**並び順**（§48・2026-09-24 Naoto「どの人とどの人がラインか見るのが大変」）。
+      🔑上の「並び 7 2 4／1／6／3 5」を左→右に読む順と、行を上→下に読む順を**同じ**にする
+         ＝目が並び行と表を往復しなくて済む。右端の役割も「先頭→番手→3番手」と縦に並ぶ。
+      🔑**色でラインを分ける案は採らなかった**＝車番の色（白黒赤青黄緑橙桃紫）が色相を使い切っていて、
+         ラインに色を足すと必ずどれかの車番色と被る（§33＝強調の手を増やすと衝突する）。隣に並べれば結ぶ必要が無い。
+      ⚠️競りは同じ位置の中で**上が競りに行く側**（並び行の縦積みと同じ順）。
+      ⚠️**並びが無いレースは車番順のまま**＝ガールズ・KEIRIN ADVANCEは規則でライン無し／
+         走り終わったレースは keirin.jp が並びを落とす（§38）。
+      ⚠️並びに載っていない車（欠車・並び予想の漏れ）は**末尾に車番順**で足す＝黙って消さない。
+      ⚠️「車番順／並び順」の切り替えは付けていない（Naoto合意）＝Yが車番順を求めたら足す。
+      返り＝[{ s:選手, lineStart:このラインの先頭で、かつ最初のラインではない }] */
+  function lineOrder(racers, lines) {
+    var list = racers || [];
+    if (!lines || !lines.length) return list.map(function (s) { return { s: s, lineStart: false }; });
+    var byNo = {};
+    list.forEach(function (s) { byNo[s.no] = s; });
+    var out = [], used = {};
+    lines.forEach(function (line) {
+      var first = true;
+      line.forEach(function (pos) {
+        pos.forEach(function (c) {
+          var s = byNo[c];
+          if (!s || used[c]) return;
+          used[c] = 1;
+          out.push({ s: s, lineStart: first && out.length > 0 });
+          first = false;
+        });
+      });
+    });
+    var rest = list.filter(function (s) { return !used[s.no]; });
+    rest.forEach(function (s, i) { out.push({ s: s, lineStart: i === 0 && out.length > 0 }); });
+    return out;
+  }
+
   function rolesFromLines(lines) {
     var map = {};
     (lines || []).forEach(function (line) {

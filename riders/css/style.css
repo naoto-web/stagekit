@@ -253,6 +253,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 
 .racers { display: flex; flex-direction: column; gap: 1px; }
+/* ラインの切れ目（§48）＝行を並び順に並べたうえで、ラインごとに細い線で区切る。
+   ⚠️行（.racer）の枠線には描かない＝行は選択中の青い枠（is-current）に border を使っているので、
+     そこに区切りを混ぜると選択の枠と見分けがつかない。独立した1本の要素にする。 */
+.line-gap { height: 1px; background: var(--line); margin: 3px 6px; }
 
 /* 車番・選手名・級班・脚質・得点／逃捲差マ／BHS／勝率2連3連／役割
    選手名は minmax(100px, 1fr)＝スクロールバーの有無で余る数pxを吸わせるための 1fr。
