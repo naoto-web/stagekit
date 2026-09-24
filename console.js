@@ -526,13 +526,15 @@
       // note予想チェック＝下書き＞保存値＞（新規のみ）勝負レース照合の既定ON（8/10 FB117）
       var vNote = d ? d.note : (saved ? !!p.isNote : isNoteRaceDefault(key, rc));
       return '<div class="pred-form' + (mc ? " mc" : "") + '" data-racer="' + rc.id + '"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" +
-        '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag + "</h3>" +
+        '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag +
+        // note予想チェックは見出しの行（入力先レースの右）へ（9/24 Naoto「押しやすく」）。⚠️class pf-note は変えない＝保存・下書きが読む
+        '<label class="pf-note-lbl"><input type="checkbox" class="pf-note"' + (vNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
+        "</h3>" +
         '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
         // プレースホルダーは例だけ（8/27 FB140・Naoto指定）。「123」はoreNormalizeが1-2-3へ正規化＝1点
         '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '" placeholder="（例　123）"></label>' +
-        '<label class="lbl inline"><input type="checkbox" class="pf-note"' + (vNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
         "</div>" +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
