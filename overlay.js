@@ -173,6 +173,21 @@
     });
     return next ? timeToSec(next.start) : null;
   }
+  /* 今の席の配信者（9/25 Naoto「配信者を変更（席替え以外）したら、もともといた人のnoteレースと的中情報はOBS画面から消していい」）。
+     ⚠️**データは消さない・表示だけ絞る**：
+       ・的中＝derived.hits は演出の新規判定（checkNewHits の seenHits／firedFx）がそのまま使う。ここから人を抜くと、
+         前の人が同じ日に席へ戻ったとき（間にオーバーレイの読み直しがあると）過去の的中が「新規」に見えて演出が再発火しうる
+       ・note勝負＝state.noteRaces は保存したまま（コンソールの「ほかの行」に残る）
+     席替え（a⇄b）は顔ぶれが同じ＝何も変わらない。戻ってきた人の分は自然にまた出る */
+  function seatedNames() {
+    var m = {};
+    (state.racers || []).forEach(function (rc) { if (rc && rc.name) m[rc.name] = 1; });
+    return m;
+  }
+  function shownHits() {
+    var m = seatedNames();
+    return derived.hits.filter(function (h) { return m[h.racerName]; });
+  }
   function renderVenueTabs() {
     var el = $("vtabs");
     if (!el) return;
@@ -204,8 +219,10 @@
     // 判定はDerive側（コンソールのnote予想チェック既定ONと同じ関数）に集約＝ルールが2か所に割れないように
     var roster = (state.roster || []).filter(function (r) { return r && r.name; });
     var groups = [], byName = {};
+    var seatedNB = seatedNames();
     lines.forEach(function (l, seq) {
       var hit = window.Derive.matchRacer(l, roster);
+      if (hit && !seatedNB[hit.name]) return; // 席にいない人のnote勝負は出さない（9/25）
       var key = hit ? hit.name : "|" + groups.length; // 名前なし行＝独立枠（まとめない）
       var g = byName[key];
       if (!g) { g = { racer: hit, items: [] }; byName[key] = g; groups.push(g); }
@@ -1722,7 +1739,7 @@
       // 的中バッジ：表示中レースの最高倍率の的中
       var raceLabel = parts[0] + parts[1] + "R";
       var best = null;
-      derived.hits.forEach(function (h) {
+      shownHits().forEach(function (h) { // 今の席の人だけ（9/25）
         if (h.place === raceLabel && (!best || h.mult > best.mult)) best = h;
       });
       if (best) {
@@ -1738,7 +1755,8 @@
   }
 
   function renderTicker() {
-    var items = derived.hits.slice().reverse().map(function (h) { // 古い順に流す
+    var tHits = shownHits(); // 今の席の人の的中だけ流す（9/25）
+    var items = tHits.slice().reverse().map(function (h) { // 古い順に流す
       // 式別ラベルは3連単運用のため省略（俺たち目・例外買いのワイド等だけ残す・8/6 FB）
       var typeLabel = h.type && h.type !== "3連単" ? " " + esc(h.type) : "";
       var noteLabel = h.note ? " note" : ""; // note予想レースの的中は場Rの後ろにnote表記（8/6 FB53）
@@ -1754,7 +1772,7 @@
       var el = $(pair[1]);
       if (!wrap || !el) return;
       wrap.classList.remove("hidden");
-      if (!derived.hits.length) {
+      if (!tHits.length) {
         el.classList.add("static");
         el.innerHTML = "<span>🎯 的中速報｜本日の的中はここに流れます</span>";
         return;
