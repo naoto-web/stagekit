@@ -165,8 +165,9 @@
     if (!key) return false;
     var r = state.preds && state.preds[key];
     var by = (r && r.byRacer) || {};
+    // 9/25 Naoto「チェックが入っていないのに🔥が付く」＝席にいない人（昼→夜で交代した前の人など）の isNote まで拾っていた。
+    // 見るのは**今の席の配信者だけ**（予想入力に並んでいる人＝画面で確かめられる人）
     var ids = {};
-    Object.keys(by).forEach(function (id) { ids[id] = 1; });
     (state.racers || []).forEach(function (rc) { ids[rc.id] = 1; });
     return Object.keys(ids).some(function (id) {
       var d = predDrafts[draftKey(key, id)];
@@ -1164,6 +1165,29 @@
     });
     return { model: model, keep: keep };
   }
+  /** 消した勝負レースの行「名前 場N・Mレース」に当たる予想の isNote を外す（読めない行・名簿にいない名前は何もしない）。
+      ⚠️席にいない人の行も対象＝ここで外さないと、予想の器に isNote=true だけが残り続ける（9/25 テスト環境で実際に残っていた） */
+  function noteUnsetLine(line) {
+    if (!line) return;
+    var roster = (state.roster || []).filter(function (r) { return r && r.name; });
+    var hit = window.Derive.matchRacer(line, roster);
+    if (!hit) return;
+    var rest = window.Derive.stripName(line, hit.name).trim();
+    var names = [];
+    (state.venues || []).forEach(function (v) { names.push(v.name); });
+    if (timetable) (timetable.venues || []).forEach(function (tv) { if (names.indexOf(tv.name) < 0) names.push(tv.name); });
+    names.sort(function (a, b) { return b.length - a.length; });
+    var venue = null;
+    for (var i = 0; i < names.length; i++) { if (rest.indexOf(names[i]) === 0) { venue = names[i]; break; } }
+    if (!venue) return;
+    var half = rest.slice(venue.length)
+      .replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); })
+      .split("レース").join(" ");
+    (half.match(/\d+/g) || []).forEach(function (n) {
+      var ent = (((state.preds || {})[window.Derive.raceKey(venue, +n)] || {}).byRacer || {})[hit.name];
+      if (ent) ent.isNote = false;
+    });
+  }
   function noteBuild(parsed) {
     var lines = parsed.keep.slice();
     (state.racers || []).forEach(function (rc) {
@@ -1248,7 +1272,8 @@
     el.querySelectorAll(".np-kdel").forEach(function (b) {
       b.addEventListener("click", function () {
         var pr = noteParse();
-        pr.keep.splice(+b.getAttribute("data-k"), 1);
+        var gone = pr.keep.splice(+b.getAttribute("data-k"), 1)[0];
+        noteUnsetLine(gone); // 9/25＝行を消しても予想の「noteあり」が残っていた（席にいない人の分）
         state.noteRaces = noteBuild(pr);
         save();
         renderAll();
