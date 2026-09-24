@@ -188,6 +188,9 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .parse-info .pl-memo { color: #6d7480; }
 .parse-total { margin-top: 4px; font-size: 13px; font-weight: 900; color: #e8e8ec; }
 .pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+/* 予想入力のカード内の注意書き（⚠投資額未入力／俺たち目未入力・買目外／✏️未保存／切り目の書き方）は非表示（9/25 Naoto「いったん予想入力のタブのみ」）。
+   ⚠️JS側の判定・文言は残してある＝戻すならこの2行を消すだけ。結果入力・精算の .unit-warn は対象外（#pred-forms で閉じる） */
+#pred-forms .unit-warn, #pred-forms .draft-warn { display: none; }
 /* 投資額（9/25 Naoto）＝欄内の上下矢印を消し、「円」の右の −／＋ ボタン（1000円ずつ）で増減 */
 .pf-invest::-webkit-outer-spin-button,
 .pf-invest::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

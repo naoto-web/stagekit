@@ -569,9 +569,9 @@
         // 俺たち目は買目欄の上（9/24 Naoto）
         '<div class="pred-opts pf-ore-row">' +
         // プレースホルダーは例だけ（8/27 FB140・Naoto指定）。「123」はoreNormalizeが1-2-3へ正規化＝1点
-        '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '" placeholder="（例　123）"></label>' +
+        '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '"></label>' +
         "</div>" +
-        '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
+        '<textarea class="inp pf-text" rows="3">' + esc(vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
@@ -580,7 +580,7 @@
         // 端数（例3500）を手打ちするのは従来どおり可（フォーム送信が無いのでstep不一致でも保存に影響しない）。
         // ⚠️回収・払戻は実額＝端数が当たり前なのでstepを付けない
         // 9/25 Naoto＝欄内の上下矢印をやめ、「円」の右に −／＋ ボタン（1000円ずつ）。手打ちの端数はこれまでどおり可
-        '<label class="lbl inline">投資額 <input type="number" step="1000" min="0" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '" placeholder="実際に買った総額">円</label>' +
+        '<label class="lbl inline">投資額 <input type="number" step="1000" min="0" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '">円</label>' +
         '<button type="button" class="btn pf-invstep pf-invdown" data-tip="1,000円減らす">−</button>' +
         '<button type="button" class="btn pf-invstep pf-invup" data-tip="1,000円増やす">＋</button>' +
         "</div>" +
