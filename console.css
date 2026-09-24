@@ -232,13 +232,9 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 }
 /* note予想ONの印🔥（丸枠の中・「3R」の右）。.off で消す（hidden属性でなくクラス＝.kb 側の指定と衝突させない） */
 .pf-race .pf-fire.off { display: none; }
-/* note予想チェック＝見出しの行・入力先レースの右（9/24 Naoto「押しやすく」）。字は入力先レースと同じ15px・箱は20px。
-   見出し（h3）の色を継がないよう白系に戻す。ラベル全体が押せる範囲 */
-.pf-note-lbl {
-  display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;
-  font-size: 15px; font-weight: 700; color: #e8e8ec;
-}
-.pf-note-lbl input { width: 20px; height: 20px; margin: 0; cursor: pointer; accent-color: #d9a441; }
+/* 🔥の右の「note勝負レース」（9/25・チェックボックスの置き換え）。見出しの色を継がず🔥に合わせた橙 */
+.pf-note-tag { font-size: 15px; font-weight: 900; color: #ff8a3d; white-space: nowrap; }
+.pf-note-tag.off { display: none; }
 .pred-form.dirty .pf-save { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
 
 /* ---------- 払戻・精算 ---------- */

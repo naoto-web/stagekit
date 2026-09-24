@@ -564,8 +564,11 @@
       var vNote = d ? d.note : (saved ? !!p.isNote : isNoteRaceDefault(key, rc));
       return '<div class="pred-form' + (mc ? " mc" : "") + '" data-racer="' + rc.id + '"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" +
         '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag(vNote) +
-        // note予想チェックは見出しの行（入力先レースの右）へ（9/24 Naoto「押しやすく」）。⚠️class pf-note は変えない＝保存・下書きが読む
-        '<label class="pf-note-lbl"><input type="checkbox" class="pf-note"' + (vNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
+        /* 9/25 Naoto「チェックボックスはやっぱりいらない（本日設定で勝負レースを決めている）。🔥の右に『note勝負レース』の文字を」
+           ＝チェックは隠すだけ（hidden）。⚠️消さない＝保存（isNote）・下書き・未保存判定・自動更新が .pf-note を読む。
+           値は従来どおり 下書き＞保存値＞勝負レースの既定ON で入り、勝負レースのチップ操作が保存値と下書きを直接そろえる（cdc4549） */
+        '<input type="checkbox" class="pf-note" hidden' + (vNote ? " checked" : "") + ">" +
+        '<span class="pf-note-tag' + (vNote ? "" : " off") + '">note勝負レース</span>' +
         "</h3>" +
         // 俺たち目は買目欄の上（9/24 Naoto）
         '<div class="pred-opts pf-ore-row">' +
@@ -631,6 +634,7 @@
       });
       form.querySelector(".pf-note").addEventListener("change", function () {
         form.querySelector(".pf-fire").classList.toggle("off", !this.checked);
+        form.querySelector(".pf-note-tag").classList.toggle("off", !this.checked);
         refreshResultFire(); // 結果入力の見出しの🔥も同時に（update→stash で下書きに入った後に呼ぶ）
       });
       // 保存本体（8/10 FB118で分離）：extraLine＝【追加して保存】で俺たち目を買目に足す1行
