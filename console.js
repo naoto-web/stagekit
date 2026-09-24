@@ -151,6 +151,17 @@
     return String(g || "").replace(/\s*(モーニング|ミッドナイト|ナイター)/g, "").trim();
   }
 
+  /* ①トーク・②サブ予想の行（9/24 Naoto）＝名前をメンバーカラーの字に／右の場ボタン群をメンバーカラーの枠で囲む／
+     名前の列幅を固定して、場ボタンの並びを縦にそろえる（一番長い名前＝4文字「ピーター」「しょーた」に合わせた幅・CSSの .pr-name）。
+     色が無い人は従来の灰色の字・灰色の枠 */
+  function personRowHtml(rc, buttonsHtml) {
+    var mc = window.Derive.colorOf(rc.color);
+    return '<div class="pr-row">' +
+      '<span class="pr-name"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + "</span>" +
+      '<div class="pr-group"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" + buttonsHtml + "</div>" +
+      "</div>";
+  }
+
   /* ---------- 場・レース ---------- */
   function activeVenueName() {
     var v = state.venues[state.activeVenue];
@@ -220,15 +231,13 @@
         sr.innerHTML = '<div class="lbl">①トーク（画面に出す場）：配信者ごとに最大3場（押した順＝表示順）</div>' +
           state.racers.map(function (rc) {
             var list = state.talkRaces[rc.id] || [];
-            return '<div class="row gap">' +
-              '<span class="lbl inline">' + esc(rc.name) + '</span>' +
+            return personRowHtml(rc,
               state.venues.map(function (v) {
                 var idx = list.indexOf(v.name);
                 var rNo = state.currentRace[v.name];
                 return '<button class="vp' + (idx >= 0 ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
                   (idx >= 0 ? (idx + 1) + "." : "") + esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
-              }).join("") +
-              "</div>";
+              }).join(""));
           }).join("");
         sr.querySelectorAll(".vp").forEach(function (b) {
           b.addEventListener("click", function () {
@@ -277,15 +286,13 @@
       state.racers.map(function (rc) {
         var cur = state.raceSubBy[rc.id];
         if (cur && names.indexOf(cur) < 0) cur = null;
-        return '<div class="row gap">' +
-          '<span class="lbl inline">' + esc(rc.name) + '</span>' +
+        return personRowHtml(rc,
           '<button class="vp' + (!cur ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="">なし</button>' +
           state.venues.map(function (v) {
             var rNo = state.currentRace[v.name];
             return '<button class="vp' + (cur === v.name ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
               esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
-          }).join("") +
-          "</div>";
+          }).join(""));
       }).join("");
     el.querySelectorAll(".vp").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -535,12 +542,13 @@
         // note予想チェックは見出しの行（入力先レースの右）へ（9/24 Naoto「押しやすく」）。⚠️class pf-note は変えない＝保存・下書きが読む
         '<label class="pf-note-lbl"><input type="checkbox" class="pf-note"' + (vNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
         "</h3>" +
-        '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
-        '<div class="parse-info pf-info"></div>' +
-        '<div class="pred-opts">' +
+        // 俺たち目は買目欄の上（9/24 Naoto）
+        '<div class="pred-opts pf-ore-row">' +
         // プレースホルダーは例だけ（8/27 FB140・Naoto指定）。「123」はoreNormalizeが1-2-3へ正規化＝1点
         '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '" placeholder="（例　123）"></label>' +
         "</div>" +
+        '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
+        '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
         '<input type="hidden" class="pf-type" value="3連単">' +

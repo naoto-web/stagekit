@@ -144,6 +144,15 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 }
 .vbtn.active { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
 .vbtn small { display: block; font-size: 11px; font-weight: 700; opacity: .8; }
+/* ①トーク・②サブ予想の行（9/24 Naoto）。名前＝メンバーカラーの字（JSが style で色を入れる）・列幅固定＝
+   一番長い4文字の名前（ピーター／しょーた）が収まる幅にして、右の場ボタンの開始位置を全員そろえる。
+   場ボタン群＝メンバーカラーの枠（--mc）で囲む。色の無い人は灰色 */
+.pr-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.pr-name { flex: 0 0 4.6em; font-size: 13px; font-weight: 900; color: #9aa0ab; white-space: nowrap; overflow: hidden; }
+.pr-group {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 5px;
+  border: 2px solid var(--mc, #4a4f59); border-radius: 10px;
+}
 /* 予想入力の入力先だけの装飾（8/27 FB139）。⚠️.vbtnは上部の場切替と共用のため #pred-venue-row で閉じる。
    .live＝追従中に「いま放送中の場」を示す控えめな枠（固定中の.active＝金の塗りとは別物）。
    .unpin＝固定中だけ現れる解除ボタン（固定を外す唯一の手段） */
@@ -171,6 +180,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .parse-info .pl-memo { color: #6d7480; }
 .parse-total { margin-top: 4px; font-size: 13px; font-weight: 900; color: #e8e8ec; }
 .pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+/* 俺たち目＝見出しと買目欄の間（9/24 Naoto） */
+.pred-opts.pf-ore-row { margin-top: 2px; margin-bottom: 8px; }
 .pred-opts .lbl { margin: 0; }
 .unit-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffb3b3; line-height: 2; }
 /* 未保存の下書きがある予想フォーム（8/8 FB75）＝入力は保持されるが放送には出ていない状態 */
