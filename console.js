@@ -514,7 +514,12 @@
        名簿に色が無い人は従来どおり（1人目＝水色・2人目＝赤の見出し／灰色の枠）。
        ⚠️外枠はCSS変数 --mc で渡す（style で border-color を直接書くと、未保存を示す .dirty の金枠の指定が効かなくなるため） */
     var raceParts = key.split("|");
-    var raceTag = '<span class="pf-race">' + esc(raceParts[0]) + kubunMarkHtml(raceParts[0]) + " " + esc(raceParts[1]) + "R</span>";
+    /* note予想にチェックが入っている間は「3R」の右（丸枠の中）に🔥（9/24 Naoto）。
+       チェックの操作で即座に出し入れする（保存前から）＝下の change ハンドラが .off を付け外しする */
+    var raceTag = function (isNote) {
+      return '<span class="pf-race">' + esc(raceParts[0]) + kubunMarkHtml(raceParts[0]) + " " + esc(raceParts[1]) + "R" +
+        '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span></span>';
+    };
     wrap.innerHTML = state.racers.map(function (rc, idx) {
       var mc = window.Derive.colorOf(rc.color);
       var saved = race.byRacer && race.byRacer[rc.id]; // 保存済みエントリの有無＝note既定判定に使う（FB117）
@@ -526,7 +531,7 @@
       // note予想チェック＝下書き＞保存値＞（新規のみ）勝負レース照合の既定ON（8/10 FB117）
       var vNote = d ? d.note : (saved ? !!p.isNote : isNoteRaceDefault(key, rc));
       return '<div class="pred-form' + (mc ? " mc" : "") + '" data-racer="' + rc.id + '"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" +
-        '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag +
+        '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag(vNote) +
         // note予想チェックは見出しの行（入力先レースの右）へ（9/24 Naoto「押しやすく」）。⚠️class pf-note は変えない＝保存・下書きが読む
         '<label class="pf-note-lbl"><input type="checkbox" class="pf-note"' + (vNote ? " checked" : "") + '> note予想（勝負レース）</label>' +
         "</h3>" +
@@ -564,6 +569,9 @@
         form.querySelector("." + cls).addEventListener("input", update);
       });
       form.querySelector(".pf-note").addEventListener("change", update);
+      form.querySelector(".pf-note").addEventListener("change", function () {
+        form.querySelector(".pf-fire").classList.toggle("off", !this.checked);
+      });
       // 保存本体（8/10 FB118で分離）：extraLine＝【追加して保存】で俺たち目を買目に足す1行
       var doSave = function (extraLine) {
         if (extraLine) {
