@@ -477,7 +477,12 @@ var DETAIL = (function () {
         label: d.label,
         showN: true,
         // 今日の戦法には印を付けて太字にする（種別の「◀ 今日」と同じ考え方）
-        cur: d.k === today
+        cur: d.k === today,
+        /* 🔴今日でない戦法は**回数も内訳もグレー**（§47・2026-09-24 Naoto実機指摘）。
+           それまでは見出しだけ落として数字は白太字のままだった＝§33の決まり
+           （今日＝白太字／今日でない＝グレー）が戦法別にだけ効いていなかった。
+           今日が分からないとき（選手一覧から開いた）は落とさない。 */
+        off: !!today && d.k !== today
       }));
     });
     // ※「走数が少ないので目安です」は廃止（2026-09-23 Naoto「注意書きは全部消して」）。
@@ -517,17 +522,18 @@ var DETAIL = (function () {
     for (var i = 0; i < 9; i++) box.appendChild(el('div', 'split-h', (i + 1) + '着'));
     if (hasOther) box.appendChild(el('div', 'split-h', '他'));
 
+    var off = opts.off ? ' is-off' : '';
     box.appendChild(el('div', 'split-k', '回数'));
     for (var k = 0; k < 9; k++) {
       var v = ranks[k] || 0;
-      box.appendChild(el('div', 'split-v' + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
+      box.appendChild(el('div', 'split-v' + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
     }
-    if (hasOther) box.appendChild(el('div', 'split-v', ranks[9] + '回'));
+    if (hasOther) box.appendChild(el('div', 'split-v' + off, ranks[9] + '回'));
 
     if (sub.some(function (x) { return x && x.length; })) {
       box.appendChild(el('div', 'split-k', '内訳'));
       for (var m = 0; m < 9; m++) {
-        var cell = el('div', 'rank-sub');
+        var cell = el('div', 'rank-sub' + off);
         (sub[m] || []).forEach(function (x) {
           var line = el('div', 'rank-sub-i' + (x.v ? '' : ' is-thin') + (x.sub ? ' is-note' : ''));
           // 🔑列は52px固定（RANK_COL）＝長い注記は短い形で出し、全文はホバーの説明に残す（スマホと同じ扱い）
@@ -862,7 +868,8 @@ var DETAIL = (function () {
     var cell = el('div', 'rank-cell');
     cell.appendChild(el('div', 'split-v' + off + (v ? '' : ' is-thin'), v ? v + '回' : '—'));
     if (subList && subList.length) {
-      var s = el('div', nar ? 'rank-cell-sub' : 'rank-sub');
+      // 🔴内訳にも今日でない印を渡す（§47）＝数字だけグレーにして内訳が白太字のまま残っていた
+      var s = el('div', (nar ? 'rank-cell-sub' : 'rank-sub') + off);
       subList.forEach(function (x) {
         if (nar) {
           s.appendChild(el('span', 'rank-v-i', (x.short || x.label) + x.v));
@@ -891,7 +898,11 @@ var DETAIL = (function () {
       基礎データのすぐ下に単独で置き、幅いっぱいで書けるようにする。
       以前は「特徴と追走能力」の右半分に押し込んでいて、書く場所が狭かった。 */
   function featureSection() {
-    var s = section('選手特徴', '出力ビュー（配信）には出ません。', defFold());
+    /* 🔑**書いてあれば開く・空なら閉じる**（§47・2026-09-24 Naoto）。
+       中身がある選手では、いちばん大事な手書きが最初から読める。空の選手では枠1つぶん短くなる。
+       ⚠️判定は開いた時点の中身だけ＝書いている途中で閉じたりはしない（描き直すのは選手を開いたときと期間の切り替え）。 */
+    var hasFeature = !!String((cur.memo && cur.memo.feature) || '').trim();
+    var s = section('選手特徴', '出力ビュー（配信）には出ません。', !hasFeature);
     s.body.appendChild(noteField('feature', '事実と観察を書く。人の評価は書かない', true));
     s.body.appendChild(saveBar());
     return s.root;

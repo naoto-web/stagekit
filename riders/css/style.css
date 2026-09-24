@@ -414,6 +414,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .rank-sub-i.is-note .rank-sub-k { font-size: 9px; line-height: 1.2; }
 .rank-sub-k { font-size: 10px; color: var(--fg-dim); }
 .rank-sub-v { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--fg-strong); }
+/* 今日でない行・表の内訳は、数字（.split-v.is-off）と同じくグレーで細く（§47・2026-09-24 Naoto）。
+   🔴それまでは数字だけ落として内訳は白太字のまま＝レース種別・グレード・戦法別で「今日でない行の
+      決まり手」がいちばん目立っていた。入れ物（.rank-sub）に is-off を付けて中の値ごと落とす。 */
+.rank-sub.is-off .rank-sub-v { font-weight: 400; color: var(--fg-dim); }
 
 /* ライン決着とレース種別は、戦法別と同じ表（.split）で出す。
    セルの中の走数（小さい灰色）と、出走表から開いたときの「今日の種別」の行（青） */
