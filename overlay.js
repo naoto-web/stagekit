@@ -1235,7 +1235,7 @@
      状態は配信者ごと（refAnim[配信者id]）＝席が変わっても追える。表示先は実行時に seatMap() で引く */
   var REFPOP = params.get("refpop") || ((window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) ? "1" : "");
   if (REFPOP === "0") REFPOP = "";
-  var REFPOP_COUNT_MS = 1000, REFPOP_AFTER_BADGE_MS = 500, REFPOP_POP_LEAD_MS = 350;
+  var REFPOP_COUNT_MS = 3000, REFPOP_AFTER_BADGE_MS = 500, REFPOP_POP_LEAD_MS = 700; // 9/25 Naoto「ピコーン2倍ゆっくり・カウント3倍ゆっくり」＝1000→3000・350→700
   var refAnim = {}; // 配信者id → { shown: 最後に見せた回収額(数値・未確定はnull), text: 見出しに出している文字列, target, waiting, running }
   function refundHeaderText(rc, bt) {
     var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
@@ -1293,7 +1293,7 @@
       pop.textContent = "＋" + fmtYen(delta);
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
-      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 2200);
+      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 3600); // CSS 3.2s＋余裕
     });
     var t0 = Date.now() + REFPOP_POP_LEAD_MS;
     (function step() {
