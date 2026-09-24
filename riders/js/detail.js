@@ -299,14 +299,17 @@ var DETAIL = (function () {
     function paint() {
       var st = stats();
       clear(tabs);
+      var key = keyRole(st);
       CONFIG.ROLES.forEach(function (role) {
         var rs = st && st.roles && st.roles[role.key];
         var hasNote = !!String(cur.memo['note' + capKey(role.key)] || '').trim();
-        var b = el('button', 'role-tab' + (openRole === role.key ? ' is-on' : '') + (hasNote ? ' has-note' : ''));
+        var b = el('button', 'role-tab' + (openRole === role.key ? ' is-on' : '') + (hasNote ? ' has-note' : '')
+          + (role.key === key ? ' is-key' : ''));
         b.type = 'button';
         b.title = role.hint + (hasNote ? '（メモあり）' : '');
         b.appendChild(el('span', 'role-tab-label', role.label));
-        b.appendChild(el('span', 'role-tab-n', rs && rs.n ? rs.n + '走' : '記録なし'));
+        // 記録が無い役割は「—」（§50・Naoto）＝表の「記録が0のマス」と同じ印にそろえる
+        b.appendChild(el('span', 'role-tab-n', rs && rs.n ? rs.n + '走' : '—'));
         b.onclick = function () {
           openRole = (openRole === role.key) ? null : role.key;
           paint();
@@ -326,6 +329,21 @@ var DETAIL = (function () {
   }
 
   function capKey(k) { return k.charAt(0).toUpperCase() + k.slice(1); }
+
+  /** 役割ボタンのうち白太字にする1つ（§50・2026-09-24 Naoto）。
+      ①出走表から開いた＝**今日の役割**（並びから決まる）
+      ②選手一覧から開いた・今日の役割が分からない（並び無し）＝**走数がいちばん多い役割**
+        （同数なら CONFIG.ROLES の順で先のもの。記録が1つも無ければ付けない）。
+      🔑「押している（青地）」とは別の印＝ほかの役割を押して見比べても、今日の役割がどれかは消えない。 */
+  function keyRole(st) {
+    if (ctx && ctx.role) return ctx.role;
+    var best = '', bestN = 0;
+    CONFIG.ROLES.forEach(function (r) {
+      var n = (st && st.roles && st.roles[r.key] && st.roles[r.key].n) || 0;
+      if (n > bestN) { best = r.key; bestN = n; }
+    });
+    return best;
+  }
 
   function rolePanel(role, st) {
     var card = el('div', 'role-body');

@@ -21,6 +21,7 @@
   --ng: #ef5f5f;
 
   --on-accent: #06121f;                 /* アクセント色の上に載せる文字 */
+  --on-key: #ffffff;                    /* 青地の上に載せる「今日の役割」の白太字（§50） */
   --fg-strong: #cfd8e3;                 /* 本文よりわずかに強い数字（内訳の回数） */
   --role-fg: #a9cdf5;                   /* 役割の青（出走表の右端・タグ） */
   --fill-soft: rgba(255, 255, 255, .03);   /* 表の地 */
@@ -66,6 +67,7 @@ body[data-view="work"][data-theme="light"] {
   --ng: #c12f26;
 
   --on-accent: #ffffff;
+  --on-key: #ffffff;
   --fg-strong: #2a323d;
   --role-fg: #1b5fa8;
   --fill-soft: rgba(0, 0, 0, .035);
@@ -372,6 +374,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   width: 6px; height: 6px; border-radius: 50%; background: var(--gold);
 }
 .role-tab.is-on.has-note::after { background: var(--on-accent); }
+/* 今日の役割（一覧から開いたときは走数が最多の役割）＝**役割名も走数も白太字**（§50・2026-09-24 Naoto）。
+   ほかのボタンはグレーのまま＝§33「今日＝白太字／他＝グレー」と同じ分担。
+   ⚠️押している（青地 is-on）ときも白＝既定の暗い字（--on-accent）だと青地の上で沈む。
+     色は変数（--on-key）＝白背景でも青地の上は白、ふつうの地の上は --fg（濃い字）になる。 */
+.role-tab.is-key { color: var(--fg); }
+.role-tab.is-key .role-tab-n { font-weight: 700; opacity: 1; }
+.role-tab.is-key.is-on { color: var(--on-key); }
 
 .role-panel { min-height: 32px; }
 
