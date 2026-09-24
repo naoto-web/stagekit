@@ -257,7 +257,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
    本日設定（.vp）と場・レース（.vbtn）で共用。絵文字は字より大きく見えるので一回り小さく */
 /* ⚠️絵文字フォントを明示する（9/24 Naoto指摘「熊本の☀が白黒」）。☀(U+2600)は本文フォントが白黒の字形を持っていて、
    FE0F（絵文字指定）を付けてもそちらで描かれていた。🌙⭐は本文フォントに字形が無いので元からカラーだった */
-.vp .kb, .vbtn .kb, .pf-race .kb {
+/* ⚠️9/25 場所を限定しない `.kb` に変更（note勝負レースの場名で☀が白黒に戻った＝新しい置き場所に指定が届いていなかった） */
+.kb {
   margin-left: 3px; font-size: .8em; vertical-align: 1px;
   font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }

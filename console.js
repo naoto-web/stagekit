@@ -1191,6 +1191,19 @@
         var set = m[v] || (m[v] = {});
         if (set[r]) delete set[r]; else set[r] = 1;
         state.noteRaces = noteBuild(pr);
+        /* 予想入力のnote予想チェックと連動（9/25 Naoto「押したのにチェックが付かない」）。
+           ⚠️勝負レース照合の既定ON（isNoteRaceDefault）は「保存値も下書きも無い新規カード」にしか効かない。
+             下書きは描画のたびに全カード分できる＝一度表示された予想には効かなかった。
+             → 押した瞬間に、その人・そのレースの保存値と下書きのチェックを直接そろえる（外したら外す） */
+        var on = !!set[r];
+        var who = (state.racers || []).filter(function (x) { return x.name === n; })[0];
+        if (who) {
+          var rk = window.Derive.raceKey(v, r);
+          var ent = (((state.preds || {})[rk] || {}).byRacer || {})[who.id];
+          if (ent) ent.isNote = on;
+          var dd = predDrafts[draftKey(rk, who.id)];
+          if (dd) dd.note = on;
+        }
         save();
         renderAll();
       });
