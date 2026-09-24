@@ -198,6 +198,11 @@ body.wm-on .gbar::before { display: block; }
   align-self: stretch; align-content: center; }
 .nh-items.nh-r2 { grid-template-rows: repeat(2, auto); } /* 4件＝2行×2列（FB111） */
 .nh-item { color: #16181c; font-weight: 900; font-size: 1em; }
+/* 場名の列そろえ（9/25 Naoto「1Rの位置が上下でズレてる」）＝場名の欄を枠内の最長の場名（--nhv＝文字数em・JSが入れる）の幅に。
+   〇Rはその右に続く＝上下で頭がそろう。間は元の半角スペース相当 */
+.nh-item.nh-split { display: inline-flex; white-space: nowrap; }
+.nh-split .nh-v { display: inline-block; width: var(--nhv, auto); }
+.nh-split .nh-r { margin-left: .3em; }
 /* .nh-item .grade-badge＝FB111でバッジ廃止に伴い削除 */
 /* 配信者名＝メンバーカラーのチップ（背景色はJSがインラインで指定＝名簿の色に追従） */
 .nh-name { display: inline-block; padding: 2px 12px; border-radius: 7px;

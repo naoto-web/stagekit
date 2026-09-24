@@ -291,12 +291,10 @@
             if (nowSec() >= b) return;          // この場のぶんだけ終了＝非表示
             if (nhBoundary === null || b < nhBoundary) nhBoundary = b;
           }
-          g.items.push({
-            t: sg.v + " " + sg.nums.map(function (n) {
-              return n.replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }); // 8/11 FB129＝2桁も全角
-            }).join("・") + "R",
-            v: sg.v, seq: seq
-          });
+          var rTxt = sg.nums.map(function (n) {
+            return n.replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }); // 8/11 FB129＝2桁も全角
+          }).join("・") + "R";
+          g.items.push({ t: sg.v + " " + rTxt, v: sg.v, r: rTxt, seq: seq }); // r＝R部分（場名の列そろえ用・9/25）
         });
         return;                                 // 分割済み＝以降の単場処理はしない
       }
@@ -313,7 +311,7 @@
       // ⚠️終了判定は行（＝note商品）単位（FB114・Naoto「7・8Rで1つのnoteとして販売＝1商品」）：
       // 行内の最終レース（最大番号）の次のレースが発走したら行ごと消す。番号単位では消さない。
       // 自由文（場不明・メモ入り）は原文のまま＝入力を壊さない
-      var t = rest;
+      var t = rest, rPart = "";
       if (venue) {
         var tail = rest.split(venue).join(" ");
         var half = tail.replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); })
@@ -327,12 +325,13 @@
             if (nowSec() >= b) return;            // 商品まるごと終了＝行ごと非表示
             if (nhBoundary === null || b < nhBoundary) nhBoundary = b;
           }
-          t = venue + " " + nums.map(function (n) {
+          rPart = nums.map(function (n) {
             return n.replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }); // 8/11 FB129＝2桁も全角
           }).join("・") + "R";
+          t = venue + " " + rPart;
         }
       }
-      g.items.push({ t: t, v: venue, seq: seq });
+      g.items.push({ t: t, v: venue, r: rPart, seq: seq }); // r が無い行（自由文）は原文のまま1つの文字列
     });
     // 枠内の並び＝場の順で自動ソート（8/9 FB104・Naoto指定）＝タイマーカードと同じ順。
     // 場が読めない行は末尾（同順位は書いた順の安定ソート）
@@ -386,12 +385,20 @@
           ? '<span class="nh-name txt-edge"' + (col ? ' style="background:' + col + ';color:#fff"' : "") + ">" +
             esc(g.racer.name) + "</span>"
           : "";
+        /* 場名の列そろえ（9/25 Naoto「1Rの位置が上下でズレてる→長い方に合わせて」）＝
+           「場名」と「〇R」を別の部品にし、場名の欄の幅を枠内でいちばん長い場名の文字数（em）にそろえる。
+           場名は全角だけ＝1文字1em で幅が決まる。整形できない自由文の行（r なし）は従来どおり1つの文字列 */
+        var nhv = 0;
+        g.items.forEach(function (it) { if (it.r && it.v.length > nhv) nhv = it.v.length; });
         var items = g.items.map(function (it) {
           // グレードバッジ＝8/10 FB111で廃止（Naoto指示・タイマーカードの〇R右バッジは存続）
+          if (it.r) return '<span class="nh-item nh-split"><span class="nh-v">' + esc(it.v) + '</span><span class="nh-r">' +
+            esc(it.r) + "</span></span>";
           return '<span class="nh-item">' + esc(it.t) + "</span>";
         }).join("");
         return '<span class="nh-group"' + (col ? ' style="border-color:' + col + '"' : "") + ">" + name +
-          '<span class="nh-items' + (g.items.length === 4 ? " nh-r2" : "") + '">' + items + "</span></span>";
+          '<span class="nh-items' + (g.items.length === 4 ? " nh-r2" : "") + '"' + (nhv ? ' style="--nhv:' + nhv + 'em"' : "") + ">" +
+          items + "</span></span>";
       }).join("") + "</span>";
   }
 
