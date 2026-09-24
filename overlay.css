@@ -366,12 +366,15 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .stc-th > .sep::before { bottom: -2px; }
 /* ②③のワイプ（544×404）＝①の「得点」までの列だけ（9/25 Naoto）。幅に余裕があるので①より一回り大きく。
    選手名は残り幅を全部使う（1fr）。行の高さはJSの STC_H_CMP から決める */
-.stc-cmp .stc-row { grid-template-columns: 30px minmax(0, 1fr) 40px 28px 76px; column-gap: 8px; padding: 0 10px; }
+/* 9/25 Naoto「②③にも一番右に BHS」＝得点の右に B H S（区切りの右の B は①と同じく8px広げて線を数字のまん中へ）。
+   選手名の列が狭くなるので府県・期別・年齢は①と同じく名前の下へ（横並びだと切れる） */
+.stc-cmp .stc-row { grid-template-columns: 30px minmax(0, 1fr) 40px 28px 76px 40px 30px 30px; column-gap: 8px; padding: 0 10px; }
+.stc-cmp .stc-row > .sep::before { left: -1px; } /* 列の隙間8px＋余白8px＝16pxのまん中 */
 .stc-cmp .stc-th { font-size: 15px; }
 .stc-cmp .stc-tr { font-size: 20px; }
 .stc-cmp .stc-tr .car { width: 30px; height: 30px; font-size: 25px; }
-.stc-cmp .stc-row > .nm { font-size: 21px; }
-.stc-cmp .stc-row > .nm small { display: inline; margin-left: 10px; font-size: 14px; }
+.stc-cmp .stc-row > .nm { font-size: 20px; }
+.stc-cmp .stc-row > .nm small { font-size: 13px; }
 
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;

@@ -1761,7 +1761,10 @@
       var rh = Math.min(STC_ROW, Math.floor(((cmp ? STC_H_CMP : STC_H) - STC_HD - STC_TH - gaps * STC_GAP) / ord.length));
       // 列の区切り（mid＝右の列を広げて線を左右の数字のまん中へ・試作4〜5のNaoto指定）
       var SEP = { 0: 1, 4: 1, 7: 1 };
-      var gapRow = cmp ? '<div class="stc-row stc-gap">' + new Array(6).join("<span></span>") + "</div>" :
+      // ②③＝得点の右に B H S（9/25 Naoto）＝得点｜Bに区切り線
+      var gapRow = cmp
+        ? '<div class="stc-row stc-gap">' + new Array(6).join("<span></span>") + '<span class="sep"></span><span></span><span></span></div>'
+        : '<div class="stc-row stc-gap">' + new Array(6).join("<span></span>") +
         '<span class="sep"></span><span></span><span></span><span></span><span class="sep"></span>' +
         '<span></span><span></span><span class="sep"></span><span></span><span></span><span class="sep"></span></div>';
       var body = ord.map(function (o) {
@@ -1773,7 +1776,7 @@
         var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
         var sub = [p.pref, c.t ? c.t + "期" : "", age].filter(Boolean).join(" ");
         var nums = "";
-        for (var i = 0; i < (cmp ? 0 : 10); i++) {
+        for (var i = (cmp ? 4 : 0); i < (cmp ? 7 : 10); i++) { // ②③＝B H S（st[4..6]）だけ
           var v = String(st[i] == null ? "" : st[i]).trim();
           nums += '<span class="n' + (SEP[i] ? " sep" : "") + (!v || v === "0" ? " z" : "") + '">' +
             esc(v === "" ? "-" : v) + "</span>";
@@ -1789,7 +1792,7 @@
         (race.cls ? '<span class="stc-cls">' + esc(race.cls) + "</span>" : "") +
         (race.lineType ? '<span class="stc-lt">' + esc(race.lineType) + "</span>" : "") + "</div>" +
         '<div class="stc-row stc-th"><span>車</span><span>選手名</span><span>級</span><span>脚</span>' +
-        '<span class="sc">得点</span>' + (cmp ? "</div>" : '<span class="n sep">逃</span><span class="n">捲</span><span class="n">差</span>' +
+        '<span class="sc">得点</span>' + (cmp ? '<span class="n sep">B</span><span class="n">H</span><span class="n">S</span></div>' : '<span class="n sep">逃</span><span class="n">捲</span><span class="n">差</span>' +
         '<span class="n">マ</span><span class="n sep">B</span><span class="n">H</span><span class="n">S</span>' +
         '<span class="n sep">勝率</span><span class="n">2連</span><span class="n">3連</span>' +
         '<span class="role sep">役割</span></div>') + body;
