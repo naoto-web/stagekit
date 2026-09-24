@@ -292,6 +292,12 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .settle-preview .hit { color: #37d67a; font-weight: 900; }
 /* 回収は枚数入力（8/27 FB146）。⚠️左詰め＝右詰めだと数字が上下ボタンと重なって読めない（Naoto指摘） */
 .settle-preview .sp-refund { width: 76px; display: inline-block; text-align: left; padding: 4px 8px; }
+/* 回収枚数の −／＋（9/25・投資と同じ見た目）。欄内の上下矢印は消す＝ボタンに一本化 */
+.settle-preview .sp-refund::-webkit-outer-spin-button,
+.settle-preview .sp-refund::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.settle-preview .sp-refund { -moz-appearance: textfield; }
+.settle-preview .sp-unitstep { width: 32px; height: 30px; font-size: 18px; margin-left: 4px; vertical-align: middle; }
+.settle-preview .sp-unitstep + .sp-unitstep { margin-left: 3px; }
 .settle-preview .sp-unit { white-space: nowrap; }
 .settle-preview .sp-yen, .settle-preview .sp-total { color: #37d67a; font-weight: 900; }
 .settle-preview .manche { color: #ff4d4d; font-weight: 900; }

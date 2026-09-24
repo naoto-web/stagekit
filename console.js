@@ -1054,6 +1054,9 @@
           (moneyHits.length > 1 ? esc(h.type + " " + h.comboLabel) + " " : "") + "回収 " +
           '<input type="number" min="0" step="1" class="inp sp-refund" data-pay="' + h.amount +
           '" data-uk="' + esc(unitKey(rc.id, h)) + '" value="' + (n > 0 ? n : "") + '" placeholder="枚数">枚' +
+          // 9/25 Naoto「回収枚数も投資と同じく −／＋ に」＝10枚（＝1,000円分・投資の刻みと同じ）ずつ。手打ちの端数は従来どおり可
+          '<button type="button" class="btn pf-invstep sp-unitstep" data-d="-10" data-tip="10枚減らす">−</button>' +
+          '<button type="button" class="btn pf-invstep sp-unitstep" data-d="10" data-tip="10枚増やす">＋</button>' +
           '<b class="sp-yen"></b></span>';
       }).join("　");
       return '<div class="sp-racer">' + esc(rc.name) + "：" + s.hits.map(function (h) {
@@ -1066,6 +1069,15 @@
         unitInputs[inp.getAttribute("data-uk")] = Math.max(0, Math.floor(+inp.value || 0));
         markResDirty();
         updateRefundYen(); // ⚠️ここで再描画しない＝打っている最中に入力欄が作り直されるとカーソルが飛ぶ（FB75）
+      });
+    });
+    // −／＋（9/25）：値を入れて input を発火＝手打ちと同じ経路（unitInputs・未確定表示・金額）に乗せる。0以下は空欄
+    el.querySelectorAll(".sp-unitstep").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var inp = b.parentNode.querySelector(".sp-refund");
+        var nv = Math.max(0, Math.floor(+inp.value || 0) + (+b.getAttribute("data-d")));
+        inp.value = nv > 0 ? String(nv) : "";
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
       });
     });
     updateRefundYen();
