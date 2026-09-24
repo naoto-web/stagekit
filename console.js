@@ -153,7 +153,7 @@
 
   /* 入力先レースの丸枠「弥彦⭐ 3R🔥」（9/24 Naoto）＝予想入力の各カード見出しと結果入力の見出しで共用。
      🔥＝note予想（勝負レース）。isNote が偽でも要素は出して .off で隠す（予想入力はチェック操作で即座に出し入れするため） */
-  /* withLabel＝🔥の右に「note勝負レース」も丸枠の中に（9/25 Naoto・予想入力のカード見出しだけ。結果入力の見出しは🔥のみ） */
+  /* withLabel＝🔥の右に「note勝負レース」も丸枠の中に（9/25 Naoto・予想入力のカード見出しと結果入力の見出し） */
   function raceTagHtml(key, isNote, withLabel) {
     var parts = String(key || "").split("|");
     return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
@@ -178,8 +178,10 @@
   }
   /** 結果入力の見出しの🔥だけを出し入れする（予想入力のチェック操作から呼ぶ＝結果入力フォームは作り直さない） */
   function refreshResultFire() {
-    var f = document.querySelector("#result-target .pf-fire");
-    if (f) f.classList.toggle("off", !raceHasNote(resultKey()));
+    var on = raceHasNote(resultKey());
+    document.querySelectorAll("#result-target .pf-fire, #result-target .pf-note-tag").forEach(function (el) {
+      el.classList.toggle("off", !on);
+    });
   }
 
   /* ①トーク・②サブ予想の行（9/24 Naoto）＝名前をメンバーカラーの字に／右の場ボタン群をメンバーカラーの枠で囲む／
@@ -805,7 +807,7 @@
   function renderResultForm() {
     var key = resultKey(); // 入力途中は表示中のレースに固定（自動追従で巻き戻さない・FB96）
     // 見出しのレースは予想入力と同じ丸枠（9/24 Naoto）＋誰かが note予想で保存していれば🔥
-    $("result-target").innerHTML = (key ? raceTagHtml(key, raceHasNote(key)) : "（場・レース未選択）") +
+    $("result-target").innerHTML = (key ? raceTagHtml(key, raceHasNote(key), true) : "（場・レース未選択）") + // 9/25 Naoto「結果入力も同じ記載に」
       (resDirty && key !== currentKey() ? "　📌入力途中のため固定中（レースを選ぶと切替）" : "");
     if (key !== resKeyShown) { resDirty = false; resKeyShown = key; } // レースが変わったら仕切り直し
     else if (resDirty) {                                             // 入力途中＝触らずに帰る
