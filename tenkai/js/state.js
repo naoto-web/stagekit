@@ -13,9 +13,11 @@ var State = (function () {
     /* 初期は内圏線のすぐ外に1列。先頭は左（＝1番が左端） */
     var riders = {};
     var L = CONFIG.LAYOUT;
+    /* 右寄せ（9/25 Naoto）＝最後尾（9番）が headX に来るまで右へ送る（lineup.js の layout と同じ考え方） */
+    var shift = L.headX - (1 - (L.headX - (CONFIG.MAX_CAR - 1) * L.gapInLine));
     for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
       riders[no] = {
-        x: clamp(1 - (L.headX - (no - 1) * L.gapInLine), CONFIG.BOUNDS.minX, CONFIG.BOUNDS.maxX),
+        x: clamp(1 - (L.headX - (no - 1) * L.gapInLine) + Math.max(0, shift), CONFIG.BOUNDS.minX, CONFIG.BOUNDS.maxX),
         y: L.lineY[0]
       };
     }

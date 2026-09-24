@@ -4,7 +4,11 @@
 
    モード（scriptタグの data-au 属性で宣言）:
      reload      … 自動リロード対象（overlay.html）
-     output-only … ?view=output のときだけ reload、それ以外は不活性（tenkai/index.html）
+     output-only … ?view=output のときだけ reload（tenkai/index.html）。
+                   それ以外（＝展開ボードの操作ドック）は dock モード（9/25 Naoto「展開ボードにも自動更新を」）:
+                   ドックはOBSのカスタムドックで常に「表示中」＝非表示待ちでは永遠に読み直さないので、
+                   代わりに「触っていない（DOCK_IDLE_MS）かつ入力欄にカーソルが無い」ときに読み直す
+                   （コンソールの自動更新と同じ考え方）。配置・選択レースは localStorage に残る＝読み直しても消えない
      banner      … リロードは絶対にしない。新版の通知バナーを出すだけ（console.html）
 
    安全機構（要件§12.4）:
@@ -24,7 +28,7 @@
 
 (function () {
   "use strict";
-  var AU_BUILD = "20260925-060201";
+  var AU_BUILD = "20260925-074922";
 
   var params;
   try { params = new URLSearchParams(location.search); } catch (e) { return; }
@@ -42,10 +46,9 @@
   if (!script) return;
   var MODE = script.getAttribute("data-au") || "";
   if (MODE === "output-only") {
-    if (params.get("view") !== "output") return;        // tenkaiの操作ドックは対象外
-    MODE = "reload";
+    MODE = params.get("view") === "output" ? "reload" : "dock"; // 9/25＝操作ドックも対象に（dockモード）
   }
-  if (MODE !== "reload" && MODE !== "banner") return;
+  if (MODE !== "reload" && MODE !== "banner" && MODE !== "dock") return;
 
   // version.json の場所＝このスクリプトの隣（tenkai/ 配下のページからも正しく解決される）
   var VER_URL = script.src.replace(/[^\/]*$/, "").replace(/\?.*$/, "") + "version.json";
@@ -81,6 +84,30 @@
     } catch (e) {}
   }
   function isHidden() { return TESTVIS === "hidden" || document.visibilityState === "hidden"; }
+
+  // ---- dockモード：人が触っていないか（9/25） ----
+  var DOCK_IDLE_MS = FAST ? 3000 : 30000;
+  var lastTouch = Date.now();   // 読み込み直後も30秒は待つ（開いた直後に操作し始める人がいる）
+  var held = false;             // ドラッグ中（ボタンを押したまま）
+  if (MODE === "dock") {
+    ["pointerdown", "keydown", "input", "wheel", "touchstart"].forEach(function (ev) {
+      window.addEventListener(ev, function () { lastTouch = Date.now(); }, true);
+    });
+    window.addEventListener("pointermove", function (e) { if (e.buttons) lastTouch = Date.now(); }, true);
+    window.addEventListener("pointerdown", function () { held = true; }, true);
+    window.addEventListener("pointerup", function () { held = false; lastTouch = Date.now(); }, true);
+    window.addEventListener("pointercancel", function () { held = false; }, true);
+  }
+  function dockIdle() {
+    if (held || Date.now() - lastTouch < DOCK_IDLE_MS) return false;
+    var a = document.activeElement;
+    var tag = a && a.tagName ? a.tagName.toLowerCase() : "";
+    if (tag === "textarea" || tag === "select") return false;   // 入力中（並び欄など）
+    if (tag === "input" && !/^(button|checkbox|radio|range|submit)$/i.test(a.type || "")) return false;
+    return true;
+  }
+  /** 読み直してよい状態か＝reload は非表示、dock は無操作 */
+  function ready() { return MODE === "dock" ? dockIdle() : isHidden(); }
   function fxBusy() { return (window.__fxUntil || 0) > Date.now(); }
 
   function get(url, cb) {  // XHR＝タイムアウト付きGET。cb(status, text)／失敗は cb(0, "")
@@ -150,7 +177,7 @@
     var fxTries = 0;
     function settle() {
       // 沈静化待ち：非表示のまま SETTLE_MS 経過してから。force時は表示中でも演出終了だけ待つ
-      if (!force && !isHidden()) { busy = false; arm(); return; } // 待つ間に表に出た＝仕切り直し
+      if (!force && !ready()) { busy = false; arm(); return; } // 待つ間に表に出た／触られた＝仕切り直し
       if (force && fxBusy() && fxTries < FX_WAIT_MAX) { fxTries++; setTimeout(settle, 3000); return; }
       probe();
     }
@@ -163,7 +190,7 @@
         //   シーンを戻された・pauseが配られた・さらに新版が出た、のどれでも移動しない。
         //   ガード（試行上限・間隔）もここで再確認＝visibilitychange経由の経路にも同じ網がかかる
         if (remote && (remote.v !== v || remote.pause)) { busy = false; return; }
-        if (!force && !isHidden()) { busy = false; arm(); return; }   // 表に戻っていた＝仕切り直し
+        if (!force && !ready()) { busy = false; arm(); return; }   // 表に戻っていた／触られた＝仕切り直し
         var tried = parseInt(ss("au_try_" + v) || "0", 10);
         var lastNav = parseInt(ss("au_last") || "0", 10);
         if (tried >= MAX_TRY || Date.now() - lastNav < MIN_GAP_MS) { busy = false; return; }
@@ -188,6 +215,14 @@
   function arm() {
     if (armed) return;
     armed = true;
+    if (MODE === "dock") {   // dock＝「非表示」は来ない。無操作になるまで5秒ごとに見る
+      (function poll() {
+        if (!ready()) { setTimeout(poll, 5000); return; }
+        armed = false;
+        if (remote && remote.v !== AU_BUILD && !remote.pause) attempt(remote.v, false);
+      })();
+      return;
+    }
     document.addEventListener("visibilitychange", function onVis() {
       if (!isHidden()) return;
       document.removeEventListener("visibilitychange", onVis);
@@ -221,7 +256,7 @@
       var last = parseInt(ss("au_last") || "0", 10);
       if (Date.now() - last < MIN_GAP_MS) { setBadge("cooldown"); return; }
 
-      if (isHidden() || remote.force) attempt(remote.v, remote.force);
+      if (ready() || remote.force) attempt(remote.v, remote.force);
       else { setBadge("wait-hidden " + remote.v); arm(); }
     });
   }

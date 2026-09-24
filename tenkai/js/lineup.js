@@ -118,9 +118,22 @@ var Lineup = (function () {
 
     /* 左が先頭のときは左右反転 */
     if (dir === 'left') {
+      var maxX = 0;
       for (var n in positions) {
         if (!Object.prototype.hasOwnProperty.call(positions, n)) continue;
         positions[n].x = 1 - positions[n].x;
+        if (positions[n].x > maxX) maxX = positions[n].x;
+      }
+      /* 右寄せ（9/25 Naoto「デフォルトでアイコンが左寄り→右寄りに」）。
+         反転しただけだと先頭が左端に張り付き、車数が少ないと右が空く。
+         並び順・間隔はそのまま、最後尾が headX（右端の定位置）に来るまで全体を右へ送る。
+         ⚠️右が先頭（dir=right）はもともと先頭が headX＝右寄せなので触らない */
+      var shift = L.headX - maxX;
+      if (shift > 0) {
+        for (var m in positions) {
+          if (!Object.prototype.hasOwnProperty.call(positions, m)) continue;
+          positions[m].x += shift;
+        }
       }
     }
 

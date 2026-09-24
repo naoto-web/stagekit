@@ -55,10 +55,10 @@
   var NFIRE = params.get("nfire") || "1";
   if (NFIRE === "0") NFIRE = "";
   /* 1人配信の空席ワイプに出走表（9/25 Naoto・🧪試作）。①トークの空席（752×423）＝ライン順・直近4ヶ月の10列つき。
-     テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（&seatcard=1 で出す／&seatcard=0 で消す）。
-     ⚠️10列・級班・競り込みの並びは GAS の narabi 応答の新項目（lines/cards）＝本番GASが未更新の間は本番でONにしても空欄が出る */
-  var SEATCARD = params.get("seatcard") ||
-    (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND ? "1" : "");
+     既定ON（9/25 本番化・それまではテストGAS接続時だけ）。&seatcard=0 で消せる（OBSのソースURLだけで戻せる保険）。
+     ⚠️10列・級班・競り込みの並びは GAS の narabi 応答の新項目（lines/cards）＝GASが古いと空欄になる */
+  // 9/25 Naoto「テスト用OBSでの見え方OK・本番反映お願いします」＝本番も既定ON（本番GASも lines/cards を返す版へ更新）
+  var SEATCARD = params.get("seatcard") || "1";
   if (SEATCARD === "0") SEATCARD = "";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
