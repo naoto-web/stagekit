@@ -370,14 +370,8 @@
     });
   }
 
-  $("btn-narabi-save").addEventListener("click", function () {
-    var key = predKey(); // 並びの手修正も入力先に追従（8/6 FB11）
-    if (!key) return;
-    if (!state.narabi) state.narabi = {};
-    state.narabi[key] = $("narabi-input").value.trim();
-    save();
-    renderPredNarabi(key); // 予想入力の並び表示もすぐ手修正の値に（9/25）
-  });
+  /* 「並びを手で直す」欄（#narabi-input／#btn-narabi-save）は9/25に撤去（Naoto「消して」）。
+     ⚠️既に保存されている手修正（state.narabi）はOBS・予想入力の並びで引き続き最優先＝データは残す（消す手段は無くなった） */
 
   // 出しっぱなし警告バー：タップで次レースへ切替（旧「次のレースへ」ボタンの代替）
   $("stale-warn").addEventListener("click", function () {
@@ -553,7 +547,8 @@
         (ent && ent.pending ? "取得中…" : "未発表") + "</span>";
       return;
     }
-    box.innerHTML = '<span class="pn-lbl">並び</span>' + (manual ? '<span class="pn-manual" title="「並びを手で直す」で入れた並び">手修正</span>' : "") +
+    // 「手修正」の印は9/25に外した（手で直す欄を撤去したため・値の優先順は不変）
+    box.innerHTML = '<span class="pn-lbl">並び</span>' +
       groups.map(function (g) {
         return '<span class="pn-group">' + g.split("").map(function (n) {
           return '<i class="pn-car c' + n + '">' + n + "</i>";
@@ -571,7 +566,6 @@
       pinNote = "　📌固定中" + (liveKey && liveKey !== key ? "（放送は " + liveKey.replace("|", " ") + "R）" : "");
     }
     $("pred-target").textContent = (key ? key.replace("|", " ") + "R（" + autoCars(key) + "車）" : "（場・レース未選択）") + pinNote;
-    $("narabi-input").value = key ? ((state.narabi || {})[key] || "") : "";
     renderPredNarabi(key);
     var wrap = $("pred-forms");
     if (!key) { wrap.innerHTML = ""; return; }
@@ -630,7 +624,9 @@
            行の高さをそろえて並べる（その行が何点に読まれたかが真横に出る）。
            ⚠️そろえるため wrap="off"（長いメモ行は横スクロール）＋高さは中身に合わせて伸ばす（fitPredText）＝欄内スクロールでずれない */
         '<div class="pf-body">' +
-        '<textarea class="inp pf-text" rows="5" wrap="off">' + esc(vText) + "</textarea>" +
+        /* ⚠️開始タグ直後の "\n" は必須（9/25）：HTMLは <textarea> 直後の改行を1つ捨てる。保存値が改行で始まる
+           （実例＝ムネオ熊本1Rの text "\n"）と欄の値がずれ、保存値と食い違って「未保存」の金の輪が出続けていた */
+        '<textarea class="inp pf-text" rows="5" wrap="off">\n' + esc(vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
         "</div>" +
         '<div class="pred-opts">' +

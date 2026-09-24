@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260925-033714">
+<link rel="stylesheet" href="console.css?v=20260925-034711">
 </head>
 <body>
 
@@ -76,13 +76,7 @@
   <!-- 並び（9/25 Naoto「入力先のレースと予想の間に」）＝手修正＞時刻表同梱＞自動取得（OBSの②中央ラインと同じ優先順） -->
   <div class="pred-narabi hidden" id="pred-narabi"></div>
   <div id="pred-forms"></div>
-  <details class="exp">
-    <summary>並びを手で直す（自動取得が間違っている時だけ）</summary>
-    <div class="row gap">
-      <input type="text" id="narabi-input" class="inp slim" placeholder="例）61 82 35 47 9（スペース区切り）" inputmode="numeric">
-      <button class="btn small" id="btn-narabi-save">並びを保存</button>
-    </div>
-  </details>
+  <!-- 「並びを手で直す」は9/25撤去（Naoto）。保存済みの手修正 state.narabi は並び表示で引き続き最優先 -->
 </details>
 
 </div>
@@ -252,11 +246,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260925-033714" data-au="banner"></script>
-<script src="config.js?v=20260925-033714"></script>
-<script src="keirin.js?v=20260925-033714"></script>
-<script src="derive.js?v=20260925-033714"></script>
-<script src="sync.js?v=20260925-033714"></script>
-<script src="console.js?v=20260925-033714"></script>
+<script src="autoupdate.js?v=20260925-034711" data-au="banner"></script>
+<script src="config.js?v=20260925-034711"></script>
+<script src="keirin.js?v=20260925-034711"></script>
+<script src="derive.js?v=20260925-034711"></script>
+<script src="sync.js?v=20260925-034711"></script>
+<script src="console.js?v=20260925-034711"></script>
 </body>
 </html>
