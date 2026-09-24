@@ -186,6 +186,13 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .parse-info { margin-top: 6px; font-size: 12px; line-height: 1.7; color: #9aa0ab; font-variant-numeric: tabular-nums; }
 .parse-info .pl-ok b { color: #d9a441; }
 .parse-info .pl-memo { color: #6d7480; }
+/* 買目欄（左・細く縦長）＋読み取り結果（右・行の高さをそろえる）9/25 Naoto「横が長すぎる」。
+   右列の行は .inp と同じ字の大きさ・行間・上の余白（padding 7px＋枠1px）＝左の1行と真横に並ぶ */
+.pf-body { display: grid; grid-template-columns: minmax(10em, 42%) 1fr; gap: 10px; align-items: start; }
+.pf-body .pf-text { resize: none; overflow-y: hidden; white-space: pre; }
+.pf-body .pf-info { margin-top: 0; padding-top: 8px; font-size: 14px; line-height: 1.6; min-width: 0; }
+.pf-body .pl-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 520px) { .pf-body { grid-template-columns: 1fr; } }
 .parse-total { margin-top: 4px; font-size: 13px; font-weight: 900; color: #e8e8ec; }
 .pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 /* 予想入力のカード内の注意書き（⚠投資額未入力／俺たち目未入力・買目外／✏️未保存／切り目の書き方）は非表示（9/25 Naoto「いったん予想入力のタブのみ」）。
@@ -355,6 +362,7 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   .pred-form { padding: 12px 14px; }
   .pred-form h3 { font-size: 16px; }
   .parse-info { font-size: 13px; }
+  .pf-body .pf-info { font-size: 15px; padding-top: 10px; } /* ≥960px の .inp（15px・padding 9px）とそろえる */
   .parse-total { font-size: 15px; }
   .unit-warn { font-size: 13px; }
 

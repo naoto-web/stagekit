@@ -572,8 +572,13 @@
         // プレースホルダーは例だけ（8/27 FB140・Naoto指定）。「123」はoreNormalizeが1-2-3へ正規化＝1点
         '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '"></label>' +
         "</div>" +
-        '<textarea class="inp pf-text" rows="3">' + esc(vText) + "</textarea>" +
+        /* 9/25 Naoto「横が長すぎて右半分を使っていない」＝買目欄を左に細く縦長、右に読み取り結果を
+           行の高さをそろえて並べる（その行が何点に読まれたかが真横に出る）。
+           ⚠️そろえるため wrap="off"（長いメモ行は横スクロール）＋高さは中身に合わせて伸ばす（fitPredText）＝欄内スクロールでずれない */
+        '<div class="pf-body">' +
+        '<textarea class="inp pf-text" rows="5" wrap="off">' + esc(vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
+        "</div>" +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
         '<input type="hidden" class="pf-type" value="3連単">' +
@@ -662,26 +667,46 @@
     }
   }
 
+  /** 買目欄の高さを中身に合わせる（9/25）＝欄内でスクロールさせない＝右列の読み取り結果と行がずれない。
+      最低は rows="5" ぶん（height:auto に戻すと rows の高さになる） */
+  function fitPredText(ta) {
+    ta.style.height = "auto";
+    var bw = ta.offsetHeight - ta.clientHeight; // 上下の枠線（＋横スクロールバー）
+    ta.style.height = (ta.scrollHeight + bw) + "px";
+  }
+
   function updatePredInfo(form, key) {
     var cars = autoCars(key); // 出走表の最大車番から自動判定（手動上書きは8/27 FB138で廃止）
     var type = form.querySelector(".pf-type").value;
-    var parsed = window.Keirin.parsePrediction(form.querySelector(".pf-text").value, type, cars);
-    form.querySelector(".pf-info").innerHTML = parsed.lines.map(function (l) {
+    var ta = form.querySelector(".pf-text");
+    fitPredText(ta);
+    var parsed = window.Keirin.parsePrediction(ta.value, type, cars);
+    var cutWarn = "";
+    /* 右列＝買目欄の1行に1行ずつ対応（9/25）。parsePrediction は空行を飛ばすので、
+       欄の行を頭から歩いて空行には空の行を置く＝高さがそろう。入力そのものは左に見えているので右には結果だけ */
+    var pi = 0;
+    form.querySelector(".pf-info").innerHTML = ta.value.split(/\r?\n/).map(function (raw) {
+      if (!raw.trim()) return '<div class="pl-row">&nbsp;</div>';
+      var l = parsed.lines[pi++];
+      if (!l) return '<div class="pl-row">&nbsp;</div>';
       // 1行に切り目を2つ書いた疑い（8/11 FB134）＝黙って誤読される前に打った本人へ知らせる。
-      // ブロックはしない（保存は通す）＝FB97「俺たち目の入れ忘れ」と同じ、気づかせるだけの通知
-      var cutWarn = l.cutMulti
-        ? '<div class="unit-warn">⚠ 切り目は1行に1つずつ（「切 1-2-3」と「切 4-5-6」の2行に分けてください。' +
-          "1行に並べると別の目として読まれます）</div>" : "";
-      if (!l.ok) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ メモ行（点数外）</div>" + cutWarn;
-      if (l.cut) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 切り目（買目から除外・的中判定外）</div>" + cutWarn;
-      if (l.allDup) return '<div class="pl-memo">' + esc(l.raw.trim()) + "　→ 全部かぶり/切り目（0点・画面に出ません）</div>";
+      // ブロックはしない（保存は通す）＝FB97「俺たち目の入れ忘れ」と同じ、気づかせるだけの通知。行がずれないよう欄の下（合計の行）へ出す
+      if (l.cutMulti && !cutWarn) {
+        cutWarn = '<div class="unit-warn">⚠ 切り目は1行に1つずつ（「切 1-2-3」と「切 4-5-6」の2行に分けてください。' +
+          "1行に並べると別の目として読まれます）</div>";
+      }
+      if (!l.ok) return '<div class="pl-row pl-memo">→ メモ行（点数外）</div>';
+      if (l.cut) return '<div class="pl-row pl-memo">→ 切り目（除外・判定外）</div>';
+      if (l.allDup) return '<div class="pl-row pl-memo">→ 全部かぶり/切り目（0点・画面に出ません）</div>';
       var dispNote = l.disp && l.disp !== window.Keirin.normalize(l.raw).replace(/\s+/g, "")
-        ? '　<span class="pl-memo">画面表示 ' + esc(l.disp) + "</span>" : "";
-      var dupNote = l.dupCount ? '　<span class="pl-memo">かぶり/切り目' + l.dupCount + "点除外</span>" : "";
-      return '<div class="pl-ok">' + esc(l.raw.trim()) + "　→ " + esc(l.type) + " <b>" + l.points + "点</b>" + dupNote + dispNote + "</div>";
+        ? '　<span class="pl-memo">画面 ' + esc(l.disp) + "</span>" : "";
+      var dupNote = l.dupCount ? '　<span class="pl-memo">かぶり/切り' + l.dupCount + "点除外</span>" : "";
+      // 列が狭いと末尾が「…」で切れる＝マウスを乗せれば全文（title）
+      var tip = l.type + " " + l.points + "点" + (l.dupCount ? "　かぶり/切り" + l.dupCount + "点除外" : "") + (dispNote ? "　画面 " + l.disp : "");
+      return '<div class="pl-row pl-ok" title="' + esc(tip) + '">→ ' + esc(l.type) + " <b>" + l.points + "点</b>" + dupNote + dispNote + "</div>";
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;
-    var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput);
+    var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) + cutWarn;
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
     var oreOut = oreMissingInBuys(key, form.querySelector(".pf-text").value, form.querySelector(".pf-ore").value.trim());
     if (oreOut) {
