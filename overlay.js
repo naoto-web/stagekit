@@ -1223,6 +1223,92 @@
       "</div>";
   }
 
+  /* ══════════ 🧪回収額のピコーン（9/25 Naoto案・試作＝テストGAS接続時は既定ON・本番は &refpop=1 で） ══════════
+     回収が増えた（結果を確定で回収が入った）ら、見出しの「回収 ¥○○」の上に「＋¥24,000」を浮かべ、
+     そのあと数字を旧→新へ1秒でカウントアップする。音なし。
+     ・順番＝的中演出の前奏が終わってバッジ（🎯的中！）が出た直後（fireHitFx が window.__fxBadgeAt に時刻を置く）。
+       新しい的中を伴わない増え方（回収の打ち直し等）は演出が出ないので即ピコーン
+     ・増える間は見出しに**古い表示（旧額 or 集計中）を保持**する＝「＋¥」→増える、の順を守るため
+     ・1回の更新で複数レース分が入っても差額の合計で1回だけ／減ったときは出さずに黙って差し替える
+     ・見出しの幅はカウントアップの最終値で先に fitBandHead する＝途中で縮小が動いて字が跳ねない
+     ・ピコーンは見出しの上に浮かべる別要素（.refpop・body直下）＝パネルの overflow:hidden に切られず、見出しの幅も動かさない
+     状態は配信者ごと（refAnim[配信者id]）＝席が変わっても追える。表示先は実行時に seatMap() で引く */
+  var REFPOP = params.get("refpop") || ((window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) ? "1" : "");
+  if (REFPOP === "0") REFPOP = "";
+  var REFPOP_COUNT_MS = 1000, REFPOP_AFTER_BADGE_MS = 500, REFPOP_POP_LEAD_MS = 350;
+  var refAnim = {}; // 配信者id → { shown: 最後に見せた回収額(数値・未確定はnull), text: 見出しに出している文字列, target, waiting, running }
+  function refundHeaderText(rc, bt) {
+    var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
+    if (!REFPOP || !rc) return normal;
+    var a = refAnim[rc.id];
+    if (!a) { a = refAnim[rc.id] = { shown: bt.pending ? null : bt.refund, text: normal, target: null, waiting: false, running: false }; return normal; }
+    if (a.waiting || a.running) { // 演出待ち・カウント中＝目標だけ最新にして表示は保持
+      if (!bt.pending && a.target !== null && bt.refund > a.target) a.target = bt.refund;
+      return a.text;
+    }
+    if (bt.pending) { a.text = normal; return normal; } // 集計中＝数字は出さない（shown は最後の数値のまま）
+    if (a.shown === null || bt.refund <= a.shown) { a.shown = bt.refund; a.text = normal; return normal; } // 初回・減額・同額＝即差し替え
+    a.target = bt.refund; a.waiting = true; // 増えた＝演出後にピコーン
+    a.invest = bt.invest;
+    // ⚠️ここは renderAll の途中＝的中演出（checkNewHits→fireHitFx）は**この後**に走り、そこで __fxBadgeAt が置かれる。
+    //   直ちに判定すると古い __fxBadgeAt を見て「演出なし」と誤って即ピコーンになる（9/25 ハーネスで実測）→ 300ms 置いてから見る
+    setTimeout(function () { refpopWait(rc.id); }, 300);
+    return a.text;
+  }
+  function refpopWait(rid) {
+    var a = refAnim[rid];
+    if (!a || !a.waiting) return;
+    var at = (window.__fxBadgeAt || 0) + REFPOP_AFTER_BADGE_MS;
+    if (Date.now() < at) { setTimeout(function () { refpopWait(rid); }, Math.min(500, at - Date.now())); return; }
+    a.waiting = false;
+    refpopRun(rid);
+  }
+  function refpopBandInvs(rid) { // その人が今座っている席の見出し（①②③）のうち画面に出ているもの
+    var seats = seatMap(), out = [];
+    ["a", "b"].forEach(function (slot) {
+      if (!seats[slot] || seats[slot].id !== rid) return;
+      ["tband-", "band-", "kband-"].forEach(function (bp) {
+        var el = $(bp + "inv-" + slot);
+        if (el) out.push(el);
+      });
+    });
+    return out;
+  }
+  function refpopRun(rid) {
+    var a = refAnim[rid];
+    if (!a || a.running || a.target === null) return;
+    var bt = derived.totals[rid] || { invest: a.invest || 0, refund: a.target };
+    var from = a.shown || 0, to = a.target, delta = to - from;
+    a.running = true; a.target = null;
+    var invs = refpopBandInvs(rid);
+    var textOf = function (v) { return "投資 " + fmtYen(bt.invest) + "　回収 " + fmtYen(Math.round(v)); };
+    // 最終値で先に幅合わせ（fitBandHead は見出し要素を取る）
+    invs.forEach(function (el) { el.textContent = textOf(to); var head = el.closest(".band-head"); if (head) fitBandHead(head); el.textContent = a.text; });
+    // ピコーン＝見えている見出しの「回収」の上に浮かべる
+    invs.forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return; // 非表示のシーン
+      var pop = document.createElement("div");
+      pop.className = "refpop";
+      pop.textContent = "＋" + fmtYen(delta);
+      pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
+      document.body.appendChild(pop);
+      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 2200);
+    });
+    var t0 = Date.now() + REFPOP_POP_LEAD_MS;
+    (function step() {
+      var p = Math.min(1, Math.max(0, (Date.now() - t0) / REFPOP_COUNT_MS));
+      var e = 1 - Math.pow(1 - p, 3); // ease-out
+      var cur = from + delta * e;
+      a.text = textOf(p >= 1 ? to : cur);
+      refpopBandInvs(rid).forEach(function (el) { el.textContent = a.text; });
+      if (p < 1) { requestAnimationFrame(step); return; }
+      a.shown = to; a.running = false;
+      if (a.target !== null && a.target > a.shown) { a.waiting = true; refpopWait(rid); } // カウント中にさらに増えた
+    })();
+  }
+  if (DEBUG) window.__refpop = { anim: refAnim, run: refpopRun };
+
   /** 🧪燃える枠を点けるか（&nfire=1＝そのレースが note予想／&nfire=all＝配信者がいてレースがあれば全部）。NFIRE無しは常に false */
   function noteFireOn(rc, k) {
     if (!NFIRE || !rc || !k) return false;
@@ -1316,9 +1402,8 @@
           var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
           // 回収未入力の的中を抱えている間は金額でなく「集計中」（8/8）＝
           // ティッカーが的中を流しているのに回収¥0、という食い違いを見せない
-          bandInv.textContent = bt
-            ? "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund))
-            : "";
+          // 🧪回収のピコーン（9/25）＝増えたときは古い表示を保持→演出後に「＋¥」→カウントアップ（refundHeaderText）
+          bandInv.textContent = bt ? refundHeaderText(rc, bt) : "";
         }
         if (color) {
           bandHead.style.background = color;
@@ -4735,6 +4820,7 @@
     // 遠隔自動更新（autoupdate.js・要件§12）への「演出中」通知＝force時はこの時刻まで待つ。
     // rainMs＝バッジが出るまで／HIT_FX_MS＝バッジ・買目強調の持続
     window.__fxUntil = Math.max(window.__fxUntil || 0, Date.now() + rainMs + HIT_FX_MS);
+    window.__fxBadgeAt = Math.max(window.__fxBadgeAt || 0, Date.now() + rainMs); // 前奏が終わりバッジが出る時刻（回収のピコーンが待つ・9/25）
     var wipes = fxWipes(slot);
     var stage = fxStageHost(hit);
     /* バッジ・枠パルス＝**常にワイプ**（8/30 Naoto決定「前奏だけ全画面」＝35秒残るのはこちら側
