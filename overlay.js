@@ -1216,6 +1216,14 @@
       "</div>";
   }
 
+  /** 🧪燃える枠を点けるか（&nfire=1＝そのレースが note予想／&nfire=all＝配信者がいてレースがあれば全部）。NFIRE無しは常に false */
+  function noteFireOn(rc, k) {
+    if (!NFIRE || !rc || !k) return false;
+    if (NFIRE === "all") return true;
+    var p = window.Derive.resolvePred(state, k, rc.id);
+    return !!(p && p.entry.isNote);
+  }
+
   function renderPreds() {
     var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
@@ -1322,12 +1330,6 @@
           bandHead.classList.remove("txt-edge");
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = "";
         }
-        if (NFIRE && bandHead.parentElement) { // 🧪燃える枠（試作・&nfire=）
-          var fireOn = !!rc && (NFIRE === "all" || (bp === "tband-"
-            ? talkKeys.some(function (tk) { var tp = window.Derive.resolvePred(state, tk, rc.id); return !!(tp && tp.entry.isNote); })
-            : isNote));
-          bandHead.parentElement.classList.toggle("note-fire", fireOn);
-        }
         fitBandHead(bandHead); // 名前＋バッジ＋投資/回収が1行に収まるよう自動縮小
         var band = $(bp + "pred-" + slot);
         if (!band) return;
@@ -1356,6 +1358,12 @@
           } else {
             band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false, false, true);
           }
+          // 🧪燃える枠は「場の区画」単位（9/25 Naoto「〇〇予想の見出しまで光る・複数場だとおかしい」）＝
+          // 2〜3場は note の場の .race-col だけ、1場は買目エリア（band）全体
+          var fireKeys = talkKeys.length >= 3 ? tk : talkKeys;
+          var fireCols = band.querySelectorAll(".race-col");
+          band.classList.toggle("note-fire", fireCols.length === 0 && noteFireOn(rc, talkKeys[0]));
+          Array.prototype.forEach.call(fireCols, function (col, ci) { col.classList.toggle("note-fire", noteFireOn(rc, fireKeys[ci])); });
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
         } else {
@@ -1378,6 +1386,7 @@
           // 残ると「予想を出し忘れている」ように見える（8/12）
           band.innerHTML = !rc ? ""
             : (key ? raceColHead(rc, key, true) : "") + raceBuyHtml(rc, key, false, true, true);
+          band.classList.toggle("note-fire", noteFireOn(rc, key)); // 🧪燃える枠＝買目エリアの内側だけ
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
         }
       });
@@ -1421,6 +1430,7 @@
           var sKey = svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
           // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
           sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true) : "";
+          sBand.classList.toggle("note-fire", noteFireOn(rc, sKey)); // 🧪NEXT枠も、そのレースが note なら内側だけ
           fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
         }
       }

@@ -3114,27 +3114,20 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
    白エリアが12px削れて俺たち目や買い目が改行される。ここは情報量が枠の見栄えより優先 */
 
 /* ══════════ note予想の燃える枠（9/25 Naoto・🧪試作＝URLに &nfire=1 / &nfire=all のときだけ class が付く） ══════════
-   枠（メンバーカラーの6px線）はそのまま、内側に橙〜赤の光を重ねて不規則に揺らめかせる＝炎のゆらぎ。
-   ・内側の光（::after・inset shadow）＝パネル自身の overflow:hidden に切られない。中身の上に乗るが pointer-events なし・
-     光は端の十数pxだけ＝買目チップは読める
-   ・外側の光（box-shadow）＝親の overflow で一部切れることがある（それでも内側だけで成立する作り）
-   ・揺らめき＝明るさの違う5コマを 1.7s で不規則に（steps でなく ease＝ちらつきでなく揺れ）。色味は 3.1s でゆっくり黄⇔赤 */
-.panel.note-fire { box-shadow: 0 0 14px 2px rgba(255, 110, 20, .75), 0 0 28px 6px rgba(255, 60, 0, .35); }
-.panel.note-fire::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
-  box-shadow: inset 0 0 10px 3px rgba(255, 190, 60, .95), inset 0 0 26px 8px rgba(255, 90, 0, .7);
-  animation: nfire-flicker 1.7s ease-in-out infinite, nfire-hue 3.1s ease-in-out infinite alternate;
+   光るのは「場の区画」の内側だけ（9/25 FB「〇〇予想の見出しまで光る・複数場だとおかしい」）＝
+   ①2〜3場＝その場の .race-col／①1場・②③＝買目エリア（.buy-line）／②NEXT＝.sub-line。パネル（見出しを含む枠）には付けない。
+   position は変えない（packRaceBand・band-meta の座標がパネル基準のため）＝::after でなく要素自身の inset shadow を揺らす。
+   揺れ＝明るさ・広がりの違う6コマを 3.4s で（9/25「もっとゆっくり」で1.7s→3.4s）。
+   ⚠️hue-rotate（filter）は使わない＝要素自身に掛けると中の車番チップの色まで変わる */
+.note-fire {
+  box-shadow: inset 0 0 8px 2px rgba(255, 190, 60, .9), inset 0 0 22px 6px rgba(255, 90, 0, .6);
+  animation: nfire-flicker 3.4s ease-in-out infinite;
 }
 @keyframes nfire-flicker {
-  0%   { opacity: .75; }
-  18%  { opacity: 1; }
-  34%  { opacity: .6; }
-  52%  { opacity: .95; }
-  71%  { opacity: .7; }
-  86%  { opacity: 1; }
-  100% { opacity: .75; }
-}
-@keyframes nfire-hue {
-  from { filter: hue-rotate(-12deg) saturate(1.1); }
-  to   { filter: hue-rotate(14deg) saturate(1.3); }
+  0%, 100% { box-shadow: inset 0 0 8px 2px rgba(255, 190, 60, .75), inset 0 0 20px 5px rgba(255, 90, 0, .5); }
+  18%  { box-shadow: inset 0 0 10px 3px rgba(255, 200, 70, .95), inset 0 0 26px 8px rgba(255, 90, 0, .7); }
+  36%  { box-shadow: inset 0 0 7px 2px rgba(255, 180, 50, .6), inset 0 0 18px 4px rgba(255, 80, 0, .42); }
+  55%  { box-shadow: inset 0 0 10px 3px rgba(255, 200, 70, .9), inset 0 0 24px 7px rgba(255, 95, 0, .65); }
+  72%  { box-shadow: inset 0 0 8px 2px rgba(255, 185, 55, .68), inset 0 0 19px 5px rgba(255, 85, 0, .48); }
+  87%  { box-shadow: inset 0 0 11px 3px rgba(255, 205, 80, 1), inset 0 0 27px 8px rgba(255, 100, 0, .72); }
 }
