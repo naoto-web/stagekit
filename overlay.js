@@ -1235,7 +1235,7 @@
      状態は配信者ごと（refAnim[配信者id]）＝席が変わっても追える。表示先は実行時に seatMap() で引く */
   var REFPOP = params.get("refpop") || ((window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) ? "1" : "");
   if (REFPOP === "0") REFPOP = "";
-  var REFPOP_COUNT_MS = 3000, REFPOP_AFTER_BADGE_MS = 500, REFPOP_POP_LEAD_MS = 700; // 9/25 Naoto「ピコーン2倍ゆっくり・カウント3倍ゆっくり」＝1000→3000・350→700
+  var REFPOP_COUNT_MS = 3000, REFPOP_AFTER_BADGE_MS = 500, REFPOP_POP_LEAD_MS = 4000; // 9/25 Naoto＝カウント3倍ゆっくり（1000→3000）／カウント開始は「＋¥」が消える1秒前（CSS 5s−1s＝4000・350→700→4000）
   var refAnim = {}; // 配信者id → { shown: 最後に見せた回収額(数値・未確定はnull), text: 見出しに出している文字列, target, waiting, running }
   function refundHeaderText(rc, bt) {
     var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
@@ -1302,7 +1302,9 @@
       var cur = from + delta * e;
       a.text = textOf(p >= 1 ? to : cur);
       refpopBandInvs(rid).forEach(function (el) { el.textContent = a.text; });
-      if (p < 1) { requestAnimationFrame(step); return; }
+      // ⚠️requestAnimationFrame ではなく 33ms のタイマー（9/25）＝rAF は見えていないページ・ヘッドレスで間引かれ、
+      //   「消える1秒前に開始」が8秒後にずれた（ハーネス実測）。OBSのブラウザソースでも同じ間引きが起こりうる
+      if (p < 1) { setTimeout(step, 33); return; }
       a.shown = to; a.running = false;
       if (a.target !== null && a.target > a.shown) { a.waiting = true; refpopWait(rid); } // カウント中にさらに増えた
     })();
