@@ -1595,7 +1595,7 @@
     var vName = v ? v.name : "";
     var rNo = v ? state.currentRace[v.name] : null;
     renderStartListInto(SL_TALK, vName, rNo);
-    if (SEATCARD && SCENE === "talk") renderSeatCard(vName, rNo);
+    if (SEATCARD && STC_BOX[SCENE]) renderSeatCard(vName, rNo); // ①＝10列つき／②③＝得点まで
     // ③は①とまったく同じレースを描く（8/12設計変更）。中央の展開図はボード側が
     // 同じコンソールに追従するので揃う＝ここに専用の分岐は要らない
     if (SCENE === "tenkai") renderStartListInto(SL_TK, vName, rNo);
@@ -1674,6 +1674,9 @@
   // 箱の高さの配分（px）＝CSSの .stc-hd / .stc-th / .stc-gap と同じ値。行の高さだけJSで決める
   // 行の高さ＝残りを車数で割る（9車・5ラインで36px＝試作5）。7車立て等で下が余らないよう最大46pxまで伸ばす
   var STC_H = 420 - 4, STC_HD = 38, STC_TH = 22, STC_GAP = 7, STC_ROW = 46;
+  // ②③のワイプ（544×404）＝①の「得点」までの列だけ（9/25 Naoto「①の得点までのバージョンでいい」）。箱の高さ＝404−枠3−カード枠4
+  var STC_H_CMP = 404 - 3 - 4;
+  var STC_BOX = { talk: ["seatcard-a", "seatcard-b"], race: ["seatcard-race-a", "seatcard-race-b"], tenkai: ["seatcard-tk-a", "seatcard-tk-b"] };
 
   /** 「25 417 36」→ [[[2],[5]],[[4],[1],[7]],[[3],[6]]]（競りは分からない＝全部1人ずつ） */
   function linesFromText(t) {
@@ -1725,7 +1728,8 @@
     return out;
   }
   function renderSeatCard(vName, rNo) {
-    var boxes = [$("seatcard-a"), $("seatcard-b")].filter(Boolean);
+    var cmp = SCENE !== "talk"; // ②③＝得点までの短い版
+    var boxes = (STC_BOX[SCENE] || []).map(function (id) { return $(id); }).filter(Boolean);
     if (!boxes.length) return;
     var race = null;
     if (vName && rNo && timetable) {
@@ -1754,10 +1758,10 @@
       });
       vals.sort(function (a, b) { return b - a; });
       var gaps = ord.filter(function (o) { return o.gap; }).length;
-      var rh = Math.min(STC_ROW, Math.floor((STC_H - STC_HD - STC_TH - gaps * STC_GAP) / ord.length));
+      var rh = Math.min(STC_ROW, Math.floor(((cmp ? STC_H_CMP : STC_H) - STC_HD - STC_TH - gaps * STC_GAP) / ord.length));
       // 列の区切り（mid＝右の列を広げて線を左右の数字のまん中へ・試作4〜5のNaoto指定）
       var SEP = { 0: 1, 4: 1, 7: 1 };
-      var gapRow = '<div class="stc-row stc-gap">' + new Array(6).join("<span></span>") +
+      var gapRow = cmp ? '<div class="stc-row stc-gap">' + new Array(6).join("<span></span>") + "</div>" :
         '<span class="sep"></span><span></span><span></span><span></span><span class="sep"></span>' +
         '<span></span><span></span><span class="sep"></span><span></span><span></span><span class="sep"></span></div>';
       var body = ord.map(function (o) {
@@ -1769,7 +1773,7 @@
         var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
         var sub = [p.pref, c.t ? c.t + "期" : "", age].filter(Boolean).join(" ");
         var nums = "";
-        for (var i = 0; i < 10; i++) {
+        for (var i = 0; i < (cmp ? 0 : 10); i++) {
           var v = String(st[i] == null ? "" : st[i]).trim();
           nums += '<span class="n' + (SEP[i] ? " sep" : "") + (!v || v === "0" ? " z" : "") + '">' +
             esc(v === "" ? "-" : v) + "</span>";
@@ -1779,20 +1783,38 @@
           '<span class="nm">' + esc(p.name) + "<small>" + esc(sub) + "</small></span>" +
           "<span>" + esc(c.c || "") + "</span><span>" + esc(c.k || p.kyaku || "") + "</span>" +
           '<span class="sc' + scls + '">' + esc(sc) + "</span>" + nums +
-          '<span class="role sep">' + esc(STC_ROLE[roles[p.no]] || "") + "</span></div>";
+          (cmp ? "" : '<span class="role sep">' + esc(STC_ROLE[roles[p.no]] || "") + "</span>") + "</div>";
       }).join("");
       html = '<div class="stc-hd"><b class="stc-vr">' + esc(vName + " " + rNo + "R") + "</b>" +
         (race.cls ? '<span class="stc-cls">' + esc(race.cls) + "</span>" : "") +
         (race.lineType ? '<span class="stc-lt">' + esc(race.lineType) + "</span>" : "") + "</div>" +
         '<div class="stc-row stc-th"><span>車</span><span>選手名</span><span>級</span><span>脚</span>' +
-        '<span class="sc">得点</span><span class="n sep">逃</span><span class="n">捲</span><span class="n">差</span>' +
+        '<span class="sc">得点</span>' + (cmp ? "</div>" : '<span class="n sep">逃</span><span class="n">捲</span><span class="n">差</span>' +
         '<span class="n">マ</span><span class="n sep">B</span><span class="n">H</span><span class="n">S</span>' +
         '<span class="n sep">勝率</span><span class="n">2連</span><span class="n">3連</span>' +
-        '<span class="role sep">役割</span></div>' + body;
-      boxes.forEach(function (b) { b.style.setProperty("--stc-rh", rh + "px"); });
+        '<span class="role sep">役割</span></div>') + body;
+      boxes.forEach(function (b) {
+        b.style.setProperty("--stc-rh", rh + "px");
+        b._stcN = ord.length; b._stcGaps = gaps;
+      });
     }
     // 同じ中身なら触らない（毎回innerHTMLを差し替えると描画が無駄に走る）
-    boxes.forEach(function (b) { if (b._html !== html) { b.innerHTML = html; b._html = html; } });
+    boxes.forEach(function (b) { if (b._html !== html) { b.innerHTML = html; b._html = html; } fitSeatCard(b); });
+  }
+  /** 行の高さを実寸で合わせ直す（9/25）＝上の STC_H は見積もり。②③のワイプで最後の行が切れた
+      （枠線・列名の下線のぶん見積もりより狭い）ので、見えている箱は実際の高さから割り直す。
+      非表示（席が埋まっている）の箱は高さ0＝見積もりのまま。席が空いた瞬間に効くよう1秒ごとの自己修復からも呼ぶ */
+  function fitSeatCard(b) {
+    if (!b || !b._stcN || !b.clientHeight) return;
+    var hd = b.querySelector(".stc-hd"), th = b.querySelector(".stc-th"), gp = b.querySelector(".stc-gap");
+    if (!hd || !th) return;
+    var avail = b.clientHeight - hd.offsetHeight - th.offsetHeight - b._stcGaps * (gp ? gp.offsetHeight : STC_GAP);
+    var rh = Math.min(STC_ROW, Math.floor(avail / b._stcN)) + "px";
+    if (b.style.getPropertyValue("--stc-rh") !== rh) b.style.setProperty("--stc-rh", rh);
+  }
+  function fitSeatCards() {
+    if (!SEATCARD) return;
+    (STC_BOX[SCENE] || []).forEach(function (id) { fitSeatCard($(id)); });
   }
 
   /** ライン（並び予想）＋競走得点＋年齢＝GAS経由でkeirin.jpから自動取得。並びは手入力があれば優先（修正用） */
@@ -5168,6 +5190,7 @@
     if (++fitTick % 4 === 0) {
       fitTalkBands(); fitRaceBands();
       fitNarabi(SL_TALK.narabi); fitNarabi(SL_TK.narabi);
+      fitSeatCards(); // 空席の出走表＝席が空いた瞬間に行の高さを実寸へ（9/25）
     }
     if (nhBoundary !== null && nowSec() >= nhBoundary) renderVenueTabs(); // note勝負＝終了レースを個々に消す（8/10 FB113）
     sweepHitGlows();    // 的中買目チップ強調の期限切れ掃除（8/10 FB119・27秒で通常表示へ）

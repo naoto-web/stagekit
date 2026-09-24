@@ -330,8 +330,8 @@ body.seat-a-off .panel.slot-a, body.seat-b-off .panel.slot-b { display: none; }
    高さ＝見出し38＋列名22＋行×n＋ラインの切れ目7×本数（行の高さはJSが --stc-rh で決める・上限36）。
    ⚠️JSの STC_HD / STC_TH / STC_GAP / STC_ROW と同じ値にそろえる */
 .seat-card { display: none; }
-body.seatcard-on.seat-a-off #scene-talk .cam.slot-a .seat-card,
-body.seatcard-on.seat-b-off #scene-talk .cam.slot-b .seat-card {
+body.seatcard-on.seat-a-off .cam.slot-a .seat-card,
+body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
   display: flex; flex-direction: column; position: absolute; inset: 0; overflow: hidden;
   background: var(--panel); border: 2px solid var(--stc-line); color: var(--txt);
   /* 線は全部この1色（9/25 Naoto「縦横の線は全部濃ゆく」＝半透明の --panel-line をやめて不透明の濃い色） */
@@ -364,6 +364,14 @@ body.seatcard-on.seat-b-off #scene-talk .cam.slot-b .seat-card {
 .stc-row > .sep { position: relative; padding-left: 8px; }
 .stc-row > .sep::before { content: ""; position: absolute; left: 1px; top: 0; bottom: 0; width: 2px; background: var(--stc-line); }
 .stc-th > .sep::before { bottom: -2px; }
+/* ②③のワイプ（544×404）＝①の「得点」までの列だけ（9/25 Naoto）。幅に余裕があるので①より一回り大きく。
+   選手名は残り幅を全部使う（1fr）。行の高さはJSの STC_H_CMP から決める */
+.stc-cmp .stc-row { grid-template-columns: 30px minmax(0, 1fr) 40px 28px 76px; column-gap: 8px; padding: 0 10px; }
+.stc-cmp .stc-th { font-size: 15px; }
+.stc-cmp .stc-tr { font-size: 20px; }
+.stc-cmp .stc-tr .car { width: 30px; height: 30px; font-size: 25px; }
+.stc-cmp .stc-row > .nm { font-size: 21px; }
+.stc-cmp .stc-row > .nm small { display: inline; margin-left: 10px; font-size: 14px; }
 
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
