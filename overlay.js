@@ -45,7 +45,10 @@
      &nfire=1 …note予想の枠だけ点灯（本番化するときの挙動）／&nfire=all …配信者のいる枠を全部点灯（見た目確認用）。
      付けなければ class も付かない＝本番のOBS（URLにnfire無し）の挙動は1文字も変わらない。
      判定＝②③は操作中のメインレースの isNote（見出しの🔥と同じ基準）／①トークは表示中の1〜3場のどれかが note */
-  var NFIRE = params.get("nfire") || "";
+  // 9/25 Naoto「俺のOBSのテスト画面で確認したい」＝テストGAS（?gas=）に繋いでいるときだけ既定で &nfire=1 相当。
+  // 本番（?gas= なし）は既定OFFのまま。&nfire=0 で明示的に消せる
+  var NFIRE = params.get("nfire") || ((window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) ? "1" : "");
+  if (NFIRE === "0") NFIRE = "";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +

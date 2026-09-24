@@ -3117,11 +3117,11 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
    光るのは「場の区画」の内側だけ（9/25 FB「〇〇予想の見出しまで光る・複数場だとおかしい」）＝
    ①2〜3場＝その場の .race-col／①1場・②③＝買目エリア（.buy-line）／②NEXT＝.sub-line。パネル（見出しを含む枠）には付けない。
    position は変えない（packRaceBand・band-meta の座標がパネル基準のため）＝::after でなく要素自身の inset shadow を揺らす。
-   揺れ＝明るさ・広がりの違う6コマを 3.4s で（9/25「もっとゆっくり」で1.7s→3.4s）。
+   揺れ＝明るさ・広がりの違う6コマを 6.8s で（9/25「もっとゆっくり」で1.7s→3.4s→6.8s）。
    ⚠️hue-rotate（filter）は使わない＝要素自身に掛けると中の車番チップの色まで変わる */
 .note-fire {
   box-shadow: inset 0 0 8px 2px rgba(255, 190, 60, .9), inset 0 0 22px 6px rgba(255, 90, 0, .6);
-  animation: nfire-flicker 3.4s ease-in-out infinite;
+  animation: nfire-flicker 6.8s ease-in-out infinite;
 }
 @keyframes nfire-flicker {
   0%, 100% { box-shadow: inset 0 0 8px 2px rgba(255, 190, 60, .75), inset 0 0 20px 5px rgba(255, 90, 0, .5); }
