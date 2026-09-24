@@ -585,7 +585,7 @@
         '<button type="button" class="btn pf-invstep pf-invup" data-tip="1,000円増やす">＋</button>' +
         "</div>" +
         '<div class="parse-total pf-total"></div>' +
-        '<button class="btn small pf-save">この予想を保存</button>' +
+        // 「この予想を保存」ボタンは9/25に撤去（打ったそばから保存＝リアルタイムで配信画面に出す）
         "</div>";
     }).join("");
 
@@ -600,10 +600,19 @@
         };
       };
       var update = function () { stash(); updatePredInfo(form, key); };
+      /* 9/25 Naoto「買目の書きかけもリアルタイムで出た方が見てる人が見やすい」＝保存ボタンを廃止し、
+         人が入力するたびに保存（＝配信画面に出す）。
+         ・同じPCのOBSへは save() 冒頭の broadcastState で即時に届く。GASへの保存は直列キュー
+           （送信中の入力は終わった後に最新の状態を1回だけ送る）＝打鍵ごとに通信が積み上がらない。
+         ・⚠️描画時の update()（下の forEach 末尾）では保存しない＝見ただけのカードに空の予想を作らない。
+           保存するのは人の操作（input／noteチェックの change／−＋ボタン＝input発火）だけ。
+         ・旧「俺たち目が買目にない→追加して保存／追加せず保存」の確認バーは出せない（止める場所が無い）
+           → updatePredInfo のカード内警告に置き換え */
+      var live = function () { update(); doSave(); };
       ["pf-text", "pf-invest", "pf-ore"].forEach(function (cls) {
-        form.querySelector("." + cls).addEventListener("input", update);
+        form.querySelector("." + cls).addEventListener("input", live);
       });
-      form.querySelector(".pf-note").addEventListener("change", update);
+      form.querySelector(".pf-note").addEventListener("change", live);
       // 投資額の −／＋（9/25）：1000円ずつ。0以下は空欄（＝未入力。保存値の「投資なし」と同じ扱い＝未保存にならない）。
       // 値を入れたら input を発火＝手打ちと同じ経路（下書き退避・合計・未保存表示）に乗せる
       [[".pf-invdown", -1000], [".pf-invup", 1000]].forEach(function (pair) {
@@ -638,13 +647,6 @@
         renderSettlePreview();
         updatePredInfo(form, key);                 // 「未保存」表示を消す
       };
-      form.querySelector(".pf-save").addEventListener("click", function () {
-        // 俺たち目が買目にない保存＝【追加して保存】/【追加せず保存】の確認バー（8/10 FB118）
-        var oreLine = oreMissingInBuys(key, form.querySelector(".pf-text").value,
-          form.querySelector(".pf-ore").value.trim());
-        if (oreLine) { showOreGuard(form, oreLine, doSave); return; }
-        doSave();
-      });
       update();
     });
 
@@ -679,6 +681,11 @@
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;
     var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput);
+    // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
+    var oreOut = oreMissingInBuys(key, form.querySelector(".pf-text").value, form.querySelector(".pf-ore").value.trim());
+    if (oreOut) {
+      html += '<div class="unit-warn">⚠ 俺たち目 ' + esc(oreOut) + " が買目に入っていません（このままだと的中しても回収を入れられません）</div>";
+    }
     if (parsed.points > 0 && !investInput) {
       html += '<div class="unit-warn">⚠ 投資額が未入力（画面の投資・回収の累計に乗りません）</div>';
     }
@@ -698,7 +705,7 @@
       form.querySelector(".pf-ore").value.trim() !== (saved.oreTachi || "") ||
       form.querySelector(".pf-note").checked !== noteBase;
     if (dirty) {
-      html += '<div class="draft-warn">✏️ 未保存（「この予想を保存」を押すまで画面に出ません・入力は消えません）</div>';
+      html += '<div class="draft-warn">✏️ まだ画面に出ていません（入力すると自動で保存されます）</div>';
     }
     // 俺たち目の入れ忘れ通知（8/9 FB97）：「買い目だけ先に保存して見せる→後から俺たち目」は
     // 正規の運用なのでブロックしない。保存済みの買い目があるのに俺たち目欄が空の間だけ知らせる
