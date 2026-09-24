@@ -3112,3 +3112,29 @@ body.v2:not(.ln-name) .rb-line .nb-nm { display: none; }
 body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 /* ⚠️②サブ予想（NEXT）だけは太らせない（8/13 FB）＝枠が182pxしかなく、6px枠だと内側の
    白エリアが12px削れて俺たち目や買い目が改行される。ここは情報量が枠の見栄えより優先 */
+
+/* ══════════ note予想の燃える枠（9/25 Naoto・🧪試作＝URLに &nfire=1 / &nfire=all のときだけ class が付く） ══════════
+   枠（メンバーカラーの6px線）はそのまま、内側に橙〜赤の光を重ねて不規則に揺らめかせる＝炎のゆらぎ。
+   ・内側の光（::after・inset shadow）＝パネル自身の overflow:hidden に切られない。中身の上に乗るが pointer-events なし・
+     光は端の十数pxだけ＝買目チップは読める
+   ・外側の光（box-shadow）＝親の overflow で一部切れることがある（それでも内側だけで成立する作り）
+   ・揺らめき＝明るさの違う5コマを 1.7s で不規則に（steps でなく ease＝ちらつきでなく揺れ）。色味は 3.1s でゆっくり黄⇔赤 */
+.panel.note-fire { box-shadow: 0 0 14px 2px rgba(255, 110, 20, .75), 0 0 28px 6px rgba(255, 60, 0, .35); }
+.panel.note-fire::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  box-shadow: inset 0 0 10px 3px rgba(255, 190, 60, .95), inset 0 0 26px 8px rgba(255, 90, 0, .7);
+  animation: nfire-flicker 1.7s ease-in-out infinite, nfire-hue 3.1s ease-in-out infinite alternate;
+}
+@keyframes nfire-flicker {
+  0%   { opacity: .75; }
+  18%  { opacity: 1; }
+  34%  { opacity: .6; }
+  52%  { opacity: .95; }
+  71%  { opacity: .7; }
+  86%  { opacity: 1; }
+  100% { opacity: .75; }
+}
+@keyframes nfire-hue {
+  from { filter: hue-rotate(-12deg) saturate(1.1); }
+  to   { filter: hue-rotate(14deg) saturate(1.3); }
+}

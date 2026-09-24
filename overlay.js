@@ -41,6 +41,11 @@
      レース映像に重ねる案は映像利用の条件で不可・予想帯208pxは伸ばせないため他に置き場がない。
      &ln=0 で苗字なし（買い目が元の高さに戻る）へ即ロールバックできる */
   var LINE_NAMES = params.get("ln") !== "0";
+  /* note予想レースの予想枠を「燃えるように光る枠」に（9/25 Naoto・🧪試作＝既定OFF）。
+     &nfire=1 …note予想の枠だけ点灯（本番化するときの挙動）／&nfire=all …配信者のいる枠を全部点灯（見た目確認用）。
+     付けなければ class も付かない＝本番のOBS（URLにnfire無し）の挙動は1文字も変わらない。
+     判定＝②③は操作中のメインレースの isNote（見出しの🔥と同じ基準）／①トークは表示中の1〜3場のどれかが note */
+  var NFIRE = params.get("nfire") || "";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
@@ -1316,6 +1321,12 @@
           bandHead.style.color = "";
           bandHead.classList.remove("txt-edge");
           if (bandHead.parentElement) bandHead.parentElement.style.borderColor = "";
+        }
+        if (NFIRE && bandHead.parentElement) { // 🧪燃える枠（試作・&nfire=）
+          var fireOn = !!rc && (NFIRE === "all" || (bp === "tband-"
+            ? talkKeys.some(function (tk) { var tp = window.Derive.resolvePred(state, tk, rc.id); return !!(tp && tp.entry.isNote); })
+            : isNote));
+          bandHead.parentElement.classList.toggle("note-fire", fireOn);
         }
         fitBandHead(bandHead); // 名前＋バッジ＋投資/回収が1行に収まるよう自動縮小
         var band = $(bp + "pred-" + slot);
