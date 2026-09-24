@@ -429,8 +429,4 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 #res-order, #res-order2 { width: 10em; }
 /* 「3連単以外の場合」は同着ボタンの下（9/25）＝上下の間隔だけ詰める */
 .exp.btn-sum { margin-top: 8px; }
-/* 場・レースの場ボタンも1行・高さ半分（9/25 Naoto）＝予想入力の入力先と同じ形「熊本☀ 1R F2」。
-   ⚠️@media (min-width:960px) の .vbtn { padding:12px } より id 指定が強い＝両方の幅で効く */
-/* 4場並ぶと「熊本☀ 1R F2」が1ボタン約135pxに入らず折り返した＝場名18px・R/グレード14px・左右の余白を詰めて折り返し禁止 */
-#venue-row .vbtn { padding: 5px 6px; line-height: 1.25; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-#venue-row .vbtn small { display: inline; margin: 0 0 0 6px; font-size: 14px; }
+/* 場・レースの場ボタンの1行化（9/25 127ba8c）は同日 Naoto「2行バージョンに戻して」で撤回＝2行のまま */
