@@ -1156,7 +1156,7 @@
     state.cfg.autoAlign = $("cfg-autoalign").checked; // 8/9 FB96
     state.noteRaces = $("note-races").value.split(/\r?\n/)
       .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
-    state.campaignCount = $("campaign-count").value === "" ? null : +$("campaign-count").value;
+    // 応募人数は9/24からキャンペーンカードの「保存」で保存する（ここでは読まない）
     ensureTalkRaces(); // 場の構成が変わったら表示場リストを整える
     ensureSubDefaults(); // 配信者・場が変わったらサブ未設定の席を既定＝ONで埋める（9/9・項100）
     save();
@@ -1250,6 +1250,17 @@
     save();
     renderAll();
   }
+  /* キャンペーンカード（9/24 Naoto＝本日設定から独立）。この欄だけを保存＝本日設定フォームは読まない。
+     空欄＝バナー非表示（null）。Enterでも保存 */
+  function saveCampaign() {
+    if (!state) return;
+    var v = $("campaign-count").value;
+    state.campaignCount = v === "" ? null : Math.max(0, +v || 0);
+    save();
+    renderAll();
+  }
+  $("btn-save-campaign").addEventListener("click", saveCampaign);
+  $("campaign-count").addEventListener("keydown", function (e) { if (e.key === "Enter") saveCampaign(); });
   $("btn-camp-plus").addEventListener("click", function () { campQuickAdd(1); });
   $("btn-camp-minus").addEventListener("click", function () { campQuickAdd(-1); });
 

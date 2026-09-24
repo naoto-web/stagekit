@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260924-212823">
+<link rel="stylesheet" href="console.css?v=20260924-213800">
 </head>
 <body>
 
@@ -162,7 +162,7 @@
 <!-- ══════════ 本日設定 ══════════ -->
 <details class="card" id="setup-card">
   <summary><h2>本日設定</h2></summary>
-  <label class="lbl">本日の場（タイムテーブルから2〜4つ選択・枠の切替帯は3〜4場可）</label>
+  <label class="lbl">本日の場</label>
   <div class="venue-pick" id="venue-pick"></div>
   <!-- グレード表示の入力欄は9/24 Naoto「使ってないのでコンソール上の表示は不要」で admin-only に（&admin=1 でだけ見える）。
        ⚠️DOMから消さない＝saveSettings が .grade-inp を読み戻して state.grade に書くため。
@@ -170,11 +170,8 @@
   <div id="grade-inputs" class="admin-only"></div>
   <div class="hint admin-only">グレード表示＝②レース観戦の映像枠に出る小バッジ。**場を選ぶと自動で入ります**（オッズパークから取得・手で書き換えOK・空欄なら非表示）</div>
 
-  <label class="lbl">本日のnote勝負レース（1行に1件・最大8行。画面上部のバナーに常時表示＝①②共通・空欄なら非表示。行に配信者名を書くとメンバーカラーで、場名を書くとグレードバッジが自動で付く）</label>
+  <label class="lbl">本日のnote勝負レース</label>
   <textarea id="note-races" class="inp" rows="5" placeholder="例）えーす 別府3・6レース&#10;しょーた 別府2・4レース"></textarea>
-
-  <label class="lbl">本日のキャンペーン応募人数（バナー時計の左に表示・空欄なら非表示）</label>
-  <input type="number" id="campaign-count" class="inp slim" placeholder="例）12">
 
   <label class="lbl">配信者：席1＝左カメラ／席2＝右カメラ。座らない席は「なし」</label>
   <div class="row gap">
@@ -212,6 +209,19 @@
   <button class="btn" id="btn-save-settings">設定を保存</button>
 </details>
 
+<!-- ══════════ キャンペーン ══════════
+     9/24 Naoto＝応募人数を本日設定から独立したカードへ。保存はこのカードの「保存」ボタン（Enterでも可）だけ＝
+     本日設定の「設定を保存」はもう応募人数を読まない（別カードの未保存入力を巻き込まないため）。
+     配信中の増減は従来どおり「場・レース」見出しの＋1/−1 -->
+<details class="card" id="campaign-card">
+  <summary><h2>キャンペーン</h2></summary>
+  <label class="lbl">本日のキャンペーン応募人数（バナー時計の左に表示・空欄なら非表示）</label>
+  <div class="row gap">
+    <input type="number" id="campaign-count" class="inp slim" placeholder="例）12">
+    <button class="btn" id="btn-save-campaign">保存</button>
+  </div>
+</details>
+
 <!-- 「広告・待機シーン」カードは撤去（8/27 Naoto「シーン削除済み」）。
      ④待機・⑤広告は8/12にOBSから削除済み＝編集する画面が存在しない。
      ⚠️本日設定の名簿・締切と違い、専用の保存ボタン（btn-save-assets）で完結していた欄＝
@@ -238,11 +248,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260924-212823" data-au="banner"></script>
-<script src="config.js?v=20260924-212823"></script>
-<script src="keirin.js?v=20260924-212823"></script>
-<script src="derive.js?v=20260924-212823"></script>
-<script src="sync.js?v=20260924-212823"></script>
-<script src="console.js?v=20260924-212823"></script>
+<script src="autoupdate.js?v=20260924-213800" data-au="banner"></script>
+<script src="config.js?v=20260924-213800"></script>
+<script src="keirin.js?v=20260924-213800"></script>
+<script src="derive.js?v=20260924-213800"></script>
+<script src="sync.js?v=20260924-213800"></script>
+<script src="console.js?v=20260924-213800"></script>
 </body>
 </html>
