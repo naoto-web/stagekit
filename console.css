@@ -217,6 +217,11 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .pf-body .pf-text { resize: none; overflow-y: hidden; white-space: pre; }
 .pf-body .pf-info { margin-top: 0; padding-top: 8px; font-size: 14px; line-height: 1.6; min-width: 0; }
 .pf-body .pl-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 買目の欄の文字を1.5倍（9/25 Naoto）＝14→21px（≥960pxは15→22px・@media 側）。
+   ⚠️右の読み取り結果（.pf-info）は行の高さだけそろえる＝行ごとの「〇点」が買目の行と横に並ぶ前提 */
+.pf-body .pf-text { font-size: 21px; }
+/* 右の「〇点」は字を大きくしない（幅を食って買目の欄が狭くなる＝長い行が切れた）。行の高さだけ買目の欄と同じにする（21px×1.6） */
+.pf-body .pf-info { line-height: 33.6px; }
 @media (max-width: 520px) { #pred-forms { grid-template-columns: 1fr; } }
 .parse-total { margin-top: 4px; font-size: 13px; font-weight: 900; color: #e8e8ec; }
 .pred-opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
@@ -401,6 +406,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   .pred-form h3 { font-size: 16px; }
   .parse-info { font-size: 13px; }
   .pf-body .pf-info { font-size: 15px; padding-top: 10px; } /* ≥960px の .inp（15px・padding 9px）とそろえる */
+  .pf-body .pf-text { font-size: 22px; } /* 9/25 1.5倍（15→22px） */
+  .pf-body .pf-info { line-height: 35.2px; } /* 買目の欄の行の高さ（22px×1.6）にそろえる */
   .parse-total { font-size: 15px; }
   .unit-warn { font-size: 13px; }
 
