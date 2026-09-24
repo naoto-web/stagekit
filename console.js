@@ -1103,6 +1103,109 @@
     renderHitAdmin();
   });
 
+  /* ---------- note勝負レース（9/25 Naoto＝自由記述→クリック式） ----------
+     本日の配信者ごとに「名前（メンバーカラー）→本日の場→レース番号のチップ」を並べ、押すとメンバーカラーで塗る。
+     🔑保存先は従来どおり state.noteRaces の文章＝「えーす 別府3・6レース」を1行＝1商品で生成する。
+       配信画面のバナー（overlay.js renderVenueTabs）と予想入力のnoteチェック既定ON（isNoteRaceDefault）は無改修で読める。
+     🔑1商品の単位＝**場ごと**（9/25 Naoto選択）＝同じ人・同じ場で選んだレースは1行にまとまる
+       （バナーはその行の最後のレースの次のレースが発走したら行ごと消す＝従来の仕様のまま）。
+     ⚠️今の席にいない人の行・この形で読めない行（メモ・複数場の1行など）は**消さずにそのまま残す**
+       ＝昼の人が入れた行は夜の人が操作しても消えない。並びは「残した行→今の配信者の行」。
+     押した瞬間に保存（本日設定の「設定を保存」は読まない） */
+  function noteParse() {
+    var roster = (state.roster || []).filter(function (r) { return r && r.name; });
+    var cur = {};
+    (state.racers || []).forEach(function (rc) { cur[rc.name] = rc; });
+    var venues = (state.venues || []).map(function (v) { return v.name; });
+    var sorted = venues.slice().sort(function (a, b) { return b.length - a.length; });
+    var model = {}, keep = [];
+    String(state.noteRaces || "").split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean).forEach(function (l) {
+      var hit = window.Derive.matchRacer(l, roster);
+      if (!hit || !cur[hit.name]) { keep.push(l); return; }
+      var rest = window.Derive.stripName(l, hit.name).trim();
+      var venue = null;
+      for (var i = 0; i < sorted.length; i++) { if (rest.indexOf(sorted[i]) === 0) { venue = sorted[i]; break; } }
+      if (!venue) { keep.push(l); return; }
+      var half = rest.slice(venue.length)
+        .replace(/[０-９]/g, function (c) { return String("０１２３４５６７８９".indexOf(c)); })
+        .split("レース").join(" ");
+      if (!/^[\s0-9rRｒＲ・.．,，、]*$/.test(half) || !/\d/.test(half)) { keep.push(l); return; }
+      var m = model[hit.name] || (model[hit.name] = {});
+      var set = m[venue] || (m[venue] = {});
+      (half.match(/\d+/g) || []).forEach(function (n) { set[+n] = 1; });
+    });
+    return { model: model, keep: keep };
+  }
+  function noteBuild(parsed) {
+    var lines = parsed.keep.slice();
+    (state.racers || []).forEach(function (rc) {
+      var m = parsed.model[rc.name] || {};
+      (state.venues || []).forEach(function (v) {
+        var nums = Object.keys(m[v.name] || {}).map(Number).sort(function (a, b) { return a - b; });
+        if (nums.length) lines.push(rc.name + " " + v.name + nums.join("・") + "レース");
+      });
+    });
+    return lines.join("\n");
+  }
+  function renderNotePick() {
+    var el = $("note-pick");
+    if (!el || !state) return;
+    if (!state.racers.length || !state.venues.length) {
+      el.innerHTML = '<div class="hint">配信者と本日の場を選ぶと、ここにレースが出ます</div>';
+      return;
+    }
+    var parsed = noteParse();
+    var now = nowSec();
+    el.innerHTML = state.racers.map(function (rc) {
+      var mc = window.Derive.colorOf(rc.color);
+      var m = parsed.model[rc.name] || {};
+      return '<div class="np-person">' +
+        '<div class="np-name"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + "</div>" +
+        state.venues.map(function (v) {
+          var set = m[v.name] || {};
+          var races = venueRaces(v.name);
+          return '<div class="np-venue"><span class="np-vname">' + esc(v.name) + kubunMarkHtml(v.name) + "</span>" +
+            '<div class="np-races">' +
+            (races.length ? races.map(function (r) {
+              var on = !!set[r.no];
+              var st = timeToSec(r.start);
+              var done = st !== null && st + 120 <= now; // 発走済み＝薄く（押せる）
+              return '<button type="button" class="np-rc' + (on ? " on" : "") + (done ? " done" : "") + '"' +
+                ' data-n="' + esc(rc.name) + '" data-v="' + esc(v.name) + '" data-r="' + r.no + '"' +
+                (on && mc ? ' style="background:' + mc + ';border-color:' + mc + '"' : "") + ">" + r.no + "R</button>";
+            }).join("") : '<span class="hint">レース未取得</span>') +
+            "</div></div>";
+        }).join("") +
+        "</div>";
+    }).join("") +
+      // 残している行（今の席にいない人の行・読めない行）＝そのまま残す。✕で消せる（今は自由記述が無いので消す手段をここに置く）
+      (parsed.keep.length ? '<div class="np-keep"><div class="lbl">ほかの行（今の配信者以外・そのまま残しています）</div>' +
+        parsed.keep.map(function (l, i) {
+          return '<span class="np-kline">' + esc(l) + '<button type="button" class="np-kdel" data-k="' + i + '" title="この行を消す">✕</button></span>';
+        }).join("") + "</div>" : "");
+    el.querySelectorAll(".np-rc").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var pr = noteParse();
+        var n = b.getAttribute("data-n"), v = b.getAttribute("data-v"), r = +b.getAttribute("data-r");
+        var m = pr.model[n] || (pr.model[n] = {});
+        var set = m[v] || (m[v] = {});
+        if (set[r]) delete set[r]; else set[r] = 1;
+        state.noteRaces = noteBuild(pr);
+        save();
+        renderAll();
+      });
+    });
+    el.querySelectorAll(".np-kdel").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var pr = noteParse();
+        pr.keep.splice(+b.getAttribute("data-k"), 1);
+        state.noteRaces = noteBuild(pr);
+        save();
+        renderAll();
+      });
+    });
+  }
+
   /* ---------- 本日設定 ---------- */
   function renderSettings() {
     var el = $("venue-pick");
@@ -1167,7 +1270,7 @@
     $("cfg-autoresults").checked = adminOn ? !!state.cfg.autoResults : true;
     $("cfg-autoscene").checked = adminOn ? state.cfg.autoScene !== false : true;
     $("cfg-autoalign").checked = adminOn ? state.cfg.autoAlign !== false : true;
-    $("note-races").value = state.noteRaces || "";
+    renderNotePick(); // note勝負レース＝クリック式（9/25）
     $("campaign-count").value = (state.campaignCount === null || state.campaignCount === undefined) ? "" : state.campaignCount;
   }
 
@@ -1198,8 +1301,7 @@
     state.cfg.autoResults = $("cfg-autoresults").checked;
     state.cfg.autoScene = $("cfg-autoscene").checked; // 8/9 FB95
     state.cfg.autoAlign = $("cfg-autoalign").checked; // 8/9 FB96
-    state.noteRaces = $("note-races").value.split(/\r?\n/)
-      .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
+    // note勝負レースは9/25からクリック式＝押した瞬間に保存（ここでは読まない）
     // 応募人数は9/24からキャンペーンカードの「保存」で保存する（ここでは読まない）
     ensureTalkRaces(); // 場の構成が変わったら表示場リストを整える
     ensureSubDefaults(); // 配信者・場が変わったらサブ未設定の席を既定＝ONで埋める（9/9・項100）
@@ -1843,7 +1945,7 @@
     return why;
   }
   function cuUnsaved() { return !!cuUnsavedWhy(); }
-  if (CU_DEBUG) window.__cu = { own: CU_OWN, typing: cuTyping, unsaved: cuUnsaved, why: cuUnsavedWhy };
+  if (CU_DEBUG) window.__cu = { own: CU_OWN, typing: cuTyping, unsaved: cuUnsaved, why: cuUnsavedWhy, state: function () { return state; }, render: function () { renderAll(); } };
   function cuTarget(v) { // 今のパラメータ（key 等）を保ったまま v だけ差し替える。検証用の cuown は落とす＝ループしない
     var p2 = new URLSearchParams(location.search);
     p2.set("v", v);
