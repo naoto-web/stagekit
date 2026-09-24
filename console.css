@@ -199,6 +199,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .pred-narabi .pn-none { font-size: 13px; color: #6d7480; }
 .pred-narabi .pn-manual { font-size: 11px; font-weight: 700; color: #d9a441; border: 1px solid #d9a441; border-radius: 4px; padding: 0 4px; }
 .pred-narabi .pn-group { display: inline-flex; gap: 2px; }
+/* ラインとラインの間＝バッジ1個分（26px）空ける（9/25 Naoto）＝親の gap 10px＋16px */
+.pred-narabi .pn-group + .pn-group { margin-left: 16px; }
 .pred-narabi .pn-car { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
   border-radius: 4px; font-style: normal; font-size: 17px; font-weight: 900; border: 1px solid transparent; }
 .pn-car.c1 { background: #fff; color: #16181c; }

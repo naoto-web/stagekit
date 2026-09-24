@@ -597,7 +597,14 @@
     /* note予想にチェックが入っている間は「3R」の右（丸枠の中）に🔥（9/24 Naoto）。
        チェックの操作で即座に出し入れする（保存前から）＝下の change ハンドラが .off を付け外しする */
     var raceTag = function (isNote) { return raceTagHtml(key, isNote, true); };
-    wrap.innerHTML = state.racers.map(function (rc, idx) {
+    /* カードの左右＝席の左右（9/25 Naoto「席替えしたら予想入力も入れ替わるように」）。
+       席a＝左カメラ・席b＝右カメラ。seat が無い旧データは並び順で1人目＝a（席替えボタン・renderSwitcher と同じ式）。
+       ⚠️並べ替えるのは表示だけ＝state.racers の順は触らない。idx（見出し色の既定・水色/赤）は元の並び順のまま */
+    var seatOf = function (r, i) { return (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b"); };
+    var ordered = state.racers.map(function (rc, i) { return { rc: rc, i: i, s: seatOf(rc, i) }; })
+      .sort(function (x, y) { return x.s === y.s ? x.i - y.i : (x.s < y.s ? -1 : 1); });
+    wrap.innerHTML = ordered.map(function (o) {
+      var rc = o.rc, idx = o.i;
       var mc = window.Derive.colorOf(rc.color);
       var saved = race.byRacer && race.byRacer[rc.id]; // 保存済みエントリの有無＝note既定判定に使う（FB117）
       var p = saved || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
@@ -718,10 +725,21 @@
 
   /** 買目欄の高さを中身に合わせる（9/25）＝欄内でスクロールさせない＝右列の読み取り結果と行がずれない。
       最低は rows="5" ぶん（height:auto に戻すと rows の高さになる） */
-  function fitPredText(ta) {
-    ta.style.height = "auto";
-    var bw = ta.offsetHeight - ta.clientHeight; // 上下の枠線（＋横スクロールバー）
-    ta.style.height = (ta.scrollHeight + bw) + "px";
+  /* 9/25 Naoto「隣のカードは全体でなく同じ買目欄が伸びる形に」＝左右に並んだカードの買目欄は高さをそろえる
+     （長い方に合わせる）。同じ行に並んでいるか＝カードの上端が同じか で判定＝縦積み（狭い画面）ではそろえない。
+     引数は互換のため残す（どのカードから呼ばれても全カードを測り直す） */
+  function fitPredText() {
+    var tas = Array.prototype.slice.call(document.querySelectorAll("#pred-forms .pf-text"));
+    var need = tas.map(function (ta) {
+      ta.style.height = "auto";
+      var bw = ta.offsetHeight - ta.clientHeight; // 上下の枠線（＋横スクロールバー）
+      return ta.scrollHeight + bw;
+    });
+    tas.forEach(function (ta, i) {
+      var top = ta.closest(".pred-form").offsetTop, h = need[i];
+      tas.forEach(function (tb, j) { if (tb.closest(".pred-form").offsetTop === top) h = Math.max(h, need[j]); });
+      ta.style.height = h + "px";
+    });
   }
 
   function updatePredInfo(form, key) {
