@@ -51,7 +51,8 @@
      判定＝②③は操作中のメインレースの isNote（見出しの🔥と同じ基準）／①トークは表示中の1〜3場のどれかが note */
   // 9/25 Naoto「俺のOBSのテスト画面で確認したい」＝テストGAS（?gas=）に繋いでいるときだけ既定で &nfire=1 相当。
   // 本番（?gas= なし）は既定OFFのまま。&nfire=0 で明示的に消せる
-  var NFIRE = params.get("nfire") || ((window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) ? "1" : "");
+  // 9/25 Naoto「本番反映お願いします」＝本番も既定ON（試作→本番）。&nfire=0 で消せる・&nfire=all は全枠点灯の確認用
+  var NFIRE = params.get("nfire") || "1";
   if (NFIRE === "0") NFIRE = "";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
@@ -1233,7 +1234,8 @@
      ・見出しの幅はカウントアップの最終値で先に fitBandHead する＝途中で縮小が動いて字が跳ねない
      ・ピコーンは見出しの上に浮かべる別要素（.refpop・body直下）＝パネルの overflow:hidden に切られず、見出しの幅も動かさない
      状態は配信者ごと（refAnim[配信者id]）＝席が変わっても追える。表示先は実行時に seatMap() で引く */
-  var REFPOP = params.get("refpop") || ((window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) ? "1" : "");
+  // 9/25 Naoto「本番反映お願いします」＝本番も既定ON（試作→本番）。&refpop=0 で消せる
+  var REFPOP = params.get("refpop") || "1";
   if (REFPOP === "0") REFPOP = "";
   var REFPOP_COUNT_MS = 3000, REFPOP_AFTER_BADGE_MS = 500, REFPOP_POP_LEAD_MS = 4000; // 9/25 Naoto＝カウント3倍ゆっくり（1000→3000）／カウント開始は「＋¥」が消える1秒前（CSS 5s−1s＝4000・350→700→4000）
   var refAnim = {}; // 配信者id → { shown: 最後に見せた回収額(数値・未確定はnull), text: 見出しに出している文字列, target, waiting, running }
