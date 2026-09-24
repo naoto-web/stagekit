@@ -151,6 +151,7 @@ var TODAY = (function () {
     var tbl = el('div', 'racers');
     tbl.appendChild(racerHeader());
     var ord = lineOrder(r.racers, lines);
+    var scoreRank = scoreRanks(r.racers);
     ord.forEach(function (it) {
       var s = it.s;
       // ラインの切れ目に区切り線（最初のラインの上には引かない）
@@ -184,7 +185,8 @@ var TODAY = (function () {
 
       row.appendChild(el('span', 'racer-kyuhan', s.kyuhan || ''));
       row.appendChild(el('span', 'racer-kyaku', s.kyaku || ''));
-      row.appendChild(el('span', 'racer-score', s.score || ''));
+      var sr = scoreRank[s.no];
+      row.appendChild(el('span', 'racer-score' + (sr === 1 ? ' is-top1' : sr === 2 ? ' is-top2' : ''), s.score || ''));
 
       // 直近4ヶ月成績。0は薄くして、数字のあるところが目に入るようにする
       // 🔴スマホでは出さない（§35-4）＝10列で551px要るので横スクロールなしに収まらない。
@@ -245,6 +247,27 @@ var TODAY = (function () {
       ⚠️並びに載っていない車（欠車・並び予想の漏れ）は**末尾に車番順**で足す＝黙って消さない。
       ⚠️「車番順／並び順」の切り替えは付けていない（Naoto合意）＝Yが車番順を求めたら足す。
       返り＝[{ s:選手, lineStart:このラインの先頭で、かつ最初のラインではない }] */
+  /** 競走得点の順位（1＝最高・2＝2番目。それ以外は印なし）＝車番→順位（§49・2026-09-24 Naoto）。
+      画面は 1位＝赤／2位＝青／他は白。
+      🔑**同点は同じ順位**（同点で最高が2人なら2人とも赤、青はその次の値）＝同じ数字に違う色を付けない。
+      ⚠️得点が空・数字でない車は数えない（新人の得点なし等）。 */
+  function scoreRanks(racers) {
+    var vals = [];
+    (racers || []).forEach(function (s) {
+      var v = parseFloat(s.score);
+      if (!isNaN(v) && vals.indexOf(v) < 0) vals.push(v);
+    });
+    vals.sort(function (a, b) { return b - a; });
+    var map = {};
+    (racers || []).forEach(function (s) {
+      var v = parseFloat(s.score);
+      if (isNaN(v)) return;
+      if (v === vals[0]) map[s.no] = 1;
+      else if (vals.length > 1 && v === vals[1]) map[s.no] = 2;
+    });
+    return map;
+  }
+
   function lineOrder(racers, lines) {
     var list = racers || [];
     if (!lines || !lines.length) return list.map(function (s) { return { s: s, lineStart: false }; });

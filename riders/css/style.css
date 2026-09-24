@@ -311,7 +311,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .racer-name-main { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .racer-sub { font-size: 10px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .racer-kyuhan, .racer-kyaku { font-size: 11px; color: var(--fg-dim); }
-.racer-score { font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; text-align: right; }
+/* 競走得点（§49・2026-09-24 Naoto）＝基本は白・レース内の1位を赤・2位を青（見出し「得点」も白）。
+   ⚠️色は変数（--ng／--accent）＝白背景では濃い赤・濃い青に切り替わる（§27の約束）。
+   🔑旧は全員を金色にしていた＝色が「得点の欄」を示すだけで、誰が上かは読めなかった。 */
+.racer-score { font-size: 12px; color: var(--fg); font-variant-numeric: tabular-nums; text-align: right; }
+.racer-score.is-top1 { color: var(--ng); }
+.racer-score.is-top2 { color: var(--accent); }
 .racer-role { font-size: 10px; color: var(--role-fg); text-align: right; }
 /* 直近4ヶ月成績の数字。0は薄くして、値のあるところだけ目に入るようにする */
 .n { font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }

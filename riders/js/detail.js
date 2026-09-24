@@ -515,7 +515,8 @@ var DETAIL = (function () {
     // 列の型は種別の表と同じ1か所（rankCols）から＝縦に並べたとき、1着・2着…の列がぴたり重なる
     box.style.gridTemplateColumns = rankCols(nCol);
 
-    var lab = el('div', 'split-label' + (opts.cur ? ' is-cur' : '') + (opts.label ? ' is-strong' : ''),
+    // 🔑今日でない戦法は**タイトル（「二分戦」）もグレー**（§49・Naoto）＝is-strong を付けない（.split-label の既定がグレー）
+    var lab = el('div', 'split-label' + (opts.cur ? ' is-cur' : '') + (opts.label && !opts.off ? ' is-strong' : ''),
       (opts.label || '着順') + (opts.cur ? ' ◀ 今日' : ''));
     if (opts.showN) lab.appendChild(el('span', 'split-n', rs.n + '走'));
     box.appendChild(lab);
@@ -787,6 +788,7 @@ var DETAIL = (function () {
       roleKey: roleKey,
       title: 'グレード（記念以上）',
       corner: '段階',
+      cornerDim: true,     // 「段階」はグレー（§49・Naoto）。種別の「種別」は白のまま
       cur: (isG && ctx.cls && window.RACETYPE) ? (RACETYPE.gradeStageOf(ctx.cls) || '') : ''
     });
   }
@@ -820,7 +822,7 @@ var DETAIL = (function () {
     box.style.gridTemplateColumns = nar
       ? '72px repeat(4, minmax(0, 1fr))'
       : rankCols(nCol);
-    box.appendChild(el('div', 'split-label is-strong', opts.corner));
+    box.appendChild(el('div', 'split-label' + (opts.cornerDim ? '' : ' is-strong'), opts.corner));
     if (nar) {
       ['1着', '2着', '3着', '4着以下'].forEach(function (t) { box.appendChild(el('div', 'split-h', t)); });
     } else {
