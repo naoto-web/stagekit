@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260924-210314">
+<link rel="stylesheet" href="console.css?v=20260924-212209">
 </head>
 <body>
 
@@ -43,11 +43,19 @@
   </div>
   <!-- 席替えは配信中に使う操作＝本日設定の中だけでなく常時見える位置にも置く（8/8 FB74・押すと即確定）。
        8/29 FB150＝見出し行の小さなボタンでは押し忘れる（休憩明けの席交代が発生源）ため、
-       カード先頭の全幅ボタンへ格上げ。⚠️idは変えない（検証ハーネスがidで叩く） -->
-  <button class="btn seat-swap" id="btn-seat-swap-quick" title="席1（左カメラ）と席2（右カメラ）を入れ替えて即保存（もう一度押すと元に戻る）">
-    <span class="ss-main" id="seat-swap-label">⇄　席替え</span>
-    <span class="ss-sub" id="seat-swap-sub">左右のカメラを入れ替える</span>
-  </button>
+       カード先頭の全幅ボタンへ格上げ。⚠️idは変えない（検証ハーネスがidで叩く）。
+       9/24 Naoto＝席替えを右半分に寄せ、左半分に「現在のスイッチャー（＝配信者2・席2の人）」の表示枠。
+       枠は押せない表示だけ（塗り＝その人のメンバーカラー・console.js の renderSwitcher） -->
+  <div class="seat-row">
+    <div class="switcher empty" id="switcher-box">
+      <span class="sw-lbl">現在のスイッチャー</span>
+      <span class="sw-name" id="switcher-name">なし</span>
+    </div>
+    <button class="btn seat-swap" id="btn-seat-swap-quick" title="席1（左カメラ）と席2（右カメラ）を入れ替えて即保存（もう一度押すと元に戻る）">
+      <span class="ss-main" id="seat-swap-label">⇄　席替え</span>
+      <span class="ss-sub" id="seat-swap-sub">左右のカメラを入れ替える</span>
+    </button>
+  </div>
   <div class="venue-row" id="venue-row"></div>
   <div class="race-chip-grid" id="race-chips"></div>
   <!-- 並び順＝シーン番号どおり①→②（8/27 FB142・Naoto指定）。
@@ -227,11 +235,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260924-210314" data-au="banner"></script>
-<script src="config.js?v=20260924-210314"></script>
-<script src="keirin.js?v=20260924-210314"></script>
-<script src="derive.js?v=20260924-210314"></script>
-<script src="sync.js?v=20260924-210314"></script>
-<script src="console.js?v=20260924-210314"></script>
+<script src="autoupdate.js?v=20260924-212209" data-au="banner"></script>
+<script src="config.js?v=20260924-212209"></script>
+<script src="keirin.js?v=20260924-212209"></script>
+<script src="derive.js?v=20260924-212209"></script>
+<script src="sync.js?v=20260924-212209"></script>
+<script src="console.js?v=20260924-212209"></script>
 </body>
 </html>

@@ -1204,6 +1204,26 @@
     seatSwapTimer = setTimeout(resetSeatSwapLabel, 2000);
   });
 
+  /* 現在のスイッチャー（9/24 Naoto）＝席替えボタンの左に「現在のスイッチャー／〇〇」の枠。
+     スイッチャー＝配信者2＝席2（右カメラ・seat b）に座っている人。塗りはその人のメンバーカラー。
+     席替えで席が入れ替わればこの表示も入れ替わる（seat を読むだけ＝席替えの処理側は無改造）。
+     席の既定（seat が無い旧データは並び順で1人目＝a・2人目＝b）は席替えボタンと同じ式。
+     席2が空席（1人配信で席1に座っている等）のときは「なし」を灰色で出す */
+  function renderSwitcher() {
+    var box = $("switcher-box"), nm = $("switcher-name");
+    if (!box || !nm || !state) return;
+    var who = null;
+    (state.racers || []).forEach(function (r, i) {
+      var st = (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b");
+      if (st === "b" && !who) who = r;
+    });
+    var mc = who ? window.Derive.colorOf(who.color) : "";
+    nm.textContent = who ? who.name : "なし";
+    box.classList.toggle("empty", !who);
+    box.style.background = mc || "";
+    box.style.borderColor = mc || "";
+  }
+
   /* キャンペーン応募人数のクイック増減（8/9 FB98）：配信中に応募が入るたび更新する運用のため、
      本日設定を開かず「場・レース」カード見出しの＋1/−1で1タップ確定（席替えクイックFB74と同じ
      即時保存・本日設定フォームは読まない）。現在人数も隣に常時表示。
@@ -1657,6 +1677,7 @@
     if (ensureSubDefaults()) save(); // 安全網（時刻表の到着後など）。save() は renderAll を呼ばないので再帰しない
     renderVenueRow();
     renderCampQuick();
+    renderSwitcher();
     renderRaceChips();
     renderRaceSubRow();
     renderPredTarget();

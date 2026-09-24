@@ -69,6 +69,19 @@ body {
 .btn.seat-swap .ss-main { font-size: 19px; font-weight: 900; letter-spacing: .06em; }
 .btn.seat-swap .ss-sub { font-size: 11px; font-weight: 700; opacity: .72; }
 .btn.seat-swap.done { background: #37d67a; border-color: #37d67a; color: #06240f; }
+/* 9/24 左半分＝現在のスイッチャー（配信者2）／右半分＝席替え。2つは同じ高さ・同じ角丸。
+   スイッチャー枠の塗りはJSがメンバーカラーを直接入れる。メンバーカラーはどれも明るめ（黄色もある）なので字は黒。
+   ⚠️席替えは幅だけ半分に変える＝色・押した後の緑（.done）は従来どおり */
+.seat-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.seat-row .btn.seat-swap { flex: 1 1 0; width: auto; margin-bottom: 0; }
+.switcher {
+  flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  padding: 11px 12px; line-height: 1.25; text-align: center;
+  border: 1px solid #4a4f59; border-radius: 10px; background: #31353d; color: #111;
+}
+.switcher .sw-lbl { font-size: 11px; font-weight: 700; opacity: .78; }
+.switcher .sw-name { font-size: 19px; font-weight: 900; letter-spacing: .04em; }
+.switcher.empty { color: #9aa0ab; }
 .h-sub { font-size: 12px; color: #9aa0ab; font-weight: 700; margin-left: 6px; }
 details.card summary { cursor: pointer; list-style: none; }
 details.card summary h2 { margin-bottom: 0; }
