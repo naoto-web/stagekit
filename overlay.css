@@ -3140,14 +3140,19 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
    字は見出しと同じ白＋黒フチ（メンバーカラーのどの背景でも読める）・「＋」の勢いは拡大→戻るの弾み */
 .refpop {
   position: absolute; z-index: 60; pointer-events: none;
-  transform: translate(-100%, -70%); transform-origin: right center; /* 右端を固定して膨らむ＝弾んだ瞬間に右のパネルへはみ出さない */
-  font-size: 66px; font-weight: 900; color: #fff; letter-spacing: .02em; white-space: nowrap; /* 9/25 44→66px（Naoto「もっと大きく」） */
+  transform: translate(-100%, -95%); transform-origin: right bottom; /* 右端を固定して膨らむ＝弾んだ瞬間に右のパネルへはみ出さない */
+  font-size: 99px; font-weight: 900; color: #fff; letter-spacing: .02em; white-space: nowrap; /* 9/25 44→66→99px（Naoto「もっと大きく」×2） */
   text-shadow: 0 0 2px #000, 0 0 6px #000, 2px 2px 0 #000, -2px 2px 0 #000, 2px -2px 0 #000, -2px -2px 0 #000;
-  animation: refpop-in 3.2s cubic-bezier(.2, .9, .3, 1) forwards; /* 9/25 1.6→3.2s（「2倍ゆっくり」） */
+  animation: refpop-in 5s cubic-bezier(.2, .9, .3, 1) forwards; /* 9/25 1.6→3.2→5s（Naoto「5秒に」） */
 }
 @keyframes refpop-in {
-  0%   { opacity: 0; transform: translate(-100%, -70%) scale(.5); }
-  14%  { opacity: 1; transform: translate(-100%, -80%) scale(1.25); }
+  /* 9/25 99pxにしたら見出しの数字（カウントアップ）に重なった＝全体を上へずらし、下端が見出しの上辺に乗る位置から始める */
+  0%   { opacity: 0; transform: translate(-100%, -95%) scale(.5); }
+  14%  { opacity: 1; transform: translate(-100%, -105%) scale(1.25); }
+  28%  { transform: translate(-100%, -103%) scale(1); }
+  70%  { opacity: 1; transform: translate(-100%, -120%) scale(1); }
+  100% { opacity: 0; transform: translate(-100%, -175%) scale(1); }
+}
   28%  { transform: translate(-100%, -78%) scale(1); }
   70%  { opacity: 1; transform: translate(-100%, -95%) scale(1); }
   100% { opacity: 0; transform: translate(-100%, -150%) scale(1); }

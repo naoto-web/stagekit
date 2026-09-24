@@ -1293,7 +1293,7 @@
       pop.textContent = "＋" + fmtYen(delta);
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
-      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 3600); // CSS 3.2s＋余裕
+      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 5400); // CSS 5s＋余裕
     });
     var t0 = Date.now() + REFPOP_POP_LEAD_MS;
     (function step() {
