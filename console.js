@@ -931,6 +931,13 @@
     renderSettlePreview();
   }
 
+  /** 払戻（100円あたり）→ 倍率の表示。1210→「12.1倍」／1200→「12.0倍」（小数1桁で桁をそろえる）。空・0は空欄 */
+  function oddsText(amount) {
+    var a = +amount || 0;
+    if (a <= 0) return "";
+    return (a / 100).toLocaleString("ja-JP", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "倍";
+  }
+
   function renderPayoutRows() {
     var el = $("payout-rows");
     el.innerHTML = payoutRows.map(function (p, i) {
@@ -938,19 +945,18 @@
         '<span class="pr-label">' + esc(p.type) + " " + esc(window.Keirin.comboLabel(p.type, p.combo)) + "</span>" +
         '<input type="number" class="inp pr-amount" data-i="' + i + '" value="' + (p.amount || "") + '" placeholder="払戻">' +
         '<span class="pr-unit">円</span>' + // 8/27 FB146＝単位を明示（上下ボタンはCSSで非表示）
-        '<button class="pr-del" data-i="' + i + '">✕</button></div>';
+        // 9/25 Naoto「✕は出さず、1210と入れたら12.1倍と出して」＝行を消す✕は撤去。
+        // 🔑打ち間違いの行は金額を空にすれば消したのと同じ＝確定は amount>0 の行しか使わない／
+        //   3連単の空行は着順を打ち直すと syncPayoutPresets が掃除する
+        '<span class="pr-odds" data-i="' + i + '">' + oddsText(p.amount) + "</span></div>";
     }).join("");
     el.querySelectorAll(".pr-amount").forEach(function (inp) {
       inp.addEventListener("input", function () {
-        payoutRows[+inp.getAttribute("data-i")].amount = +inp.value || 0;
+        var i = +inp.getAttribute("data-i");
+        payoutRows[i].amount = +inp.value || 0;
+        var od = el.querySelector('.pr-odds[data-i="' + i + '"]');
+        if (od) od.textContent = oddsText(payoutRows[i].amount);
         markResDirty();
-        renderSettlePreview();
-      });
-    });
-    el.querySelectorAll(".pr-del").forEach(function (b) {
-      b.addEventListener("click", function () {
-        payoutRows.splice(+b.getAttribute("data-i"), 1);
-        renderPayoutRows();
         renderSettlePreview();
       });
     });
