@@ -151,6 +151,20 @@
     return String(g || "").replace(/\s*(モーニング|ミッドナイト|ナイター)/g, "").trim();
   }
 
+  /* 入力先レースの丸枠「弥彦⭐ 3R🔥」（9/24 Naoto）＝予想入力の各カード見出しと結果入力の見出しで共用。
+     🔥＝note予想（勝負レース）。isNote が偽でも要素は出して .off で隠す（予想入力はチェック操作で即座に出し入れするため） */
+  function raceTagHtml(key, isNote) {
+    var parts = String(key || "").split("|");
+    return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
+      '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span></span>';
+  }
+  /** そのレースで誰か1人でも note予想（勝負レース）にチェックを入れて保存しているか（結果入力の🔥用） */
+  function raceHasNote(key) {
+    var r = key && state.preds && state.preds[key];
+    var by = (r && r.byRacer) || {};
+    return Object.keys(by).some(function (id) { return by[id] && by[id].isNote; });
+  }
+
   /* ①トーク・②サブ予想の行（9/24 Naoto）＝名前をメンバーカラーの字に／右の場ボタン群をメンバーカラーの枠で囲む／
      名前の列幅を固定して、場ボタンの並びを縦にそろえる（一番長い名前＝4文字「ピーター」「しょーた」に合わせた幅・CSSの .pr-name）。
      色が無い人は従来の灰色の字・灰色の枠 */
@@ -520,13 +534,9 @@
        色は名簿の色名（オレンジ等）を Derive.colorOf で hex にしたもの＝配信画面と同じ色。
        名簿に色が無い人は従来どおり（1人目＝水色・2人目＝赤の見出し／灰色の枠）。
        ⚠️外枠はCSS変数 --mc で渡す（style で border-color を直接書くと、未保存を示す .dirty の金枠の指定が効かなくなるため） */
-    var raceParts = key.split("|");
     /* note予想にチェックが入っている間は「3R」の右（丸枠の中）に🔥（9/24 Naoto）。
        チェックの操作で即座に出し入れする（保存前から）＝下の change ハンドラが .off を付け外しする */
-    var raceTag = function (isNote) {
-      return '<span class="pf-race">' + esc(raceParts[0]) + kubunMarkHtml(raceParts[0]) + " " + esc(raceParts[1]) + "R" +
-        '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span></span>';
-    };
+    var raceTag = function (isNote) { return raceTagHtml(key, isNote); };
     wrap.innerHTML = state.racers.map(function (rc, idx) {
       var mc = window.Derive.colorOf(rc.color);
       var saved = race.byRacer && race.byRacer[rc.id]; // 保存済みエントリの有無＝note既定判定に使う（FB117）
@@ -720,7 +730,8 @@
 
   function renderResultForm() {
     var key = resultKey(); // 入力途中は表示中のレースに固定（自動追従で巻き戻さない・FB96）
-    $("result-target").textContent = (key ? key.replace("|", " ") + "R" : "（場・レース未選択）") +
+    // 見出しのレースは予想入力と同じ丸枠（9/24 Naoto）＋誰かが note予想で保存していれば🔥
+    $("result-target").innerHTML = (key ? raceTagHtml(key, raceHasNote(key)) : "（場・レース未選択）") +
       (resDirty && key !== currentKey() ? "　📌入力途中のため固定中（レースを選ぶと切替）" : "");
     if (key !== resKeyShown) { resDirty = false; resKeyShown = key; } // レースが変わったら仕切り直し
     else if (resDirty) {                                             // 入力途中＝触らずに帰る
