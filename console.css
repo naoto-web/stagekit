@@ -161,7 +161,9 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 /* 予想入力の入力先だけの装飾（8/27 FB139）。⚠️.vbtnは上部の場切替と共用のため #pred-venue-row で閉じる。
    .live＝追従中に「いま放送中の場」を示す控えめな枠（固定中の.active＝金の塗りとは別物）。
    .unpin＝固定中だけ現れる解除ボタン（固定を外す唯一の手段） */
-#pred-venue-row .vbtn.live { border-color: #d9a441; box-shadow: inset 0 0 0 1px rgba(217, 164, 65, .35); }
+/* 9/25 Naoto「枠だけの選択なので塗りつぶしに」＝追従中の入力先も固定中（.active）と同じ金の塗り。
+   追従か固定かは「📌解除」ボタンと見出しの📌で見分ける */
+#pred-venue-row .vbtn.live { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
 #pred-venue-row .vbtn.unpin { flex: 0 0 auto; background: #2a2118; border-color: #d9a441; color: #e8c98a; }
 /* 予想入力の入力先ボタン＝「熊本☀ 1R」の1行・縦幅は約半分（9/25 Naoto）。上の場・レースの場ボタンは2行のまま */
 #pred-venue-row .vbtn { padding-top: 5px; padding-bottom: 5px; line-height: 1.25; }
@@ -239,12 +241,14 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .pred-opts.pf-ore-row { margin-top: 2px; margin-bottom: 8px; }
 .pred-opts .lbl { margin: 0; }
 /* 2人を左右に並べた細いカードでも1行に収める（9/25）：俺たち目は行の残り幅いっぱい・投資額の行は折り返さず欄だけ縮む */
-#pred-forms .pf-ore-row .lbl { flex: 1; min-width: 0; }
-#pred-forms .pf-ore { flex: 1; min-width: 0; }
+/* 俺たち目の欄は半分の幅（9/25 Naoto「広い」）＝「1-2-3」が余裕で入る8em */
+#pred-forms .pf-ore-row .lbl { flex: 0 1 auto; min-width: 0; }
+#pred-forms .pf-ore { flex: 0 1 8em; width: 8em; min-width: 4em; }
 #pred-forms .pred-opts:not(.pf-ore-row) { flex-wrap: nowrap; }
 #pred-forms .pred-opts .lbl { white-space: nowrap; }
-#pred-forms .pred-opts:not(.pf-ore-row) .lbl { flex: 1; min-width: 0; }
-#pred-forms .pf-invest { flex: 1; min-width: 3em; max-width: 8em; padding-left: 6px; padding-right: 6px; }
+/* −／＋ は「円」のすぐ右（9/25 Naoto「円と離れている」）＝見出しを伸ばさず、欄は固定幅で細いカードでは縮む */
+#pred-forms .pred-opts:not(.pf-ore-row) .lbl { flex: 0 1 auto; min-width: 0; }
+#pred-forms .pf-invest { flex: 0 1 6.5em; width: 6.5em; min-width: 3em; padding-left: 6px; padding-right: 6px; }
 #pred-forms .btn.pf-invstep { width: 32px; flex: none; }
 .unit-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffb3b3; line-height: 2; }
 /* 未保存の下書きがある予想フォーム（8/8 FB75）＝入力は保持されるが放送には出ていない状態 */
