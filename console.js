@@ -1767,6 +1767,151 @@
     }
   });
 
+  /* ---------- コンソールの自動更新（9/25 Naoto「入力中でない・未保存の予想が無いなら自動更新で大丈夫」） ----------
+     新しい版を公開したら、福岡で手動の再読み込みをしなくてもコンソールが自分で読み直す。
+     ⚠️読み直すのは「入力中でない」かつ「未保存の入力が無い」ときだけ。未保存の予想・結果はコンソールの
+       メモリにしか無く、読み直すと消えるため。条件がそろうまで5秒ごとに待ち直す（あきらめない）。
+     版の検知＝公開中の console.html を60秒ごとに取り直し、中の console.js?v=<版> と、自分が読み込んだ
+       console.js の ?v= を比べる。公開.ps1（全体）も公開_指定ファイルのみ.ps1も console.html に版を刻印する
+       ＝🔴指定ファイル公開のときは console.html を必ず一緒に上げる（上げないと版が変わらず検知しない）。
+       version.json の版は見ない＝オーバーレイの自動更新とは切り離してある。
+     安全網（autoupdate.js と同じ考え方）：同じ版への試行は2回まで・読み直しの間隔は最短120秒・
+       移動先の本文に新版の刻印があることを確かめてから移動・URLに &au=0 で無効・version.json の pause:true で停止。
+       未刻印（ローカル・検証ハーネス）と file:// では何もしない。
+     読み直した後に戻すもの＝スクロール位置・カードの開閉・予想入力の入力先固定（sessionStorage 経由）。
+     検証用＝&debug=1 のときだけ &cufast=1（初回3秒・周期5秒）と &cuown=<版>（自分の版を偽装）が効く */
+  var CU_DEBUG = params.get("debug") === "1";
+  var CU_OWN = (function () {
+    if (CU_DEBUG && params.get("cuown")) return params.get("cuown");
+    var sc = document.querySelector('script[src*="console.js"]');
+    var m = sc && /[?&]v=([0-9A-Za-z._-]+)/.exec(sc.getAttribute("src") || "");
+    return m ? m[1] : "";
+  })();
+  var CU_FAST = CU_DEBUG && params.get("cufast") === "1";
+  var cuPending = null;   // 検知した新しい版
+  var cuBusy = false;     // 移動手続きの多重起動防止
+  var cuWait = null;      // 条件待ちのタイマー（1本だけ）
+  function cuSS(k, v) {
+    try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; }
+  }
+  function cuGet(url, cb) { // タイムアウト付きGET。失敗は cb(0, "")
+    try {
+      var x = new XMLHttpRequest();
+      x.open("GET", url, true);
+      x.timeout = 10000;
+      x.onload = function () { cb(x.status, x.responseText || ""); };
+      x.onerror = x.ontimeout = x.onabort = function () { cb(0, ""); };
+      x.send();
+    } catch (e) { cb(0, ""); }
+  }
+  /** 入力中＝文字を打つ欄（テキスト・数値・テキストエリア・セレクト）にカーソルがある。チェックボックスやボタンは入力中に数えない */
+  function cuTyping() {
+    var ae = document.activeElement;
+    if (!ae) return false;
+    if (ae.tagName === "TEXTAREA" || ae.tagName === "SELECT") return true;
+    if (ae.tagName === "INPUT") return !/^(checkbox|radio|button|submit|reset|hidden)$/i.test(ae.type || "");
+    return false;
+  }
+  /** 読み直すと消える入力があるか。
+      ⚠️予想の下書き（predDrafts）は画面を描くたびに全カード分が作られる＝「下書きがある」だけでは判定できない。
+        保存値と中身が違うものだけを未保存とする（「未保存」表示＝updatePredInfo の dirty と同じ比べ方）。
+        note予想チェックだけは、保存値が無いカードでは勝負レース照合の既定値と比べる（読み直しても同じ既定値に戻るため） */
+  function cuUnsavedWhy() { // 未保存の理由（無ければ空文字）
+    if (!state) return "";
+    if (saveRunning || savePending) return "saving";         // 保存の送信中＝終わるまで待つ
+    if (resDirty) return "result";                            // 結果入力の途中
+    if (document.querySelector(".ore-guard")) return "oreguard"; // 俺たち目の確認バーが出ている
+    var why = "";
+    Object.keys(predDrafts).some(function (dk) {
+      var d = predDrafts[dk];
+      if (!d) return false;
+      var sp = dk.indexOf("\u0000"); // ⚠️draftKey の区切りは生のNUL文字（スペースに見えるが違う）
+      var key = dk.slice(0, sp), rid = dk.slice(sp + 1);
+      var saved = (((state.preds || {})[key] || {}).byRacer || {})[rid];
+      var sv = saved || {};
+      if ((d.text || "") !== (sv.text || "")) why = "text";
+      else if (String(d.invest || "") !== (sv.investInput ? String(sv.investInput) : "")) why = "invest";
+      else if (String(d.ore || "").trim() !== (sv.oreTachi || "")) why = "ore";
+      else {
+        var rc = (state.racers || []).filter(function (r) { return r.id === rid; })[0];
+        var defNote = saved ? !!saved.isNote : isNoteRaceDefault(key, rc);
+        if (!!d.note !== defNote) why = "note";
+      }
+      if (why) why += " " + dk;
+      return !!why;
+    });
+    return why;
+  }
+  function cuUnsaved() { return !!cuUnsavedWhy(); }
+  if (CU_DEBUG) window.__cu = { own: CU_OWN, typing: cuTyping, unsaved: cuUnsaved, why: cuUnsavedWhy };
+  function cuTarget(v) { // 今のパラメータ（key 等）を保ったまま v だけ差し替える。検証用の cuown は落とす＝ループしない
+    var p2 = new URLSearchParams(location.search);
+    p2.set("v", v);
+    p2.delete("cuown");
+    return location.pathname + "?" + p2.toString() + (location.hash || "");
+  }
+  function cuTry() {
+    if (!cuPending || cuBusy) return;
+    var v = cuPending;
+    var tried = parseInt(cuSS("cu_try_" + v) || "0", 10);
+    var last = parseInt(cuSS("cu_last") || "0", 10);
+    if (tried >= 2) return;                                   // 同じ版に2回失敗＝旧版のまま動き続ける
+    if (Date.now() - last < 120000) { cuLater(); return; }    // 間隔の下限
+    if (cuTyping() || cuUnsaved()) { cuLater(); return; }     // 入力中・未保存＝待ち直す
+    cuBusy = true;
+    var url = cuTarget(v);
+    cuGet(url, function (status, text) {
+      cuBusy = false;
+      // XHRの往復の間に打ち始めた・さらに新しい版が出た、なら移動しない
+      if (cuPending !== v) return;
+      if (cuTyping() || cuUnsaved()) { cuLater(); return; }
+      if (status !== 200 || text.indexOf("console.js?v=" + v) === -1) { cuLater(); return; } // 配信前・ネット断＝移動しない
+      cuSS("cu_try_" + v, String(tried + 1));
+      cuSS("cu_last", String(Date.now()));
+      var opens = [];
+      document.querySelectorAll("details.card").forEach(function (dt) { opens.push(dt.open ? 1 : 0); });
+      cuSS("cu_restore", JSON.stringify({ y: window.scrollY || 0, open: opens, ev: editVenue, er: editRace }));
+      try { console.log("[console-update] " + CU_OWN + " → " + v); } catch (e) {}
+      location.replace(url);
+    });
+  }
+  function cuLater() {
+    if (cuWait) return;
+    cuWait = setTimeout(function () { cuWait = null; cuTry(); }, 5000);
+  }
+  function cuTick() {
+    cuGet("version.json?aucb=" + Date.now(), function (st1, t1) {
+      try { if (st1 === 200 && JSON.parse(t1).pause) return; } catch (e) {}  // 遠隔キルスイッチ
+      cuGet(location.pathname + "?aucb=" + Date.now(), function (status, text) {
+        if (status !== 200) return;
+        var m = /console\.js\?v=([0-9A-Za-z._-]+)/.exec(text);
+        if (!m || m[1] === CU_OWN) return;
+        cuPending = m[1];
+        cuTry();
+      });
+    });
+  }
+  /** 読み直し直後に、スクロール位置・カードの開閉・入力先固定を戻す（初回の描画の後に1回だけ呼ぶ） */
+  function cuRestore() {
+    var raw = cuSS("cu_restore");
+    if (!raw) return;
+    try { sessionStorage.removeItem("cu_restore"); } catch (e) {}
+    var r = null;
+    try { r = JSON.parse(raw); } catch (e) { return; }
+    if (!r) return;
+    var dts = document.querySelectorAll("details.card");
+    (r.open || []).forEach(function (o, i) { if (dts[i]) dts[i].open = !!o; });
+    if (r.ev && state && state.venues.some(function (v) { return v.name === r.ev; })) {
+      editVenue = r.ev;
+      editRace = r.er || null;
+      renderAll();
+    }
+    setTimeout(function () { window.scrollTo(0, r.y || 0); }, 300);
+  }
+  if (CU_OWN && location.protocol !== "file:" && params.get("au") !== "0") {
+    setTimeout(function () { cuTick(); setInterval(cuTick, CU_FAST ? 5000 : 60000); }, CU_FAST ? 3000 : 20000);
+  }
+
   /* 起動時のstate読み込み。**失敗しても空のstateで確定させない**（8/12）。
      以前は失敗時に既定state（場もレースも空）を入れて描いていたため、
      そのまま何か操作すると**本物のstateを空で上書きしてしまう**危険があった
@@ -1786,6 +1931,7 @@
       stateLoaded = true;
       setSync("ok", "接続OK（rev " + (state.rev || 0) + "）");
       renderAll();
+      cuRestore(); // 自動更新で読み直した直後なら、画面の状態を戻す（9/25）
       pollResults();
     }).catch(function (e) {
       setSync("err", "GAS接続失敗: " + e.message + "　再試行中…（つながるまで保存しません）");
