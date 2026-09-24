@@ -316,13 +316,14 @@
     if (!state.venues.length || !state.racers.length) { el.innerHTML = ""; return; }
     var names = state.venues.map(function (v) { return v.name; });
     /* メインの場はサブの選択肢から外す（9/25 Naoto）＝同じ場を選んでもOBSのNEXT枠は中身が出ない（丸かぶり）。
-       ⚠️表示だけ＝保存値は触らない。自動追従でサブ＝メインになった配信者は「どれも選ばれていない」見た目になる
-       （OBSは丸かぶりとして枠を残す＝SUB_KEEP_OVERLAP・「なし」を押した扱いにはしない＝カメラ穴の幾何を変えない） */
+       ⚠️表示だけ＝保存値は触らない。サブ＝メイン（丸かぶり）の配信者は「なし」を選択表示（OBSも9/25から丸かぶりは
+       「なし」と同じく枠ごと畳む＝overlay.js SUB_KEEP_OVERLAP 既定OFF）。次の発走エッジで alignSub が別場へ動かせば自動で復帰する
+       （保存値が場名のままなので「人の『なし』＝SUB_OFF」とは違い、自動追従の対象であり続ける） */
     var mainV = activeVenueName();
     el.innerHTML = '<div class="lbl">②サブ予想（ワイプ左のNEXT枠）：配信者ごとに場を選択</div>' +
       state.racers.map(function (rc) {
         var cur = state.raceSubBy[rc.id];
-        if (cur && names.indexOf(cur) < 0) cur = null;
+        if (cur && (names.indexOf(cur) < 0 || cur === mainV)) cur = null;
         return personRowHtml(rc,
           '<button class="vp' + (!cur ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="">なし</button>' +
           state.venues.filter(function (v) { return v.name !== mainV; }).map(function (v) {
