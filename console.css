@@ -163,6 +163,9 @@ textarea.inp { resize: vertical; line-height: 1.6; }
    .unpin＝固定中だけ現れる解除ボタン（固定を外す唯一の手段） */
 #pred-venue-row .vbtn.live { border-color: #d9a441; box-shadow: inset 0 0 0 1px rgba(217, 164, 65, .35); }
 #pred-venue-row .vbtn.unpin { flex: 0 0 auto; background: #2a2118; border-color: #d9a441; color: #e8c98a; }
+/* 予想入力の入力先ボタン＝「熊本☀ 1R」の1行・縦幅は約半分（9/25 Naoto）。上の場・レースの場ボタンは2行のまま */
+#pred-venue-row .vbtn { padding-top: 5px; padding-bottom: 5px; line-height: 1.25; }
+#pred-venue-row .vbtn small { display: inline; margin: 0 0 0 8px; }
 
 .race-chip-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .rc {
@@ -191,7 +194,13 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .pf-invest { -moz-appearance: textfield; }
 .btn.pf-invstep {
   width: 40px; height: 36px; padding: 0; font-size: 20px; font-weight: 900; line-height: 1;
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex; align-items: center; justify-content: center; position: relative;
+}
+/* 説明はボタンの**上**に出す（9/25 Naoto「下に出るとカーソルに被る」）。標準の title は位置を変えられないので data-tip で自前表示 */
+.btn.pf-invstep[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: rgba(0, 0, 0, .85); color: #fff; font-size: 12px; font-weight: 700; line-height: 1.4;
+  padding: 3px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none; z-index: 20;
 }
 /* 俺たち目＝見出しと買目欄の間（9/24 Naoto） */
 .pred-opts.pf-ore-row { margin-top: 2px; margin-bottom: 8px; }

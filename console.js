@@ -581,8 +581,8 @@
         // ⚠️回収・払戻は実額＝端数が当たり前なのでstepを付けない
         // 9/25 Naoto＝欄内の上下矢印をやめ、「円」の右に −／＋ ボタン（1000円ずつ）。手打ちの端数はこれまでどおり可
         '<label class="lbl inline">投資額 <input type="number" step="1000" min="0" class="inp slim pf-invest" value="' + esc(String(vInvest)) + '" placeholder="実際に買った総額">円</label>' +
-        '<button type="button" class="btn pf-invstep pf-invdown" title="1000円減らす">−</button>' +
-        '<button type="button" class="btn pf-invstep pf-invup" title="1000円増やす">＋</button>' +
+        '<button type="button" class="btn pf-invstep pf-invdown" data-tip="1,000円減らす">−</button>' +
+        '<button type="button" class="btn pf-invstep pf-invup" data-tip="1,000円増やす">＋</button>' +
         "</div>" +
         '<div class="parse-total pf-total"></div>' +
         '<button class="btn small pf-save">この予想を保存</button>' +
