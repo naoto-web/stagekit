@@ -163,6 +163,17 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 /* 未保存の下書きがある予想フォーム（8/8 FB75）＝入力は保持されるが放送には出ていない状態 */
 .draft-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffd88a; line-height: 2; }
 .pred-form.dirty { border-color: #d9a441; }
+/* メンバーカラーの外枠（9/24 Naoto「どのレースに入力しているか分かりづらく入力ミスが頻発」）。色は console.js が --mc で渡す。
+   ⚠️未保存（.dirty）でも枠はメンバーカラーのまま＝打っている最中こそ「誰の欄か」が要る。
+     未保存は外側の金の輪＋金の保存ボタン＋「✏️未保存」の文言で示す */
+.pred-form.mc { border: 2px solid var(--mc); }
+.pred-form.mc.dirty { border-color: var(--mc); box-shadow: 0 0 0 3px #d9a441; }
+.pred-form h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+/* 見出しの右に入力先のレース（弥彦 1R）。放送中のレースと別レースに書く事故を防ぐため、白の太字＋枠で目立たせる */
+.pf-race {
+  font-size: 15px; font-weight: 900; color: #fff; white-space: nowrap;
+  padding: 2px 10px; border-radius: 999px; background: #31353d; border: 1px solid #5a606b;
+}
 .pred-form.dirty .pf-save { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
 
 /* ---------- 払戻・精算 ---------- */
@@ -214,7 +225,7 @@ textarea.inp { resize: vertical; line-height: 1.6; }
    本日設定（.vp）と場・レース（.vbtn）で共用。絵文字は字より大きく見えるので一回り小さく */
 /* ⚠️絵文字フォントを明示する（9/24 Naoto指摘「熊本の☀が白黒」）。☀(U+2600)は本文フォントが白黒の字形を持っていて、
    FE0F（絵文字指定）を付けてもそちらで描かれていた。🌙⭐は本文フォントに字形が無いので元からカラーだった */
-.vp .kb, .vbtn .kb {
+.vp .kb, .vbtn .kb, .pf-race .kb {
   margin-left: 3px; font-size: .8em; vertical-align: 1px;
   font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }

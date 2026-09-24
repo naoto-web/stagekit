@@ -378,7 +378,7 @@
         var isLive = !editVenue && v.name === liveVenue;
         return '<button class="vbtn' + (editVenue === v.name ? " active" : (isLive ? " live" : "")) + '" data-v="' + esc(v.name) + '"' +
           (isLive ? ' title="いま放送中の場＝追従中はここに書かれます"' : ' title="この場に入力先を固定する（放送の表示は変わりません）"') + '>' +
-          esc(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "</small></button>";
+          esc(v.name) + kubunMarkHtml(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "</small></button>";
       }).join("");
     vr.querySelectorAll(".vbtn").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -508,7 +508,15 @@
       };
     }
 
+    /* 9/24 Naoto「どのレースの予想を入力しているのか分かりづらく、入力ミスが頻発する」＝
+       ②見出し「〇〇 の予想」をメンバーカラーで ③カードの外枠もメンバーカラー ④見出しの右に入力先のレース（弥彦 1R＋開催区分の印）。
+       色は名簿の色名（オレンジ等）を Derive.colorOf で hex にしたもの＝配信画面と同じ色。
+       名簿に色が無い人は従来どおり（1人目＝水色・2人目＝赤の見出し／灰色の枠）。
+       ⚠️外枠はCSS変数 --mc で渡す（style で border-color を直接書くと、未保存を示す .dirty の金枠の指定が効かなくなるため） */
+    var raceParts = key.split("|");
+    var raceTag = '<span class="pf-race">' + esc(raceParts[0]) + kubunMarkHtml(raceParts[0]) + " " + esc(raceParts[1]) + "R</span>";
     wrap.innerHTML = state.racers.map(function (rc, idx) {
+      var mc = window.Derive.colorOf(rc.color);
       var saved = race.byRacer && race.byRacer[rc.id]; // 保存済みエントリの有無＝note既定判定に使う（FB117）
       var p = saved || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
       var d = predDrafts[draftKey(key, rc.id)]; // 未保存の入力があればそれを表示（消さない）
@@ -517,8 +525,8 @@
       var vOre = d ? d.ore : (p.oreTachi || "");
       // note予想チェック＝下書き＞保存値＞（新規のみ）勝負レース照合の既定ON（8/10 FB117）
       var vNote = d ? d.note : (saved ? !!p.isNote : isNoteRaceDefault(key, rc));
-      return '<div class="pred-form" data-racer="' + rc.id + '">' +
-        '<h3><span class="' + (idx === 1 ? "alt" : "") + '">' + esc(rc.name) + "</span> の予想</h3>" +
+      return '<div class="pred-form' + (mc ? " mc" : "") + '" data-racer="' + rc.id + '"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" +
+        '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag + "</h3>" +
         '<textarea class="inp pf-text" rows="3" placeholder="例）1=9-2357&#10;メモ行はそのまま画面に出ます">' + esc(vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
         '<div class="pred-opts">' +
