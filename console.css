@@ -143,7 +143,10 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   background: #1a1c21; color: #d6d9de;
 }
 .vbtn.active { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
-.vbtn small { display: block; font-size: 11px; font-weight: 700; opacity: .8; }
+/* 9/25 Naoto「場名・1R・F2 が小さくて分かりづらい」＝場名20px／R・グレード15pxの太字に拡大（場・レースと予想入力の入力先で共用）。
+   ⚠️下の @media (min-width:960px) にも同じ上書きがある＝両方そろえる */
+.vbtn { font-size: 20px; }
+.vbtn small { display: block; font-size: 15px; font-weight: 900; opacity: .9; margin-top: 2px; }
 /* ①トーク・②サブ予想の行（9/24 Naoto）。名前＝メンバーカラーの字（JSが style で色を入れる）・列幅固定＝
    一番長い4文字の名前（ピーター／しょーた）が収まる幅にして、右の場ボタンの開始位置を全員そろえる。
    色の無い人は灰色の字。
@@ -324,8 +327,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   .btn.seat-swap .ss-main { font-size: 21px; }
   .btn.seat-swap .ss-sub { font-size: 12px; }
 
-  .vbtn { font-size: 18px; padding: 12px; }
-  .vbtn small { font-size: 12px; }
+  .vbtn { font-size: 22px; padding: 12px; }
+  .vbtn small { font-size: 16px; }
   .rc { font-size: 16px; width: 52px; padding: 9px 0; }
   .rc small { font-size: 10px; }
 
