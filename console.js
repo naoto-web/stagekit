@@ -671,11 +671,19 @@
     }
     // 保存済みの値と違う＝まだ放送に出ていない（8/8 FB75・打ったのに出ていない事故防止）
     var racerId = form.getAttribute("data-racer");
-    var saved = ((state.preds[key] || {}).byRacer || {})[racerId] || {};
+    var savedEntry = ((state.preds[key] || {}).byRacer || {})[racerId];
+    var saved = savedEntry || {};
+    /* noteチェックの比べる相手（9/25 Naoto「本日設定で勝負レースに選んだら予想入力が未保存になった」）：
+       一度も保存していない予想は「勝負レースに選ばれているか」（isNoteRaceDefault）と比べる。
+       勝負レースの選択はその場で保存済み＝チェックだけの状態は失うものが無い＝未保存にしない
+       （買目を打って保存すればチェックも一緒に保存される）。保存済みの予想は従来どおり保存値と比べる。
+       ⚠️自動更新の cuUnsavedWhy も同じ比べ方＝ここと食い違うと「表示は未保存なのに読み直す」等がずれる */
+    var rcNow = (state.racers || []).filter(function (x) { return x.id === racerId; })[0];
+    var noteBase = savedEntry ? !!savedEntry.isNote : isNoteRaceDefault(key, rcNow);
     var dirty = form.querySelector(".pf-text").value !== (saved.text || "") ||
       (form.querySelector(".pf-invest").value || "") !== (saved.investInput ? String(saved.investInput) : "") ||
       form.querySelector(".pf-ore").value.trim() !== (saved.oreTachi || "") ||
-      form.querySelector(".pf-note").checked !== !!saved.isNote;
+      form.querySelector(".pf-note").checked !== noteBase;
     if (dirty) {
       html += '<div class="draft-warn">✏️ 未保存（「この予想を保存」を押すまで画面に出ません・入力は消えません）</div>';
     }
