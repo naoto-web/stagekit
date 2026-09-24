@@ -1441,6 +1441,47 @@
     // 描画直後の測定は不確実なことがある→次フレーム＋300ms後に再フィット（8/6 FB32）
     requestAnimationFrame(fitTalkBands);
     setTimeout(fitTalkBands, 300);
+    placeNoteFires();
+    requestAnimationFrame(placeNoteFires);
+  }
+
+  /* 🧪燃える枠の光は .note-fire（目印）の上に別の層（.nfire-ov）を重ねて描く（9/25 FB「3場表示で枠がずれる・下枠が無い」）。
+     .race-col／1場の .buy-line は fitColBox が transform:scale（0.35〜1.6倍）で中身に合わせるため、要素自身に
+     影を付けると影ごと拡大されてずれ・はみ出して切れた。offsetLeft/Top/Width/Height は transform の影響を受けない
+     ＝本来の区画の位置にパネル基準（.panel は position:relative）で重ねれば、拡大縮小に関係なく区画の内側にぴったり乗る */
+  function placeNoteFires() {
+    document.querySelectorAll(".nfire-ov").forEach(function (o) { o.remove(); });
+    if (!NFIRE) return;
+    // パネル基準の本来の箱（transform を無視した layout の位置）
+    function boxIn(el, panel) {
+      var x = 0, y = 0, n = el;
+      while (n && n !== panel) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+      return n === panel ? { l: x, t: y, r: x + el.offsetWidth, b: y + el.offsetHeight } : null;
+    }
+    document.querySelectorAll(".note-fire").forEach(function (el) {
+      var panel = el.closest(".panel");
+      if (!panel || !el.offsetWidth || !el.offsetHeight) return;
+      var bx = boxIn(el, panel);
+      if (!bx) return; // 途中に別の位置決め要素がある＝座標が取れないので出さない
+      /* 区画の辺が買目エリア（.buy-line＝見出しの下の白い面）の端に近い（24px以内＝帯の内側の余白ぶん）なら、
+         その辺はエリアの端まで伸ばす。区画は余白の内側で終わるが、中身は拡大されて余白まで描かれるため
+         （9/25 3場の右列で光の右端が区画より約17px手前で止まって見えた） */
+      var area = el.closest(".buy-line");
+      var ab = area ? boxIn(area, panel) : null;
+      if (ab) {
+        if (bx.l - ab.l <= 24) bx.l = ab.l;
+        if (bx.t - ab.t <= 24) bx.t = ab.t;
+        if (ab.r - bx.r <= 24) bx.r = ab.r;
+        if (ab.b - bx.b <= 24) bx.b = ab.b;
+      }
+      var ov = document.createElement("div");
+      ov.className = "nfire-ov";
+      ov.style.left = bx.l + "px"; ov.style.top = bx.t + "px";
+      ov.style.width = (bx.r - bx.l) + "px"; ov.style.height = (bx.b - bx.t) + "px";
+      // 描画のたびに作り直すので、揺れの位相は時計で合わせる（作り直しで揺れが頭から始まってカクつかない）。6800＝CSSの周期
+      ov.style.animationDelay = "-" + (Date.now() % 6800) + "ms";
+      panel.appendChild(ov);
+    });
   }
 
   /* ---------- 出走表（①トーク右下／③レース展開の左） ----------

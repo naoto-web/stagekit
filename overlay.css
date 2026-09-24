@@ -3119,7 +3119,10 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
    position は変えない（packRaceBand・band-meta の座標がパネル基準のため）＝::after でなく要素自身の inset shadow を揺らす。
    揺れ＝明るさ・広がりの違う6コマを 6.8s で（9/25「もっとゆっくり」で1.7s→3.4s→6.8s）。
    ⚠️hue-rotate（filter）は使わない＝要素自身に掛けると中の車番チップの色まで変わる */
-.note-fire {
+/* .note-fire は目印だけ（光らない）。光は overlay.js placeNoteFires が区画の本来の位置に重ねる .nfire-ov
+   （9/25 3場表示で区画の transform:scale に影ごと引きずられてずれた対策） */
+.nfire-ov {
+  position: absolute; pointer-events: none; z-index: 3;
   box-shadow: inset 0 0 8px 2px rgba(255, 190, 60, .9), inset 0 0 22px 6px rgba(255, 90, 0, .6);
   animation: nfire-flicker 6.8s ease-in-out infinite;
 }
