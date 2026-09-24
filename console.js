@@ -153,10 +153,12 @@
 
   /* 入力先レースの丸枠「弥彦⭐ 3R🔥」（9/24 Naoto）＝予想入力の各カード見出しと結果入力の見出しで共用。
      🔥＝note予想（勝負レース）。isNote が偽でも要素は出して .off で隠す（予想入力はチェック操作で即座に出し入れするため） */
-  function raceTagHtml(key, isNote) {
+  /* withLabel＝🔥の右に「note勝負レース」も丸枠の中に（9/25 Naoto・予想入力のカード見出しだけ。結果入力の見出しは🔥のみ） */
+  function raceTagHtml(key, isNote, withLabel) {
     var parts = String(key || "").split("|");
     return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
-      '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span></span>';
+      '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span>' +
+      (withLabel ? '<span class="pf-note-tag' + (isNote ? "" : " off") + '">note勝負レース</span>' : "") + "</span>";
   }
   /** そのレースで誰か1人でも note予想（勝負レース）にチェックが入っているか（結果入力の🔥用）。
       9/24 Naoto「予想入力のチェックと同じタイミングで」＝未保存の下書きのチェックも見る（下書き＞保存値。
@@ -551,7 +553,7 @@
        ⚠️外枠はCSS変数 --mc で渡す（style で border-color を直接書くと、未保存を示す .dirty の金枠の指定が効かなくなるため） */
     /* note予想にチェックが入っている間は「3R」の右（丸枠の中）に🔥（9/24 Naoto）。
        チェックの操作で即座に出し入れする（保存前から）＝下の change ハンドラが .off を付け外しする */
-    var raceTag = function (isNote) { return raceTagHtml(key, isNote); };
+    var raceTag = function (isNote) { return raceTagHtml(key, isNote, true); };
     wrap.innerHTML = state.racers.map(function (rc, idx) {
       var mc = window.Derive.colorOf(rc.color);
       var saved = race.byRacer && race.byRacer[rc.id]; // 保存済みエントリの有無＝note既定判定に使う（FB117）
@@ -568,7 +570,6 @@
            ＝チェックは隠すだけ（hidden）。⚠️消さない＝保存（isNote）・下書き・未保存判定・自動更新が .pf-note を読む。
            値は従来どおり 下書き＞保存値＞勝負レースの既定ON で入り、勝負レースのチップ操作が保存値と下書きを直接そろえる（cdc4549） */
         '<input type="checkbox" class="pf-note" hidden' + (vNote ? " checked" : "") + ">" +
-        '<span class="pf-note-tag' + (vNote ? "" : " off") + '">note勝負レース</span>' +
         "</h3>" +
         // 俺たち目は買目欄の上（9/24 Naoto）
         '<div class="pred-opts pf-ore-row">' +

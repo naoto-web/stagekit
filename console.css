@@ -232,8 +232,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 }
 /* note予想ONの印🔥（丸枠の中・「3R」の右）。.off で消す（hidden属性でなくクラス＝.kb 側の指定と衝突させない） */
 .pf-race .pf-fire.off { display: none; }
-/* 🔥の右の「note勝負レース」（9/25・チェックボックスの置き換え）。見出しの色を継がず🔥に合わせた橙 */
-.pf-note-tag { font-size: 15px; font-weight: 900; color: #ff8a3d; white-space: nowrap; }
+/* 🔥の右の「note勝負レース」（9/25・チェックボックスの置き換え）。丸枠の中・字は場名と同じ白（Naoto指定） */
+.pf-note-tag { margin-left: 4px; color: #e8e8ec; white-space: nowrap; }
 .pf-note-tag.off { display: none; }
 .pred-form.dirty .pf-save { background: #d9a441; border-color: #d9a441; color: #1a1a1a; }
 
