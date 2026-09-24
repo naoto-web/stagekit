@@ -2436,20 +2436,22 @@ body.debug #scene-tenkai .slist:empty::after {
 /* ══════════ プロレス入場＝赤メンバーの3つ目の個人演出（9/15 Naoto依頼・先方要望「東京ドームの花道入場のような派手さ」）
    素材＝fx_ent.png（両腕を広げた立ち姿1枚）。歩きのコマは無いので、暗転した花道の奥から
    シルエットが scale で近づいてくる→白フラッシュで色つきに→両腕を広げたポーズがズーム→金の札吹雪。
-   段取り・尺・寸法（--ew/--eh/--walk/--dark/--estep/--zoom/--bw/--bh）はJS（ENT_BASE／spawnEntrance）。
+   段取り・尺・寸法（--ew/--eh/--walk/--dark/--zoom/--bw/--bh）はJS（ENT_BASE／spawnEntrance）。
    状態クラス＝kime（フラッシュ以降）／out（退場）／lite（大きい箱＝塗りで効く部品を落とす）
    ⚠️重なり順＝暗転幕(z0)＜舞台(z1: スポット・レーザー・後光・奥に降る札)＜キャラ(z2)＜札吹雪・きらめき(z3)
-              ＜フラッシュ(::before z4)＜タイトル・キメ文字(z5)
+              ＜フラッシュ(::before z4)＜キメ文字(z5)
    ⚠️舞台の登場フェードは「基底opacity 1に対する from{0}」＝キメでシェイクに差し替えても消えない
       （bothで0→1を持たせると、差し替えた瞬間に基底の0へ落ちて舞台ごと消える）
-   ⚠️タイトル・キメ文字は出す時刻にJSが要素を足す＝基底opacityを0にしない（同上の理由） ══════════ */
+   ⚠️キメ文字は出す時刻にJSが要素を足す＝基底opacityを0にしない（同上の理由）
+   ※9/24 FB＝タイトル「〇〇的中！！」廃止／歩きの揺れ廃止／暗転1秒／札をお札の形にしてひらひら ══════════ */
 .fx-ent { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
 .fx-ent.out { transition: opacity .55s ease; opacity: 0; }
 @keyframes entFadeIn { from { opacity: 0; } }
+/* 幕・舞台のフェードは.45s固定＝暗転の「長さ」は--dark（キャラが出てくるまでの待ち）で決まる */
 .fx-ent-dark { position: absolute; inset: 0; z-index: 0; background: rgba(4, 7, 18, .9);
-  animation: entFadeIn var(--dark, .45s) ease-in both; }
+  animation: entFadeIn .45s ease-in both; }
 .fx-ent.kime .fx-ent-dark { animation: none; opacity: .6; transition: opacity .5s ease; } /* キメは少し明るく＝色つきの本体を立てる */
-.fx-ent-stage { position: absolute; inset: 0; z-index: 1; animation: entFadeIn var(--dark, .45s) ease-in; }
+.fx-ent-stage { position: absolute; inset: 0; z-index: 1; animation: entFadeIn .45s ease-in; }
 .fx-ent.kime .fx-ent-stage { animation: entShake .42s ease-out; }   /* フラッシュの瞬間に画面が揺れる（暗転幕は揺らさない） */
 @keyframes entShake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-1.2%, .8%); }
   35% { transform: translate(1%, -.9%); } 55% { transform: translate(-.7%, .5%); } 75% { transform: translate(.5%, -.3%); } }
@@ -2477,19 +2479,19 @@ body.debug #scene-tenkai .slist:empty::after {
 .fx-ent.kime .fx-ent-rays { animation: entRaysIn .5s ease-out forwards, entRaysSpin 9s linear infinite; }
 @keyframes entRaysIn { to { opacity: 1; } }
 @keyframes entRaysSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-/* キャラ＝花道の奥（小さく・少し上＝遠近）からシルエットで近づく→キメで色つきに＋ズーム（足元原点） */
+/* キャラ＝花道の奥（小さく・少し上＝遠近）からシルエットで近づく→キメで色つきに＋ズーム（足元原点）。
+   暗転（--dark）が明けてから歩き出す＝delay中はbothで0%（透明・奥）に留まる。
+   9/24 FB＝左右・上下に揺らさず「影がどんどん大きくなる」だけ（旧entStepの歩調は廃止）。
+   カーブはゆるい加速＝一定速度で近づく物は手前ほど速く大きくなる（奥から来ている感じ） */
 .fx-ent-run { position: absolute; left: 50%; bottom: 0; width: var(--ew); height: var(--eh); z-index: 2;
   transform-origin: 50% 100%; transform: translateX(-50%);
-  animation: entApproach var(--walk, 2.6s) cubic-bezier(.25, .5, .35, 1) both; }
-@keyframes entApproach { 0% { transform: translate(-50%, -30%) scale(.36); opacity: 0; }
+  animation: entApproach var(--walk, 2.6s) cubic-bezier(.4, .1, .75, .95) var(--dark, 1s) both; }
+@keyframes entApproach { 0% { transform: translate(-50%, -30%) scale(.3); opacity: 0; }
   12% { opacity: 1; } 100% { transform: translate(-50%, 0) scale(1); opacity: 1; } }
-.fx-ent-body { width: 100%; height: 100%; transform-origin: 50% 100%;
-  animation: entStep var(--estep, .43s) ease-in-out infinite; }   /* 歩調＝上下動＋わずかな揺れ */
-@keyframes entStep { 0%, 100% { transform: translateY(0) rotate(-.8deg); } 50% { transform: translateY(-2.4%) rotate(.8deg); } }
+.fx-ent-body { width: 100%; height: 100%; }
 .fx-ent-img { display: block; width: 100%; height: 100%;
   background: url("fx_ent.png") center bottom / contain no-repeat;
   filter: brightness(.1) contrast(1.15); }    /* 近づく間はシルエット */
-.fx-ent.kime .fx-ent-body { animation: none; transform: none; }
 .fx-ent.kime .fx-ent-img { filter: none; transition: filter .25s ease-out; }
 .fx-ent.kime .fx-ent-run { animation: entKime .55s cubic-bezier(.3, 1.4, .5, 1) forwards; }
 @keyframes entKime { to { transform: translate(-50%, 0) scale(var(--zoom, 1.05)); } }
@@ -2497,41 +2499,45 @@ body.debug #scene-tenkai .slist:empty::after {
 .fx-ent.kime::before { content: ""; position: absolute; inset: 0; z-index: 4;
   background: radial-gradient(circle, #fff, #fff8 55%, transparent 80%);
   opacity: 0; animation: sambaFlash .6s ease-out forwards; }
-/* 大型ビジョン風のタイトル「〇〇的中！！」＝上の帯（キャラの頭より上）に、遠くから飛んでくるように */
-.fx-ent-title { position: absolute; left: 0; right: 0; top: 2%; z-index: 5; text-align: center;
-  transform-origin: 50% 0; animation: entTitleIn .6s cubic-bezier(.2, 1.2, .4, 1) both; }
-@keyframes entTitleIn { 0% { transform: translateY(-40%) scale(2.1); opacity: 0; } 100% { transform: none; opacity: 1; } }
-.fx-ent.kime .fx-ent-title { animation: entTitleKime .45s ease-out forwards; }   /* キメでは少し小さく上へ＝主役をポーズに譲る */
-@keyframes entTitleKime { from { opacity: 1; transform: none; } to { opacity: 1; transform: translateY(-14%) scale(.8); } }
-.fx-ent-title span, .fx-ent-cap span { display: inline-block; white-space: nowrap;
-  font-family: "Yu Gothic UI", "Meiryo", "MS PGothic", sans-serif; font-weight: 900; line-height: 1.05; }
-.fx-ent-title span { letter-spacing: .06em;
-  background: linear-gradient(#fff9dc, #ffd23e 40%, #c98f10 62%, #ffe680 80%, #fff3b0);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 2px 0 #6b3a00) drop-shadow(0 0 10px rgba(255, 210, 62, .55)) drop-shadow(0 5px 12px rgba(0, 0, 0, .6)); }
-/* キメ文字「配当の雨が降るぞ！！」＝腰の帯（腕より下）。白→金のグラデ＋濃赤のフチ（赤いガウンの上でも読める） */
+/* キメ文字「配当の雨が降るぞ！！」＝腰の帯（腕より下）。
+   9/24 FB「フォントがダサい・後ろ（赤×金）と色が似てる」→ 候補3番＝Reggae One（格闘技の煽り系）×
+   白＋濃紺の太フチ＋赤い落ち影。フォントは web/fx_ent_cap.woff2 に同梱（使う文字だけのサブセット・
+   素材加工/fx_ent_font_make.py・ライセンス＝fx_ent_cap_OFL.txt）。⚠️ENT_CAPを変えたらサブセットも作り直す
+   構造＝i（重ね置きの枠＝grid 1マスに2枚）の中に u（奥＝濃紺の太フチだけ）と span（手前＝白の本体）。
+   ポップは枠iごと＝2枚がずれない。文字の大きさはJS（fitEntText）が枠iに入れる */
+@font-face { font-family: "OKL Ent Cap"; src: url("fx_ent_cap.woff2") format("woff2"); font-display: block; }
 .fx-ent-cap { position: absolute; left: 0; right: 0; top: 49%; z-index: 5; text-align: center; }
-.fx-ent-cap span { letter-spacing: .03em;
-  background: linear-gradient(#fff, #fff1c0 45%, #ffd23e 75%, #fff6d0);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 3px 0 #5a0d0d) drop-shadow(0 0 2px #5a0d0d) drop-shadow(0 6px 14px rgba(0, 0, 0, .6));
+.fx-ent-cap i { display: inline-grid; font-style: normal; white-space: nowrap; letter-spacing: .02em;
+  font-family: "OKL Ent Cap", "Yu Gothic UI", "Meiryo", sans-serif; font-weight: 400; line-height: 1.1;
   animation: sambaKpop .5s cubic-bezier(.34, 1.56, .64, 1) both; }
-/* 金の札吹雪（生成と掃除はJS＝animationendで自己削除）。--k個体差の倍率／.s＝細い短冊／.bk＝キャラの奥 */
-.fx-ent-bill { position: absolute; top: -9%; z-index: 3; border-radius: 1px; opacity: .96;
+.fx-ent-cap u, .fx-ent-cap span { grid-area: 1 / 1; text-decoration: none; }
+.fx-ent-cap u { color: #10183a; -webkit-text-stroke: .2em #10183a; }   /* 太フチ（字の外へ約0.1em） */
+.fx-ent-cap span { background: linear-gradient(#fff, #fff 45%, #dbe9ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .08em 0 #8a0f1f) drop-shadow(0 .12em .2em rgba(0, 0, 0, .6)); }
+/* 金の札（生成と掃除はJS＝animationendで自己削除）。--k個体差の倍率／.bk＝キャラの奥。
+   9/24 FB2回目＝絵は最初の金札（斜めグラデ）に戻して横長に（比はJSの--bw/--bh）。
+   落ち方はギャル神の金の羽（ggFeaFall/ggFeaSway）と同じ2層：
+     親（.fx-ent-bill）＝一定速度でまっすぐ落ちるだけ（linear・--sxでわずかに横へ流れる）
+     子（b）＝左右に振れ（±札幅の半分）＋傾きを行き来（ease-in-out・alternate・周期--bsw・位相--bph）
+   落下と揺れの周期が無関係＝1枚ずつ違う揺れ方になる＝自然に見える（1本のキーフレームに
+   落下と揺れを同居させた1回目は、区間ごとに落下まで緩急がついて不自然だった）
+   9/24 FB3回目「長方形のままなので横から見た形に」＝子bにrotateX（--tx＝寝かせ角・1枚ずつ乱数）で
+   紙を寝かせ、perspective()で奥の辺を細く（台形）。揺れに合わせて寝かせ角も±14°行き来させる＝
+   時々ほぼ真横（線のように薄い）になる瞬間が出る。順序＝rotate(z)で紙の面内で回してからrotateXで寝かせる */
+.fx-ent-bill { position: absolute; top: -9%; z-index: 3;
   width: calc(var(--bw) * var(--k, 1)); height: calc(var(--bh) * var(--k, 1));
+  animation: entBillFall var(--d, 3.4s) linear forwards; }
+.fx-ent-bill b { display: block; width: 100%; height: 100%; border-radius: 1px; opacity: .96;
   background: linear-gradient(135deg, #fff6c4, #ffd23e 35%, #d09a12 62%, #ffe680);
   box-shadow: inset 0 0 0 1px rgba(120, 80, 0, .35);
-  animation: entBill var(--d, 2.2s) linear forwards; }
-.fx-ent-bill.s { width: calc(var(--bh) * .32 * var(--k, 1)); height: calc(var(--bh) * 1.35 * var(--k, 1));
-  background: linear-gradient(#fffbe0, #ffd23e 60%, #e0a818); border-radius: 0; }
+  animation: entBillSway var(--bsw, 1.4s) ease-in-out var(--bph, 0s) infinite alternate; }
 .fx-ent-bill.bk { z-index: 1; filter: brightness(.8); }
 .fx-ent.lite .fx-ent-bill.bk { filter: none; }
-@keyframes entBill {   /* 落ちながら横に流れ・回り・ひらひら（scaleXの開閉＝札が裏返る） */
-  0%   { transform: translate(0, 0) rotate(0deg) scaleX(1); }
-  25%  { transform: translate(calc(var(--sx) * .25), calc(var(--fall) * .25)) rotate(calc(var(--rot) * .25)) scaleX(.15); }
-  50%  { transform: translate(calc(var(--sx) * .5), calc(var(--fall) * .5)) rotate(calc(var(--rot) * .5)) scaleX(1); }
-  75%  { transform: translate(calc(var(--sx) * .75), calc(var(--fall) * .75)) rotate(calc(var(--rot) * .75)) scaleX(.15); }
-  100% { transform: translate(var(--sx), var(--fall)) rotate(var(--rot)) scaleX(1); opacity: .85; } }
+@keyframes entBillFall { from { transform: translate(0, 0); } to { transform: translate(var(--sx), var(--fall)); } }
+@keyframes entBillSway {
+  from { transform: perspective(150px) translateX(calc(var(--bw) * -.5)) rotateX(calc(var(--tx, 58deg) - 14deg)) rotate(calc(var(--rot) * -1)); }
+  to { transform: perspective(150px) translateX(calc(var(--bw) * .5)) rotateX(calc(var(--tx, 58deg) + 14deg)) rotate(var(--rot)); } }
 /* きらめき＝「✦」がパッと出て消える（位置・大きさ・尺はJS） */
 .fx-ent-glint { position: absolute; z-index: 3; color: #fff8d0; line-height: 1;
   transform: translate(-50%, -50%) scale(0);

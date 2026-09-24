@@ -2489,26 +2489,23 @@
   }
 
   /* プロレス入場の尺（9/15 Naoto依頼・赤メンバーの3つ目＝先方要望「東京ドームの花道入場のような派手さ」）
-     流れ＝①暗転＋レーザーが振れる＋天井スポットの筋（DARK）
-           ②シルエットが花道の奥から近づいてくる（WALK・歩調の上下動つき）。途中で大型ビジョン風の
-             タイトル「〇〇的中！！」が上からドン（TITLE＝発火からのms）
-           ③白フラッシュ＝色つきの本体に変わり、両腕を広げたポーズがズーム＋金の札吹雪が降り続ける
+     流れ＝①暗転＋レーザーが振れる＋天井スポットの筋（DARK＝この間キャラは出ない）
+           ②シルエットが花道の奥から近づいてくる（WALK・左右にも上下にも揺らさず大きくなるだけ＝9/24 FB）
+           ③白フラッシュ＝色つきの本体に変わり、両腕を広げたポーズがズーム＋金の札吹雪がひらひら降り続ける
              ＋回る後光＋ネックレスのきらめき（KIME）
            ④「配当の雨が降るぞ！！」がドン（KIME＋CAPGAP）⑤HOLDだけ見せて退場（OUT）
-       DARK  …暗転のフェードms／WALK…寄ってくるms／TITLE…タイトルを出す時刻（発火からのms）
+       ※9/24 FB＝タイトル「〇〇的中！！」は廃止（要らない）・暗転を0.45→1秒に
+       DARK  …暗転＋レーザーだけの時間ms（幕のフェード自体はCSSの.45s）／WALK…寄ってくるms
        CAPGAP…フラッシュからキメ文字までのms／HOLD…キメを見せるms／OUT…退場ms
-       STEP  …歩調（上下動1往復）のms
-     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約7.4秒（サンバ8.4／お茶7.56の帯） */
-  var ENT_BASE = { DARK: 450, WALK: 2600, TITLE: 700, CAPGAP: 520, HOLD: 4300, OUT: 600, STEP: 430 };
+     ⚠️ENDがバッジまでの時間（fireHitFxがrainMsとして使う）＝約7.9秒（サンバ8.4／お茶7.56の帯） */
+  var ENT_BASE = { DARK: 1000, WALK: 2600, CAPGAP: 520, HOLD: 4300, OUT: 600 };
   var ENT_AR = 842 / 1200;  // fx_ent.png の実寸比（横/縦）＝絵を差し替えたら素材加工/fx_ent_make.pyの出力で更新
-  var ENT_NECK_Y = 0.248;   // 首の下端（絵の高さに対する比・同上）＝タイトル帯を顔に被せない検算用（enttest）
-  var ENT_H = 0.84;         // キャラの背丈（ワイプ高に対する比）。上に残す帯がタイトルの居場所
-  var ENT_ZOOM = 1.05;      // キメのズーム倍率（足元原点）。上げるほど頭がタイトル帯に食い込む
-  var ENT_TITLE_K = 0.12;   // タイトルの文字高（ワイプ高に対する比）／ENT_CAP_K＝キメ文字
-  var ENT_CAP_K = 0.145;
+  var ENT_H = 0.84;         // キャラの背丈（ワイプ高に対する比）
+  var ENT_ZOOM = 1.05;      // キメのズーム倍率（足元原点）。上げるほど頭が枠の上端に近づく
+  var ENT_CAP_K = 0.145;    // キメ文字の文字高（ワイプ高に対する比）
   var ENT_CAP = "配当の雨が降るぞ！！"; // キメ文字（文言はここ1か所）
   function entTimes() {
-    var t = { TITLE: ENT_BASE.TITLE };          // タイトルが上から降りてくる
+    var t = {};
     t.KIME = ENT_BASE.DARK + ENT_BASE.WALK;     // 白フラッシュ＝色つきに変わってポーズ・札吹雪の始まり
     t.CAP  = t.KIME + ENT_BASE.CAPGAP;          // 「配当の雨が降るぞ！！」
     t.END  = t.KIME + ENT_BASE.HOLD;            // 退場開始＝ここでバッジにバトンを渡す
@@ -2656,6 +2653,8 @@
   });
   (function () { var im = new Image(); im.src = "fx_ent.png"; })(); // プロレス入場（9/15・赤の3つ目）＝
   // 暗転の中をシルエットで近づく＝未読込だと花道が無人になり、白フラッシュ明けに突然現れる
+  try { document.fonts.load('40px "OKL Ent Cap"', ENT_CAP); } catch (e) {} // キメ文字のフォント（9/24）＝
+  // @font-faceは使う瞬間まで読まない＝初回の的中で一瞬ゴシックで出る（か空白）のを防ぐ先読み
   ["fx_slotchar1.png", "fx_slotchar2.png"].forEach(function (f) {
     var im = new Image(); im.src = f;  // スロットのキャラ2ポーズ（8/10 FB122）＝入場でコマ落ちしないよう先読み
   });
@@ -3895,12 +3894,11 @@
      素材＝web/fx_ent.png（両腕を広げた立ち姿1枚・素材加工/fx_ent_make.py）。歩きのコマは無いので
      「暗転した花道の奥からシルエットで近づいてくる」を scale＋上下動で作り、白フラッシュの裏で
      色つきに切り替える（=ギャル神の玉座と同じ「フラッシュで乗り換えを隠す」語彙）。
-     ⚠️タイトルは名簿の名前から組む（rc.name＋"的中！！"）＝人名をコードに書かない方針（サンバと同じ）
      ⚠️札吹雪・きらめきはsetInterval駆動＋box.isConnectedで自己停止（rAFが来ないOBSの裏画面でも
         凍らず、除去後のリークもない＝サンバFB121と同系）
      ⚠️元ネタ（先方が示した入場映像）の団体名・選手名・技名・決め台詞そのものは演出内・ファイル名・
         コードのどこにも書かない（8/18のダンスと同じ整理＝連想パーツを積まない）。文言はENT_CAPだけ */
-  function spawnEntrance(cam, key, name) {
+  function spawnEntrance(cam, key) {
     var old = cam.querySelector(".fx-ent");
     if (old) old.parentNode.removeChild(old);
     var T = entTimes();
@@ -3913,10 +3911,9 @@
     box.style.setProperty("--eh", eh + "px");
     box.style.setProperty("--walk", (ENT_BASE.WALK / 1000) + "s");
     box.style.setProperty("--dark", (ENT_BASE.DARK / 1000) + "s");
-    box.style.setProperty("--estep", (ENT_BASE.STEP / 1000) + "s");
     box.style.setProperty("--zoom", ENT_ZOOM);
-    box.style.setProperty("--bw", Math.round(ch * 0.10) + "px");   // 札1枚の横（ワイプ高の10%）
-    box.style.setProperty("--bh", Math.round(ch * 0.05) + "px");   // 札1枚の縦
+    box.style.setProperty("--bw", Math.round(ch * 0.13) + "px");   // 札1枚の横（ワイプ高の13%）
+    box.style.setProperty("--bh", Math.round(ch * 0.05) + "px");   // 札1枚の縦（横:縦2.6:1＝9/24 FB「もっと横長」。寝かせる分やや厚めに）
     // レーザー4本＝左右2本ずつ・緑と黄を交互に。--lx根元／--la0,--la1振れ幅／--ld周期
     var LASERS = [
       { lx: "6%",  a0: "-42deg", a1: "-12deg", c: "#8dff4a", d: "1.7s" },
@@ -3936,26 +3933,15 @@
       "</div>";
     cam.appendChild(box);
 
-    setTimeout(function () {   // 大型ビジョン風のタイトル＝名簿名＋「的中！！」が上からドン
-      if (!box.isConnected) return;
-      var t = document.createElement("div");
-      t.className = "fx-ent-title";
-      var s = document.createElement("span");
-      s.textContent = (name || "") + "的中！！";
-      t.appendChild(s);
-      box.appendChild(t);
-      fitEntText(s, cw, ch, ENT_TITLE_K);
-    }, T.TITLE);
-
     var rain = null, glint = null;
     setTimeout(function () {   // キメ＝白フラッシュ・色つきに切替・ズーム・札吹雪・後光・きらめき
       if (!box.isConnected) return;
       box.classList.add("kime");
-      entBills(box, ch, 48, true);                       // まず一斉に
-      rain = setInterval(function () {                   // あとは降り続ける
+      entBills(box, ch, 36, true);                       // まず一斉に
+      rain = setInterval(function () {                   // あとは降り続ける（札が大きく滞空も長い分、数は絞る）
         if (!box.isConnected) { clearInterval(rain); return; }
-        entBills(box, ch, 5, false);
-      }, 130);
+        entBills(box, ch, 3, false);
+      }, 150);
       glint = setInterval(function () {
         if (!box.isConnected) { clearInterval(glint); return; }
         entGlints(box, cw, ch, ew, eh, 2);
@@ -3963,13 +3949,18 @@
     }, T.KIME);
     setTimeout(function () {   // キメ文字
       if (!box.isConnected) return;
+      // 9/24 FB＝同じ文字を2枚重ねる（i＝重ね置きの枠）：奥のu＝濃紺の太フチだけ／手前のspan＝白の本体＋赤い影。
+      // text-strokeは線の半分が字の内側に食い込む＝1枚で太フチにすると字が痩せるので、フチは奥に敷く
       var c = document.createElement("div");
       c.className = "fx-ent-cap";
+      var w = document.createElement("i");
+      var o = document.createElement("u");
       var s = document.createElement("span");
-      s.textContent = ENT_CAP;
-      c.appendChild(s);
+      o.textContent = s.textContent = ENT_CAP;
+      w.appendChild(o); w.appendChild(s);
+      c.appendChild(w);
       box.appendChild(c);
-      fitEntText(s, cw, ch, ENT_CAP_K);
+      fitEntText(w, cw, ch, ENT_CAP_K);
     }, T.CAP);
     setTimeout(function () {
       if (rain) clearInterval(rain);
@@ -3978,19 +3969,27 @@
     }, T.END);
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
   }
-  /** 金の札吹雪（burst＝キメの一斉・それ以外＝降り続け）。約35%は細い短冊、約40%はキャラの奥（.bk）に降る */
+  /** 金の札吹雪（burst＝キメの一斉・それ以外＝降り続け）。約40%はキャラの奥（.bk）に降る。
+      9/24 FB＝絵は最初の金札のまま横長に（短冊は廃止）。落ち方はギャル神の金の羽と同じ2層
+      （親＝linearでまっすぐ落ちる／子b＝左右の揺り戻し＋傾き・落下とは別周期）。
+      --d落下の尺／--sx全体の横流れ／--bsw揺れの周期／--bph揺れの位相（負のdelay＝途中から揺れ始める）
+      --rot傾きの最大（符号で振り始めの向き）／--tx寝かせ角（9/24 FB3回目＝横から見た形。大きいほど薄い） */
   function entBills(box, ch, n, burst) {
     for (var i = 0; i < n; i++) {
       var p = document.createElement("span");
-      var strip = Math.random() < .35, back = Math.random() < .4;
-      p.className = "fx-ent-bill" + (strip ? " s" : "") + (back ? " bk" : "");
-      p.style.left = (Math.random() * 104 - 2) + "%";
-      p.style.setProperty("--k", (.7 + Math.random() * .55).toFixed(2));
-      p.style.setProperty("--d", (burst ? (1.3 + Math.random() * .9) : (1.9 + Math.random() * 1.4)).toFixed(2) + "s");
+      var back = Math.random() < .4;
+      p.className = "fx-ent-bill" + (back ? " bk" : "");
+      p.style.left = (Math.random() * 100) + "%";
+      p.style.setProperty("--k", (.75 + Math.random() * .45).toFixed(2));
+      p.style.setProperty("--d", (burst ? (2.6 + Math.random() * 1.0) : (2.8 + Math.random() * 1.8)).toFixed(2) + "s");
       p.style.setProperty("--fall", Math.round(ch * 1.2) + "px");
-      p.style.setProperty("--sx", Math.round((Math.random() - .5) * ch * .45) + "px");
-      p.style.setProperty("--rot", Math.round((Math.random() - .5) * 720) + "deg");
-      if (burst) p.style.animationDelay = (Math.random() * .35).toFixed(2) + "s";
+      p.style.setProperty("--sx", Math.round((Math.random() - .5) * ch * .15) + "px");
+      p.style.setProperty("--bsw", (1.1 + Math.random() * .8).toFixed(2) + "s");
+      p.style.setProperty("--bph", (-Math.random() * 1.9).toFixed(2) + "s");
+      p.style.setProperty("--rot", ((Math.random() < .5 ? -1 : 1) * (20 + Math.random() * 12)).toFixed(0) + "deg");
+      p.style.setProperty("--tx", (48 + Math.random() * 18).toFixed(0) + "deg");   // 寝かせ角48〜66°（揺れで±14°）
+      p.innerHTML = "<b></b>"; // b＝ひらひら層・親（span）＝落下層
+      if (burst) p.style.animationDelay = (Math.random() * .5).toFixed(2) + "s";
       box.appendChild(p);
       p.addEventListener("animationend", function () { this.remove(); });
     }
@@ -4660,7 +4659,7 @@
       else if (eff === "nicha") spawnTea(cam, key, "nicha");  // ニチャー（8/29・お茶の派生＝歩きは共通）
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
       else if (eff === "dance") spawnDance(cam, key);   // ダンス（8/25・赤の2つ目）
-      else if (eff === "entrance") spawnEntrance(cam, key, rc && rc.name); // プロレス入場（9/15・赤の3つ目＝タイトルは名簿名）
+      else if (eff === "entrance") spawnEntrance(cam, key); // プロレス入場（9/15・赤の3つ目。9/24にタイトル廃止＝名前は使わない）
       else if (eff === "adjust") spawnAdjust(cam, key);
       else if (eff === "peye") spawnPeye(cam, key, hit);       // ピーターズ・アイ（8/25・的中目はスロットと同源）
       else if (eff === "galgod") spawnGalgod(cam, key);        // ギャル神（9/1・青のガールズレース限定）
