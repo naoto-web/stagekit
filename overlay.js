@@ -1478,8 +1478,8 @@
       ov.className = "nfire-ov";
       ov.style.left = bx.l + "px"; ov.style.top = bx.t + "px";
       ov.style.width = (bx.r - bx.l) + "px"; ov.style.height = (bx.b - bx.t) + "px";
-      // 描画のたびに作り直すので、揺れの位相は時計で合わせる（作り直しで揺れが頭から始まってカクつかない）。6800＝CSSの周期
-      ov.style.animationDelay = "-" + (Date.now() % 6800) + "ms";
+      // 描画のたびに作り直すので、揺れの位相は時計で合わせる（作り直しで揺れが頭から始まってカクつかない）。13600＝CSSの周期（overlay.css .nfire-ov と必ずそろえる）
+      ov.style.animationDelay = "-" + (Date.now() % 13600) + "ms";
       panel.appendChild(ov);
     });
   }
