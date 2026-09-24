@@ -409,3 +409,19 @@ textarea.inp { resize: vertical; line-height: 1.6; }
   .vp { font-size: 14px; padding: 8px 14px; }
   .exp summary { font-size: 13px; }
 }
+
+/* ══════════ 結果入力の見た目（9/25 Naoto） ══════════ */
+/* 「結果を今すぐ取得」＝見出しのレース丸枠の右 */
+.res-refresh-inline { margin-left: 8px; vertical-align: middle; }
+#res-refresh-hint:empty { display: none; }
+/* 払戻の欄は適切な長さで左寄せ（全幅だった）＝6桁（万車の10万円台）が入る9em */
+.payout-row .inp { flex: 0 0 9em; width: 9em; }
+/* 「3連単以外の場合」は「同着」と同じ丸いボタンの見た目（開くと中身が下に出る） */
+.exp.btn-sum > summary {
+  display: inline-block; list-style: none; font-size: 12px; font-weight: 700; color: #d6d9de;
+  padding: 5px 10px; border-radius: 8px; border: 1px solid #4a4f59; background: #31353d;
+}
+.exp.btn-sum > summary::-webkit-details-marker { display: none; }
+.exp.btn-sum[open] > summary { background: #3a3f48; border-color: #6a7080; }
+/* 的中プレビューの配信者名＝メンバーカラーの字 */
+.settle-preview .sp-name { font-weight: 900; }

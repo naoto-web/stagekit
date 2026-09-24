@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260925-045101">
+<link rel="stylesheet" href="console.css?v=20260925-050304">
 </head>
 <body>
 
@@ -84,15 +84,16 @@
 
 <!-- ══════════ 結果入力 ══════════ -->
 <details class="card" open>
-  <summary><h2>結果入力</h2> <span class="h-sub" id="result-target"></span></summary>
+  <!-- 9/25 Naoto「結果を今すぐ取得」は見出しのレース丸枠の右へ。⚠️summary の中のボタン＝押すとカードが開閉してしまうので
+       click で preventDefault（console.js） -->
+  <summary><h2>結果入力</h2> <span class="h-sub" id="result-target"></span>
+    <button class="btn small res-refresh-inline" id="btn-res-refresh">🔄 結果を今すぐ取得</button></summary>
   <div class="hint hidden" id="auto-result-hint"></div>
-  <div class="row gap">
-    <button class="btn small" id="btn-res-refresh">🔄 結果を今すぐ取得</button>
-    <span class="hint" id="res-refresh-hint"></span>
-  </div>
+  <div class="hint" id="res-refresh-hint"></div>
 
-  <label class="lbl">着順（例：1-9-2）</label>
-  <input type="text" id="res-order" class="inp big" placeholder="1-9-2" inputmode="numeric">
+  <!-- 9/25 Naoto＝見出しは「決定着順」・例はハイフン無し・欄の中の例は出さない（parseOneOrder は数字だけ拾うので 123 で通る） -->
+  <label class="lbl">決定着順（例：123）</label>
+  <input type="text" id="res-order" class="inp big" inputmode="numeric">
 
   <!-- 同着（8/27 FB148）＝勝ちの並びが2通りになり、公式の3連単払戻も2本出る。
        着順を2本持って両方を的中・回収に載せる。既定は閉じたまま＝通常レースの邪魔をしない。
@@ -117,14 +118,12 @@
        ここに欄を戻す必要はない（戻すならcarryResultMeta側も直すこと） -->
 
   <label class="lbl">払戻（100円あたり・円）</label>
-  <!-- 8/27 FB146＝回収は「枚数」入力に変更したので、入れ方の説明をここに置く -->
-  <div class="hint">公式サイトの払戻（100円あたり）をそのまま入れます。
-    <b>回収は下のプレビューで「何枚買ったか」を入力</b>＝1枚100円で、
-    <b>回収額＝払戻×枚数を自動計算</b>します（金額の手入力は不要）</div>
+  <!-- 8/27 FB146の入れ方の説明（公式の払戻をそのまま・回収は枚数）は9/25 Naoto「消して」で撤去 -->
   <div id="payout-rows"></div>
   <!-- 8/27 FB144：式別セレクタ＋組合せ＋行を追加は常時表示をやめ、この折りたたみの中へ。
-       買い方は3連単が基本で、行の追加が要るのは他式別で買った時だけ（＝押した時だけ出す） -->
-  <details class="exp">
+       買い方は3連単が基本で、行の追加が要るのは他式別で買った時だけ（＝押した時だけ出す）。
+       9/25 開くボタンは「同着」と同じ丸いボタンの見た目（.exp.btn-sum） -->
+  <details class="exp btn-sum">
     <summary>3連単以外の場合</summary>
     <div class="hint">ワイド・2車複などで買った時だけ使います。式別と買い目を指定して決定すると、
       あとは3連単と同じ＝その行に払戻を入れれば的中・回収の計算に入ります</div>
@@ -246,11 +245,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260925-045101" data-au="banner"></script>
-<script src="config.js?v=20260925-045101"></script>
-<script src="keirin.js?v=20260925-045101"></script>
-<script src="derive.js?v=20260925-045101"></script>
-<script src="sync.js?v=20260925-045101"></script>
-<script src="console.js?v=20260925-045101"></script>
+<script src="autoupdate.js?v=20260925-050304" data-au="banner"></script>
+<script src="config.js?v=20260925-050304"></script>
+<script src="keirin.js?v=20260925-050304"></script>
+<script src="derive.js?v=20260925-050304"></script>
+<script src="sync.js?v=20260925-050304"></script>
+<script src="console.js?v=20260925-050304"></script>
 </body>
 </html>

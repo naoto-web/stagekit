@@ -1032,18 +1032,13 @@
     el.innerHTML = head + state.racers.map(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
       var s = window.Keirin.settle(rp.parsed, 0, orders, payouts);
+      /* 9/25 Naoto「的中情報に俺たち目の記載は不要」＝俺たち目の🎯表示は撤去（買目側の🎯で足りる・同じ目が2回並んでいた）。
+         名前はメンバーカラーの字（9/25）＝予想入力の見出しと同じ色 */
       var oreHtml = "";
-      if (rp.entry.oreTachi) {
-        var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
-        var oh = window.Keirin.settle(op, 0, orders, payouts).hits;
-        if (oh.length) {
-          oreHtml = oh[0].amount
-            ? ' <span class="hit">🎯 俺たち目 ' + oh[0].comboLabel + " " + oh[0].mult + "倍</span>"
-            : ' <span class="manche">🎯 俺たち目 ' + oh[0].comboLabel + " 払戻未入力</span>";
-        }
-      }
-      if (!rp.points && !oreHtml) return "<div>" + esc(rc.name) + "：予想なし</div>";
-      if (!s.hits.length) return "<div>" + esc(rc.name) + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）" + oreHtml + "</div>";
+      var mcN = window.Derive.colorOf(rc.color);
+      var nm = '<b class="sp-name"' + (mcN ? ' style="color:' + mcN + '"' : "") + ">" + esc(rc.name) + "</b>";
+      if (!rp.points) return "<div>" + nm + "：予想なし</div>";
+      if (!s.hits.length) return "<div>" + nm + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）</div>";
       seedUnitsFromSaved(key, rc.id, s.hits);
       var moneyHits = s.hits.filter(function (h) { return h.amount > 0; });
       // 的中買目ごとに「何枚買ったか」を入れてもらう（複数式別が当たった時も取り違えない）。
@@ -1054,12 +1049,12 @@
           (moneyHits.length > 1 ? esc(h.type + " " + h.comboLabel) + " " : "") + "回収 " +
           '<input type="number" min="0" step="1" class="inp sp-refund" data-pay="' + h.amount +
           '" data-uk="' + esc(unitKey(rc.id, h)) + '" value="' + (n > 0 ? n : "") + '" placeholder="枚数">枚' +
-          // 9/25 Naoto「回収枚数も投資と同じく −／＋ に」＝10枚（＝1,000円分・投資の刻みと同じ）ずつ。手打ちの端数は従来どおり可
-          '<button type="button" class="btn pf-invstep sp-unitstep" data-d="-10" data-tip="10枚減らす">−</button>' +
-          '<button type="button" class="btn pf-invstep sp-unitstep" data-d="10" data-tip="10枚増やす">＋</button>' +
+          // 9/25 Naoto「回収枚数も投資と同じく −／＋ に」＝1枚ずつ（同日「1枚ずつの増減に」で10枚→1枚）。手打ちも可
+          '<button type="button" class="btn pf-invstep sp-unitstep" data-d="-1" data-tip="1枚減らす">−</button>' +
+          '<button type="button" class="btn pf-invstep sp-unitstep" data-d="1" data-tip="1枚増やす">＋</button>' +
           '<b class="sp-yen"></b></span>';
       }).join("　");
-      return '<div class="sp-racer">' + esc(rc.name) + "：" + s.hits.map(function (h) {
+      return '<div class="sp-racer">' + nm + "：" + s.hits.map(function (h) {
         if (!h.amount) return '<span class="manche">🎯 ' + h.type + " " + h.comboLabel + " 払戻未入力</span>";
         return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + h.mult + "倍</span>";
       }).join(" ") + oreHtml + "　" + unitHtml + '<b class="sp-total"></b></div>';
@@ -1820,7 +1815,8 @@
     }));
   }
 
-  $("btn-res-refresh").addEventListener("click", function () {
+  $("btn-res-refresh").addEventListener("click", function (e) {
+    e.preventDefault(); // 見出し（summary）の中にある＝既定動作だとカードが開閉する（9/25）
     var hint = $("res-refresh-hint");
     hint.textContent = "取得中…";
     pollResults(true).then(function () {
