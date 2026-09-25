@@ -64,9 +64,12 @@
      テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（本番GASに action=odds が無い）。&odds=1／0 で明示 */
   var ODDS = params.get("odds") || (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND ? "1" : "");
   if (ODDS === "0") ODDS = "";
-  // ②レース観戦は枠が狭いので買目・俺たち目の右の倍率は出さない（9/25 Naoto）。
-  // ただし合成オッズだけは右下の枠（投資の上・右寄せ）に出す（同日 Naoto）＝取得はする
-  var ODDS_LINES = SCENE !== "race";
+  // ②レース観戦も買目の右に倍率を出す（9/25 Naoto・一度外して戻した）。②のNEXT枠（サブ）は倍率・合成とも出さない（raceBuyHtml の noOdds）
+  /* ①トークの合計・合成・投資を②③と同じ「右下の角に固定」に（9/25 Naoto）。1場＝パネル右下の固定枠（tband-meta）／
+     2〜3場＝場の区画ごとに右下へ寄せる（1つの角に3レース分は入らない）。
+     オッズと同じくテストGAS接続時だけ既定ON（本番の①は従来のインラインのまま）。&tmeta=1／0 で明示 */
+  var TMETA = params.get("tmeta") ? params.get("tmeta") !== "0" : !!ODDS;
+  if (TMETA) document.body.classList.add("tmeta-on");
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
@@ -835,7 +838,6 @@
     // 初めて画面に出たレース＝30秒の定期を待たずにすぐ取りに行く（9/25 Naoto「なかなか出ない」＝最悪35〜40秒かかっていた）
     if (!oddsData[k] && !oddsPending[k] && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
     oddsWant[k] = Date.now();
-    if (!ODDS_LINES) return ""; // ②＝取得の要求だけ出して行には描かない（合成オッズ用）
     var d = oddsData[k];
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
     // 「倍」は付けない（9/25 Naoto「文字数大事・みんな分かる」）。合成オッズの「倍」は残す
@@ -852,6 +854,23 @@
     var a = points ? '<span class="bm-part bm-pts">合計 ' + points + "点</span>" : "";
     var b = invest > 0 ? '<span class="bm-part bm-inv">投資 ' + fmtYen(invest) + "</span>" : "";
     return (st ? '<span class="bm-part bm-syn">' + st + "</span>" : "") + a + b;
+  }
+  /** 右下の固定枠（②③＝band-meta／①の1場表示＝tband-meta）に 合計・合成・投資 を入れる。合成が無いときは従来の1行テキスト */
+  function fillBandMeta(bMeta, rc, key) {
+    if (!bMeta) return;
+    var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
+    var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13）＝投資の上・右寄せ
+    var has = !!(rpm && (rpm.points || rpm.invest > 0));
+    if (st && has) {
+      bMeta.innerHTML = metaPartsHtml(rpm.points, st, rpm.invest);
+    } else {
+      bMeta.textContent = has
+        ? (rpm.points ? "合計 " + rpm.points + "点" : "") +
+          (rpm.invest > 0 ? (rpm.points ? "　" : "") + "投資 " + fmtYen(rpm.invest) : "")
+        : "";
+    }
+    bMeta.classList.toggle("has-synth", !!(st && has));
+    bMeta.classList.toggle("hidden", !has);
   }
   /** 30秒ごと：画面に出ている（90秒以内に描画要求のあった）3連単レースを場ごとにまとめて取る。最終オッズは取り直さない */
   function pollOdds() {
@@ -886,7 +905,8 @@
   var TYPING_RE = /^[\s0-9０-９\-－ー=＝→>＞]+$/;
   var TRAIL_SEP_RE = /[\-－ー=＝→>＞]\s*$/;
   function isTypingLine(l) { return !l.ok && !l.cut && TYPING_RE.test(l.raw || "") && /[0-9０-９]/.test(l.raw || ""); }
-  function raceBuyHtml(rc, k, small, noMeta, keepAll) {
+  /* noOdds=true＝倍率・合成を出さない（②のNEXT枠＝182pxに入らない・9/25 Naoto） */
+  function raceBuyHtml(rc, k, small, noMeta, keepAll, noOdds) {
     var rp = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     // 表示する行＝成立した買目＋書きかけ（チップで描く）。メモ＝それ以外の不成立行（書きかけは除く）
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return (l.ok && !l.allDup) || isTypingLine(l); }) : [];
@@ -897,8 +917,9 @@
     var metaLine = "";
     if (!noMeta && rp && (rp.points || rp.invest > 0)) {
       // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
-      var st0 = ODDS_LINES ? synthText(k, rp) : ""; // ②はNEXT枠（182px）に出さない＝合成は右下の枠だけ // 合成オッズ（§13）＝合計の右・投資はその下（9/25 Naoto）
-      metaLine = '<div class="buy-meta' + (st0 ? " has-synth" : "") + '">' +
+      var st0 = noOdds ? "" : synthText(k, rp); // 合成オッズ（§13）＝投資の上・右寄せ（9/25 Naoto）
+      // bm-total＝①の2〜3場表示で区画の右下へ寄せる目印（TMETA・CSS body.tmeta-on）
+      metaLine = '<div class="buy-meta bm-total' + (st0 ? " has-synth" : "") + '">' +
         metaPartsHtml(rp.points, st0, rp.invest) + "</div>";
     }
     // 的中買目の車番強調（8/10 FB119）＝このレース×この配信者に有効な的中があれば、
@@ -909,7 +930,7 @@
     var oreGlow = [];
     glows.forEach(function (g) { if (g.type === "俺たち目") oreGlow.push(g.combo); });
     // 俺たち目の右にもオッズ（9/25 Naoto）。俺たち目は「126」＝1-2-6 の記法補正を通してから組を出す
-    var oreOdds = ore ? oddsHtml(k, window.Keirin.parseLine(window.Keirin.oreNormalize(ore), "3連単"), small) : "";
+    var oreOdds = ore && !noOdds ? oddsHtml(k, window.Keirin.parseLine(window.Keirin.oreNormalize(ore), "3連単"), small) : "";
     return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small, oreGlow) + oreOdds + "</div>" : "") +
       okLines.map(function (l) {
         // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
@@ -930,7 +951,7 @@
         });
         var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
         if (!l.dupCount && TRAIL_SEP_RE.test(l.raw || "")) src = String(l.raw).trim(); // 末尾が区切り＝打ちかけの形のまま
-        return '<div class="pred-line chips">' + lineChips(src, small, g) + oddsHtml(k, l, small) + "</div>";
+        return '<div class="pred-line chips">' + lineChips(src, small, g) + (noOdds ? "" : oddsHtml(k, l, small)) + "</div>";
       }).join("") +
       (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
       metaLine;
@@ -1539,7 +1560,15 @@
               '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true, false, true) + "</div>" +
               "</div>";
           } else {
-            band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false, false, true);
+            // TMETA（9/25）＝1場は合計欄をパネル右下の固定枠へ（noMeta）。本番（TMETA無効）は従来のインライン
+            band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false, TMETA, true);
+          }
+          // ①の固定枠：1場表示のときだけ使う。買目が枠の下に潜らないよう、枠の高さぶん買目エリアの下を空ける
+          var tMeta = $(bp + "meta-" + slot);
+          if (tMeta) {
+            if (TMETA && talkKeys.length <= 1) fillBandMeta(tMeta, rc, talkKeys[0] || null);
+            else { tMeta.classList.add("hidden"); tMeta.textContent = ""; }
+            band.style.paddingBottom = (TMETA && !tMeta.classList.contains("hidden")) ? (tMeta.offsetHeight + 12) + "px" : "";
           }
           // 🧪燃える枠は「場の区画」単位（9/25 Naoto「〇〇予想の見出しまで光る・複数場だとおかしい」）＝
           // 2〜3場は note の場の .race-col だけ、1場は買目エリア（band）全体
@@ -1553,22 +1582,7 @@
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）。
           // 合計/投資は右下の固定枠へ分離（8/6 FB57）。パッキングが実座標で衝突判定するため
           // metaを先に確定させてから買い目を組む（FB58・順序に意味あり）
-          var bMeta = $(bp + "meta-" + slot);
-          if (bMeta) {
-            var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
-            var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13・③だけ＝②はODDS無効）＝合計の右・投資はその下
-            var has = !!(rpm && (rpm.points || rpm.invest > 0));
-            if (st && has) {
-              bMeta.innerHTML = metaPartsHtml(rpm.points, st, rpm.invest);
-            } else {
-              bMeta.textContent = has
-                ? (rpm.points ? "合計 " + rpm.points + "点" : "") +
-                  (rpm.invest > 0 ? (rpm.points ? "　" : "") + "投資 " + fmtYen(rpm.invest) : "")
-                : "";
-            }
-            bMeta.classList.toggle("has-synth", !!(st && has));
-            bMeta.classList.toggle("hidden", !has);
-          }
+          fillBandMeta($(bp + "meta-" + slot), rc, key);
           band.classList.remove("buy-xl", "buy-lg");
           // 第5引数keepAll=true＝②メイン帯も「全」を展開せず元記法で描く（8/8 FB74）。
           // 空席は中身ごと空にする＝③は席を畳まないので、誰もいない枠にレースラベルだけ
@@ -1618,7 +1632,7 @@
         if (sBand) {
           var sKey = svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
           // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
-          sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true) : "";
+          sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true, true) : ""; // NEXT枠はオッズなし
           sBand.classList.toggle("note-fire", noteFireOn(rc, sKey)); // 🧪NEXT枠も、そのレースが note なら内側だけ
           fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
         }
