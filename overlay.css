@@ -741,6 +741,8 @@ body.debug #scene-tenkai .slist:empty::after {
    2〜3場＝場の区画の中で一番下・右寄せ（流れの中なので買目と重ならない） */
 .talk-band .band-meta { font-size: 27px; }
 .tmeta-on .talk-band .race-col > .bm-total { margin-top: auto; align-self: flex-end; }
+/* 9/26 合計欄は折り返さない＝fitColBox の margin-left（px・小数1桁）の丸めで幅が1px足りず「投資／¥7,000」に割れて下へはみ出した */
+.tmeta-on .talk-band .race-col > .bm-total { white-space: nowrap; }
 /* ①トークの買い目行は折り返さない＝長い行はJSが幅に合わせて自動縮小（8/6 FB） */
 .talk-band .pred-line.chips { flex-wrap: nowrap; }
 

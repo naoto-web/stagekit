@@ -73,6 +73,9 @@
   var TMETA = params.get("tmeta") ? params.get("tmeta") !== "0" : !!ODDS;
   // 1場の固定枠を帯の拡大率に合わせて大きくする（9/26 Naoto）。&tmetak=0 で27px固定に戻す
   var TMETAK = params.get("tmetak") !== "0";
+  // ①の買目がまだ無い区画はレースの札（場名R）を大きく（9/26 Naoto）。&headbig=0 で戻す／&headpx= で上限
+  var HEADBIG = params.get("headbig") !== "0";
+  var HEAD_EMPTY_PX = +(params.get("headpx") || 44);
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
@@ -1359,6 +1362,26 @@
        先に区画いっぱいになり買目が大きくならなかった）・区画を縮めるときだけ一緒に縮める。置き場所は右下の角（px指定） */
     var meta = document.body.classList.contains("tmeta-on") ? col.querySelector(":scope > .bm-total") : null;
     if (meta) { meta.style.marginTop = "0px"; meta.style.marginLeft = "0px"; meta.style.alignSelf = "flex-start"; meta.style.transform = ""; }
+    /* 買目がまだ無い区画はレースの札（.race-col-head）を大きく（9/26 Naoto「買目を入れる前のデフォルトがもっと大きい方がいい・
+       買目を入れたあとは今まで通り」）。中身が札だけ（合計欄はあってもよい）のときだけ、区画の幅に収まる範囲で最大 HEAD_EMPTY_PX。
+       ⚠️一度「札を常に34pxにそろえる」案を作ったが、買目を入れたあとは今まで通りでよい（Naoto）で取り消し。
+       1秒ごとの見直しでも呼ばれる＝毎回いったん元に戻してから測る。戻す＝&headbig=0 */
+    var head = col.querySelector(":scope > .race-col-head");
+    if (head) head.style.fontSize = "";
+    if (HEADBIG && head && Array.prototype.every.call(col.children, function (c) { return c === head || c === meta; })) {
+      var hBase = parseFloat(getComputedStyle(head).fontSize) || 26;
+      var hRoom = (col.getBoundingClientRect().width - (parseFloat(getComputedStyle(col).paddingLeft) || 0) - (parseFloat(getComputedStyle(col).paddingRight) || 0)) * 0.96;
+      // 1行で置いた幅（折り返し前）と、🔥note予想を2行目へ回したときの一番長い行の幅を測る
+      head.style.whiteSpace = "nowrap";
+      var hW1 = head.getBoundingClientRect().width;
+      var tag = head.querySelector(".note-tag");
+      var tagW = tag ? tag.getBoundingClientRect().width : 0;
+      head.style.whiteSpace = "";
+      var one = hW1 > 0 ? hBase * hRoom / hW1 : HEAD_EMPTY_PX;               // 1行のまま入る大きさ
+      var two = tag ? hBase * hRoom / Math.max(hW1 - tagW, tagW + 30) : one;  // 2行に分けたときに入る大きさ（+30＝札の左右の余白）
+      var hPx = Math.min(HEAD_EMPTY_PX, one >= 36 ? one : Math.max(one, two));
+      if (hPx > hBase) head.style.fontSize = hPx.toFixed(1) + "px";
+    }
     var cr = col.getBoundingClientRect();
     if (cr.height <= 0) return;
     var cs = getComputedStyle(col);
@@ -1385,7 +1408,16 @@
       if (kj < 1) { mScale = kj; return kj; }
       // 拡大できる場合＝合計欄は等倍のまま右下に置き、残りの高さで買目を拡大
       mScale = 1;
-      return Math.min(availW / needW, (availH - mh - MGAP) / needH);
+      var k1 = Math.min(availW / needW, (availH - mh - MGAP) / needH);
+      /* 9/26 Naoto「2場も投資額を大きく（note予想は締切後まで買目を書かず投資額だけ先に入れる＝空いた感じ）」＝
+         買目の倍率（上限1.6）を決めたあと、**余った高さの範囲で**合計欄も大きくする（上限1.4倍＝1場の固定枠と同じ）。
+         買目が小さくなる大きさにはしない（9/25夜＝合計欄を一緒に拡大したら買目が大きくならなかった教訓）。戻す＝&tmetak=0 */
+      if (TMETAK) {
+        var kUse = Math.min(1.6, k1);
+        var s = Math.min(1.4, (availW - padL) / Math.max(1, mw), (availH - MGAP - kUse * needH) / Math.max(1, mh));
+        if (s > 1.02) mScale = s;
+      }
+      return k1;
     }
     var k = measureK();
     if (needW <= 0 || needH <= 0) return;
@@ -1410,7 +1442,8 @@
     if (col.style.transform) col.style.transformOrigin = "left top";
     if (meta) {
       var kk = parseFloat((String(col.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
-      var ms = Math.min(mScale, kk); // 合計欄の見た目の倍率（区画を縮めたときだけ一緒に縮む・拡大はしない）
+      // 合計欄の見た目の倍率＝縮めるときは区画と一緒（mScale<1）／拡大は余った高さの範囲だけ（mScale>1・9/26）
+      var ms = mScale > 1 ? mScale : Math.min(mScale, kk);
       // 区画の拡大を打ち消して ms 倍で描く。右下の角を基準に縮めるので、その角（レイアウト上）を区画の右下に合わせる
       if (Math.abs(ms / kk - 1) > 0.001) {
         meta.style.transform = "scale(" + (ms / kk).toFixed(4) + ")";
@@ -1974,6 +2007,9 @@
           if (TMETAK && tMeta && !tMeta.classList.contains("hidden")) {
             tMeta.style.fontSize = "";
             var bk = parseFloat((String(band.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+            // 買目がまだ無い（中身が札だけ）＝帯は拡大されない→上限の1.4倍で（9/26・note予想は投資額だけ先に入れる運用）
+            var onlyHead = Array.prototype.every.call(band.children, function (c) { return c.classList.contains("race-col-head"); });
+            if (onlyHead) bk = 1.4;
             if (bk > 1.02) {
               tMeta.style.fontSize = Math.round(27 * Math.min(1.4, bk)) + "px";
               band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
