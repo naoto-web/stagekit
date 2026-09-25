@@ -3311,6 +3311,19 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
           drop-shadow(0 0 14px rgba(255,200,40,.95));
   animation: platen-in 4s cubic-bezier(.2, .9, .3, 1) forwards;
 }
+/* 回収率の節目（9/26・§20）＝「回収率」を小さく上の段・「200%突破！」を大きく下の段（1行だと①の席幅に入らない）。
+   節目が上がるほど大きく（200〜400%＝110px／500〜900%＝130px／1000%〜＝150px＋虹＋5秒）。席のパネルに入らなければJS bigPop が字を縮める */
+.platen-pop.ms { font-size: 110px; line-height: 1; text-align: right; }
+.platen-pop.ms .ms-l { display: block; font-size: .45em; letter-spacing: .08em; }
+.platen-pop.ms .ms-b { display: block; }
+.platen-pop.ms.t5 { font-size: 130px;
+  filter: drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)
+          drop-shadow(0 0 22px rgba(255,200,40,1)) drop-shadow(0 0 40px rgba(255,150,0,.8)); }
+.platen-pop.ms.t10 { font-size: 150px; animation-duration: 5s;
+  background: linear-gradient(90deg, #ff5a5a, #ffb13b, #fff35c, #5cff8a, #5ccfff, #b07cff, #ff5ad2);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)
+          drop-shadow(0 0 24px rgba(255,255,255,.9)) drop-shadow(0 0 44px rgba(255,120,220,.8)); }
 @keyframes platen-in {
   0%   { opacity: 0; transform: translate(-100%, -95%) scale(.4); }
   12%  { opacity: 1; transform: translate(-100%, -105%) scale(1.3); }

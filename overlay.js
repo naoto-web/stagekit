@@ -1510,21 +1510,43 @@
     });
     return { invest: inv, refund: bt.refund, pending: bt.pending, sInv: sInv };
   }
+  /* 回収率の節目（9/26 Naoto・要件定義§20）＝200%から100%刻み。考え方はプラ転と同じ：
+     ・判定は結果の瞬間だけ・画面の数字（回収÷発走済み投資）が節目を**超えた**ら（ちょうどは出さない）
+     ・節目ごとの「出せる状態」＝精算済みの回収率（結果の出たレースだけ）がその節目以下になったら戻る＝本当に割ってからまた超えたら何度でも
+       （発走で一時的に下がって見えただけでは戻らない）
+     ・1レース目の的中でも出す（1日の始まりは全節目が「出せる状態」）・一気に複数超えたら一番上だけ
+     ・プラ転と重なったら「プラ転！」→「回収率○○%突破！」の順（popUntil で後ろへずらす）
+     ・読み込み直後は、その時点の精算済み回収率より上の節目だけ「出せる状態」＝読み直しで過去の突破を再生しない */
+  var MS_MIN_PROFIT = +(params.get("msmin") || 10000); // 節目を出す最低のもうけ（円）。200%なら最低でも投資1万・回収2万超
+  function msElig(p, T) { return Object.prototype.hasOwnProperty.call(p.ms, T) ? p.ms[T] : T >= p.msInit; }
   function platenCheck(rid, ht) {
     if (!PLATEN) return;
     var p = platenSt[rid];
-    if (!p) { platenSt[rid] = { refund: ht.refund, sInv: ht.sInv, losing: ht.refund - ht.sInv < 0, armed: false }; return; } // 読み込み直後＝出さない
+    var dispR = ht.invest > 0 ? ht.refund / ht.invest * 100 : 0;
+    var setR = ht.sInv > 0 ? ht.refund / ht.sInv * 100 : 0;
+    if (!p) { // 読み込み直後＝出さない
+      platenSt[rid] = { refund: ht.refund, sInv: ht.sInv, losing: ht.refund - ht.sInv < 0, armed: false,
+        ms: {}, msInit: setR, msArmed: 0, popUntil: 0 };
+      return;
+    }
     if (ht.pending) return; // 集計中＝回収が入るまで判定しない（入った瞬間を「結果の瞬間」として見る）
     if (ht.refund === p.refund && ht.sInv === p.sInv) return; // 結果・回収に変化なし（発走で投資が増えただけ等）
     p.refund = ht.refund; p.sInv = ht.sInv;
     if (ht.refund - ht.invest > 0 && p.losing) { p.losing = false; p.armed = true; }
     else if (ht.refund - ht.sInv < 0) p.losing = true;
-    if (p.armed && !REFPOP) platenFire(rid); // ピコーンを止めている場合は即
+    // 節目：超えたもののうち「出せる状態」だった一番上を出す。超えた節目は全部「出した」扱い
+    var top = 0;
+    for (var T = 200; T < dispR; T += 100) { if (msElig(p, T)) top = T; p.ms[T] = false; }
+    Object.keys(p.ms).forEach(function (t) { if (!p.ms[t] && setR <= +t) p.ms[t] = true; }); // 本当に割った＝また出せる
+    // もうけ（回収−投資）が MS_MIN_PROFIT 未満なら出さない（9/26 Naoto「1,000円が3,500円で派手なのは恥ずかしい」）。
+    // 出さなかった節目も「出した」扱いのまま＝あとで額が増えても突破の瞬間でないので遅れて出さない。プラ転には下限なし
+    if (top && ht.refund - ht.invest < MS_MIN_PROFIT) top = 0;
+    if (top > p.msArmed) p.msArmed = top;
+    if (!REFPOP) { platenFire(rid); msFire(rid); } // ピコーンを止めている場合は即
   }
-  function platenFire(rid) {
-    var p = platenSt[rid];
-    if (!p || !p.armed) return;
-    p.armed = false;
+  /** 見出しの右上に大きな文字を出す共通処理（プラ転・節目）。帯の金フラッシュつき。
+      文字の幅が席のパネルに収まらなければ字を縮める（「回収率1000%突破！」が①の左の席で画面外へ出ないように） */
+  function bigPop(rid, cls, html, ms) {
     refpopBandInvs(rid).forEach(function (el) {
       var r = el.getBoundingClientRect();
       if (!r.width || !r.height) return; // 非表示のシーン
@@ -1534,12 +1556,37 @@
         setTimeout(function () { head.classList.remove("pl-flash"); }, 1700);
       }
       var pop = document.createElement("div");
-      pop.className = "platen-pop";
-      pop.textContent = "プラ転！";
+      pop.className = cls;
+      pop.innerHTML = html;
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
-      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 4300);
+      var panel = el.closest(".panel");
+      var avail = panel ? r.right - panel.getBoundingClientRect().left - 16 : r.right - 16;
+      if (avail > 0 && pop.offsetWidth > avail) {
+        pop.style.fontSize = (parseFloat(getComputedStyle(pop).fontSize) * avail / pop.offsetWidth).toFixed(1) + "px";
+      }
+      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, ms + 300);
     });
+  }
+  function platenFire(rid) {
+    var p = platenSt[rid];
+    if (!p || !p.armed) return;
+    p.armed = false;
+    p.popUntil = Date.now() + 3000; // 続く節目の演出は「プラ転！」が消え始めるころ（CSS 4s の75%）から
+    bigPop(rid, "platen-pop", "プラ転！", 4000);
+  }
+  function msFire(rid) {
+    var p = platenSt[rid];
+    if (!p || !p.msArmed) return;
+    var T = p.msArmed;
+    p.msArmed = 0;
+    var tier = T >= 1000 ? " t10" : T >= 500 ? " t5" : "";
+    var dur = T >= 1000 ? 5000 : 4000;
+    var wait = Math.max(0, p.popUntil - Date.now());
+    p.popUntil = Date.now() + wait + dur * 0.75;
+    setTimeout(function () {
+      bigPop(rid, "platen-pop ms" + tier, '<span class="ms-l">回収率</span><span class="ms-b">' + T + "%突破！</span>", dur);
+    }, wait);
   }
   /** 見出しの投資/回収を2秒ごとに取り直す（9/26）＝発走時刻で投資が増えるのは state の変化を伴わないため。
       文字列が変わったときだけ書き換え＋幅合わせ。ピコーン中は refundHeaderText が表示を保持するので干渉しない */
@@ -1572,7 +1619,7 @@
     if (bt.pending) { a.text = normal; return normal; } // 集計中＝数字は出さない（shown は最後の数値のまま）
     if (a.shown === null || bt.refund <= a.shown) { // 初回・減額・同額＝即差し替え
       a.shown = bt.refund; a.text = normal;
-      if (platenSt[rc.id] && platenSt[rc.id].armed) setTimeout(function () { platenFire(rc.id); }, 0); // カウントアップが無い増え方＝その場で
+      if (platenSt[rc.id] && (platenSt[rc.id].armed || platenSt[rc.id].msArmed)) setTimeout(function () { platenFire(rc.id); msFire(rc.id); }, 0); // カウントアップが無い増え方＝その場で（プラ転→節目の順）
       return normal;
     }
     a.target = bt.refund; a.waiting = true; // 増えた＝演出後にピコーン
@@ -1630,7 +1677,10 @@
       a.text = textOf(p >= 1 ? to : cur);
       refpopBandInvs(rid).forEach(function (el) { setBandInv(el, a.text); });
       // プラ転＝カウントアップが投資を追い越した瞬間（9/26 Naoto「的中演出→ピコーン→投資を追い越したところでプラ転」）
-      if (platenSt[rid] && platenSt[rid].armed && Math.round(p >= 1 ? to : cur) > bt.invest) platenFire(rid);
+      var ps = platenSt[rid], shownV = Math.round(p >= 1 ? to : cur);
+      if (ps && ps.armed && shownV > bt.invest) platenFire(rid);
+      // 回収率の節目（§20）＝カウントアップが「投資×節目%」を追い越した瞬間。プラ転と重なれば msFire がプラ転の後ろへずらす
+      if (ps && ps.msArmed && shownV * 100 > bt.invest * ps.msArmed) { if (ps.armed) platenFire(rid); msFire(rid); }
       // ⚠️requestAnimationFrame ではなく 33ms のタイマー（9/25）＝rAF は見えていないページ・ヘッドレスで間引かれ、
       //   「消える1秒前に開始」が8秒後にずれた（ハーネス実測）。OBSのブラウザソースでも同じ間引きが起こりうる
       if (p < 1) { setTimeout(step, 33); return; }
