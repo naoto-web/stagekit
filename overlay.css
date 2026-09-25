@@ -694,8 +694,8 @@ body.debug #scene-tenkai .slist:empty::after {
    em指定（40/34）＝fitBandHead が .band-inv を縮めたときも比率を保って一緒に縮む。JSの setBandInv が .bi-v で包む */
 .band-head .band-inv .bi-v { font-size: 1.1765em; }
 /* 🧪RB2（9/25 Naoto・②だけ・テストGAS接続時のみ）
-   A＝見出しの「〇〇 予想」の右にレース名を白い札で（帯の中の「別府 7R」ラベルを移した）。あふれたら fitBandHead が縮める */
-.rb2 .bh-race { display: inline-block; margin-left: 12px; padding: 1px 10px; border-radius: 6px;
+   A＝帯の中の「別府 7R」ラベルは出さない。note予想の人だけ見出しに白い札「🔥note」（左の席＝名前の右／右の席＝名前の左） */
+.rb2 .bh-race { display: inline-block; margin: 0 6px; padding: 1px 10px; border-radius: 6px;
   font-size: 26px; font-weight: 900; background: rgba(255,255,255,.94); color: #16202e;
   text-shadow: none; vertical-align: 4px; white-space: nowrap; }
 .rb2 .bh-race .grade-badge { font-size: .8em; margin-left: 6px; vertical-align: 1px; }
@@ -3189,6 +3189,8 @@ body.v2 .rb-line .narabi-row {
 body.v2 .rb-line .nb-race { display: flex; flex-direction: row; align-items: center; gap: 9px;
   font-size: var(--rbrace, 22px); font-weight: 900; color: #16202e; line-height: 1;
   white-space: nowrap; flex: 0 0 auto; }
+/* 🧪RB2（9/25 Naoto）＝見出しからレース名を外したので、並びの窓の「別府 8R」を紺地・白抜きの札で強調 */
+body.v2.rb2 .rb-line .nb-race { background: #16202e; color: #fff; padding: .18em .5em; border-radius: 6px; gap: .35em; }
 /* 太字化（8/13 FB）。font-weight は既に900だが「←」は記号グリフでウェイトが効かない font が多い。
    縁取りを同色で足して線そのものを太らせる（高さ・位置は変えない） */
 body.v2 .rb-line .nb-arrow { font-size: calc(var(--rbchip, 30px) * .9); color: #16202e;

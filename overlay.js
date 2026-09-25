@@ -1543,12 +1543,11 @@
         // note予想バッジは廃止（8/6 FB25・レースラベル側の🔥表記のみ残す）。
         // 空席は文言ごと出さない＝③は席を畳まないので「名前の無い『予想』」が画面に残るため（8/12）
         if (bandName) {
-          // A（RB2・②だけ）＝見出しの「〇〇 予想」の右にレース名（場R・グレード・🔥）。帯の中のラベルは出さない
-          var bhRace = (RB2 && bp === "band-" && rc && key)
-            ? ' <span class="bh-race">' + esc(keyLabel(key)) + gradeBadge(String(key).split("|")[0]) +
-              (rp && rp.entry.isNote ? ' <span class="bh-note">🔥</span>' : "") + "</span>"
-            : "";
-          bandName.innerHTML = name ? esc(name) + " 予想" + bhRace : "";
+          // A（RB2・②だけ）＝帯の中のレース名ラベルは出さない（場名・Rは中央の並びの窓に出ている）。
+          // note予想のレースの人だけ「🔥note」の札（9/25 Naoto）＝左の席は名前の右・右の席は名前の左（中央の並びに寄せる）
+          var bhNote = (RB2 && bp === "band-" && rp && rp.entry.isNote) ? '<span class="bh-race">🔥note</span>' : "";
+          bandName.innerHTML = !name ? ""
+            : (slot === "b" && bhNote ? bhNote + " " : "") + esc(name) + " 予想" + (slot !== "b" && bhNote ? " " + bhNote : "");
         }
         var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
