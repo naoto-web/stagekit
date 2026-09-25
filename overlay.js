@@ -75,8 +75,8 @@
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
      9/25 Naoto「OK・本番反映」＝本番も既定ON。&rb2=0 で従来の②に戻せる（OBSのソースURLだけで） */
   var RB2 = SCENE === "race" && params.get("rb2") !== "0";
-  // 🧪②NEXT枠は入力があるレースだけ出す（9/25 Naoto・詳細は renderPreds の subHasContent）。テストGAS接続時だけ既定ON・&subauto=1／0
-  var SUBAUTO = params.get("subauto") ? params.get("subauto") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
+  // ②NEXT枠は入力があるレースだけ出す（9/25 Naoto・詳細は renderPreds の subHasContent）。9/25 本番既定ON・&subauto=0 で従来（選べば常に出す）
+  var SUBAUTO = params.get("subauto") !== "0";
   // ⚠️tmeta-on は下の className 代入の中で付ける（9/25 当初は classList.add を先に書いていて、直後の代入で消えていた
   //    ＝①の2〜3場で合計欄が区画の右下に寄らなかった）
 
