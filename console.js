@@ -290,7 +290,7 @@
         });
         // 見出しは②サブ予想と揃える（8/27 FB142・①→②の並びにしたのに①側だけ無名だったため）。
         // 「最大3場」は見出しに移したので行のラベルは名前だけ＝②と同じ形・狭いドックでの折返しも減る
-        sr.innerHTML = '<div class="lbl">①トーク（画面に出す場）：配信者ごとに最大3場（並びは開催の早い順）</div>' +
+        sr.innerHTML = '<div class="lbl">①トーク（画面に出す場）：配信者ごとに最大3場</div>' +
           state.racers.map(function (rc) {
             var list = state.talkRaces[rc.id] || [];
             return personRowHtml(rc,
@@ -1485,7 +1485,7 @@
             if (tv && tv.grade) state.grade[v.name] = tv.grade;
           }
         });
-        renderSettings();
+        saveSettings(); // 押した瞬間に保存（9/26 Naoto・旧＝「設定を保存」かほかの操作の保存に便乗するまでOBSに出なかった）
       });
     });
 
@@ -1558,7 +1558,23 @@
     save();
     renderAll();
   }
-  $("btn-save-settings").addEventListener("click", saveSettings);
+  $("btn-save-settings").addEventListener("click", saveSettings); // 9/26から admin-only（隠した項目の保存用）
+  /* 配信者は選んだ瞬間に保存（9/26 Naoto）。もう一方の席にいる人を選んだら2人の席を入れ替える
+     ＝同じ人を両席に選ぶと席2が空席扱いになり、一瞬1人配信の画面に切り替わってしまうため。
+     元の席が空席だった人を選んだ場合は「移動」になる（もう一方が空席に） */
+  ["racer-1", "racer-2"].forEach(function (id, n) {
+    $(id).addEventListener("change", function () {
+      var other = $(n === 0 ? "racer-2" : "racer-1");
+      var seat = n === 0 ? "a" : "b";
+      var prev = "";
+      (state.racers || []).forEach(function (r, i) {
+        var s = (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b"); // renderSettings と同じ読み方
+        if (s === seat && !prev) prev = r.name;
+      });
+      if ($(id).value && $(id).value === other.value) other.value = prev;
+      saveSettings();
+    });
+  });
   // 席替え：席1⇄席2を入れ替えて即保存（座り位置の変更に1タップで追従）
   $("btn-seat-swap").addEventListener("click", function () {
     var a = $("racer-1").value;
