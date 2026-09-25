@@ -70,12 +70,14 @@
      2〜3場＝場の区画ごとに右下へ寄せる（1つの角に3レース分は入らない）。
      オッズと同じ既定（9/25 本番化＝ON）。&tmeta=0 で従来のインラインに戻せる */
   var TMETA = params.get("tmeta") ? params.get("tmeta") !== "0" : !!ODDS;
-  if (TMETA) document.body.classList.add("tmeta-on");
+  // ⚠️tmeta-on は下の className 代入の中で付ける（9/25 当初は classList.add を先に書いていて、直後の代入で消えていた
+  //    ＝①の2〜3場で合計欄が区画の右下に寄らなかった）
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
     (params.get("wm") === "0" ? "" : " wm-on") + // CTC透かし＝既定ON（8/6）・&wm=0で非表示
-    (SEATCARD ? " seatcard-on" : "");
+    (SEATCARD ? " seatcard-on" : "") +
+    (TMETA ? " tmeta-on" : "");
   // テーマ：①トーク・②レース観戦は白（w）が既定（7/30 FB10）。
   // URLの &theme=a|b|c|w が最優先＝OBS側だけで即時に戻せる保険
   var THEMES = ["a", "b", "c", "w"];
