@@ -73,9 +73,8 @@
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
-     テストGAS接続時だけ既定ON・本番は既定OFF。&rb2=1／0 で明示 */
-  var RB2 = SCENE === "race" &&
-    (params.get("rb2") ? params.get("rb2") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
+     9/25 Naoto「OK・本番反映」＝本番も既定ON。&rb2=0 で従来の②に戻せる（OBSのソースURLだけで） */
+  var RB2 = SCENE === "race" && params.get("rb2") !== "0";
   // ⚠️tmeta-on は下の className 代入の中で付ける（9/25 当初は classList.add を先に書いていて、直後の代入で消えていた
   //    ＝①の2〜3場で合計欄が区画の右下に寄らなかった）
 
