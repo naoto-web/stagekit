@@ -1475,9 +1475,92 @@
   function setBandInv(el, text) {
     if (!el || el._biText === text) return;
     el._biText = text;
-    el.innerHTML = esc(text || "").replace(/(¥[0-9,]+|集計中)/g, '<span class="bi-v">$1</span>');
+    var html = esc(text || "").replace(/(¥[0-9,]+|集計中)/g, '<span class="bi-v">$1</span>');
+    // プラ転（9/26）＝回収＞投資の間は回収額を金色（同額・集計中は付かない）。カウントアップの途中も文字列で判定＝追い越した瞬間に金になる
+    if (PLATEN) {
+      var m = String(text || "").match(/投資 ¥([0-9,]+)　回収 ¥([0-9,]+)/);
+      if (m && +m[2].replace(/,/g, "") > +m[1].replace(/,/g, "")) html = html.replace(/(回収 )<span class="bi-v">/, '$1<span class="bi-v pl-gold">');
+    }
+    el.innerHTML = html;
   }
+
+  /* ══════════ プラ転（9/26 Naoto・要件定義§19） ══════════
+     ・見出しの投資＝**発走したレースの投資だけ**（時刻表の発走時刻から加算・遅延も時刻表どおり・時刻表に無いレースは入力時点・
+       結果の出たレースは必ず含む・日跨ぎ（state.date が前日）は全部含む）。回収・集計中は従来どおり derive の totals
+     ・判定は**結果が入った瞬間だけ**（回収額か「結果の出たレースの投資」が変わったとき）。集計中は判定しない
+       ＝結果が出た時点で精算済みの収支（結果の出たレースだけ）がマイナスなら「負けている人」→その後、画面の数字が回収＞投資になったらプラ転。
+       一時的なへこみ（新しいレースの発走で投資が先に増えた）ではプラ転しない（Naotoの例：投資10,000回収12,000→追加5,000が的中＝非プラ転）
+     ・1レース目の的中は非プラ転（一度も負けていない）／返還は収支不変／同額は非プラ／毎回出す（1日何回でも・打ち直しで出るのは許容）
+     ・演出＝ピコーンのカウントアップが投資を追い越した瞬間に、帯の金フラッシュ＋「プラ転！」。&platen=0 で金色ごと止める */
+  var PLATEN = params.get("platen") !== "0";
+  var platenSt = {}; // 配信者id → { refund, sInv, losing, armed }
+  function headTotals(rid) {
+    var bt = derived.totals[rid] || { invest: 0, refund: 0, pending: false };
+    if (!PLATEN) return { invest: bt.invest, refund: bt.refund, pending: bt.pending, sInv: 0 };
+    var inv = 0, sInv = 0, late = !!(state.date && state.date < todayStr()), now = nowSec();
+    Object.keys(state.preds || {}).forEach(function (key) {
+      var br = (state.preds[key] || {}).byRacer || {};
+      if (!br[rid]) return;
+      var v = window.Derive.resolvePred(state, key, rid).invest;
+      if (!v) return;
+      var done = !!(state.results && state.results[key]);
+      var s = raceStartSecOf(key);
+      if (done || late || s === null || now >= s) inv += v;
+      if (done) sInv += v;
+    });
+    return { invest: inv, refund: bt.refund, pending: bt.pending, sInv: sInv };
+  }
+  function platenCheck(rid, ht) {
+    if (!PLATEN) return;
+    var p = platenSt[rid];
+    if (!p) { platenSt[rid] = { refund: ht.refund, sInv: ht.sInv, losing: ht.refund - ht.sInv < 0, armed: false }; return; } // 読み込み直後＝出さない
+    if (ht.pending) return; // 集計中＝回収が入るまで判定しない（入った瞬間を「結果の瞬間」として見る）
+    if (ht.refund === p.refund && ht.sInv === p.sInv) return; // 結果・回収に変化なし（発走で投資が増えただけ等）
+    p.refund = ht.refund; p.sInv = ht.sInv;
+    if (ht.refund - ht.invest > 0 && p.losing) { p.losing = false; p.armed = true; }
+    else if (ht.refund - ht.sInv < 0) p.losing = true;
+    if (p.armed && !REFPOP) platenFire(rid); // ピコーンを止めている場合は即
+  }
+  function platenFire(rid) {
+    var p = platenSt[rid];
+    if (!p || !p.armed) return;
+    p.armed = false;
+    refpopBandInvs(rid).forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return; // 非表示のシーン
+      var head = el.closest(".band-head");
+      if (head) {
+        head.classList.remove("pl-flash"); void head.offsetWidth; head.classList.add("pl-flash");
+        setTimeout(function () { head.classList.remove("pl-flash"); }, 1700);
+      }
+      var pop = document.createElement("div");
+      pop.className = "platen-pop";
+      pop.textContent = "プラ転！";
+      pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
+      document.body.appendChild(pop);
+      setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 4300);
+    });
+  }
+  /** 見出しの投資/回収を2秒ごとに取り直す（9/26）＝発走時刻で投資が増えるのは state の変化を伴わないため。
+      文字列が変わったときだけ書き換え＋幅合わせ。ピコーン中は refundHeaderText が表示を保持するので干渉しない */
+  function refreshBandInvs() {
+    if (!PLATEN || !state || !derived) return;
+    var seats = seatMap();
+    ["a", "b"].forEach(function (slot) {
+      var rc = seats[slot];
+      if (!rc) return;
+      ["band-", "tband-", "kband-"].forEach(function (bp) {
+        var el = $(bp + "inv-" + slot);
+        if (!el) return;
+        var before = el._biText;
+        setBandInv(el, refundHeaderText(rc, derived.totals[rc.id] || { invest: 0, refund: 0 }));
+        if (el._biText !== before) { var head = el.closest(".band-head"); if (head) fitBandHead(head); }
+      });
+    });
+  }
+  setInterval(refreshBandInvs, 2000);
   function refundHeaderText(rc, bt) {
+    if (rc) { bt = headTotals(rc.id); platenCheck(rc.id, bt); }
     var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
     if (!REFPOP || !rc) return normal;
     var a = refAnim[rc.id];
@@ -1487,7 +1570,11 @@
       return a.text;
     }
     if (bt.pending) { a.text = normal; return normal; } // 集計中＝数字は出さない（shown は最後の数値のまま）
-    if (a.shown === null || bt.refund <= a.shown) { a.shown = bt.refund; a.text = normal; return normal; } // 初回・減額・同額＝即差し替え
+    if (a.shown === null || bt.refund <= a.shown) { // 初回・減額・同額＝即差し替え
+      a.shown = bt.refund; a.text = normal;
+      if (platenSt[rc.id] && platenSt[rc.id].armed) setTimeout(function () { platenFire(rc.id); }, 0); // カウントアップが無い増え方＝その場で
+      return normal;
+    }
     a.target = bt.refund; a.waiting = true; // 増えた＝演出後にピコーン
     a.invest = bt.invest;
     // ⚠️ここは renderAll の途中＝的中演出（checkNewHits→fireHitFx）は**この後**に走り、そこで __fxBadgeAt が置かれる。
@@ -1517,7 +1604,7 @@
   function refpopRun(rid) {
     var a = refAnim[rid];
     if (!a || a.running || a.target === null) return;
-    var bt = derived.totals[rid] || { invest: a.invest || 0, refund: a.target };
+    var bt = headTotals(rid); // 投資＝発走したレースまで（プラ転・9/26）
     var from = a.shown || 0, to = a.target, delta = to - from;
     a.running = true; a.target = null;
     var invs = refpopBandInvs(rid);
@@ -1542,6 +1629,8 @@
       var cur = from + delta * e;
       a.text = textOf(p >= 1 ? to : cur);
       refpopBandInvs(rid).forEach(function (el) { setBandInv(el, a.text); });
+      // プラ転＝カウントアップが投資を追い越した瞬間（9/26 Naoto「的中演出→ピコーン→投資を追い越したところでプラ転」）
+      if (platenSt[rid] && platenSt[rid].armed && Math.round(p >= 1 ? to : cur) > bt.invest) platenFire(rid);
       // ⚠️requestAnimationFrame ではなく 33ms のタイマー（9/25）＝rAF は見えていないページ・ヘッドレスで間引かれ、
       //   「消える1秒前に開始」が8秒後にずれた（ハーネス実測）。OBSのブラウザソースでも同じ間引きが起こりうる
       if (p < 1) { setTimeout(step, 33); return; }
