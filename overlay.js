@@ -1572,8 +1572,9 @@
     var p = platenSt[rid];
     if (!p || !p.armed) return;
     p.armed = false;
-    p.popUntil = Date.now() + 3000; // 続く節目の演出は「プラ転！」が消え始めるころ（CSS 4s の75%）から
-    bigPop(rid, "platen-pop", "プラ転！", 4000);
+    var wait = Math.max(0, p.popUntil - Date.now()); // 最高額のピコーン（§21）が消えきるまで待つ
+    p.popUntil = Date.now() + wait + 3000; // 続く節目の演出は「プラ転！」が消え始めるころ（CSS 4s の75%）から
+    setTimeout(function () { bigPop(rid, "platen-pop", "プラ転！", 4000); }, wait);
   }
   function msFire(rid) {
     var p = platenSt[rid];
@@ -1586,6 +1587,58 @@
     p.popUntil = Date.now() + wait + dur * 0.75;
     setTimeout(function () {
       bigPop(rid, "platen-pop ms" + tier, '<span class="ms-l">回収率</span><span class="ms-b">' + T + "%突破！</span>", dur);
+    }, wait);
+  }
+
+  /* 最高額更新（9/26 Naoto・要件定義§21）＝1レースの回収額（円）がその区分の最高を超えたら「最高額更新！」／同額なら「最高額タイ！」。
+     ・区分＝昼と夜で別（pairBandOf＝開催区分→発走15時。ハイタッチ／乾杯の出し分けと同じ）。区分の中は配信者を問わず全員の的中が対象（二人合わせて）
+     ・その区分の最初の的中は出さない／回収額1万円以上だけ／同じ更新で複数人（同じレースを2人的中等）なら額の大きい人だけ
+     ・判定＝回収額が新しく入った（または増えた）瞬間。比べる相手は「今のデータ」の他の的中＝打ち直しで下がった記録は残らない
+     ・順番＝プラ転→節目→最高額（ピコーンのカウントアップを数え終えたら・popUntil で前の演出の後ろへ）
+     ・読み込み直後は今あるものを「見た」扱いにするだけ（読み直しで過去の更新を再生しない） */
+  var REC_MIN = +(params.get("recmin") || 10000);
+  var recSeen = null; // "場|R|配信者id" → 回収額
+  function recCheck() {
+    if (!PLATEN || !state) return;
+    var cur = {};
+    Object.keys(state.results || {}).forEach(function (key) {
+      var rf = (state.results[key] || {}).refunds || {};
+      Object.keys(rf).forEach(function (pid) { if (rf[pid] > 0) cur[key + "|" + pid] = rf[pid]; });
+    });
+    if (recSeen === null) { recSeen = cur; return; }
+    var fresh = [];
+    Object.keys(cur).forEach(function (id) { if (!(recSeen[id] >= cur[id])) fresh.push(id); });
+    recSeen = cur;
+    if (!fresh.length) return;
+    var keyOf = function (id) { return id.split("|").slice(0, 2).join("|"); };
+    var byBand = {};
+    fresh.forEach(function (id) { var b = pairBandOf(keyOf(id)); (byBand[b] = byBand[b] || []).push(id); });
+    Object.keys(byBand).forEach(function (b) {
+      var ids = byBand[b], top = null, prev = 0, any = false;
+      ids.forEach(function (id) { if (!top || cur[id] > cur[top]) top = id; });
+      Object.keys(cur).forEach(function (id) {
+        if (ids.indexOf(id) >= 0 || pairBandOf(keyOf(id)) !== b) return;
+        any = true;
+        if (cur[id] > prev) prev = cur[id];
+      });
+      var amt = cur[top];
+      if (!any || amt < REC_MIN || amt < prev) return; // 区分の最初の的中・1万円未満・記録に届かない
+      var rid = top.split("|").slice(2).join("|");
+      var ps = platenSt[rid];
+      if (!ps) return;
+      ps.recArmed = { amt: amt, tie: amt === prev };
+      if (!REFPOP) recFire(rid);
+    });
+  }
+  function recFire(rid) {
+    var p = platenSt[rid];
+    if (!p || !p.recArmed) return;
+    var r = p.recArmed;
+    p.recArmed = null;
+    var wait = Math.max(0, p.popUntil - Date.now());
+    p.popUntil = Date.now() + wait + 3000;
+    setTimeout(function () {
+      bigPop(rid, "platen-pop rec", '<span class="ms-l">' + (r.tie ? "最高額タイ！" : "最高額更新！") + '</span><span class="ms-b">' + fmtYen(r.amt) + "</span>", 4000);
     }, wait);
   }
   /** 見出しの投資/回収を2秒ごとに取り直す（9/26）＝発走時刻で投資が増えるのは state の変化を伴わないため。
@@ -1607,7 +1660,7 @@
   }
   setInterval(refreshBandInvs, 2000);
   function refundHeaderText(rc, bt) {
-    if (rc) { bt = headTotals(rc.id); platenCheck(rc.id, bt); }
+    if (rc) { bt = headTotals(rc.id); platenCheck(rc.id, bt); recCheck(); }
     var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
     if (!REFPOP || !rc) return normal;
     var a = refAnim[rc.id];
@@ -1619,7 +1672,7 @@
     if (bt.pending) { a.text = normal; return normal; } // 集計中＝数字は出さない（shown は最後の数値のまま）
     if (a.shown === null || bt.refund <= a.shown) { // 初回・減額・同額＝即差し替え
       a.shown = bt.refund; a.text = normal;
-      if (platenSt[rc.id] && (platenSt[rc.id].armed || platenSt[rc.id].msArmed)) setTimeout(function () { platenFire(rc.id); msFire(rc.id); }, 0); // カウントアップが無い増え方＝その場で（プラ転→節目の順）
+      if (platenSt[rc.id] && (platenSt[rc.id].armed || platenSt[rc.id].msArmed || platenSt[rc.id].recArmed)) setTimeout(function () { platenFire(rc.id); msFire(rc.id); recFire(rc.id); }, 0); // カウントアップが無い増え方＝その場で（プラ転→節目→最高額の順）
       return normal;
     }
     a.target = bt.refund; a.waiting = true; // 増えた＝演出後にピコーン
@@ -1659,12 +1712,23 @@
     // 最終値で先に幅合わせ（fitBandHead は見出し要素を取る）
     invs.forEach(function (el) { setBandInv(el, textOf(to)); var head = el.closest(".band-head"); if (head) fitBandHead(head); setBandInv(el, a.text); });
     // ピコーン＝見えている見出しの「回収」の上に浮かべる
+    /* 最高額更新（§21・9/26 Naoto「＋¥が出るタイミングで」）＝同じ場所なので重ねず、ピコーン自体をシルバーの
+       「最高額更新！＋¥30,000」に置き換える（ここで recArmed を使い切る＝後続のプラ転・節目より前に出る）。
+       金額は記録の額（そのレースの回収）。1回の更新で複数レース分が入り差額と違うときは「＋」を付けない */
+    var ps0 = platenSt[rid], rec = ps0 && ps0.recArmed;
+    if (rec) {
+      ps0.recArmed = null;
+      ps0.popUntil = Date.now() + 4600; // 2段で背が高い＝プラ転・節目はこのピコーンが上へ抜けてから（CSS refpop 5s の終盤）
+      invs.forEach(function (el) { var head = el.closest(".band-head"); if (head && head.getBoundingClientRect().width) { head.classList.remove("pl-flash"); void head.offsetWidth; head.classList.add("pl-flash"); setTimeout(function () { head.classList.remove("pl-flash"); }, 1700); } });
+    }
     invs.forEach(function (el) {
       var r = el.getBoundingClientRect();
       if (!r.width || !r.height) return; // 非表示のシーン
       var pop = document.createElement("div");
-      pop.className = "refpop";
-      pop.textContent = "＋" + fmtYen(delta);
+      pop.className = "refpop" + (rec ? " rec" : "");
+      if (rec) pop.innerHTML = '<span class="ms-l">' + (rec.tie ? "最高額タイ！" : "最高額更新！") + '</span><span class="ms-b">' +
+        (rec.amt === delta ? "＋" : "") + fmtYen(rec.amt) + "</span>";
+      else pop.textContent = "＋" + fmtYen(delta);
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
       setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 5400); // CSS 5s＋余裕

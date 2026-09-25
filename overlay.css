@@ -3324,6 +3324,22 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
   -webkit-background-clip: text; background-clip: text;
   filter: drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)
           drop-shadow(0 0 24px rgba(255,255,255,.9)) drop-shadow(0 0 44px rgba(255,120,220,.8)); }
+/* 最高額更新（9/26・§21）＝B案シルバー（プラチナ）。「最高額更新！／最高額タイ！」小さく上段・金額を大きく下段（見本 モック/最高額更新_見本/） */
+.platen-pop.rec { font-size: 120px; line-height: 1; text-align: right;
+  background: linear-gradient(180deg, #ffffff 0%, #eef3f8 35%, #b9c6d4 60%, #7d8da0 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)
+          drop-shadow(0 0 20px rgba(210,235,255,.95)); }
+.platen-pop.rec .ms-l { display: block; font-size: .42em; letter-spacing: .06em; }
+.platen-pop.rec .ms-b { display: block; }
+/* 9/26 Naoto「＋¥が出るタイミングで」＝最高額のときはピコーン自体をシルバー2段に置き換える（動き・大きさ・尺はピコーンのまま） */
+.refpop.rec { line-height: 1; text-align: right; text-shadow: none;
+  background: linear-gradient(180deg, #ffffff 0%, #eef3f8 35%, #b9c6d4 60%, #7d8da0 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)
+          drop-shadow(0 0 20px rgba(210,235,255,.95)); }
+.refpop.rec .ms-l { display: block; font-size: .45em; letter-spacing: .06em; }
+.refpop.rec .ms-b { display: block; }
 @keyframes platen-in {
   0%   { opacity: 0; transform: translate(-100%, -95%) scale(.4); }
   12%  { opacity: 1; transform: translate(-100%, -105%) scale(1.3); }
