@@ -77,6 +77,8 @@
   var RB2 = SCENE === "race" && params.get("rb2") !== "0";
   // ②NEXT枠は入力があるレースだけ出す（9/25 Naoto・詳細は renderPreds の subHasContent）。9/25 本番既定ON・&subauto=0 で従来（選べば常に出す）
   var SUBAUTO = params.get("subauto") !== "0";
+  // 🧪NEXT枠の補完（サブの場が空なら入力のある別の場のレース・renderPreds の effSubOf）。テストGAS接続時だけ既定ON・&subfb=1／0
+  var SUBFB = params.get("subfb") ? params.get("subfb") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
   /* 🧪①③は幅のある倍率（「40〜308」）を買目の下の段に回し、買目の右端にそろえる（9/25 Naoto「横長の買目だと小さくなる」）。
      ①は行ごとに枠幅へ縮める作り＝倍率ぶん行が短くなれば縮まない。②は縦が狭いので対象外（1段のまま）。
      1点の行・俺たち目は倍率が短いので従来どおり右。9/25 本番既定ON・&odds2=0 で1段に戻す */
@@ -1549,10 +1551,28 @@
       var e = (p && p.entry) || {};
       return !!(e.isNote || String(e.text || "").trim() || String(e.oreTachi || "").trim() || (p && p.invest > 0));
     };
+    /* 🧪SUBFB（9/25 Naoto「えーすさん弥彦1Rを入れていたのに出ない」）＝サブの場（自動追従＝次に発走する場）のレースが空なら、
+       メイン以外の場の今のレースから、その人の入力がある（またはnoteの）レースを発走の早い順に1つ出す。
+       人が「なし」（SUB_OFF）を選んだ席は対象外。テストGAS接続時だけ既定ON・&subfb=1／0 */
+    var effSubOf = function (rc) {
+      var svn = subVenueOf(rc);
+      if (!SUBAUTO || !SUBFB || !rc) return svn;
+      if (svn && subHasContent(rc, svn)) return svn;
+      if (rawSubOf(rc) === window.Derive.SUB_OFF) return svn;
+      var best = null, bestSec = Infinity;
+      state.venues.forEach(function (v) {
+        var vn = v.name;
+        if (vn === mainName || vn === svn || !state.currentRace[vn] || !subHasContent(rc, vn)) return;
+        var sec = raceStartSecOf(window.Derive.raceKey(vn, state.currentRace[vn]));
+        if (sec === null) sec = Infinity - 1;
+        if (sec < bestSec) { bestSec = sec; best = vn; }
+      });
+      return best || svn;
+    };
     var subFrameOf = function (rc) {
       if (!rc) return false;
       if (SUB_FIXED) return true;
-      var svn0 = subVenueOf(rc);
+      var svn0 = effSubOf(rc);
       if (svn0) return SUBAUTO ? subHasContent(rc, svn0) : true;
       var raw = rawSubOf(rc);
       return !!(SUB_KEEP_OVERLAP && raw && raw === mainName);
@@ -1686,7 +1706,7 @@
       // ②サブ予想帯（8/6 FB13・FB17）：配信者ごとの場＝raceSubBy。サブ未選択の配信者の枠は畳む
       var sHead = $("sband-head-" + slot);
       if (sHead) {
-        var svn = subVenueOf(rc);
+        var svn = effSubOf(rc); // SUBFB＝サブの場が空なら入力のある別の場（無ければ従来どおり subVenueOf）
         var sPanel = sHead.parentElement;
         // 席ごとに枠を出し入れ（9/7・§10項98）：ON＝パネル表示＋カメラ穴362（.sub-on）／OFF＝パネル非表示＋カメラ穴544。
         // 丸かぶり・SUB_FIXEDでは svn が null でも枠は出る（ヘッダーだけ残る）
