@@ -1197,20 +1197,38 @@
     }
     var best = null;
     var maxCols = Math.min(5, rows.length);
-    (function rec(start, cols) {
-      for (var end = start + 1; end <= rows.length; end++) {
-        var idx = [];
-        for (var i = start; i < end; i++) idx.push(i);
-        cols.push(idx);
-        if (end === rows.length) {
-          var k = evalCols(cols);
-          if (!best || k > best.k) best = { k: k, cols: cols.map(function (c) { return c.slice(); }) };
-        } else if (cols.length < maxCols) {
-          rec(end, cols);
+    /* 試す行の並び（seq）。通常＝書いた順だけ。
+       🧪RB2（②・9/25 Naoto「書いた順でなくていいから全体の文字が大きくなるように」）＝買目行を長い順／短い順にも並べ替えて試す
+       （長さの近い行が同じ列にまとまる＝列幅が短い行のすき間で太らない）。俺たち目は常に先頭（左上）・メモ等は常に最後。
+       振り分けが決まったら各列の中は書いた順に戻す（1行足したときに他の行が飛び回りにくい） */
+    var seqs = [rows.map(function (_, i) { return i; })];
+    if (RB2) {
+      var head = [], mid = [], tail = [];
+      rows.forEach(function (el, i) {
+        if (el.classList.contains("ore-row")) head.push(i);
+        else if (hard[i]) mid.push(i);
+        else tail.push(i);
+      });
+      var byW = function (dir) {
+        return head.concat(mid.slice().sort(function (a, b) { return dir * (ws[b] - ws[a]) || a - b; }), tail);
+      };
+      seqs.push(byW(1), byW(-1));
+    }
+    seqs.forEach(function (seq) {
+      (function rec(start, cols) {
+        for (var end = start + 1; end <= seq.length; end++) {
+          cols.push(seq.slice(start, end));
+          if (end === seq.length) {
+            var k = evalCols(cols);
+            if (!best || k > best.k + 1e-6) best = { k: k, cols: cols.map(function (c) { return c.slice(); }) };
+          } else if (cols.length < maxCols) {
+            rec(end, cols);
+          }
+          cols.pop();
         }
-        cols.pop();
-      }
-    })(0, []);
+      })(0, []);
+    });
+    if (RB2) best.cols.forEach(function (c) { c.sort(function (a, b) { return a - b; }); }); // 列の中は書いた順
     // 診断フック（body.debug系と同趣旨・通常は不発）：パッキングの入力と採用解を記録
     if (window.__RB_DEBUG) window.__RB_DEBUG.push({ availW: availW, availH: availH, metaL: metaL, metaT: metaT,
       hs: hs, ws: ws, hard: hard, bestK: best.k, cols: best.cols });
