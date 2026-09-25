@@ -1887,7 +1887,9 @@
         }
         return (o.gap ? gapRow : "") +
           '<div class="stc-row stc-tr"><span><i class="car c' + p.no + '">' + p.no + "</i></span>" +
-          '<span class="nm">' + esc(p.name) + "<small>" + esc(sub) + "</small></span>" +
+          // 補充・追加の選手は名前の後ろに「(補充)」「(追加)」（9/25 Naoto・GAS cards.h＝JSJ002 ketujyouTuikaHojyu。旧GASは空＝出ない）
+          '<span class="nm">' + (c.h ? '<span class="nm1">' + esc(p.name) + '<span class="hj">(' + esc(c.h) + ")</span></span>" : esc(p.name)) +
+          "<small>" + esc(sub) + "</small></span>" +
           "<span>" + esc(c.c || "") + "</span><span>" + esc(c.k || p.kyaku || "") + "</span>" +
           '<span class="sc' + scls + '">' + esc(sc) + "</span>" + nums +
           (cmp ? "" : '<span class="role sep">' + esc(STC_ROLE[roles[p.no]] || "") + "</span>") + "</div>";

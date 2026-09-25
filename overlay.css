@@ -364,6 +364,9 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .stc-row > .nm small { display: block; font-size: min(14px, calc(var(--stc-rh, 36px) * .33)); font-weight: 700; color: var(--sub);
   /* 名前との間をあける（9/25 Naoto「名前と出身が近くて被って見える」）＝行の高さの8%・最大4px */
   margin-top: min(4px, calc(var(--stc-rh, 36px) * .08)); line-height: 1.1; }
+/* 補充・追加の印（9/25 Naoto）＝名前の後ろに一回り小さく「(補充)」。名前＋印は折り返さない（はみ出しは .nm の overflow で切れる） */
+.stc-row > .nm .nm1 { white-space: nowrap; }
+.stc-row > .nm .hj { font-size: .72em; font-weight: 800; margin-left: 2px; }
 .stc-tr .sc { font-weight: 900; }
 .stc-tr .sc.top1 { color: #d63b3b; }
 .stc-tr .sc.top2 { color: #2f66d0; }
