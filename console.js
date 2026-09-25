@@ -743,7 +743,31 @@
     });
   }
 
+  /* 買目のリアルタイムオッズ（9/25 Naoto・要件定義§13）＝右列を点数→オッズ（整数）、合計の行の投資の右に合成オッズ。
+     テストGAS接続時だけ既定ON（本番GASに action=odds が無い）。&odds=1／0 で明示。取れない行は従来どおり点数。
+     予想入力の対象レースだけを30秒ごと（初回は即）に取る。表示だけ＝保存・計算には入れない */
+  var CON_ODDS = params.get("odds") ? params.get("odds") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
+  var conOdds = {}, conOddsAt = {}, conOddsPending = {};
+  function ensureConOdds(key, force) {
+    if (!CON_ODDS || !key || conOddsPending[key]) return;
+    if (!force && conOddsAt[key] && Date.now() - conOddsAt[key] < 25000) return;
+    var p = key.split("|"), jo = joCodeOfName(p[0]);
+    if (!jo || !+p[1]) return;
+    conOddsPending[key] = true;
+    window.Sync.fetchOdds(jo, [+p[1]]).then(function (res) {
+      delete conOddsPending[key];
+      conOddsAt[key] = Date.now();
+      var d = res[+p[1]];
+      if (!d || !d.o || JSON.stringify(d.o) === JSON.stringify(conOdds[key] || null)) return;
+      conOdds[key] = d.o;
+      if (predKey() !== key) return;
+      document.querySelectorAll("#pred-forms .pred-form").forEach(function (f) { updatePredInfo(f, key); });
+    }).catch(function () { delete conOddsPending[key]; conOddsAt[key] = Date.now(); });
+  }
+
   function updatePredInfo(form, key) {
+    ensureConOdds(key); // 買目オッズ（§13）＝初回は即・以後は25秒以内の重複を抑える
+    var odds = CON_ODDS ? conOdds[key] : null;
     var cars = autoCars(key); // 出走表の最大車番から自動判定（手動上書きは8/27 FB138で廃止）
     var type = form.querySelector(".pf-type").value;
     var ta = form.querySelector(".pf-text");
@@ -771,10 +795,14 @@
       var showDisp = l.disp && l.disp !== window.Keirin.normalize(l.raw).replace(/\s+/g, "");
       var tip = l.type + " " + l.points + "点" + (l.dupCount ? "　かぶり/切り" + l.dupCount + "点除外" : "") + (showDisp ? "　画面 " + l.disp : "");
       var typeMark = l.type !== "3連単" ? '<span class="pl-memo">' + esc(l.type) + "</span> " : "";
+      var ol = odds ? window.Keirin.oddsLabel(l, odds) : ""; // 9/25 Naoto「右側は点数じゃなくオッズ（整数）」
+      if (ol) return '<div class="pl-row pl-ok pl-odds" title="' + esc(tip) + '">' + "<b>" + ol + "倍</b>" + "</div>";
       return '<div class="pl-row pl-ok" title="' + esc(tip) + '">' + typeMark + "<b>" + l.points + "点</b>" + (l.dupCount ? '<span class="pl-memo">*</span>' : "") + "</div>";
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;
-    var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) + cutWarn;
+    var syn = odds ? window.Keirin.synthOdds(parsed, odds) : null; // 合成オッズ＝投資の右（9/25 Naoto）
+    var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
+      (syn ? "　合成 " + window.Keirin.oddsInt(syn) + "倍" : "") + cutWarn;
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
     var oreOut = oreMissingInBuys(key, form.querySelector(".pf-text").value, form.querySelector(".pf-ore").value.trim());
     if (oreOut) {
@@ -1911,6 +1939,7 @@
   }
 
   setInterval(pollResults, 60000);
+  if (CON_ODDS) setInterval(function () { ensureConOdds(predKey(), true); }, 30000); // 買目オッズ（§13）の定期取得
 
   /* ---------- 診断 ---------- */
   function renderDiag() {

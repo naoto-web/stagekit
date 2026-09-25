@@ -827,39 +827,28 @@
   /* 買目のリアルタイムオッズ（§13）。oddsData[raceKey]＝GAS action=odds の1レース分
      {st, end, fin, o:{'123':65.1}}。oddsWant[raceKey]＝最後に描画で要求された時刻（画面に出ている3連単のレースだけ取る）。
      ⚠️表示だけ＝点数・投資・回収・的中の計算（derive）には一切入れない（§8の実額転記は不変） */
-  var oddsData = {}, oddsWant = {}, oddsPending = {}, oddsDate = "";
-  function fmtOdds(v) { return v >= 1000 ? String(Math.round(v)) : v.toFixed(1); }
+  var oddsData = {}, oddsWant = {}, oddsPending = {}, oddsDate = "", oddsKick = null;
   function oddsHtml(k, l, small) {
     if (!ODDS || !k || l.type !== "3連単" || !l.combos || !l.combos.length) return "";
+    // 初めて画面に出たレース＝30秒の定期を待たずにすぐ取りに行く（9/25 Naoto「なかなか出ない」＝最悪35〜40秒かかっていた）
+    if (!oddsData[k] && !oddsPending[k] && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
     oddsWant[k] = Date.now();
     var d = oddsData[k];
-    if (!d || !d.o) return "";
-    var vals = [];
-    l.combos.forEach(function (c) { var v = d.o[c.join("")]; if (v > 0) vals.push(v); });
-    if (!vals.length) return "";
-    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
-    var txt = lo === hi ? fmtOdds(lo) : fmtOdds(lo) + "〜" + fmtOdds(hi);
-    return '<span class="pl-odds' + (small ? " sm" : "") + (d.fin ? " fin" : "") + '">' + txt + "倍</span>";
+    var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
+    return txt ? '<span class="pl-odds' + (small ? " sm" : "") + '">' + txt + "倍</span>" : "";
   }
-  /** 合成オッズ（9/25 Naoto）＝ 1 ÷ Σ(1/倍率)。配信者の均等回収配分（どれが当たっても回収同額）と同じ考え方。
-      対象＝成立した買目行の全組（切り目・かぶり目は parsePrediction が除去済み）。俺たち目は買っていないので入れない。
-      3連単以外の行が混じる／倍率が取れない組がある → null（出さない＝間違った数字より出さない方がよい） */
-  function synthOdds(k, rp) {
-    if (!ODDS || !k || !rp) return null;
-    var d = oddsData[k];
-    if (!d || !d.o) return null;
-    var inv = 0, n = 0, bad = false;
-    rp.parsed.lines.forEach(function (l) {
-      if (!l.ok || l.cut || l.allDup) return;
-      if (l.type !== "3連単") { bad = true; return; }
-      l.combos.forEach(function (c) {
-        var v = d.o[c.join("")];
-        if (v > 0) { inv += 1 / v; n++; } else bad = true;
-      });
-    });
-    return bad || !n ? null : 1 / inv;
+  /** 合成オッズ（9/25 Naoto）＝keirin.js synthOdds（1÷Σ(1/倍率)）。出せないときは "" */
+  function synthText(k, rp) {
+    if (!ODDS || !k || !rp || !oddsData[k]) return "";
+    var s = window.Keirin.synthOdds(rp.parsed, oddsData[k].o);
+    return s ? "合成 " + window.Keirin.oddsInt(s) + "倍" : "";
   }
-  function synthText(k, rp) { var s = synthOdds(k, rp); return s ? "合成 " + fmtOdds(s) + "倍" : ""; }
+  /** 合計・合成・投資の中身（9/25 Naoto）＝合成は投資の真上・合計は投資の左（2段）。合成が無いときは従来の1行 */
+  function metaPartsHtml(points, st, invest) {
+    var a = points ? '<span class="bm-part bm-pts">合計 ' + points + "点</span>" : "";
+    var b = invest > 0 ? '<span class="bm-part bm-inv">投資 ' + fmtYen(invest) + "</span>" : "";
+    return (st ? '<span class="bm-part bm-syn">' + st + "</span>" : "") + a + b;
+  }
   /** 30秒ごと：画面に出ている（90秒以内に描画要求のあった）3連単レースを場ごとにまとめて取る。最終オッズは取り直さない */
   function pollOdds() {
     if (!ODDS || !timetable) return;
@@ -901,12 +890,9 @@
     var metaLine = "";
     if (!noMeta && rp && (rp.points || rp.invest > 0)) {
       // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
-      metaLine = '<div class="buy-meta' + (synthText(k, rp) ? " has-synth" : "") + '">' +
-        // 合成オッズ（§13）が出るときは「合計」→「計」に縮めて1行に収める（9/25 Naoto）
-        (rp.points ? '<span class="bm-part">' + (synthText(k, rp) ? "計" : "合計 ") + rp.points + "点</span>" : "") +
-        (synthText(k, rp) ? '<span class="bm-part">' + synthText(k, rp) + "</span>" : "") +
-        (rp.invest > 0 ? '<span class="bm-part">投資 ' + fmtYen(rp.invest) + "</span>" : "") +
-        "</div>";
+      var st0 = synthText(k, rp); // 合成オッズ（§13）＝投資の真上（9/25 Naoto）
+      metaLine = '<div class="buy-meta' + (st0 ? " has-synth" : "") + '">' +
+        metaPartsHtml(rp.points, st0, rp.invest) + "</div>";
     }
     // 的中買目の車番強調（8/10 FB119）＝このレース×この配信者に有効な的中があれば、
     // 該当する行（式別＋組合せ一致）にだけ当たり組合せを渡してチップを光らせる
@@ -1561,13 +1547,18 @@
           var bMeta = $(bp + "meta-" + slot);
           if (bMeta) {
             var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
-            var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13）＝合計と投資の間
-            var mt = rpm && (rpm.points || rpm.invest > 0)
-              ? [rpm.points ? (st ? "計" : "合計 ") + rpm.points + "点" : "", st,
-                 rpm.invest > 0 ? "投資 " + fmtYen(rpm.invest) : ""].filter(Boolean).join("　")
-              : "";
-            bMeta.textContent = mt;
-            bMeta.classList.toggle("hidden", !mt);
+            var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13・③だけ＝②はODDS無効）＝投資の真上
+            var has = !!(rpm && (rpm.points || rpm.invest > 0));
+            if (st && has) {
+              bMeta.innerHTML = metaPartsHtml(rpm.points, st, rpm.invest);
+            } else {
+              bMeta.textContent = has
+                ? (rpm.points ? "合計 " + rpm.points + "点" : "") +
+                  (rpm.invest > 0 ? (rpm.points ? "　" : "") + "投資 " + fmtYen(rpm.invest) : "")
+                : "";
+            }
+            bMeta.classList.toggle("has-synth", !!(st && has));
+            bMeta.classList.toggle("hidden", !has);
           }
           band.classList.remove("buy-xl", "buy-lg");
           // 第5引数keepAll=true＝②メイン帯も「全」を展開せず元記法で描く（8/8 FB74）。

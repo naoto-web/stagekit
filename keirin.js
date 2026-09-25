@@ -512,9 +512,38 @@
     return /^[1-9]{2,3}$/.test(s) ? s.split("").join("-") : String(raw || "");
   }
 
+  /* ---------- 買目のリアルタイムオッズ（9/25・要件定義§13） ----------
+     o＝GAS action=odds の {'123': 65.1, …}（3連単のみ）。表示は整数（四捨五入・9/25 Naoto）。
+     OBS（overlay.js）とコンソール（console.js）の両方がここを使う＝表示の数字を食い違わせない */
+  function oddsInt(v) { return String(Math.round(v)); }
+  /** 1行の倍率表示：1点「509」／複数点「78〜116」（四捨五入後に同じなら1つ）。3連単以外・倍率なしは "" */
+  function oddsLabel(line, o) {
+    if (!o || !line || !line.ok || line.cut || line.type !== "3連単" || !line.combos || !line.combos.length) return "";
+    var vals = [];
+    line.combos.forEach(function (c) { var v = o[c.join("")]; if (v > 0) vals.push(v); });
+    if (!vals.length) return "";
+    var lo = oddsInt(Math.min.apply(null, vals)), hi = oddsInt(Math.max.apply(null, vals));
+    return lo === hi ? lo : lo + "〜" + hi;
+  }
+  /** 合成オッズ＝1÷Σ(1/倍率)（均等回収配分と同じ考え方）。成立した買目行の全組（切り目・かぶり目は除去済み・俺たち目は入れない）。
+      3連単以外の行が混じる／倍率が取れない組がある → null（間違った数字より出さない） */
+  function synthOdds(parsed, o) {
+    if (!o || !parsed) return null;
+    var inv = 0, n = 0, bad = false;
+    parsed.lines.forEach(function (l) {
+      if (!l.ok || l.cut || l.allDup) return;
+      if (l.type !== "3連単") { bad = true; return; }
+      l.combos.forEach(function (c) { var v = o[c.join("")]; if (v > 0) { inv += 1 / v; n++; } else bad = true; });
+    });
+    return bad || !n ? null : 1 / inv;
+  }
+
   return {
     TYPES: TYPES,
     normalize: normalize,
+    oddsInt: oddsInt,         // 9/25 §13
+    oddsLabel: oddsLabel,     // 9/25 §13
+    synthOdds: synthOdds,     // 9/25 §13
     oreNormalize: oreNormalize,
     parseLine: parseLine,
     parsePrediction: parsePrediction,

@@ -701,8 +701,14 @@ body.debug #scene-tenkai .slist:empty::after {
 .talk-band .buy-meta { font-size: 27px; font-weight: 900; color: var(--txt); }
 /* 合計/合成/投資のパーツ内で折り返さない（9/25・合成オッズ追加で細い列だと「合計 6／点」に割れた）。
    はみ出しは既存の fitColBox が列ごと縮めて収める */
-.buy-meta.has-synth { gap: 0 12px; }
-.buy-meta.has-synth .bm-part { white-space: nowrap; flex: none; }
+/* 9/25 Naoto「合成は投資の上・合計は投資の左」＝2段のグリッド（1段目の右列に合成・2段目に 合計｜投資） */
+.has-synth { display: grid !important; grid-template-columns: auto auto; justify-content: start;
+  column-gap: 18px; row-gap: 0; align-items: baseline; }
+.has-synth .bm-part { white-space: nowrap; }
+.has-synth .bm-syn { grid-column: 2; grid-row: 1; }
+.has-synth .bm-pts { grid-column: 1; grid-row: 2; }
+.has-synth .bm-inv { grid-column: 2; grid-row: 2; }
+.band-meta.has-synth { justify-content: end; }
 
 /* ①トークの買い目行は折り返さない＝長い行はJSが幅に合わせて自動縮小（8/6 FB） */
 .talk-band .pred-line.chips { flex-wrap: nowrap; }
