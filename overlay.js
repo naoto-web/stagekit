@@ -840,6 +840,25 @@
     var txt = lo === hi ? fmtOdds(lo) : fmtOdds(lo) + "〜" + fmtOdds(hi);
     return '<span class="pl-odds' + (small ? " sm" : "") + (d.fin ? " fin" : "") + '">' + txt + "倍</span>";
   }
+  /** 合成オッズ（9/25 Naoto）＝ 1 ÷ Σ(1/倍率)。配信者の均等回収配分（どれが当たっても回収同額）と同じ考え方。
+      対象＝成立した買目行の全組（切り目・かぶり目は parsePrediction が除去済み）。俺たち目は買っていないので入れない。
+      3連単以外の行が混じる／倍率が取れない組がある → null（出さない＝間違った数字より出さない方がよい） */
+  function synthOdds(k, rp) {
+    if (!ODDS || !k || !rp) return null;
+    var d = oddsData[k];
+    if (!d || !d.o) return null;
+    var inv = 0, n = 0, bad = false;
+    rp.parsed.lines.forEach(function (l) {
+      if (!l.ok || l.cut || l.allDup) return;
+      if (l.type !== "3連単") { bad = true; return; }
+      l.combos.forEach(function (c) {
+        var v = d.o[c.join("")];
+        if (v > 0) { inv += 1 / v; n++; } else bad = true;
+      });
+    });
+    return bad || !n ? null : 1 / inv;
+  }
+  function synthText(k, rp) { var s = synthOdds(k, rp); return s ? "合成 " + fmtOdds(s) + "倍" : ""; }
   /** 30秒ごと：画面に出ている（90秒以内に描画要求のあった）3連単レースを場ごとにまとめて取る。最終オッズは取り直さない */
   function pollOdds() {
     if (!ODDS || !timetable) return;
@@ -883,6 +902,7 @@
       // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
       metaLine = '<div class="buy-meta">' +
         (rp.points ? '<span class="bm-part">合計 ' + rp.points + "点</span>" : "") +
+        (synthText(k, rp) ? '<span class="bm-part">' + synthText(k, rp) + "</span>" : "") + // 合成オッズ（§13）
         (rp.invest > 0 ? '<span class="bm-part">投資 ' + fmtYen(rp.invest) + "</span>" : "") +
         "</div>";
     }
@@ -1539,9 +1559,10 @@
           var bMeta = $(bp + "meta-" + slot);
           if (bMeta) {
             var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
+            var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13）＝合計と投資の間
             var mt = rpm && (rpm.points || rpm.invest > 0)
-              ? (rpm.points ? "合計 " + rpm.points + "点" : "") +
-                (rpm.invest > 0 ? (rpm.points ? "　" : "") + "投資 " + fmtYen(rpm.invest) : "")
+              ? [rpm.points ? "合計 " + rpm.points + "点" : "", st,
+                 rpm.invest > 0 ? "投資 " + fmtYen(rpm.invest) : ""].filter(Boolean).join("　")
               : "";
             bMeta.textContent = mt;
             bMeta.classList.toggle("hidden", !mt);

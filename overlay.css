@@ -415,11 +415,10 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .pl-type { font-size: 14px; font-weight: 900; color: var(--acc-text); background: var(--acc);
   padding: 3px 9px; border-radius: 6px; margin-right: 4px; }
 .pl-txt { font-size: 16px; font-weight: 800; color: var(--sub); }
-/* 買目のリアルタイムオッズ（9/25・§13）＝行の右端に「12.3倍」「8.1〜65.0倍」。発売中〜集計中は橙字・最終（fin）は濃い字。
+/* 買目のリアルタイムオッズ（9/25・§13）＝行の右端に「12.3倍」「8.1〜65.0倍」。黒字（9/25 Naoto・当初の橙から変更）。
    チップより一回り小さく・折り返さない（行の縮小は既存の fitColBox／fitSubRows に任せる） */
-.pl-odds { margin-left: 10px; font-size: 20px; font-weight: 900; color: #c2410c; white-space: nowrap;
+.pl-odds { margin-left: 10px; font-size: 20px; font-weight: 900; color: var(--txt); white-space: nowrap;
   font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.pl-odds.fin { color: var(--txt); }
 .pl-odds.sm { font-size: 15px; margin-left: 6px; }
 .talk-band .buy-line .pl-odds { font-size: 26px; }
 .talk-band .buy-line .pl-odds.sm { font-size: 19px; }
