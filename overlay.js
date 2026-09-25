@@ -971,7 +971,7 @@
         var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
         if (!l.dupCount && TRAIL_SEP_RE.test(l.raw || "")) src = String(l.raw).trim(); // 末尾が区切り＝打ちかけの形のまま
         var oh = noOdds ? "" : oddsHtml(k, l, small);
-        // ODDS2（①③）＝幅のある倍率は下の段・買目の右端にそろえる（.pl-2row＝買目の幅だけの2段グリッド）
+        // ODDS2（①③）＝幅のある倍率の行は .pl-2row（まず1段・入りきらなければ fitPredLines が .stack で下の段へ）
         if (ODDS2 && oh && oh.indexOf("〜") > 0) {
           return '<div class="pred-line pl-2row"><span class="pl-chips chips">' + lineChips(src, small, g) + "</span>" + oh + "</div>";
         }
@@ -1019,12 +1019,17 @@
   function fitPredLines(scope) {
     if (!scope) return;
     fitCutLabels(scope); // 先にバッジ文言を確定させてから幅を測る（FB122）
-    scope.querySelectorAll(".pred-line.chips, .pred-line.pl-2row").forEach(function (el) { // pl-2row＝ODDS2の2段行
+    scope.querySelectorAll(".pred-line.chips, .pred-line.pl-2row").forEach(function (el) { // pl-2row＝ODDS2の行
       el.style.transform = "";
       var parent = el.parentElement;
       if (!parent) return;
       var cs = getComputedStyle(parent);
       var avail = parent.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      // ODDS2：まず1段で測り、入りきらないときだけ倍率を下の段へ（.stack）→測り直す
+      if (el.classList.contains("pl-2row")) {
+        el.classList.remove("stack");
+        if (avail > 0 && el.scrollWidth > avail) el.classList.add("stack");
+      }
       var w = el.scrollWidth;
       if (w > avail && avail > 0) {
         el.style.transform = "scale(" + Math.max(0.4, avail / w) + ")";

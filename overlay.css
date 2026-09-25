@@ -410,10 +410,12 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 
 .pred-line { font-size: 32px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: .05em; }
 .pred-line.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-/* 🧪ODDS2（9/25・①③）＝幅のある倍率を買目の下の段へ。グリッドの幅＝買目の幅（max-content）＝倍率は買目の右端にそろう */
-.pred-line.pl-2row { display: grid; grid-template-columns: max-content; justify-content: start; row-gap: 0; }
+/* ODDS2（9/25・①③）＝幅のある倍率の行は、まず1段（倍率は右）で描き、枠に入りきらない行だけ fitPredLines が .stack を付けて
+   倍率を買目の下の段へ（グリッドの幅＝買目の幅＝倍率は買目の右端にそろう）。9/25 Naoto「15-15-3は右でいい」＝入る行は1段のまま */
+.pred-line.pl-2row { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; }
 .pl-2row .pl-chips { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; }
-.pl-2row .pl-odds { justify-self: end; margin: 0; line-height: 1; margin-top: -2px; }
+.pred-line.pl-2row.stack { display: grid; grid-template-columns: max-content; justify-content: start; row-gap: 0; }
+.pl-2row.stack .pl-odds { justify-self: end; margin: 0; line-height: 1; margin-top: -2px; }
 
 /* 買い目の色チップ表示（車番＝競輪9色・記号は控えめに） */
 .car.sm { width: 26px; height: 26px; font-size: 15px; border-radius: 5px; }
