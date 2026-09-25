@@ -382,8 +382,9 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .stc-cmp .stc-th { font-size: 15px; }
 .stc-cmp .stc-tr { font-size: 20px; }
 .stc-cmp .stc-tr .car { width: 30px; height: 30px; font-size: 25px; }
-.stc-cmp .stc-row > .nm { font-size: min(23px, calc(var(--stc-rh, 36px) * .52)); } /* 9/25 20→23px（上限） */
-.stc-cmp .stc-row > .nm small { font-size: min(15px, calc(var(--stc-rh, 36px) * .33)); } /* 9/25 13→15px（上限） */
+.stc-cmp .stc-row > .nm { font-size: min(23px, calc(var(--stc-rh, 36px) * .56)); } /* 9/25 20→23px（上限） */
+.stc-cmp .stc-row > .nm small { font-size: min(15px, calc(var(--stc-rh, 36px) * .36));
+  margin-top: 0; line-height: inherit; } /* 9/25 Naoto「②③は下の人に近づく→元に戻して」＝名前との間あけは①だけ */ /* 9/25 13→15px（上限） */
 
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
