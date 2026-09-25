@@ -3189,8 +3189,9 @@ body.v2 .rb-line .narabi-row {
 body.v2 .rb-line .nb-race { display: flex; flex-direction: row; align-items: center; gap: 9px;
   font-size: var(--rbrace, 22px); font-weight: 900; color: #16202e; line-height: 1;
   white-space: nowrap; flex: 0 0 auto; }
-/* 🧪RB2（9/25 Naoto）＝見出しからレース名を外したので、並びの窓の「別府 8R」を紺地・白抜きの札で強調 */
-body.v2.rb2 .rb-line .nb-race { background: #16202e; color: #fff; padding: .18em .5em; border-radius: 6px; gap: .35em; }
+/* 🧪RB2（9/25 Naoto）＝見出しからレース名を外したので、並びの窓の「別府 8R」を札で強調。
+   見た目は帯の場名ラベル（.race-col-head）と同じグレー網掛け＋黒字（Naoto指定・当初の紺地白抜きから変更） */
+body.v2.rb2 .rb-line .nb-race { background: rgba(0,0,0,.08); color: #16202e; padding: .18em .55em; border-radius: 6px; gap: .35em; }
 /* 太字化（8/13 FB）。font-weight は既に900だが「←」は記号グリフでウェイトが効かない font が多い。
    縁取りを同色で足して線そのものを太らせる（高さ・位置は変えない） */
 body.v2 .rb-line .nb-arrow { font-size: calc(var(--rbchip, 30px) * .9); color: #16202e;
