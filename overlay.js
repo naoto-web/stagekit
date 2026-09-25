@@ -1339,26 +1339,72 @@
       （⚠️scrollWidth/Heightはflexであふれを報告しないことがある＝FB27/28実バグ） */
   function fitColBox(col) {
     col.style.transform = "";
+    /* ①2〜3場の右下の合計欄（TMETA・.bm-total）＝CSSの margin-top:auto で区画の底へ寄せると、測った中身が常に
+       区画の高さいっぱい＝拡大が一度も効かなかった（9/25夜 Naoto「川崎2Rの買目もっと大きくできそう」）。
+       合計欄は倍率の計算から外して別に扱う：区画を拡大しても合計欄は元の大きさのまま（拡大すると合計欄の横幅が
+       先に区画いっぱいになり買目が大きくならなかった）・区画を縮めるときだけ一緒に縮める。置き場所は右下の角（px指定） */
+    var meta = document.body.classList.contains("tmeta-on") ? col.querySelector(":scope > .bm-total") : null;
+    if (meta) { meta.style.marginTop = "0px"; meta.style.marginLeft = "0px"; meta.style.alignSelf = "flex-start"; meta.style.transform = ""; }
     var cr = col.getBoundingClientRect();
     if (cr.height <= 0) return;
     var cs = getComputedStyle(col);
     var padR = parseFloat(cs.paddingRight) || 0;
     var padB = parseFloat(cs.paddingBottom) || 0;
-    var maxRight = cr.left, maxBottom = cr.top;
-    for (var i = 0; i < col.children.length; i++) {
-      var r = col.children[i].getBoundingClientRect();
-      if (r.right > maxRight) maxRight = r.right;
-      if (r.bottom > maxBottom) maxBottom = r.bottom;
+    var padL = parseFloat(cs.paddingLeft) || 0;
+    var rowGap = parseFloat(cs.rowGap) || 0;
+    var availW = cr.width - padR, availH = cr.height - padB;
+    var mw = meta ? meta.offsetWidth : 0, mh = meta ? meta.offsetHeight : 0;
+    var MGAP = 4, mScale = 1;
+    var needW, needH;
+    function measureK() {
+      var maxRight = cr.left, maxBottom = cr.top;
+      for (var i = 0; i < col.children.length; i++) {
+        if (col.children[i] === meta) continue;
+        var r = col.children[i].getBoundingClientRect();
+        if (r.right > maxRight) maxRight = r.right;
+        if (r.bottom > maxBottom) maxBottom = r.bottom;
+      }
+      needW = maxRight - cr.left; needH = maxBottom - cr.top;
+      if (!meta) return Math.min(availW / needW, availH / needH);
+      // 一緒に縮める場合（従来と同じ＝合計欄も同じ倍率）
+      var kj = Math.min(availW / needW, availH / (needH + MGAP + mh), (availW - padL) / Math.max(1, mw));
+      if (kj < 1) { mScale = kj; return kj; }
+      // 拡大できる場合＝合計欄は等倍のまま右下に置き、残りの高さで買目を拡大
+      mScale = 1;
+      return Math.min(availW / needW, (availH - mh - MGAP) / needH);
     }
-    var needW = maxRight - cr.left, needH = maxBottom - cr.top;
+    var k = measureK();
     if (needW <= 0 || needH <= 0) return;
-    var k = Math.min((cr.width - padR) / needW, (cr.height - padB) / needH);
+    /* ODDS2（①）＝1段で入った倍率つきの行も、倍率を下の段へ回した方が区画全体を大きくできるなら回す（9/25夜 Naoto
+       「川崎2R」＝横幅で頭打ち・縦は余っていた）。回した結果が5%以上大きいときだけ採用＝1段で足りる行はそのまま */
+    var flat = col.querySelectorAll(".pred-line.pl-2row:not(.stack)");
+    if (flat.length && k < 1.6) {
+      var saved = [];
+      flat.forEach(function (el) { saved.push(el.style.transform); el.style.transform = ""; el.classList.add("stack"); });
+      var wOld = needW, hOld = needH, kStack = measureK();
+      if (kStack > k * 1.05) { k = kStack; }
+      else {
+        flat.forEach(function (el, j) { el.classList.remove("stack"); el.style.transform = saved[j]; });
+        needW = wOld; needH = hOld;
+      }
+    }
     if (k < 1) {
       col.style.transform = "scale(" + Math.max(0.35, k).toFixed(3) + ")";
     } else if (k > 1.02 && col.children.length > 1) {
       col.style.transform = "scale(" + Math.min(1.6, k).toFixed(3) + ")";
     }
     if (col.style.transform) col.style.transformOrigin = "left top";
+    if (meta) {
+      var kk = parseFloat((String(col.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+      var ms = Math.min(mScale, kk); // 合計欄の見た目の倍率（区画を縮めたときだけ一緒に縮む・拡大はしない）
+      // 区画の拡大を打ち消して ms 倍で描く。右下の角を基準に縮めるので、その角（レイアウト上）を区画の右下に合わせる
+      if (Math.abs(ms / kk - 1) > 0.001) {
+        meta.style.transform = "scale(" + (ms / kk).toFixed(4) + ")";
+        meta.style.transformOrigin = "right bottom";
+      }
+      meta.style.marginTop = (availH / kk - needH - rowGap - mh).toFixed(1) + "px";
+      meta.style.marginLeft = (availW / kk - padL - mw).toFixed(1) + "px";
+    }
   }
   function fitRaceCols(scope) {
     if (!scope) return;
