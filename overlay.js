@@ -1033,7 +1033,8 @@
       var w = el.scrollWidth;
       if (avail > 0 && w > avail + 1) {
         el.style.transform = "scale(" + Math.max(0.4, avail / w) + ")";
-        el.style.transformOrigin = "left center";
+        // 合計/投資（bm-total）は右下寄せ（9/25）＝右下を基準に縮める（左基準だと右端から離れる）
+        el.style.transformOrigin = el.classList.contains("bm-total") ? "right bottom" : "left center";
       }
     });
   }
