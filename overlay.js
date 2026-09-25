@@ -831,14 +831,16 @@
        最後の「−」が消えるので、打ったとおりの形で描く
      ⚠️点数・的中・投資の計算（derive）は触らない＝見た目だけの扱い */
   /* 買目のリアルタイムオッズ（§13）。oddsData[raceKey]＝GAS action=odds の1レース分
-     {st, end, fin, o:{'123':65.1}}。oddsWant[raceKey]＝最後に描画で要求された時刻（画面に出ている3連単のレースだけ取る）。
+     {st, end, fin, o:{'123':65.1}}。oddsWant[raceKey]＝そのレースを描いた renderPreds の通し番号（oddsSeq）。
+     最新の描画に出ているレースだけ取る（9/25 旧＝「90秒以内に描いた」判定だと、オッズが変わらない間に描き直しが
+     無いまま90秒を超えて取得が止まり、買目を触るまで更新されなかった）。
      ⚠️表示だけ＝点数・投資・回収・的中の計算（derive）には一切入れない（§8の実額転記は不変） */
-  var oddsData = {}, oddsWant = {}, oddsPending = {}, oddsDate = "", oddsKick = null;
+  var oddsData = {}, oddsWant = {}, oddsPending = {}, oddsDate = "", oddsKick = null, oddsSeq = 0;
   function oddsHtml(k, l, small) {
     if (!ODDS || !k || l.type !== "3連単" || !l.combos || !l.combos.length) return "";
     // 初めて画面に出たレース＝30秒の定期を待たずにすぐ取りに行く（9/25 Naoto「なかなか出ない」＝最悪35〜40秒かかっていた）
     if (!oddsData[k] && !oddsPending[k] && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
-    oddsWant[k] = Date.now();
+    oddsWant[k] = oddsSeq;
     var d = oddsData[k];
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
     // 「倍」は付けない（9/25 Naoto「文字数大事・みんな分かる」）。合成オッズの「倍」は残す
@@ -882,7 +884,7 @@
     if (timetable.date && timetable.date !== oddsDate) { oddsData = {}; oddsWant = {}; oddsDate = timetable.date; }
     var now = Date.now(), byJo = {};
     Object.keys(oddsWant).forEach(function (k) {
-      if (now - oddsWant[k] > 90000) { delete oddsWant[k]; return; }
+      if (oddsWant[k] < oddsSeq) { delete oddsWant[k]; return; } // 最新の描画に出ていない＝画面から消えた
       if (oddsPending[k] || (oddsData[k] && oddsData[k].fin)) return;
       var p = k.split("|"), jo = joCodeOf(p[0]);
       if (!jo || !+p[1]) return;
@@ -1431,6 +1433,7 @@
   }
 
   function renderPreds() {
+    oddsSeq++; // 買目オッズ（§13）＝この描画で oddsHtml を通ったレースが「今画面に出ている」レース
     var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
     // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
@@ -5284,7 +5287,7 @@
   }
   loadTimetable();
   setInterval(loadTimetable, (window.APP_CONFIG.TT_POLL_MS || 600000));
-  if (ODDS) { setTimeout(pollOdds, 3000); setInterval(pollOdds, 30000); } // 買目オッズ（§13）＝初回は描画で要求が溜まってから
+  if (ODDS) { setTimeout(pollOdds, 3000); setInterval(pollOdds, 10000); } // 買目オッズ（§13）＝10秒ごと（GASは20秒キャッシュ＝keirin.jpへの実アクセスは増えない・9/25）
 
   var fitTick = 0;
   setInterval(function () {
