@@ -802,7 +802,7 @@
     var investInput = +form.querySelector(".pf-invest").value || 0;
     var syn = odds ? window.Keirin.synthOdds(parsed, odds) : null; // 合成オッズ＝投資の右（9/25 Naoto）
     var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
-      (syn ? "　合成 " + window.Keirin.oddsInt(syn) + "倍" : "") + cutWarn;
+      (syn ? "　合成 " + window.Keirin.synthFmt(syn) + "倍" : "") + cutWarn;
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
     var oreOut = oreMissingInBuys(key, form.querySelector(".pf-text").value, form.querySelector(".pf-ore").value.trim());
     if (oreOut) {

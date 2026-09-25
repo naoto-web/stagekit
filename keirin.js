@@ -513,9 +513,14 @@
   }
 
   /* ---------- 買目のリアルタイムオッズ（9/25・要件定義§13） ----------
-     o＝GAS action=odds の {'123': 65.1, …}（3連単のみ）。表示は整数（四捨五入・9/25 Naoto）。
+     o＝GAS action=odds の {'123': 65.1, …}（3連単のみ）。
+     表示＝10倍以上は整数（四捨五入）・10倍未満は小数第1位まで（9/25 Naoto）。合成オッズは常に小数第1位（synthFmt）。
      OBS（overlay.js）とコンソール（console.js）の両方がここを使う＝表示の数字を食い違わせない */
-  function oddsInt(v) { return String(Math.round(v)); }
+  function oddsInt(v) {
+    var r1 = Math.round(v * 10) / 10;
+    return r1 < 10 ? r1.toFixed(1) : String(Math.round(v)); // 9.96→10（「10.0」にしない）
+  }
+  function synthFmt(v) { return (Math.round(v * 10) / 10).toFixed(1); }
   /** 1行の倍率表示：1点「509」／複数点「78〜116」（四捨五入後に同じなら1つ）。3連単以外・倍率なしは "" */
   function oddsLabel(line, o) {
     if (!o || !line || !line.ok || line.cut || line.type !== "3連単" || !line.combos || !line.combos.length) return "";
@@ -541,7 +546,8 @@
   return {
     TYPES: TYPES,
     normalize: normalize,
-    oddsInt: oddsInt,         // 9/25 §13
+    oddsInt: oddsInt,         // 9/25 §13（10倍未満は小数第1位）
+    synthFmt: synthFmt,       // 9/25 §13（合成オッズ＝常に小数第1位）
     oddsLabel: oddsLabel,     // 9/25 §13
     synthOdds: synthOdds,     // 9/25 §13
     oreNormalize: oreNormalize,

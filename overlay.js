@@ -841,9 +841,9 @@
   function synthText(k, rp) {
     if (!ODDS || !k || !rp || !oddsData[k]) return "";
     var s = window.Keirin.synthOdds(rp.parsed, oddsData[k].o);
-    return s ? "合成 " + window.Keirin.oddsInt(s) + "倍" : "";
+    return s ? "合成 " + window.Keirin.synthFmt(s) + "倍" : "";
   }
-  /** 合計・合成・投資の中身（9/25 Naoto）＝合成は投資の真上・合計は投資の左（2段）。合成が無いときは従来の1行 */
+  /** 合計・合成・投資の中身（9/25 Naoto）＝1段目 合計｜合成・2段目 投資（合成の真下）。合成が無いときは従来の1行 */
   function metaPartsHtml(points, st, invest) {
     var a = points ? '<span class="bm-part bm-pts">合計 ' + points + "点</span>" : "";
     var b = invest > 0 ? '<span class="bm-part bm-inv">投資 ' + fmtYen(invest) + "</span>" : "";
@@ -890,7 +890,7 @@
     var metaLine = "";
     if (!noMeta && rp && (rp.points || rp.invest > 0)) {
       // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
-      var st0 = synthText(k, rp); // 合成オッズ（§13）＝投資の真上（9/25 Naoto）
+      var st0 = synthText(k, rp); // 合成オッズ（§13）＝合計の右・投資はその下（9/25 Naoto）
       metaLine = '<div class="buy-meta' + (st0 ? " has-synth" : "") + '">' +
         metaPartsHtml(rp.points, st0, rp.invest) + "</div>";
     }
@@ -1547,7 +1547,7 @@
           var bMeta = $(bp + "meta-" + slot);
           if (bMeta) {
             var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
-            var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13・③だけ＝②はODDS無効）＝投資の真上
+            var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13・③だけ＝②はODDS無効）＝合計の右・投資はその下
             var has = !!(rpm && (rpm.points || rpm.invest > 0));
             if (st && has) {
               bMeta.innerHTML = metaPartsHtml(rpm.points, st, rpm.invest);
