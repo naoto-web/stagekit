@@ -64,7 +64,9 @@
      テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（本番GASに action=odds が無い）。&odds=1／0 で明示 */
   var ODDS = params.get("odds") || (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND ? "1" : "");
   if (ODDS === "0") ODDS = "";
-  if (SCENE === "race") ODDS = ""; // ②レース観戦は枠が狭いので出さない＝①トーク・③展開だけ（9/25 Naoto）。取得もしない
+  // ②レース観戦は枠が狭いので買目・俺たち目の右の倍率は出さない（9/25 Naoto）。
+  // ただし合成オッズだけは右下の枠（投資の上・右寄せ）に出す（同日 Naoto）＝取得はする
+  var ODDS_LINES = SCENE !== "race";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
@@ -833,6 +835,7 @@
     // 初めて画面に出たレース＝30秒の定期を待たずにすぐ取りに行く（9/25 Naoto「なかなか出ない」＝最悪35〜40秒かかっていた）
     if (!oddsData[k] && !oddsPending[k] && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
     oddsWant[k] = Date.now();
+    if (!ODDS_LINES) return ""; // ②＝取得の要求だけ出して行には描かない（合成オッズ用）
     var d = oddsData[k];
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
     // 「倍」は付けない（9/25 Naoto「文字数大事・みんな分かる」）。合成オッズの「倍」は残す
@@ -852,7 +855,10 @@
   }
   /** 30秒ごと：画面に出ている（90秒以内に描画要求のあった）3連単レースを場ごとにまとめて取る。最終オッズは取り直さない */
   function pollOdds() {
-    if (!ODDS || !timetable) return;
+    if (!ODDS) return;
+    // 時刻表（場名→場コード）がまだ無い＝起動直後。空振りで30秒待たせない（9/25 Naoto「OBSだけ出るのが遅い」の原因）。
+    // 時刻表が届いた時点でも loadTimetable から呼ぶ
+    if (!timetable) return;
     if (timetable.date && timetable.date !== oddsDate) { oddsData = {}; oddsWant = {}; oddsDate = timetable.date; }
     var now = Date.now(), byJo = {};
     Object.keys(oddsWant).forEach(function (k) {
@@ -891,7 +897,7 @@
     var metaLine = "";
     if (!noMeta && rp && (rp.points || rp.invest > 0)) {
       // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
-      var st0 = synthText(k, rp); // 合成オッズ（§13）＝合計の右・投資はその下（9/25 Naoto）
+      var st0 = ODDS_LINES ? synthText(k, rp) : ""; // ②はNEXT枠（182px）に出さない＝合成は右下の枠だけ // 合成オッズ（§13）＝合計の右・投資はその下（9/25 Naoto）
       metaLine = '<div class="buy-meta' + (st0 ? " has-synth" : "") + '">' +
         metaPartsHtml(rp.points, st0, rp.invest) + "</div>";
     }
@@ -5256,6 +5262,7 @@
       renderBrb();
       renderStartList();
       renderVenueTabs(); // note勝負の終了判定は時刻表基準（8/10 FB113）＝時刻表が届いたら即再評価
+      if (ODDS) { renderPreds(); pollOdds(); } // 買目オッズ（§13）＝場コードが引けるようになった瞬間に取りに行く
     }).catch(function () {
       setTimeout(loadTimetable, 15000); // 起動直後の取得失敗で10分空白にならないよう即リトライ
     });

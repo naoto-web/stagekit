@@ -709,6 +709,10 @@ body.debug #scene-tenkai .slist:empty::after {
 .has-synth .bm-pts { grid-column: 1; grid-row: 1; }
 .has-synth .bm-inv { grid-column: 2; grid-row: 2; }
 .band-meta.has-synth { justify-content: end; }
+/* ②レース観戦（9/25 Naoto）＝合成オッズだけ。投資の上に右寄せ（2段目は 合計｜投資 の従来どおり） */
+.scene-race .band-meta.has-synth .bm-syn { grid-column: 1 / span 2; grid-row: 1; justify-self: end; }
+.scene-race .band-meta.has-synth .bm-pts { grid-column: 1; grid-row: 2; }
+.scene-race .band-meta.has-synth .bm-inv { grid-column: 2; grid-row: 2; }
 
 /* ①トークの買い目行は折り返さない＝長い行はJSが幅に合わせて自動縮小（8/6 FB） */
 .talk-band .pred-line.chips { flex-wrap: nowrap; }
