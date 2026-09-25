@@ -835,7 +835,8 @@
     oddsWant[k] = Date.now();
     var d = oddsData[k];
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
-    return txt ? '<span class="pl-odds' + (small ? " sm" : "") + '">' + txt + "倍</span>" : "";
+    // 「倍」は付けない（9/25 Naoto「文字数大事・みんな分かる」）。合成オッズの「倍」は残す
+    return txt ? '<span class="pl-odds' + (small ? " sm" : "") + '">' + txt + "</span>" : "";
   }
   /** 合成オッズ（9/25 Naoto）＝keirin.js synthOdds（1÷Σ(1/倍率)）。出せないときは "" */
   function synthText(k, rp) {
@@ -901,7 +902,9 @@
     var glows = rc && k ? glowsFor(k, rc.id) : [];
     var oreGlow = [];
     glows.forEach(function (g) { if (g.type === "俺たち目") oreGlow.push(g.combo); });
-    return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small, oreGlow) + "</div>" : "") +
+    // 俺たち目の右にもオッズ（9/25 Naoto）。俺たち目は「126」＝1-2-6 の記法補正を通してから組を出す
+    var oreOdds = ore ? oddsHtml(k, window.Keirin.parseLine(window.Keirin.oreNormalize(ore), "3連単"), small) : "";
+    return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small, oreGlow) + oreOdds + "</div>" : "") +
       okLines.map(function (l) {
         // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
         // チップは通常色のまま・的中強調の対象外（そもそも的中しない）
