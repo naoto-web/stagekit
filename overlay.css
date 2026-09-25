@@ -699,6 +699,10 @@ body.debug #scene-tenkai .slist:empty::after {
   display: flex; align-items: baseline; gap: 0 18px; } /* 合計/投資のパーツ間隔（旧全角スペース相当） */
 /* ①トークの合計・投資・メモは大きめに（8/6 FB・FB3でさらに拡大） */
 .talk-band .buy-meta { font-size: 27px; font-weight: 900; color: var(--txt); }
+/* 合計/合成/投資のパーツ内で折り返さない（9/25・合成オッズ追加で細い列だと「合計 6／点」に割れた）。
+   はみ出しは既存の fitColBox が列ごと縮めて収める */
+.buy-meta.has-synth { gap: 0 12px; }
+.buy-meta.has-synth .bm-part { white-space: nowrap; flex: none; }
 
 /* ①トークの買い目行は折り返さない＝長い行はJSが幅に合わせて自動縮小（8/6 FB） */
 .talk-band .pred-line.chips { flex-wrap: nowrap; }

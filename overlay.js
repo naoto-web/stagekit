@@ -901,9 +901,10 @@
     var metaLine = "";
     if (!noMeta && rp && (rp.points || rp.invest > 0)) {
       // 合計と投資はパーツ化：トーク・②メインは1行（gapで従来どおり）・サブは縦2行（8/6 FB15）
-      metaLine = '<div class="buy-meta">' +
-        (rp.points ? '<span class="bm-part">合計 ' + rp.points + "点</span>" : "") +
-        (synthText(k, rp) ? '<span class="bm-part">' + synthText(k, rp) + "</span>" : "") + // 合成オッズ（§13）
+      metaLine = '<div class="buy-meta' + (synthText(k, rp) ? " has-synth" : "") + '">' +
+        // 合成オッズ（§13）が出るときは「合計」→「計」に縮めて1行に収める（9/25 Naoto）
+        (rp.points ? '<span class="bm-part">' + (synthText(k, rp) ? "計" : "合計 ") + rp.points + "点</span>" : "") +
+        (synthText(k, rp) ? '<span class="bm-part">' + synthText(k, rp) + "</span>" : "") +
         (rp.invest > 0 ? '<span class="bm-part">投資 ' + fmtYen(rp.invest) + "</span>" : "") +
         "</div>";
     }
@@ -1562,7 +1563,7 @@
             var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
             var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13）＝合計と投資の間
             var mt = rpm && (rpm.points || rpm.invest > 0)
-              ? [rpm.points ? "合計 " + rpm.points + "点" : "", st,
+              ? [rpm.points ? (st ? "計" : "合計 ") + rpm.points + "点" : "", st,
                  rpm.invest > 0 ? "投資 " + fmtYen(rpm.invest) : ""].filter(Boolean).join("　")
               : "";
             bMeta.textContent = mt;
