@@ -77,8 +77,8 @@
   var RB2 = SCENE === "race" && params.get("rb2") !== "0";
   // ②NEXT枠は入力があるレースだけ出す（9/25 Naoto・詳細は renderPreds の subHasContent）。9/25 本番既定ON・&subauto=0 で従来（選べば常に出す）
   var SUBAUTO = params.get("subauto") !== "0";
-  // 🧪NEXT枠の補完（サブの場が空なら入力のある別の場のレース・renderPreds の effSubOf）。テストGAS接続時だけ既定ON・&subfb=1／0
-  var SUBFB = params.get("subfb") ? params.get("subfb") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
+  // NEXT枠の補完（サブの場が空なら入力のある別の場のレース・renderPreds の effSubOf）。9/25 本番既定ON・&subfb=0 で止める
+  var SUBFB = params.get("subfb") !== "0";
   /* 🧪①③は幅のある倍率（「40〜308」）を買目の下の段に回し、買目の右端にそろえる（9/25 Naoto「横長の買目だと小さくなる」）。
      ①は行ごとに枠幅へ縮める作り＝倍率ぶん行が短くなれば縮まない。②は縦が狭いので対象外（1段のまま）。
      1点の行・俺たち目は倍率が短いので従来どおり右。9/25 本番既定ON・&odds2=0 で1段に戻す */
