@@ -1179,7 +1179,7 @@
     });
     var hasPred = false;
     hard.forEach(function (v) { if (v) hasPred = true; });
-    var ROWGAP = 5, COLGAP = RB2 ? 22 : 40, MARGIN = 6; // gapはCSSの.rb-col/.rb-flowと一致させること（RB2＝②は列間を詰める・CSS .rb2 .rb-flow）
+    var ROWGAP = 5, COLGAP = RB2 ? 14 : 40, MARGIN = 6; // gapはCSSの.rb-col/.rb-flowと一致させること（RB2＝②は列間を詰める・CSS .rb2 .rb-flow）
     var CAP = hasPred ? 3.0 : 1.5;           // ラベルだけの帯は控えめに留める
     // 右下固定の合計/投資：表示中なら帯コンテンツ原点からの左端・上端（renderPredsが先にmetaを確定させる前提）
     var metaL = Infinity, metaT = Infinity;

@@ -713,6 +713,13 @@ body.debug #scene-tenkai .slist:empty::after {
 .rb2 .race-band .band-meta.has-synth.m1 .bm-pts { grid-column: 1; grid-row: 1; }
 .rb2 .race-band .band-meta.has-synth.m1 .bm-syn { grid-column: 2; grid-row: 1; justify-self: start; }
 .rb2 .race-band .band-meta.has-synth.m1 .bm-inv { grid-column: 3; grid-row: 1; }
+/* ②の買目の中のすき間を詰める（9/25 Naoto「まだスペースある・もっと大きく」）＝②は横幅が足りずに縮んでいる
+   （縦は余る）ので、行を短くした分だけ packRaceBand が拡大する。チップ間4→1px・ハイフン左右の余白0・倍率の前10→5px・
+   俺たち目の札の内側。実測（9/25夜のカズ7行）＝倍率0.876→0.981。①③は対象外 */
+.rb2 .race-band .buy-line .pred-line.chips, .rb2 .race-band .buy-line .ore-row { gap: 1px; }
+.rb2 .race-band .buy-line .pl-sep { padding: 0; }
+.rb2 .race-band .pl-odds { margin-left: 5px; }
+.rb2 .race-band .ore-row { padding: 2px 5px; }
 /* 買い目は縦に並べ、高さが足りなくなったら右の列へ折り返す（列間は広めに離す） */
 .race-band .panel, .talk-band .panel { display: flex; flex-direction: column; }
 .race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;
@@ -791,8 +798,8 @@ body.debug #scene-tenkai .slist:empty::after {
    縦横の余りが最小になる倍率へ拡大（flex-wrapの誤動作起因の見切れ・下余白を根治） */
 .rb-flow { display: flex; align-items: flex-start; gap: 0 40px; }
 .rb-col { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; flex: 0 0 auto; }
-/* 🧪RB2＝②は列間 40→22px（買目の拡大に回す）。⚠️overlay.js packRaceBand の COLGAP と必ず一致させる */
-.rb2 .rb-flow { gap: 0 22px; }
+/* 🧪RB2＝②は列間 40→22→14px（買目の拡大に回す・9/25夜に14へ）。⚠️overlay.js packRaceBand の COLGAP と必ず一致させる */
+.rb2 .rb-flow { gap: 0 14px; }
 /* ②の行は全種折返し禁止（8/6 FB56）：幅不足は列圧縮でなく倍率縮小で吸収する（測定と実描画を一致させる） */
 .race-band .buy-line .pred-line.chips { flex-wrap: nowrap; }
 .race-band .buy-line .race-col-head { white-space: nowrap; }
