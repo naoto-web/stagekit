@@ -3012,6 +3012,19 @@ body.debug #scene-tenkai .slist:empty::after {
 #scene-race .hit-fx-badge::before, #scene-race .hit-fx-badge::after { font-size: 26px; }
 #scene-race .hit-fx-badge::before { left: -32px; top: -12px; }
 #scene-race .hit-fx-badge::after { right: -32px; bottom: -12px; }
+/* 連続的中（9/26・§22）＝バッジの文字が「3連続的中！」に変わる（JS showHitBadge）。4連続以上は一回り大きく＋炎色の光が脈打つ。
+   背景（金・note・虹）はそのまま＝光は外側の box-shadow だけ。大きすぎるときは fitHitBadge がワイプ幅まで縮める */
+.hit-fx-badge.streak-hi { font-size: 46px;
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite, streakGlow 1.1s ease-in-out .5s infinite; }
+.hit-fx-badge.note.streak-hi { animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite,
+    noteShimmer 1.8s linear .5s infinite, streakGlow 1.1s ease-in-out .5s infinite; }
+.hit-fx-badge.manche.streak-hi { animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitShake .55s linear .5s infinite,
+    rainbowSweep 1.6s linear .5s infinite, streakGlow 1.1s ease-in-out .5s infinite; }
+#scene-race .hit-fx-badge.streak-hi { font-size: 42px; }
+@keyframes streakGlow {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 3px #fff, 0 0 18px 6px rgba(255,110,0,.75); }
+  50%      { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 3px #fff, 0 0 34px 14px rgba(255,60,0,.95); }
+}
 
 /* ---------- ティッカー ---------- */
 .ticker {

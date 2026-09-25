@@ -5499,12 +5499,50 @@
       else if (key) spawnRain(cam, key);
     });
   }
+  /* 連続的中（9/26 Naoto・要件定義§22）＝この的中が「その人の何連続目の的中か」。2以上なら的中バッジを「N連続的中！」に。
+     ・数えるのは**その人が買目を入れたレース**（点数＞0）で**結果が出たもの**を**発走時刻の順**に並べ、このレースから遡って
+       買目の的中（俺たち目だけの的中は数えない・トリガミは数える）が何回続いているか
+     ・結果の出ていないレースは飛ばす（あとで外れと分かっても出た表示は取り消さない）／買目を入れていないレースは途切れさせない
+     ・範囲＝その人のその日の全部（昼夜で分けない）。手動追加の的中（manual-N）はレースが分からないので数えない */
+  function hitStreakOf(hit) {
+    var p = String(hit && hit.id || "").split("|");
+    if (p.length < 5 || !state) return 0;
+    var target = p[0] + "|" + p[1], pid = p[2];
+    var secOf = function (key) {
+      var s = raceStartSecOf(key);
+      if (s !== null) return s;
+      var d = new Date((state.results[key] || {}).settledAt || 0); // 時刻表に無いレース＝結果を確定した時刻で代用
+      return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+    };
+    if (!state.results || !state.results[target]) return 0;
+    var tSec = secOf(target), list = [];
+    Object.keys(state.preds || {}).forEach(function (key) {
+      if (!((state.preds[key] || {}).byRacer || {})[pid]) return;
+      if (!state.results[key]) return;                                             // 結果の出ていないレースは飛ばす
+      if (!(window.Derive.resolvePred(state, key, pid).points > 0)) return;       // 買目を入れたレースだけ
+      var sec = secOf(key);
+      if (key !== target && sec > tSec) return;                                    // このレースより後に発走したものは見ない
+      list.push({ key: key, sec: sec });
+    });
+    // このレース自体に買目が無い（俺たち目だけの的中）＝連続の対象外（普通の「的中！」）
+    if (!list.some(function (x) { return x.key === target; })) return 0;
+    list.sort(function (a, b) { return a.sec - b.sec || (a.key === target ? 1 : b.key === target ? -1 : 0); });
+    var n = 0;
+    for (var i = list.length - 1; i >= 0; i--) {
+      var s = window.Derive.settleRace(state, list[i].key);
+      var r = s && s.byRacer[pid];
+      if (!r || !r.hits.length) break;
+      n++;
+    }
+    return n;
+  }
   function showHitBadge(cam, hit, key) {
     var old = cam.querySelector(".hit-fx-badge");
     if (old) old.parentNode.removeChild(old);
     var badge = document.createElement("div");
+    var streak = hitStreakOf(hit);
     badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "") +
-      (key ? " m-" + key : "");
+      (streak >= 2 ? " streak" : "") + (streak >= 4 ? " streak-hi" : "") + (key ? " m-" + key : "");
     // 式別が混ざった同時的中ではラベルを出さない（片方だけ出すと嘘になる・8/27 FB148）
     var typeLabel = (!hit.mixedType && hit.type && hit.type !== "3連単") ? " " + hit.type : "";
     // 同時に複数当たったら倍率を全部並べる（同着で両方の並びを持っていた時など・8/27 FB148）。
@@ -5512,9 +5550,11 @@
     var mults = (hit.mults && hit.mults.length ? hit.mults : [hit.mult]).filter(Boolean);
     var multLabel = mults.length ? " " + mults.map(function (m) { return m + "倍"; }).join("＋") : "";
     // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
+    // 連続的中（§22）＝「的中！」の部分を「3連続的中！」に（万車・note・同着の頭の言葉はそのまま前に付く）
+    var hitWord = streak >= 2 ? streak + "連続的中！" : "的中！";
     badge.textContent = hit.manche
-      ? "🌈 万車的中！" + (hit.note ? " note" : "") + multLabel
-      : (hit.note ? "🔥 note的中！" : hit.deadHeat ? "🎯 同着ダブル的中！" : "🎯 的中！") + typeLabel + multLabel;
+      ? "🌈 万車" + (streak >= 2 ? " " : "") + hitWord + (hit.note ? " note" : "") + multLabel
+      : (hit.note ? "🔥 note" + (streak >= 2 ? " " : "") + hitWord : hit.deadHeat ? "🎯 同着ダブル" + (streak >= 2 ? " " : "") + hitWord : "🎯 " + hitWord) + typeLabel + multLabel;
     cam.appendChild(badge);
     fitHitBadge(badge, cam); // ワイプ幅いっぱいの最大サイズ（はみ出す時だけ段階縮小・8/7 FB59）
     setTimeout(function () {
