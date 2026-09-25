@@ -1636,6 +1636,7 @@
     };
     // 互換：どちらかの席に枠が出ていれば body.race-sub-on（レイアウト自体はCSSグリッドで席ごとに決まる）
     document.body.classList.toggle("race-sub-on", subFrameOf(seats.a) || subFrameOf(seats.b));
+    requestAnimationFrame(buildBackdrop); // 下で席ごとに枠を出し入れする＝穴の形が変わりうる（9/26 白帯の真因の対処）
     ["a", "b"].forEach(function (slot) {
       var rc = seats[slot];
       var name = rc ? rc.name : "";
@@ -5336,6 +5337,10 @@
   }
 
   /* ---------- 背景（透過穴つき） ---------- */
+  /* 🔴9/26 白帯の真因＝この背景の穴は読み込み時に1回だけ開けていた。読み込んだ瞬間にNEXT枠が出ていた席は穴が362幅で固定され、
+     あとで枠を畳んで .cam が544に広がっても左182pxに背景（白テーマ #dde4ec→#f9fbfd）が残っていた＝8/27以来の白帯すべて。
+     カメラ・OBSは無関係。→ 穴の位置が変わったら開け直す（1秒ごと＋描画直後。形が同じなら何もしない） */
+  var backdropSig = "";
   function buildBackdrop() {
     var svg = $("backdrop");
     var cs = getComputedStyle(document.body);
@@ -5355,6 +5360,9 @@
     var d = "M0 0H1920V1080H0Z" + holes.map(function (h) {
       return "M" + h.x + " " + h.y + "h" + h.w + "v" + h.h + "h-" + h.w + "Z";
     }).join("");
+    var sig = d + "|" + bg1 + "|" + bg2;
+    if (sig === backdropSig) return;
+    backdropSig = sig;
     svg.innerHTML =
       '<defs><radialGradient id="bgGrad" cx="30%" cy="20%" r="80%">' +
       '<stop offset="0%" stop-color="' + bg2 + '"/><stop offset="100%" stop-color="' + bg1 + '"/>' +
@@ -5472,4 +5480,5 @@
   tickClock();
   renderAll();
   requestAnimationFrame(buildBackdrop);
+  setInterval(buildBackdrop, 1000); // 穴の位置が変わったら開け直す（NEXT枠の出し入れ・席替え等。変化なしなら即return）
 })();
