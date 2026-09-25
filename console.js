@@ -1505,6 +1505,7 @@
     });
     $("racer-1").value = bySeat.a;
     $("racer-2").value = bySeat.b;
+    renderSeatPick();
     $("roster").value = state.roster.map(function (r) {
       return r.name + (r.color ? " " + r.color : "");
     }).join("\n");
@@ -1522,6 +1523,30 @@
     $("cfg-autoalign").checked = adminOn ? state.cfg.autoAlign !== false : true;
     renderNotePick(); // note勝負レース＝クリック式（9/25）
     $("campaign-count").value = (state.campaignCount === null || state.campaignCount === undefined) ? "" : state.campaignCount;
+  }
+
+  /* 配信者のボタン式（9/26 Naoto）＝席ごとに「なし＋名簿の全員」。座っている人はメンバーカラーの塗り。
+     押すと隠した select の値を書き換えて change を発火＝保存と「同じ人なら席を入れ替え」は change 側の処理をそのまま使う */
+  function renderSeatPick() {
+    ["racer-1", "racer-2"].forEach(function (id, n) {
+      var box = $("seat-pick-" + (n + 1));
+      if (!box) return;
+      var cur = $(id).value;
+      box.innerHTML = '<button class="vp sp-none' + (cur ? "" : " sel") + '" data-n="">なし</button>' +
+        state.roster.map(function (r) {
+          var mc = window.Derive.colorOf(r.color);
+          return '<button class="vp' + (cur === r.name ? " sel" : "") + '" data-n="' + esc(r.name) + '"' +
+            (mc ? ' style="--mc:' + mc + '"' : "") + ">" + esc(r.name) + "</button>";
+        }).join("");
+      box.querySelectorAll(".vp").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var sel = $(id);
+          if (sel.value === b.getAttribute("data-n")) return; // 今の人をもう一度押しても何もしない
+          sel.value = b.getAttribute("data-n");
+          sel.dispatchEvent(new Event("change"));
+        });
+      });
+    });
   }
 
   function saveSettings() {
