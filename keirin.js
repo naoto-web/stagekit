@@ -516,11 +516,13 @@
      o＝GAS action=odds の {'123': 65.1, …}（3連単のみ）。
      表示＝10倍以上は整数（四捨五入）・10倍未満は小数第1位まで（9/25 Naoto）。合成オッズは常に小数第1位（synthFmt）。
      OBS（overlay.js）とコンソール（console.js）の両方がここを使う＝表示の数字を食い違わせない */
+  // 「.0」になるものは整数で出す（9/25 Naoto「一桁でも二桁でも .0 は整数でOK」）＝5.0→5・14.0→14
+  function trimZero(r1) { return r1 % 1 === 0 ? String(r1) : r1.toFixed(1); }
   function oddsInt(v) {
     var r1 = Math.round(v * 10) / 10;
-    return r1 < 10 ? r1.toFixed(1) : String(Math.round(v)); // 9.96→10（「10.0」にしない）
+    return r1 < 10 ? trimZero(r1) : String(Math.round(v)); // 9.96→10（「10.0」にしない）
   }
-  function synthFmt(v) { return (Math.round(v * 10) / 10).toFixed(1); }
+  function synthFmt(v) { return trimZero(Math.round(v * 10) / 10); }
   /** 1行の倍率表示：1点「509」／複数点「78〜116」（四捨五入後に同じなら1つ）。3連単以外・倍率なしは "" */
   function oddsLabel(line, o) {
     if (!o || !line || !line.ok || line.cut || line.type !== "3連単" || !line.combos || !line.combos.length) return "";
