@@ -64,6 +64,7 @@
      テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（本番GASに action=odds が無い）。&odds=1／0 で明示 */
   var ODDS = params.get("odds") || (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND ? "1" : "");
   if (ODDS === "0") ODDS = "";
+  if (SCENE === "race") ODDS = ""; // ②レース観戦は枠が狭いので出さない＝①トーク・③展開だけ（9/25 Naoto）。取得もしない
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
