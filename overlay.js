@@ -71,6 +71,8 @@
      2〜3場＝場の区画ごとに右下へ寄せる（1つの角に3レース分は入らない）。
      オッズと同じ既定（9/25 本番化＝ON）。&tmeta=0 で従来のインラインに戻せる */
   var TMETA = params.get("tmeta") ? params.get("tmeta") !== "0" : !!ODDS;
+  // 1場の固定枠を帯の拡大率に合わせて大きくする（9/26 Naoto）。&tmetak=0 で27px固定に戻す
+  var TMETAK = params.get("tmetak") !== "0";
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
@@ -1966,6 +1968,18 @@
           Array.prototype.forEach.call(fireCols, function (col, ci) { col.classList.toggle("note-fire", noteFireOn(rc, fireKeys[ci])); });
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
+          // 1場の右下の固定枠は帯の拡大率に合わせて大きく（9/26 Naoto「買目の大きさに対して点数と投資の字が小さい」）。
+          // 帯は最大1.6倍に拡大されるが固定枠は帯の外＝27pxのまま取り残されていた。上限1.4倍（約38px）。
+          // 枠が大きくなると買目に使える高さが減る＝大きさを決めてから下の余白を取り直し、もう一度だけ測り直す。戻す＝&tmetak=0
+          if (TMETAK && tMeta && !tMeta.classList.contains("hidden")) {
+            tMeta.style.fontSize = "";
+            var bk = parseFloat((String(band.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+            if (bk > 1.02) {
+              tMeta.style.fontSize = Math.round(27 * Math.min(1.4, bk)) + "px";
+              band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
+              fitRaceCols(band);
+            }
+          }
         } else {
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）。
           // 合計/投資は右下の固定枠へ分離（8/6 FB57）。パッキングが実座標で衝突判定するため
