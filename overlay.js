@@ -1166,10 +1166,14 @@
     // 右下固定の合計/投資：表示中なら帯コンテンツ原点からの左端・上端（renderPredsが先にmetaを確定させる前提）
     var metaL = Infinity, metaT = Infinity;
     var meta = band.parentElement ? band.parentElement.querySelector(".band-meta") : null;
-    if (meta && !meta.classList.contains("hidden")) {
-      var br = band.getBoundingClientRect(), mr = meta.getBoundingClientRect();
-      if (mr.width > 0) { metaL = mr.left - br.left - padL - MARGIN; metaT = mr.top - br.top - padT - MARGIN; }
+    function measureMeta() {
+      metaL = Infinity; metaT = Infinity;
+      if (meta && !meta.classList.contains("hidden")) {
+        var br = band.getBoundingClientRect(), mr = meta.getBoundingClientRect();
+        if (mr.width > 0) { metaL = mr.left - br.left - padL - MARGIN; metaT = mr.top - br.top - padT - MARGIN; }
+      }
     }
+    measureMeta();
     function colWidth(idx) {
       var w = 0, wAny = 0;
       idx.forEach(function (i) { if (ws[i] > wAny) wAny = ws[i]; if (hard[i] && ws[i] > w) w = ws[i]; });
@@ -1214,20 +1218,37 @@
       };
       seqs.push(byW(1), byW(-1));
     }
-    seqs.forEach(function (seq) {
-      (function rec(start, cols) {
-        for (var end = start + 1; end <= seq.length; end++) {
-          cols.push(seq.slice(start, end));
-          if (end === seq.length) {
-            var k = evalCols(cols);
-            if (!best || k > best.k + 1e-6) best = { k: k, cols: cols.map(function (c) { return c.slice(); }) };
-          } else if (cols.length < maxCols) {
-            rec(end, cols);
+    function search() {
+      var b = null;
+      seqs.forEach(function (seq) {
+        (function rec(start, cols) {
+          for (var end = start + 1; end <= seq.length; end++) {
+            cols.push(seq.slice(start, end));
+            if (end === seq.length) {
+              var k = evalCols(cols);
+              if (!b || k > b.k + 1e-6) b = { k: k, cols: cols.map(function (c) { return c.slice(); }) };
+            } else if (cols.length < maxCols) {
+              rec(end, cols);
+            }
+            cols.pop();
           }
-          cols.pop();
-        }
-      })(0, []);
-    });
+        })(0, []);
+      });
+      return b;
+    }
+    /* 🧪RB2＝右下の 合計・合成・投資 の形を2通り試して、買目が大きく入る方を採る（9/25 Naoto「バランスで選んで」）：
+       2段（合成を投資の上に乗せる＝既定の has-synth）／1行（.m1）。同じ大きさなら2段を優先 */
+    if (RB2 && meta && meta.classList.contains("has-synth") && !meta.classList.contains("hidden")) {
+      meta.classList.remove("m1"); measureMeta();
+      var bStack = search();
+      meta.classList.add("m1"); measureMeta();
+      var bLine = search();
+      if (bLine.k > bStack.k * 1.01) { best = bLine; }
+      else { best = bStack; meta.classList.remove("m1"); measureMeta(); }
+    } else {
+      if (meta) meta.classList.remove("m1");
+      best = search();
+    }
     if (RB2) best.cols.forEach(function (c) { c.sort(function (a, b) { return a - b; }); }); // 列の中は書いた順
     // 診断フック（body.debug系と同趣旨・通常は不発）：パッキングの入力と採用解を記録
     if (window.__RB_DEBUG) window.__RB_DEBUG.push({ availW: availW, availH: availH, metaL: metaL, metaT: metaT,

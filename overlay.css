@@ -700,11 +700,11 @@ body.debug #scene-tenkai .slist:empty::after {
   text-shadow: none; vertical-align: 4px; white-space: nowrap; }
 .rb2 .bh-race .grade-badge { font-size: .8em; margin-left: 6px; vertical-align: 1px; }
 .rb2 .bh-race .bh-note { margin-left: 2px; }
-/* C＝右下の 合計・合成・投資 を1行（合計｜合成｜投資）＝右端の列が底まで使える */
-.rb2 .race-band .band-meta.has-synth { grid-template-columns: auto auto auto; }
-.rb2 .race-band .band-meta.has-synth .bm-pts { grid-column: 1; grid-row: 1; }
-.rb2 .race-band .band-meta.has-synth .bm-syn { grid-column: 2; grid-row: 1; justify-self: start; }
-.rb2 .race-band .band-meta.has-synth .bm-inv { grid-column: 3; grid-row: 1; }
+/* C＝右下の 合計・合成・投資 は「2段（合成を投資の上）」と「1行（.m1）」を packRaceBand が買目の大きさで選ぶ（9/25 Naoto） */
+.rb2 .race-band .band-meta.has-synth.m1 { grid-template-columns: auto auto auto; }
+.rb2 .race-band .band-meta.has-synth.m1 .bm-pts { grid-column: 1; grid-row: 1; }
+.rb2 .race-band .band-meta.has-synth.m1 .bm-syn { grid-column: 2; grid-row: 1; justify-self: start; }
+.rb2 .race-band .band-meta.has-synth.m1 .bm-inv { grid-column: 3; grid-row: 1; }
 /* 買い目は縦に並べ、高さが足りなくなったら右の列へ折り返す（列間は広めに離す） */
 .race-band .panel, .talk-band .panel { display: flex; flex-direction: column; }
 .race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;
