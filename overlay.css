@@ -3297,9 +3297,12 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 .pl-gold {
   background: linear-gradient(180deg, #fff7c8 0%, #ffd54f 45%, #e3a600 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;
-  filter: drop-shadow(1.5px 0 0 rgba(0,0,0,.75)) drop-shadow(-1.5px 0 0 rgba(0,0,0,.75))
-          drop-shadow(0 1.5px 0 rgba(0,0,0,.75)) drop-shadow(0 -1.5px 0 rgba(0,0,0,.75))
-          drop-shadow(0 0 6px rgba(255,210,60,.9));
+  /* 9/26 C案＝黒フチを 1.5px(.75) → 2.5px(不透明) に太く・光は 6px→5px（Naoto「ムネオ（黄色の見出し）だけ金が見えづらい」）。
+     金のグラデは不変（暗くしたB案は黒くつぶれた）。黒い札を敷くA案は「ムネオだけ／全員とも違和感」で不採用。
+     比較＝モック/プラ転_金色見本/C案_黒フチ太め_全員.png */
+  filter: drop-shadow(2.5px 0 0 #000) drop-shadow(-2.5px 0 0 #000)
+          drop-shadow(0 2.5px 0 #000) drop-shadow(0 -2.5px 0 #000)
+          drop-shadow(0 0 5px rgba(255,220,80,.9));
 }
 .band-head.pl-flash { position: relative; }
 .band-head.pl-flash::after {
