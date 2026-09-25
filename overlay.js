@@ -1768,13 +1768,30 @@
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
     // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
     // コンソールの操作用の場切替に引きずられない。旧データ（talkRaces無し）はメイン＋人別サブで互換
+    // 並び＝開催の早い順（1Rの発走が早い順・選手DBと同じ定義）＝2場は左→右、3場は左→右上→右下が基準
+    // （9/26 Naoto「押した順だと左右の人で場の並びが逆になり分かりづらい」→押した順は廃止）
+    function venueFirstSec(name) {
+      var sec = null;
+      if (timetable) (timetable.venues || []).forEach(function (tv) {
+        if (tv.name !== name || sec !== null) return;
+        (tv.races || []).forEach(function (r) { var s = timeToSec(r.start); if (s !== null && (sec === null || s < sec)) sec = s; });
+      });
+      return sec;
+    }
+    function byHeldOrder(a, b) { // 時刻が取れない場は本日の場の並びで後ろへ（sortは安定）
+      var sa = venueFirstSec(a), sb = venueFirstSec(b);
+      if (sa !== null && sb !== null && sa !== sb) return sa - sb;
+      if ((sa === null) !== (sb === null)) return sa === null ? 1 : -1;
+      var vi = function (n) { for (var i = 0; i < state.venues.length; i++) if (state.venues[i].name === n) return i; return 999; };
+      return vi(a) - vi(b);
+    }
     function talkKeysOf(rc) {
       if (!rc) return key ? [key] : [];
       var names = (state.talkRaces || {})[rc.id];
       if (names && names.length) {
         return names.filter(function (n) {
           return state.venues.some(function (v) { return v.name === n; }) && state.currentRace[n];
-        }).slice(0, 3).map(function (n) { return window.Derive.raceKey(n, state.currentRace[n]); });
+        }).slice(0, 3).sort(byHeldOrder).map(function (n) { return window.Derive.raceKey(n, state.currentRace[n]); });
       }
       var ks = key ? [key] : [];
       var subName = (state.subVenueBy || {})[rc.id] || state.subVenue;
@@ -1907,14 +1924,15 @@
         fitBandHead(bandHead); // 名前＋バッジ＋投資/回収が1行に収まるよう自動縮小
         var band = $(bp + "pred-" + slot);
         if (!band) return;
-        // ①トーク＝配信者ごとの表示レース1〜3場（8/6 FB3）。1場＝全面／2場＝左右分割／3場＝T字（上段1場目・下段2場）。
+        // ①トーク＝配信者ごとの表示レース1〜3場（8/6 FB3）。1場＝全面／2場＝左右分割／3場＝左の大枠＋右上下（FB26）。
+        // talkKeys は開催の早い順（9/26）。
         // ②レース観戦は従来どおり操作中のメインレースのみ
         if (bp === "tband-") {
           // 第5引数keepAll=true＝①トークも「全」を展開せず元記法で描く（8/8 FB77で②に合わせた）。
           // 第4引数noMetaはfalse固定＝①は合計/投資を帯の中にインラインで出す仕様のまま
           if (talkKeys.length >= 3) {
             // 左＝フル高の大枠／右＝上下2段（8/6 FB26・Naotoスケッチ準拠）。
-            // 大枠には行数最多のレースを自動配置（FB33・同数ならタップ順維持＝安定ソート）
+            // 大枠には行数最多のレースを自動配置（FB33・同数なら開催の早い順のまま＝安定ソート）
             var tk = talkKeys.slice().sort(function (a, b) { return predRowCount(rc, b) - predRowCount(rc, a); });
             band.innerHTML =
               '<div class="race-t">' +

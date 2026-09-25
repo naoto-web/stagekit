@@ -110,6 +110,29 @@
      以後は車数＝この自動判定のみ。上書きが必要な事態（keirin.jpの出走表が壊れている等）が
      起きたら、まずautoCarsの判定側を直す。旧stateにcarsFixが残っていても読まない＝無害 */
 
+  /** その場で一番早い発走時刻（0時起点秒）＝「開催の早い順」の物差し（選手DBの sortVenues と同じ定義）。取れなければ null */
+  function firstStartSec(name) {
+    var sec = null;
+    venueRaces(name).forEach(function (r) { var s = timeToSec(r.start); if (s !== null && (sec === null || s < sec)) sec = s; });
+    return sec;
+  }
+
+  /* 本日の場（state.venues）を開催の早い順に並べ直す（9/26 Naoto「場・レースの場が押した順＝初めて知った・開催が早い順で左から」）。
+     activeVenue は番号なので、操作中の場を**場名で**引き継ぐ（番号のままだと別の場に飛ぶ）。
+     時刻表が無い間は何もしない・時刻が取れない場は後ろ（sortは安定＝同時刻は元の順）。並びが変わったらtrue（保存は呼び出し側） */
+  function sortVenuesHeld() {
+    if (!state || !timetable || !state.venues || state.venues.length < 2) return false;
+    var key = function (v) { var s = firstStartSec(v.name); return s === null ? 1e9 : s; };
+    var sorted = state.venues.slice().sort(function (a, b) { return key(a) - key(b); });
+    if (sorted.every(function (v, i) { return v === state.venues[i]; })) return false;
+    var cur = activeVenueName();
+    state.venues = sorted;
+    var idx = 0;
+    sorted.forEach(function (v, i) { if (v.name === cur) idx = i; });
+    state.activeVenue = idx;
+    return true;
+  }
+
   function nextRaceOf(name) {
     var now = nowSec();
     var rs = venueRaces(name).filter(function (r) {
@@ -207,7 +230,8 @@
     return rNo ? window.Derive.raceKey(name, rNo) : null;
   }
 
-  /* トークの表示場リスト（8/6 FB3・state.talkRaces = {配信者id: [場名,…]} 最大3場・並び順＝表示順）。
+  /* トークの表示場リスト（8/6 FB3・state.talkRaces = {配信者id: [場名,…]} 最大3場）。
+     配列の順は押した順のまま保存するが、使うのは「4つ目を押したら一番古いのを外す」だけ＝画面の並びには使わない（9/26）。
      コンソールの操作用の場切替（activeVenue）とは独立＝入力のために場を替えても配信画面は変わらない。
      場構成が変わったら無効な場を除去し、空なら先頭2場を既定にする */
   function ensureTalkRaces() {
@@ -251,7 +275,8 @@
       });
     });
 
-    // トークの表示場（8/6 FB3）：配信者ごとに最大3場をトグル選択（押した順＝表示順・1番目が上段）。
+    // トークの表示場（8/6 FB3）：配信者ごとに最大3場をトグル選択。
+    // 画面の並びは開催の早い順で自動（9/26 Naoto・押した順は廃止＝overlay の talkKeysOf）。ボタンも同じ順に並べる。
     // 操作用の場切替とは独立＝どの場に切り替えて入力しても配信画面の買い目は変わらない
     var sr = $("sub-row");
     if (sr) {
@@ -259,17 +284,21 @@
       if (!state.venues.length || !state.racers.length) {
         sr.innerHTML = "";
       } else {
+        var heldVenues = state.venues.slice().sort(function (a, b) {
+          var sa = firstStartSec(a.name), sb = firstStartSec(b.name);
+          return (sa === null ? 1e9 : sa) - (sb === null ? 1e9 : sb);
+        });
         // 見出しは②サブ予想と揃える（8/27 FB142・①→②の並びにしたのに①側だけ無名だったため）。
         // 「最大3場」は見出しに移したので行のラベルは名前だけ＝②と同じ形・狭いドックでの折返しも減る
-        sr.innerHTML = '<div class="lbl">①トーク（画面に出す場）：配信者ごとに最大3場（押した順＝表示順）</div>' +
+        sr.innerHTML = '<div class="lbl">①トーク（画面に出す場）：配信者ごとに最大3場（並びは開催の早い順）</div>' +
           state.racers.map(function (rc) {
             var list = state.talkRaces[rc.id] || [];
             return personRowHtml(rc,
-              state.venues.map(function (v) {
-                var idx = list.indexOf(v.name);
+              heldVenues.map(function (v) {
+                var on = list.indexOf(v.name) >= 0;
                 var rNo = state.currentRace[v.name];
-                return '<button class="vp' + (idx >= 0 ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
-                  (idx >= 0 ? (idx + 1) + "." : "") + esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
+                return '<button class="vp' + (on ? " sel" : "") + '" data-rid="' + esc(rc.id) + '" data-v="' + esc(v.name) + '">' +
+                  esc(v.name) + (rNo ? " " + rNo + "R" : "") + "</button>";
               }).join(""));
           }).join("");
         sr.querySelectorAll(".vp").forEach(function (b) {
@@ -1440,8 +1469,11 @@
         var i = selected.indexOf(n);
         if (i >= 0) selected.splice(i, 1);
         else { if (selected.length >= 4) selected.shift(); selected.push(n); } // 最大4場（モーニング→昼の並走帯対応）
+        var curName = activeVenueName();
         state.venues = selected.map(function (x) { return { name: x }; });
-        if (state.activeVenue >= state.venues.length) state.activeVenue = 0;
+        // 操作中の場は場名で引き継ぐ（外した場が操作中なら先頭へ）→開催の早い順に並べ直す（9/26）
+        state.activeVenue = Math.max(0, selected.indexOf(curName));
+        sortVenuesHeld();
         state.venues.forEach(function (v) {
           if (!state.currentRace[v.name]) {
             var next = nextRaceOf(v.name);
@@ -2252,6 +2284,7 @@
       }
       stateLoaded = true;
       setSync("ok", "接続OK（rev " + (state.rev || 0) + "）");
+      if (sortVenuesHeld()) save(); // 時刻表が先に着いていた場合（9/26・開催の早い順）
       renderAll();
       cuRestore(); // 自動更新で読み直した直後なら、画面の状態を戻す（9/25）
       pollResults();
@@ -2269,6 +2302,8 @@
   function loadTimetable() {
     window.Sync.fetchTimetable(0).then(function (t) {
       timetable = t;
+      // 押した順で保存済みの本日の場（9/26以前・旧版コンソールの操作）も開催順へ。stateが読めるまでは触らない
+      if (stateLoaded && sortVenuesHeld()) save();
       renderAll();
       pollResults();
     }).catch(function () {
