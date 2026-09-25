@@ -75,6 +75,8 @@
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
      9/25 Naoto「OK・本番反映」＝本番も既定ON。&rb2=0 で従来の②に戻せる（OBSのソースURLだけで） */
   var RB2 = SCENE === "race" && params.get("rb2") !== "0";
+  // 🧪②NEXT枠は入力があるレースだけ出す（9/25 Naoto・詳細は renderPreds の subHasContent）。テストGAS接続時だけ既定ON・&subauto=1／0
+  var SUBAUTO = params.get("subauto") ? params.get("subauto") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
   // ⚠️tmeta-on は下の className 代入の中で付ける（9/25 当初は classList.add を先に書いていて、直後の代入で消えていた
   //    ＝①の2〜3場で合計欄が区画の右下に寄らなかった）
 
@@ -1523,10 +1525,21 @@
     };
     // 枠（182px）を出すか＝席ごと（9/7・§10項98）。有効なサブ場あり／丸かぶり（SUB_KEEP_OVERLAP）／SUB_FIXED なら出す。
     // 「なし」（未選択・本日の場に無い）は畳んでワイプ全幅。枠の有無＝OBSカメラ座標と噛み合う幾何（§10項86）
+    /* 🧪SUBAUTO（9/25 Naoto）＝サブの場を選んでいても、そのレースに入力が無ければ枠を畳む（「なし」と同じ幾何＝OBS側の変更なし）。
+       入力あり＝買目欄（メモ行だけでも）・俺たち目・投資額のどれか（案B）／note予想のレースは入力が無くても出す。
+       レースが進んで新しいレースが空なら畳まれ、1文字打った瞬間に出る（配信者ごとに出る出ないが分かれてよい） */
+    var subHasContent = function (rc, vn) {
+      var r = state.currentRace[vn];
+      if (!r) return false;
+      var p = window.Derive.resolvePred(state, window.Derive.raceKey(vn, r), rc.id);
+      var e = (p && p.entry) || {};
+      return !!(e.isNote || String(e.text || "").trim() || String(e.oreTachi || "").trim() || (p && p.invest > 0));
+    };
     var subFrameOf = function (rc) {
       if (!rc) return false;
       if (SUB_FIXED) return true;
-      if (subVenueOf(rc)) return true;
+      var svn0 = subVenueOf(rc);
+      if (svn0) return SUBAUTO ? subHasContent(rc, svn0) : true;
       var raw = rawSubOf(rc);
       return !!(SUB_KEEP_OVERLAP && raw && raw === mainName);
     };
