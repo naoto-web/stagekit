@@ -624,6 +624,7 @@
         '<div class="pred-opts pf-ore-row">' +
         // プレースホルダーは例だけ（8/27 FB140・Naoto指定）。「123」はoreNormalizeが1-2-3へ正規化＝1点
         '<label class="lbl inline">俺たち目 <input type="text" class="inp slim pf-ore" value="' + esc(vOre) + '"></label>' +
+        '<span class="pf-ore-odds"></span>' + // 俺たち目のオッズ（9/25 Naoto・updatePredInfo が入れる）
         "</div>" +
         /* 9/25 Naoto「横が長すぎて右半分を使っていない」＝買目欄を左に細く縦長、右に読み取り結果を
            行の高さをそろえて並べる（その行が何点に読まれたかが真横に出る）。
@@ -802,6 +803,13 @@
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;
     var syn = odds ? window.Keirin.synthOdds(parsed, odds) : null; // 合成オッズ＝投資の右（9/25 Naoto）
+    // 俺たち目の右にもオッズ（9/25 Naoto）＝「126」は1-2-6（oreNormalize）で組を出す。OBSと同じ関数
+    var oreBox = form.querySelector(".pf-ore-odds");
+    if (oreBox) {
+      var oreV = form.querySelector(".pf-ore").value.trim();
+      var oreL = odds && oreV ? window.Keirin.oddsLabel(window.Keirin.parseLine(window.Keirin.oreNormalize(oreV), "3連単", cars), odds) : "";
+      oreBox.textContent = oreL ? oreL + "倍" : "";
+    }
     var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
       (syn ? "　合成 " + window.Keirin.synthFmt(syn) + "倍" : "") + cutWarn;
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない

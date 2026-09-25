@@ -249,6 +249,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 /* 俺たち目の欄は半分の幅（9/25 Naoto「広い」）＝「1-2-3」が余裕で入る8em */
 #pred-forms .pf-ore-row .lbl { flex: 0 1 auto; min-width: 0; }
 #pred-forms .pf-ore { flex: 0 1 8em; width: 8em; min-width: 4em; }
+/* 俺たち目のオッズ（9/25）＝右列の倍率と同じ見た目（金の太字） */
+#pred-forms .pf-ore-odds { margin-left: 10px; font-weight: 800; color: #d9a441; white-space: nowrap; align-self: center; }
 #pred-forms .pred-opts:not(.pf-ore-row) { flex-wrap: nowrap; }
 #pred-forms .pred-opts .lbl { white-space: nowrap; }
 /* −／＋ は「円」のすぐ右（9/25 Naoto「円と離れている」）＝見出しを伸ばさず、欄は固定幅で細いカードでは縮む */
