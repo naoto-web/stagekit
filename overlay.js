@@ -2593,6 +2593,10 @@
       }
       return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + h.mult + "倍 的中</span>";
     }).join("");
+    /* 9/26 Naoto「同じ内容が同時に出ている・右端からでなく途中から流れる」＝旧方式（同じ中身を2つ並べて半幅ずらす継ぎ目なしループ）は
+       中身が画面幅より短いと2つが同時に見え、しかも開始位置が左端だった。
+       新方式＝中身は1つ・右端の外から入って左端の外へ抜けたら、また右端から（テレビのテロップと同じ）。
+       速さは一定（TICK_PX 毎秒・&tickspd=）＝長さから時間を計算。中身が変わったときだけ描き直して右端から流し直す */
     var copy = '<div class="tick-copy">' + items + "</div>";
     // ③結果と①トークの両方のティッカーに同じ内容を流す（的中ゼロでもバーは常時表示。②への追加は比率崩れのためFB31で撤回）
     [["ticker", "ticker-result"], ["ticker-talk-wrap", "ticker-talk"]].forEach(function (pair) {
@@ -2603,11 +2607,27 @@
       if (!tHits.length) {
         el.classList.add("static");
         el.innerHTML = "<span>🎯 的中速報｜本日の的中はここに流れます</span>";
+        el.removeAttribute("data-tick");
         return;
       }
       el.classList.remove("static");
-      el.innerHTML = copy + copy; // 同一コピー2つ＋半幅移動で継ぎ目なしループ
+      if (el.getAttribute("data-tick") === copy) return; // 同じ中身＝流れを途切れさせない
+      el.setAttribute("data-tick", copy);
+      el.innerHTML = copy;
+      fitTickSpeed(el);
     });
+  }
+  // 流れる速さ（px/秒）。旧方式は中身の長さ次第で約30〜70（3件で約45）＝読みやすさを変えないよう70。&tickspd= で調整
+  var TICK_PX = +(params.get("tickspd") || 70);
+  /** 右端の外（padding-left＝バーの幅）から自分の幅ぶん左へ動かす＝中身の右端が左端の外へ抜けるまで。時間＝距離÷速さ。
+      バーが非表示（display:none）の間は幅が測れない＝測れるようになるまで待つ */
+  function fitTickSpeed(el) {
+    var w = el.offsetWidth;
+    if (!w) { setTimeout(function () { if (el.getAttribute("data-tick")) fitTickSpeed(el); }, 1000); return; }
+    el.style.animation = "none";
+    void el.offsetWidth; // アニメーションを先頭（右端）からやり直させる
+    el.style.animation = "";
+    el.style.animationDuration = (w / (TICK_PX || 70)).toFixed(1) + "s";
   }
 
   /* ---------- ④待機 ---------- */
