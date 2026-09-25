@@ -746,7 +746,8 @@
   /* 買目のリアルタイムオッズ（9/25 Naoto・要件定義§13）＝右列を点数→オッズ（整数）、合計の行の投資の右に合成オッズ。
      テストGAS接続時だけ既定ON（本番GASに action=odds が無い）。&odds=1／0 で明示。取れない行は従来どおり点数。
      予想入力の対象レースだけを30秒ごと（初回は即）に取る。表示だけ＝保存・計算には入れない */
-  var CON_ODDS = params.get("odds") ? params.get("odds") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
+  // 9/25 本番化＝既定ON（本番GAS v12 に action=odds 追加済み）。&odds=0 で点数表示に戻せる
+  var CON_ODDS = params.get("odds") ? params.get("odds") !== "0" : true;
   var conOdds = {}, conOddsAt = {}, conOddsPending = {};
   function ensureConOdds(key, force) {
     if (!CON_ODDS || !key || conOddsPending[key]) return;

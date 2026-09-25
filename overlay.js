@@ -62,12 +62,13 @@
   if (SEATCARD === "0") SEATCARD = "";
   /* 買目のリアルタイムオッズ（9/25 Naoto・要件定義§13・🧪試作）。3連単の行の右端に倍率（1点）／幅（複数点）。
      テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（本番GASに action=odds が無い）。&odds=1／0 で明示 */
-  var ODDS = params.get("odds") || (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND ? "1" : "");
+  // 9/25 Naoto「いい感じ・本番反映」＝本番も既定ON（本番GAS v12 に action=odds を追加済み）。&odds=0 で消せる
+  var ODDS = params.get("odds") || "1";
   if (ODDS === "0") ODDS = "";
   // ②レース観戦も買目の右に倍率を出す（9/25 Naoto・一度外して戻した）。②のNEXT枠（サブ）は倍率・合成とも出さない（raceBuyHtml の noOdds）
   /* ①トークの合計・合成・投資を②③と同じ「右下の角に固定」に（9/25 Naoto）。1場＝パネル右下の固定枠（tband-meta）／
      2〜3場＝場の区画ごとに右下へ寄せる（1つの角に3レース分は入らない）。
-     オッズと同じくテストGAS接続時だけ既定ON（本番の①は従来のインラインのまま）。&tmeta=1／0 で明示 */
+     オッズと同じ既定（9/25 本番化＝ON）。&tmeta=0 で従来のインラインに戻せる */
   var TMETA = params.get("tmeta") ? params.get("tmeta") !== "0" : !!ODDS;
   if (TMETA) document.body.classList.add("tmeta-on");
 
