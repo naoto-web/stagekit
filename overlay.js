@@ -2582,22 +2582,58 @@
     renderTicker();
   }
 
+  /* 9/26 Naoto（2回目）「右から流すとシュール」→**収まる間は左から並べて止める／収まらなくなったら流す**。
+     流すときは「同じ中身2つ＋半幅ずらし」の継ぎ目なしループ（旧方式）＝中身が画面より長いときだけ使うので2つ同時には見えない。
+     止まった位置からそのまま左へ動き出す＝切り替わりも自然。速さ一定（TICK_PX・&tickspd=）。
+     **新しい的中は演出が一段落してから足して、その1件だけ金色に光らせる**（.tick-new）：
+       前奏→🎯バッジ→回収のピコーン（→プラ転・節目・最高額）が終わるまで的中ロールには出さない
+       ＝演出に埋もれない・バッジより先に倍率が下に出るネタバレもしない。演出が無い的中（自動確定等）はピコーンが終われば出る。
+     「新しい」＝このページが初めて知った的中（席に関係なく全員分で見る）＝配信者の交代で入ってきた人の過去の的中は光らない。
+       読み込み直後（TICK_QUIET_MS）に届いた分は既知扱い＝読み直しで一斉に光らない。
+     （9/26 07:35 の「右端の外から入る」テロップ方式は1時間で撤回） */
+  var tickSeen = null, tickHold = {}, tickGlow = {}, tickTimer = null;
+  function tickKey(h) { // 手動の的中は id が並び順（manual-0…）で、追加でずれる＝中身で見分ける
+    return /^manual-/.test(String(h.id || "")) ? "m|" + h.racerName + "|" + h.place + "|" + h.type + "|" + h.mult : String(h.id);
+  }
+  function tickItemHtml(h) {
+    // 式別ラベルは3連単運用のため省略（俺たち目・例外買いのワイド等だけ残す・8/6 FB）
+    var typeLabel = h.type && h.type !== "3連単" ? " " + esc(h.type) : "";
+    var noteLabel = h.note ? " note" : ""; // note予想レースの的中は場Rの後ろにnote表記（8/6 FB53）
+    if (h.manche && h.amount) {
+      return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + h.mult + "倍</span>";
+    }
+    return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + h.mult + "倍 的中</span>";
+  }
+  /** 演出が一段落する時刻＝バッジ＋ピコーン（0.5s後に出て4s後からカウント3s）／プラ転・節目・最高額（popUntil）／ピコーンの実行中 */
+  function fxQuietAt() {
+    var t = (window.__fxBadgeAt || 0) + REFPOP_AFTER_BADGE_MS + REFPOP_POP_LEAD_MS + REFPOP_COUNT_MS + 500;
+    Object.keys(platenSt).forEach(function (k) { t = Math.max(t, (platenSt[k].popUntil || 0) + 500); });
+    Object.keys(refAnim).forEach(function (k) { if (refAnim[k].running || refAnim[k].waiting) t = Math.max(t, Date.now() + 500); });
+    return t;
+  }
+  function tickRelease() {
+    tickTimer = null;
+    var at = fxQuietAt();
+    if (Date.now() < at) { tickTimer = setTimeout(tickRelease, Math.min(500, at - Date.now())); return; }
+    Object.keys(tickHold).forEach(function (k) { tickGlow[k] = true; });
+    tickHold = {};
+    renderTicker();
+  }
   function renderTicker() {
-    var tHits = shownHits(); // 今の席の人の的中だけ流す（9/25）
-    var items = tHits.slice().reverse().map(function (h) { // 古い順に流す
-      // 式別ラベルは3連単運用のため省略（俺たち目・例外買いのワイド等だけ残す・8/6 FB）
-      var typeLabel = h.type && h.type !== "3連単" ? " " + esc(h.type) : "";
-      var noteLabel = h.note ? " note" : ""; // note予想レースの的中は場Rの後ろにnote表記（8/6 FB53）
-      if (h.manche && h.amount) {
-        return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + h.mult + "倍</span>";
-      }
-      return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + h.mult + "倍 的中</span>";
-    }).join("");
-    /* 9/26 Naoto「同じ内容が同時に出ている・右端からでなく途中から流れる」＝旧方式（同じ中身を2つ並べて半幅ずらす継ぎ目なしループ）は
-       中身が画面幅より短いと2つが同時に見え、しかも開始位置が左端だった。
-       新方式＝中身は1つ・右端の外から入って左端の外へ抜けたら、また右端から（テレビのテロップと同じ）。
-       速さは一定（TICK_PX 毎秒・&tickspd=）＝長さから時間を計算。中身が変わったときだけ描き直して右端から流し直す */
-    var copy = '<div class="tick-copy">' + items + "</div>";
+    var quiet = tickSeen === null || Date.now() - TICK_T0 < TICK_QUIET_MS;
+    if (quiet) tickSeen = {};
+    var added = false;
+    derived.hits.forEach(function (h) {
+      var k = tickKey(h);
+      if (tickSeen[k]) return;
+      tickSeen[k] = true;
+      if (!quiet) { tickHold[k] = true; added = true; }
+    });
+    // ⚠️ここは renderAll の途中＝的中演出（fireHitFx が __fxBadgeAt を置く）は**この後**に走る＝300ms 置いてから待ち時間を見る（ピコーンと同じ）
+    if (added && !tickTimer) tickTimer = setTimeout(tickRelease, 300);
+    var tHits = shownHits().filter(function (h) { return !tickHold[tickKey(h)]; }); // 今の席の人の的中だけ（9/25）・演出待ちは除く
+    var items = tHits.slice().reverse().map(function (h) { return { k: tickKey(h), s: tickItemHtml(h), m: !!(h.manche && h.amount) }; }); // 古い順
+    var sig = items.map(function (it) { return it.s; }).join("");
     // ③結果と①トークの両方のティッカーに同じ内容を流す（的中ゼロでもバーは常時表示。②への追加は比率崩れのためFB31で撤回）
     [["ticker", "ticker-result"], ["ticker-talk-wrap", "ticker-talk"]].forEach(function (pair) {
       var wrap = $(pair[0]);
@@ -2605,29 +2641,46 @@
       if (!wrap || !el) return;
       wrap.classList.remove("hidden");
       if (!tHits.length) {
+        el.classList.remove("scroll");
         el.classList.add("static");
+        el.style.animationDuration = "";
         el.innerHTML = "<span>🎯 的中速報｜本日の的中はここに流れます</span>";
         el.removeAttribute("data-tick");
         return;
       }
       el.classList.remove("static");
-      if (el.getAttribute("data-tick") === copy) return; // 同じ中身＝流れを途切れさせない
-      el.setAttribute("data-tick", copy);
-      el.innerHTML = copy;
-      fitTickSpeed(el);
+      if (el.getAttribute("data-tick") === sig) return; // 同じ中身＝流れを途切れさせない
+      el.setAttribute("data-tick", sig);
+      layoutTicker(wrap, el, items, sig, tickGlow);
     });
+    tickGlow = {}; // 光らせるのは足された瞬間の1回だけ
   }
   // 流れる速さ（px/秒）。旧方式は中身の長さ次第で約30〜70（3件で約45）＝読みやすさを変えないよう70。&tickspd= で調整
   var TICK_PX = +(params.get("tickspd") || 70);
-  /** 右端の外（padding-left＝バーの幅）から自分の幅ぶん左へ動かす＝中身の右端が左端の外へ抜けるまで。時間＝距離÷速さ。
-      バーが非表示（display:none）の間は幅が測れない＝測れるようになるまで待つ */
-  function fitTickSpeed(el) {
-    var w = el.offsetWidth;
-    if (!w) { setTimeout(function () { if (el.getAttribute("data-tick")) fitTickSpeed(el); }, 1000); return; }
+  // 読み込み直後に届いた的中は既知扱い（0件を一瞬経由して実データが届くと、全件が「新しい」扱いで一斉に光るため）
+  var TICK_T0 = Date.now(), TICK_QUIET_MS = 8000;
+  /** まず1つ並べて止め、バーに収まるか測る。収まる＝そのまま／収まらない＝2つ並べて流す。
+      glow＝今回足された的中（tickKey→true）。バーの幅が測れない間（非表示）は1秒ごとに測り直す */
+  function layoutTicker(wrap, el, items, sig, glow) {
+    var html = items.map(function (it) {
+      return '<span class="tick-item' + (it.m ? " tick-m" : "") + (glow && glow[it.k] ? " tick-new" : "") + '">' + it.s + "</span>";
+    }).join("");
+    el.classList.remove("scroll");
+    el.style.animationDuration = "";
+    el.innerHTML = '<div class="tick-copy">' + html + "</div>";
+    var avail = wrap.clientWidth - (parseFloat(getComputedStyle(wrap).paddingLeft) || 0) - 12;
+    if (wrap.clientWidth <= 0) {
+      setTimeout(function () { if (el.getAttribute("data-tick") === sig) layoutTicker(wrap, el, items, sig, null); }, 1000);
+      return;
+    }
+    if (el.scrollWidth <= avail) return; // 収まる＝止めて表示
+    el.innerHTML = '<div class="tick-copy">' + html + '</div><div class="tick-copy">' + html + "</div>";
+    el.classList.add("scroll");
+    var cw = el.firstChild.offsetWidth; // 1つ分（右の余白込み）＝-50%で動く距離
     el.style.animation = "none";
-    void el.offsetWidth; // アニメーションを先頭（右端）からやり直させる
+    void el.offsetWidth; // 先頭（止まっていた位置）から流し始める
     el.style.animation = "";
-    el.style.animationDuration = (w / (TICK_PX || 70)).toFixed(1) + "s";
+    el.style.animationDuration = (cw / (TICK_PX || 70)).toFixed(1) + "s";
   }
 
   /* ---------- ④待機 ---------- */
