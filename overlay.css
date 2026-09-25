@@ -358,8 +358,10 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .stc-gap { flex: 0 0 7px; height: 7px;
   background: linear-gradient(var(--stc-line), var(--stc-line)) 6px 50% / calc(100% - 12px) 2px no-repeat; }
 .stc-tr .car { width: 26px; height: 26px; font-size: 22px; border-radius: 4px; border-width: 1px; }
-.stc-row > .nm { display: block; align-self: center; overflow: hidden; font-size: 18px; font-weight: 900; line-height: 1.05; }
-.stc-row > .nm small { display: block; font-size: 12px; font-weight: 700; color: var(--sub); }
+/* 9/25 Naoto「名前と下の行がもう少し大きく」＝18→20px／12→14px。⚠️行の高さ（--stc-rh）に比例して上限つきで決める＝
+   9車立てで行が詰まる日も2段が行からはみ出さない（名前≒行の56%・下の行≒36%） */
+.stc-row > .nm { display: block; align-self: center; overflow: hidden; font-size: min(20px, calc(var(--stc-rh, 36px) * .56)); font-weight: 900; line-height: 1.05; }
+.stc-row > .nm small { display: block; font-size: min(14px, calc(var(--stc-rh, 36px) * .36)); font-weight: 700; color: var(--sub); }
 .stc-tr .sc { font-weight: 900; }
 .stc-tr .sc.top1 { color: #d63b3b; }
 .stc-tr .sc.top2 { color: #2f66d0; }
@@ -378,8 +380,8 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .stc-cmp .stc-th { font-size: 15px; }
 .stc-cmp .stc-tr { font-size: 20px; }
 .stc-cmp .stc-tr .car { width: 30px; height: 30px; font-size: 25px; }
-.stc-cmp .stc-row > .nm { font-size: 20px; }
-.stc-cmp .stc-row > .nm small { font-size: 13px; }
+.stc-cmp .stc-row > .nm { font-size: min(23px, calc(var(--stc-rh, 36px) * .56)); } /* 9/25 20→23px（上限） */
+.stc-cmp .stc-row > .nm small { font-size: min(15px, calc(var(--stc-rh, 36px) * .36)); } /* 9/25 13→15px（上限） */
 
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;
