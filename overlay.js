@@ -943,7 +943,8 @@
     glows.forEach(function (g) { if (g.type === "俺たち目") oreGlow.push(g.combo); });
     // 俺たち目の右にもオッズ（9/25 Naoto）。俺たち目は「126」＝1-2-6 の記法補正を通してから組を出す
     var oreOdds = ore && !noOdds ? oddsHtml(k, window.Keirin.parseLine(window.Keirin.oreNormalize(ore), "3連単"), small) : "";
-    return (ore ? '<div class="ore-row"><span class="ore-label">俺たち目</span>' + lineChips(ore, small, oreGlow) + oreOdds + "</div>" : "") +
+    // ②レース観戦（RB2）は札の文字を「俺」だけに（9/25 Naoto・狭い②だけ。①③は「俺たち目」のまま＝言葉を覚えてもらう）
+    return (ore ? '<div class="ore-row"><span class="ore-label">' + (RB2 ? "俺" : "俺たち目") + "</span>" + lineChips(ore, small, oreGlow) + oreOdds + "</div>" : "") +
       okLines.map(function (l) {
         // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
         // チップは通常色のまま・的中強調の対象外（そもそも的中しない）

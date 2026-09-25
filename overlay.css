@@ -700,6 +700,8 @@ body.debug #scene-tenkai .slist:empty::after {
   text-shadow: none; vertical-align: 4px; white-space: nowrap; }
 .rb2 .bh-race .grade-badge { font-size: .8em; margin-left: 6px; vertical-align: 1px; }
 .rb2 .bh-race .bh-note { margin-left: 2px; }
+/* ②の俺たち目の札は「俺」1文字（9/25 Naoto）＝13pxの1文字は読みにくいので一回り大きく（幅は4文字時より細いまま） */
+.rb2 .race-band .ore-label, .rb2 .sub-line .ore-label { font-size: 17px; font-weight: 900; }
 /* C＝右下の 合計・合成・投資 は「2段（合成を投資の上）」と「1行（.m1）」を packRaceBand が買目の大きさで選ぶ（9/25 Naoto） */
 .rb2 .race-band .band-meta.has-synth.m1 { grid-template-columns: auto auto auto; }
 .rb2 .race-band .band-meta.has-synth.m1 .bm-pts { grid-column: 1; grid-row: 1; }
