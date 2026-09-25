@@ -60,6 +60,10 @@
   // 9/25 Naoto「テスト用OBSでの見え方OK・本番反映お願いします」＝本番も既定ON（本番GASも lines/cards を返す版へ更新）
   var SEATCARD = params.get("seatcard") || "1";
   if (SEATCARD === "0") SEATCARD = "";
+  /* 買目のリアルタイムオッズ（9/25 Naoto・要件定義§13・🧪試作）。3連単の行の右端に倍率（1点）／幅（複数点）。
+     テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（本番GASに action=odds が無い）。&odds=1／0 で明示 */
+  var ODDS = params.get("odds") || (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND ? "1" : "");
+  if (ODDS === "0") ODDS = "";
 
   document.body.className = "scene-" + SCENE + (DEBUG ? " debug" : "") +
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
@@ -819,6 +823,50 @@
      ・成立している行でも末尾が区切り記号（「1-2-」は2車単1-2として読める）＝整形表示（disp）だと
        最後の「−」が消えるので、打ったとおりの形で描く
      ⚠️点数・的中・投資の計算（derive）は触らない＝見た目だけの扱い */
+  /* 買目のリアルタイムオッズ（§13）。oddsData[raceKey]＝GAS action=odds の1レース分
+     {st, end, fin, o:{'123':65.1}}。oddsWant[raceKey]＝最後に描画で要求された時刻（画面に出ている3連単のレースだけ取る）。
+     ⚠️表示だけ＝点数・投資・回収・的中の計算（derive）には一切入れない（§8の実額転記は不変） */
+  var oddsData = {}, oddsWant = {}, oddsPending = {}, oddsDate = "";
+  function fmtOdds(v) { return v >= 1000 ? String(Math.round(v)) : v.toFixed(1); }
+  function oddsHtml(k, l, small) {
+    if (!ODDS || !k || l.type !== "3連単" || !l.combos || !l.combos.length) return "";
+    oddsWant[k] = Date.now();
+    var d = oddsData[k];
+    if (!d || !d.o) return "";
+    var vals = [];
+    l.combos.forEach(function (c) { var v = d.o[c.join("")]; if (v > 0) vals.push(v); });
+    if (!vals.length) return "";
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var txt = lo === hi ? fmtOdds(lo) : fmtOdds(lo) + "〜" + fmtOdds(hi);
+    return '<span class="pl-odds' + (small ? " sm" : "") + (d.fin ? " fin" : "") + '">' + txt + "倍</span>";
+  }
+  /** 30秒ごと：画面に出ている（90秒以内に描画要求のあった）3連単レースを場ごとにまとめて取る。最終オッズは取り直さない */
+  function pollOdds() {
+    if (!ODDS || !timetable) return;
+    if (timetable.date && timetable.date !== oddsDate) { oddsData = {}; oddsWant = {}; oddsDate = timetable.date; }
+    var now = Date.now(), byJo = {};
+    Object.keys(oddsWant).forEach(function (k) {
+      if (now - oddsWant[k] > 90000) { delete oddsWant[k]; return; }
+      if (oddsPending[k] || (oddsData[k] && oddsData[k].fin)) return;
+      var p = k.split("|"), jo = joCodeOf(p[0]);
+      if (!jo || !+p[1]) return;
+      (byJo[jo] = byJo[jo] || { name: p[0], races: [] }).races.push(+p[1]);
+    });
+    Object.keys(byJo).forEach(function (jo) {
+      var g = byJo[jo];
+      g.races.forEach(function (r) { oddsPending[g.name + "|" + r] = true; });
+      window.Sync.fetchOdds(jo, g.races).then(function (res) {
+        var changed = false;
+        g.races.forEach(function (r) {
+          var k = g.name + "|" + r, d = res[r];
+          delete oddsPending[k];
+          if (d && d.o && JSON.stringify(d.o) !== JSON.stringify((oddsData[k] || {}).o)) changed = true;
+          if (d && d.o) oddsData[k] = d;
+        });
+        if (changed) renderPreds();
+      }).catch(function () { g.races.forEach(function (r) { delete oddsPending[g.name + "|" + r]; }); });
+    });
+  }
   var TYPING_RE = /^[\s0-9０-９\-－ー=＝→>＞]+$/;
   var TRAIL_SEP_RE = /[\-－ー=＝→>＞]\s*$/;
   function isTypingLine(l) { return !l.ok && !l.cut && TYPING_RE.test(l.raw || "") && /[0-9０-９]/.test(l.raw || ""); }
@@ -865,7 +913,7 @@
         });
         var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
         if (!l.dupCount && TRAIL_SEP_RE.test(l.raw || "")) src = String(l.raw).trim(); // 末尾が区切り＝打ちかけの形のまま
-        return '<div class="pred-line chips">' + lineChips(src, small, g) + "</div>";
+        return '<div class="pred-line chips">' + lineChips(src, small, g) + oddsHtml(k, l, small) + "</div>";
       }).join("") +
       (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
       metaLine;
@@ -5197,6 +5245,7 @@
   }
   loadTimetable();
   setInterval(loadTimetable, (window.APP_CONFIG.TT_POLL_MS || 600000));
+  if (ODDS) { setTimeout(pollOdds, 3000); setInterval(pollOdds, 30000); } // 買目オッズ（§13）＝初回は描画で要求が溜まってから
 
   var fitTick = 0;
   setInterval(function () {

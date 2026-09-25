@@ -109,6 +109,15 @@
             lines: j.lines || [], cards: j.cards || {} };
         });
     },
+    /** 買目のリアルタイムオッズ（§13・3連単）。races＝[2,3] → { '2': {st,end,fin,cnt,at,o:{'123':65.1}}|null } */
+    fetchOdds: function (jo, races) {
+      var url = cfg.GAS_URL + "?action=odds&jo=" + encodeURIComponent(jo) + "&races=" + races.join(",");
+      return getJson(url)
+        .then(function (j) {
+          if (!j.ok) throw new Error(j.error || "odds fetch failed");
+          return j.odds || {};
+        });
+    },
 
     /* ---------- GAS書き込み（コンソール専用・keyが要る） ----------
        Content-Type: text/plain でプリフライトを回避（GASはOPTIONSに応答しないため） */
