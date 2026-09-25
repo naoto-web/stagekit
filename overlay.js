@@ -75,7 +75,8 @@
   var TMETAK = params.get("tmetak") !== "0";
   // ①の買目がまだ無い区画はレースの札（場名R）を大きく（9/26 Naoto）。&headbig=0 で戻す／&headpx= で上限
   var HEADBIG = params.get("headbig") !== "0";
-  var HEAD_EMPTY_PX = +(params.get("headpx") || 44);
+  var HEAD_EMPTY_PX = +(params.get("headpx") || 44);   // 1場
+  var HEAD_EMPTY_PX2 = +(params.get("headpx2") || 38); // 2〜3場
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
@@ -767,7 +768,9 @@
       「全」チップは行が的中していれば光らせる（当たり車番がその裏に居るため）
       ⚠️8/27 FB148＝**組合せは複数渡せる**（[[5,2,3],[5,3,2]] の形）。同着で1行が2つの目に当たったとき、
         片方しか光らないと「両方持っているのに1つしか光らない」になる＝どちらかに当たる車番を全部光らせる */
-  function lineChips(raw, small, hlCombo) {
+  /* noSep＝区切り（- =）を描かない（9/26 Naoto「俺たち目はハイフンを入れて入力しても画面ではハイフン無しで」）。
+     当たり目を光らせる判定（strict＝区切りが全部「-」なら着順どおりに照合）は入力どおりの区切りで行う＝表示だけ消す */
+  function lineChips(raw, small, hlCombo, noSep) {
     var toks = window.Keirin.displayTokens(raw);
     // 単一の [5,2,3] でも複数の [[5,2,3],[5,3,2]] でも受ける
     var hls = !hlCombo || !hlCombo.length ? null
@@ -789,7 +792,7 @@
           });
           return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + (glow ? " hit-glow" : "") + '">' + tk.v + "</i>";
         }
-        case "sep": pos++; return '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
+        case "sep": pos++; return noSep ? "" : '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
         case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
         case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hls ? " hit-glow" : "") + '">全</span>';
         case "box": return '<span class="pl-box' + (small ? " sm" : "") + '">BOX</span>';
@@ -958,7 +961,7 @@
     // 俺たち目の右にもオッズ（9/25 Naoto）。俺たち目は「126」＝1-2-6 の記法補正を通してから組を出す
     var oreOdds = ore && !noOdds ? oddsHtml(k, window.Keirin.parseLine(window.Keirin.oreNormalize(ore), "3連単"), small) : "";
     // ②レース観戦（RB2）は札の文字を「俺」だけに（9/25 Naoto・狭い②だけ。①③は「俺たち目」のまま＝言葉を覚えてもらう）
-    return (ore ? '<div class="ore-row"><span class="ore-label">' + (RB2 ? "俺" : "俺たち目") + "</span>" + lineChips(ore, small, oreGlow) + oreOdds + "</div>" : "") +
+    return (ore ? '<div class="ore-row"><span class="ore-label">' + (RB2 ? "俺" : "俺たち目") + "</span>" + lineChips(ore, small, oreGlow, true) + oreOdds + "</div>" : "") +
       okLines.map(function (l) {
         // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
         // チップは通常色のまま・的中強調の対象外（そもそも的中しない）
@@ -1368,18 +1371,18 @@
        1秒ごとの見直しでも呼ばれる＝毎回いったん元に戻してから測る。戻す＝&headbig=0 */
     var head = col.querySelector(":scope > .race-col-head");
     if (head) head.style.fontSize = "";
-    if (HEADBIG && head && Array.prototype.every.call(col.children, function (c) { return c === head || c === meta; })) {
+    var emptyCol = HEADBIG && head && Array.prototype.every.call(col.children, function (c) { return c === head || c === meta; });
+    if (emptyCol) {
+      /* 大きさは区画ごとに計算せず固定（9/26 Naoto「グレード付きとそうでない札で大きさが違う＝グレード付きの方に合わせて」）：
+         1場＝HEAD_EMPTY_PX（44）／2〜3場＝HEAD_EMPTY_PX2（38＝2場でグレード付きの札が入った大きさ）。区画に入り切らない時だけ縮める。
+         2〜3場の札は🔥note予想の前で必ず改行（raceColHead の split）＝1行目の幅で入るかを見る */
       var hBase = parseFloat(getComputedStyle(head).fontSize) || 26;
       var hRoom = (col.getBoundingClientRect().width - (parseFloat(getComputedStyle(col).paddingLeft) || 0) - (parseFloat(getComputedStyle(col).paddingRight) || 0)) * 0.96;
-      // 1行で置いた幅（折り返し前）と、🔥note予想を2行目へ回したときの一番長い行の幅を測る
-      head.style.whiteSpace = "nowrap";
-      var hW1 = head.getBoundingClientRect().width;
-      var tag = head.querySelector(".note-tag");
-      var tagW = tag ? tag.getBoundingClientRect().width : 0;
+      var hTarget = col.classList.contains("race-col") ? HEAD_EMPTY_PX2 : HEAD_EMPTY_PX;
+      head.style.whiteSpace = "nowrap"; // 折り返し前の幅（2〜3場は <br> で区切った長い方の行）
+      var hW = head.getBoundingClientRect().width;
       head.style.whiteSpace = "";
-      var one = hW1 > 0 ? hBase * hRoom / hW1 : HEAD_EMPTY_PX;               // 1行のまま入る大きさ
-      var two = tag ? hBase * hRoom / Math.max(hW1 - tagW, tagW + 30) : one;  // 2行に分けたときに入る大きさ（+30＝札の左右の余白）
-      var hPx = Math.min(HEAD_EMPTY_PX, one >= 36 ? one : Math.max(one, two));
+      var hPx = Math.min(hTarget, hW > 0 ? hBase * hRoom / hW : hTarget);
       if (hPx > hBase) head.style.fontSize = hPx.toFixed(1) + "px";
     }
     var cr = col.getBoundingClientRect();
@@ -1436,7 +1439,7 @@
     }
     if (k < 1) {
       col.style.transform = "scale(" + Math.max(0.35, k).toFixed(3) + ")";
-    } else if (k > 1.02 && col.children.length > 1) {
+    } else if (k > 1.02 && col.children.length > 1 && !emptyCol) { // 買目が無い区画は札の大きさを固定したので区画は拡大しない（9/26）
       col.style.transform = "scale(" + Math.min(1.6, k).toFixed(3) + ")";
     }
     if (col.style.transform) col.style.transformOrigin = "left top";
@@ -1971,16 +1974,16 @@
             var tk = talkKeys.slice().sort(function (a, b) { return predRowCount(rc, b) - predRowCount(rc, a); });
             band.innerHTML =
               '<div class="race-t">' +
-              '<div class="race-t-main race-col">' + raceColHead(rc, tk[0]) + raceBuyHtml(rc, tk[0], true, false, true) + "</div>" +
+              '<div class="race-t-main race-col">' + raceColHead(rc, tk[0], true) + raceBuyHtml(rc, tk[0], true, false, true) + "</div>" +
               '<div class="race-t-side">' +
-              '<div class="race-col">' + raceColHead(rc, tk[1]) + raceBuyHtml(rc, tk[1], true, false, true) + "</div>" +
-              '<div class="race-col">' + raceColHead(rc, tk[2]) + raceBuyHtml(rc, tk[2], true, false, true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, tk[1], true) + raceBuyHtml(rc, tk[1], true, false, true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, tk[2], true) + raceBuyHtml(rc, tk[2], true, false, true) + "</div>" +
               "</div></div>";
           } else if (talkKeys.length === 2) {
             band.innerHTML =
               '<div class="race-split">' +
-              '<div class="race-col">' + raceColHead(rc, talkKeys[0]) + raceBuyHtml(rc, talkKeys[0], true, false, true) + "</div>" +
-              '<div class="race-col">' + raceColHead(rc, talkKeys[1]) + raceBuyHtml(rc, talkKeys[1], true, false, true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[0], true) + raceBuyHtml(rc, talkKeys[0], true, false, true) + "</div>" +
+              '<div class="race-col">' + raceColHead(rc, talkKeys[1], true) + raceBuyHtml(rc, talkKeys[1], true, false, true) + "</div>" +
               "</div>";
           } else {
             // TMETA（9/25）＝1場は合計欄をパネル右下の固定枠へ（noMeta）。本番（TMETA無効）は従来のインライン
