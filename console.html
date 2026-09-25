@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260926-064613">
+<link rel="stylesheet" href="console.css?v=20260926-065446">
 </head>
 <body>
 
@@ -159,6 +159,20 @@
 <!-- ══════════ 本日設定 ══════════ -->
 <details class="card" id="setup-card">
   <summary><h2>本日設定</h2></summary>
+  <!-- 並び＝配信者 → 本日の場 → note勝負レース（9/26 Naoto）。note は「座っている人×本日の場」から作るので最後。
+       配信者は交代・1人配信のときに一番急ぐ＝開いてすぐの位置 -->
+  <!-- 9/26 Naoto＝プルダウン→ボタン式。座っている人をメンバーカラーで塗る・押した瞬間に保存。
+       ⚠️select は隠して残す＝saveSettings が #racer-1/#racer-2 の値を読むため。ボタンは select の値を書き換えて change を発火するだけ
+       （同じ人を選んだら席を入れ替える処理も change 側にある） -->
+  <label class="lbl">配信者：席1＝左カメラ／席2＝右カメラ。座らない席は「なし」</label>
+  <div class="seat-row"><span class="seat-lbl">席1（左）</span><div class="seat-btns" id="seat-pick-1"></div></div>
+  <div class="seat-swap-row"><button class="btn small" id="btn-seat-swap" title="席1と席2を入れ替えて即保存">⇄ 席替え</button></div>
+  <div class="seat-row"><span class="seat-lbl">席2（右）</span><div class="seat-btns" id="seat-pick-2"></div></div>
+  <div class="seat-selects">
+    <select id="racer-1" class="inp slim"></select>
+    <select id="racer-2" class="inp slim"></select>
+  </div>
+
   <label class="lbl">本日の場</label>
   <div class="venue-pick" id="venue-pick"></div>
   <!-- グレード表示の入力欄は9/24 Naoto「使ってないのでコンソール上の表示は不要」で admin-only に（&admin=1 でだけ見える）。
@@ -172,17 +186,6 @@
   <label class="lbl">本日のnote勝負レース（押すと選択・もう一度押すと解除）</label>
   <div id="note-pick" class="note-pick"></div>
 
-  <!-- 9/26 Naoto＝プルダウン→ボタン式。座っている人をメンバーカラーで塗る・押した瞬間に保存。
-       ⚠️select は隠して残す＝saveSettings が #racer-1/#racer-2 の値を読むため。ボタンは select の値を書き換えて change を発火するだけ
-       （同じ人を選んだら席を入れ替える処理も change 側にある） -->
-  <label class="lbl">配信者：席1＝左カメラ／席2＝右カメラ。座らない席は「なし」</label>
-  <div class="seat-row"><span class="seat-lbl">席1（左）</span><div class="seat-btns" id="seat-pick-1"></div></div>
-  <div class="seat-swap-row"><button class="btn small" id="btn-seat-swap" title="席1と席2を入れ替えて即保存">⇄ 席替え</button></div>
-  <div class="seat-row"><span class="seat-lbl">席2（右）</span><div class="seat-btns" id="seat-pick-2"></div></div>
-  <div class="seat-selects">
-    <select id="racer-1" class="inp slim"></select>
-    <select id="racer-2" class="inp slim"></select>
-  </div>
   <!-- 名簿・締切オフセットは配信者が触らないので既定で非表示（8/12）。
        ⚠️DOMから消してはいけない＝save()がここを読み戻すため、消すと保存のたびに
        名簿が空・締切が既定値で上書きされる。直すときは URL に &admin=1 を付けて開く -->
@@ -254,11 +257,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260926-064613" data-au="banner"></script>
-<script src="config.js?v=20260926-064613"></script>
-<script src="keirin.js?v=20260926-064613"></script>
-<script src="derive.js?v=20260926-064613"></script>
-<script src="sync.js?v=20260926-064613"></script>
-<script src="console.js?v=20260926-064613"></script>
+<script src="autoupdate.js?v=20260926-065446" data-au="banner"></script>
+<script src="config.js?v=20260926-065446"></script>
+<script src="keirin.js?v=20260926-065446"></script>
+<script src="derive.js?v=20260926-065446"></script>
+<script src="sync.js?v=20260926-065446"></script>
+<script src="console.js?v=20260926-065446"></script>
 </body>
 </html>
