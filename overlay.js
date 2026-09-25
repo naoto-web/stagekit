@@ -852,7 +852,7 @@
     oddsWant[k] = oddsSeq;
     var d = oddsData[k];
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
-    if (RB2 && !small && txt.indexOf("〜") > 0) txt = txt.split("〜")[0] + "〜"; // B：②は幅の行を下限だけ「49〜」
+    // （9/25 RB2のB「幅の行は下限だけ『49〜』」は撤回＝Naoto「11〜で文字が切れて見える」→①③と同じ「11〜14」）
     // 「倍」は付けない（9/25 Naoto「文字数大事・みんな分かる」）。合成オッズの「倍」は残す
     return txt ? '<span class="pl-odds' + (small ? " sm" : "") + '">' + txt + "</span>" : "";
   }
