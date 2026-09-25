@@ -1197,8 +1197,9 @@
       idx.forEach(function (i) { if (ws[i] > wAny) wAny = ws[i]; if (hard[i] && ws[i] > w) w = ws[i]; });
       return w || wAny; // チップ行のない列（ラベルだけ等）は行の実幅
     }
-    function evalCols(cols) {
-      var k = CAP, sumW = COLGAP * (cols.length - 1), x = 0, i, j;
+    function evalCols(cols, gap) {
+      if (gap == null) gap = COLGAP;
+      var k = CAP, sumW = gap * (cols.length - 1), x = 0, i, j;
       var cw = [], ch = [];
       for (i = 0; i < cols.length; i++) {
         cw[i] = colWidth(cols[i]);
@@ -1213,7 +1214,7 @@
         var right = x + cw[i];
         // 合計/投資とは「横で手前に収まる」か「縦で上に収まる」のどちらかを満たせば重ならない
         if (right > 0 && ch[i] > 0) k = Math.min(k, Math.max(metaL / right, metaT / ch[i]));
-        x = right + COLGAP;
+        x = right + gap;
       }
       return k;
     }
@@ -1268,6 +1269,16 @@
       best = search();
     }
     if (RB2) best.cols.forEach(function (c) { c.sort(function (a, b) { return a - b; }); }); // 列の中は書いた順
+    /* RB2＝横が余っているときは列間を広げる（9/25夜 Naoto「1列目と2列目が近い・右にスペースあるならもう少し離して」）。
+       最小14px（CSS .rb2 .rb-flow）〜最大40px（従来の②）の範囲で、倍率 best.k を1ミリも下げない一番広い列間を選ぶ
+       ＝縦で頭打ちのとき（横が余る）だけ広がり、横で頭打ちのときは14pxのまま */
+    var colGapUsed = COLGAP;
+    if (RB2 && best.cols.length > 1) {
+      for (var tg = 40; tg > COLGAP; tg -= 2) {
+        if (evalCols(best.cols, tg) >= best.k - 1e-6) { colGapUsed = tg; break; }
+      }
+    }
+    if (colGapUsed !== COLGAP) flow.style.columnGap = colGapUsed + "px";
     // 診断フック（body.debug系と同趣旨・通常は不発）：パッキングの入力と採用解を記録
     if (window.__RB_DEBUG) window.__RB_DEBUG.push({ availW: availW, availH: availH, metaL: metaL, metaT: metaT,
       hs: hs, ws: ws, hard: hard, bestK: best.k, cols: best.cols });
