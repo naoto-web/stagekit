@@ -693,6 +693,18 @@ body.debug #scene-tenkai .slist:empty::after {
 /* 金額だけ「〇〇 予想」（40px）と同じ大きさに（9/25 Naoto）＝「投資」「回収」は34pxのまま。
    em指定（40/34）＝fitBandHead が .band-inv を縮めたときも比率を保って一緒に縮む。JSの setBandInv が .bi-v で包む */
 .band-head .band-inv .bi-v { font-size: 1.1765em; }
+/* 🧪RB2（9/25 Naoto・②だけ・テストGAS接続時のみ）
+   A＝見出しの「〇〇 予想」の右にレース名を白い札で（帯の中の「別府 7R」ラベルを移した）。あふれたら fitBandHead が縮める */
+.rb2 .bh-race { display: inline-block; margin-left: 12px; padding: 1px 10px; border-radius: 6px;
+  font-size: 26px; font-weight: 900; background: rgba(255,255,255,.94); color: #16202e;
+  text-shadow: none; vertical-align: 4px; white-space: nowrap; }
+.rb2 .bh-race .grade-badge { font-size: .8em; margin-left: 6px; vertical-align: 1px; }
+.rb2 .bh-race .bh-note { margin-left: 2px; }
+/* C＝右下の 合計・合成・投資 を1行（合計｜合成｜投資）＝右端の列が底まで使える */
+.rb2 .race-band .band-meta.has-synth { grid-template-columns: auto auto auto; }
+.rb2 .race-band .band-meta.has-synth .bm-pts { grid-column: 1; grid-row: 1; }
+.rb2 .race-band .band-meta.has-synth .bm-syn { grid-column: 2; grid-row: 1; justify-self: start; }
+.rb2 .race-band .band-meta.has-synth .bm-inv { grid-column: 3; grid-row: 1; }
 /* 買い目は縦に並べ、高さが足りなくなったら右の列へ折り返す（列間は広めに離す） */
 .race-band .panel, .talk-band .panel { display: flex; flex-direction: column; }
 .race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;
@@ -771,6 +783,8 @@ body.debug #scene-tenkai .slist:empty::after {
    縦横の余りが最小になる倍率へ拡大（flex-wrapの誤動作起因の見切れ・下余白を根治） */
 .rb-flow { display: flex; align-items: flex-start; gap: 0 40px; }
 .rb-col { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; flex: 0 0 auto; }
+/* 🧪RB2＝②は列間 40→22px（買目の拡大に回す）。⚠️overlay.js packRaceBand の COLGAP と必ず一致させる */
+.rb2 .rb-flow { gap: 0 22px; }
 /* ②の行は全種折返し禁止（8/6 FB56）：幅不足は列圧縮でなく倍率縮小で吸収する（測定と実描画を一致させる） */
 .race-band .buy-line .pred-line.chips { flex-wrap: nowrap; }
 .race-band .buy-line .race-col-head { white-space: nowrap; }

@@ -70,6 +70,12 @@
      2〜3場＝場の区画ごとに右下へ寄せる（1つの角に3レース分は入らない）。
      オッズと同じ既定（9/25 本番化＝ON）。&tmeta=0 で従来のインラインに戻せる */
   var TMETA = params.get("tmeta") ? params.get("tmeta") !== "0" : !!ODDS;
+  /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
+     A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
+     B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
+     テストGAS接続時だけ既定ON・本番は既定OFF。&rb2=1／0 で明示 */
+  var RB2 = SCENE === "race" &&
+    (params.get("rb2") ? params.get("rb2") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
   // ⚠️tmeta-on は下の className 代入の中で付ける（9/25 当初は classList.add を先に書いていて、直後の代入で消えていた
   //    ＝①の2〜3場で合計欄が区画の右下に寄らなかった）
 
@@ -77,7 +83,8 @@
     (V2 ? " v2" + (LINE_NAMES ? " ln-name" : "") : "") +
     (params.get("wm") === "0" ? "" : " wm-on") + // CTC透かし＝既定ON（8/6）・&wm=0で非表示
     (SEATCARD ? " seatcard-on" : "") +
-    (TMETA ? " tmeta-on" : "");
+    (TMETA ? " tmeta-on" : "") +
+    (RB2 ? " rb2" : "");
   // テーマ：①トーク・②レース観戦は白（w）が既定（7/30 FB10）。
   // URLの &theme=a|b|c|w が最優先＝OBS側だけで即時に戻せる保険
   var THEMES = ["a", "b", "c", "w"];
@@ -845,6 +852,7 @@
     oddsWant[k] = oddsSeq;
     var d = oddsData[k];
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
+    if (RB2 && !small && txt.indexOf("〜") > 0) txt = txt.split("〜")[0] + "〜"; // B：②は幅の行を下限だけ「49〜」
     // 「倍」は付けない（9/25 Naoto「文字数大事・みんな分かる」）。合成オッズの「倍」は残す
     return txt ? '<span class="pl-odds' + (small ? " sm" : "") + '">' + txt + "</span>" : "";
   }
@@ -966,11 +974,12 @@
   function fitBandHead(headEl) {
     var inv = headEl.querySelector(".band-inv");
     var badge = headEl.querySelector(".note-badge");
-    [inv, badge].forEach(function (el) { if (el) el.style.fontSize = ""; });
+    var race = headEl.querySelector(".bh-race"); // RB2（②）＝見出しに移したレース名も一緒に縮める
+    [inv, badge, race].forEach(function (el) { if (el) el.style.fontSize = ""; });
     var guard = 0;
     while (headEl.scrollWidth > headEl.clientWidth + 1 && guard < 8) {
       var shrunk = false;
-      [inv, badge].forEach(function (el) {
+      [inv, badge, race].forEach(function (el) {
         if (!el) return;
         var cur = parseFloat(getComputedStyle(el).fontSize);
         if (cur > 11) { el.style.fontSize = (cur - 2) + "px"; shrunk = true; }
@@ -1152,7 +1161,7 @@
     });
     var hasPred = false;
     hard.forEach(function (v) { if (v) hasPred = true; });
-    var ROWGAP = 5, COLGAP = 40, MARGIN = 6; // gapはCSSの.rb-col/.rb-flowと一致させること
+    var ROWGAP = 5, COLGAP = RB2 ? 22 : 40, MARGIN = 6; // gapはCSSの.rb-col/.rb-flowと一致させること（RB2＝②は列間を詰める・CSS .rb2 .rb-flow）
     var CAP = hasPred ? 3.0 : 1.5;           // ラベルだけの帯は控えめに留める
     // 右下固定の合計/投資：表示中なら帯コンテンツ原点からの左端・上端（renderPredsが先にmetaを確定させる前提）
     var metaL = Infinity, metaT = Infinity;
@@ -1515,7 +1524,14 @@
         var bandName = $(bp + "name-" + slot);
         // note予想バッジは廃止（8/6 FB25・レースラベル側の🔥表記のみ残す）。
         // 空席は文言ごと出さない＝③は席を畳まないので「名前の無い『予想』」が画面に残るため（8/12）
-        if (bandName) bandName.innerHTML = name ? esc(name) + " 予想" : "";
+        if (bandName) {
+          // A（RB2・②だけ）＝見出しの「〇〇 予想」の右にレース名（場R・グレード・🔥）。帯の中のラベルは出さない
+          var bhRace = (RB2 && bp === "band-" && rc && key)
+            ? ' <span class="bh-race">' + esc(keyLabel(key)) + gradeBadge(String(key).split("|")[0]) +
+              (rp && rp.entry.isNote ? ' <span class="bh-note">🔥</span>' : "") + "</span>"
+            : "";
+          bandName.innerHTML = name ? esc(name) + " 予想" + bhRace : "";
+        }
         var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
           var bt = rc ? (derived.totals[rc.id] || { invest: 0, refund: 0 }) : null;
@@ -1595,7 +1611,8 @@
           // 空席は中身ごと空にする＝③は席を畳まないので、誰もいない枠にレースラベルだけ
           // 残ると「予想を出し忘れている」ように見える（8/12）
           band.innerHTML = !rc ? ""
-            : (key ? raceColHead(rc, key, true) : "") + raceBuyHtml(rc, key, false, true, true);
+            : (key && !(RB2 && bp === "band-") ? raceColHead(rc, key, true) : "") + // A：②はラベルを見出しへ移した
+              raceBuyHtml(rc, key, false, true, true);
           band.classList.toggle("note-fire", noteFireOn(rc, key)); // 🧪燃える枠＝買目エリアの内側だけ
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
         }
