@@ -79,9 +79,8 @@
   var SUBAUTO = params.get("subauto") !== "0";
   /* 🧪①③は幅のある倍率（「40〜308」）を買目の下の段に回し、買目の右端にそろえる（9/25 Naoto「横長の買目だと小さくなる」）。
      ①は行ごとに枠幅へ縮める作り＝倍率ぶん行が短くなれば縮まない。②は縦が狭いので対象外（1段のまま）。
-     1点の行・俺たち目は倍率が短いので従来どおり右。テストGAS接続時だけ既定ON・&odds2=1／0 */
-  var ODDS2 = SCENE !== "race" &&
-    (params.get("odds2") ? params.get("odds2") !== "0" : !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
+     1点の行・俺たち目は倍率が短いので従来どおり右。9/25 本番既定ON・&odds2=0 で1段に戻す */
+  var ODDS2 = SCENE !== "race" && params.get("odds2") !== "0";
   // ⚠️tmeta-on は下の className 代入の中で付ける（9/25 当初は classList.add を先に書いていて、直後の代入で消えていた
   //    ＝①の2〜3場で合計欄が区画の右下に寄らなかった）
 
