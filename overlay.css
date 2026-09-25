@@ -675,6 +675,9 @@ body.debug #scene-tenkai .slist:empty::after {
 .band-head { font-size: 40px; padding: 2px 20px; }
 .band-head .band-inv { margin-left: auto; font-size: 34px; font-weight: 900;
   font-variant-numeric: tabular-nums; }
+/* 金額だけ「〇〇 予想」（40px）と同じ大きさに（9/25 Naoto）＝「投資」「回収」は34pxのまま。
+   em指定（40/34）＝fitBandHead が .band-inv を縮めたときも比率を保って一緒に縮む。JSの setBandInv が .bi-v で包む */
+.band-head .band-inv .bi-v { font-size: 1.1765em; }
 /* 買い目は縦に並べ、高さが足りなくなったら右の列へ折り返す（列間は広めに離す） */
 .race-band .panel, .talk-band .panel { display: flex; flex-direction: column; }
 .race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;

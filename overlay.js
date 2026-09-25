@@ -1253,6 +1253,14 @@
   if (REFPOP === "0") REFPOP = "";
   var REFPOP_COUNT_MS = 3000, REFPOP_AFTER_BADGE_MS = 500, REFPOP_POP_LEAD_MS = 4000; // 9/25 Naoto＝カウント3倍ゆっくり（1000→3000）／カウント開始は「＋¥」が消える1秒前（CSS 5s−1s＝4000・350→700→4000）
   var refAnim = {}; // 配信者id → { shown: 最後に見せた回収額(数値・未確定はnull), text: 見出しに出している文字列, target, waiting, running }
+  /** 見出しの「投資 ¥○○　回収 ¥○○」を画面に入れる（9/25 Naoto「金額だけ『〇〇 予想』と同じ大きさに」）。
+      文字列はそのまま（refAnim.text 等の比較・カウントアップは従来どおり文字列で回す）、描くときだけ
+      金額（¥…／集計中）を .bi-v で包む＝CSSで金額だけ大きく。同じ文字列なら触らない */
+  function setBandInv(el, text) {
+    if (!el || el._biText === text) return;
+    el._biText = text;
+    el.innerHTML = esc(text || "").replace(/(¥[0-9,]+|集計中)/g, '<span class="bi-v">$1</span>');
+  }
   function refundHeaderText(rc, bt) {
     var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
     if (!REFPOP || !rc) return normal;
@@ -1299,7 +1307,7 @@
     var invs = refpopBandInvs(rid);
     var textOf = function (v) { return "投資 " + fmtYen(bt.invest) + "　回収 " + fmtYen(Math.round(v)); };
     // 最終値で先に幅合わせ（fitBandHead は見出し要素を取る）
-    invs.forEach(function (el) { el.textContent = textOf(to); var head = el.closest(".band-head"); if (head) fitBandHead(head); el.textContent = a.text; });
+    invs.forEach(function (el) { setBandInv(el, textOf(to)); var head = el.closest(".band-head"); if (head) fitBandHead(head); setBandInv(el, a.text); });
     // ピコーン＝見えている見出しの「回収」の上に浮かべる
     invs.forEach(function (el) {
       var r = el.getBoundingClientRect();
@@ -1317,7 +1325,7 @@
       var e = 1 - Math.pow(1 - p, 3); // ease-out
       var cur = from + delta * e;
       a.text = textOf(p >= 1 ? to : cur);
-      refpopBandInvs(rid).forEach(function (el) { el.textContent = a.text; });
+      refpopBandInvs(rid).forEach(function (el) { setBandInv(el, a.text); });
       // ⚠️requestAnimationFrame ではなく 33ms のタイマー（9/25）＝rAF は見えていないページ・ヘッドレスで間引かれ、
       //   「消える1秒前に開始」が8秒後にずれた（ハーネス実測）。OBSのブラウザソースでも同じ間引きが起こりうる
       if (p < 1) { setTimeout(step, 33); return; }
@@ -1421,7 +1429,7 @@
           // 回収未入力の的中を抱えている間は金額でなく「集計中」（8/8）＝
           // ティッカーが的中を流しているのに回収¥0、という食い違いを見せない
           // 🧪回収のピコーン（9/25）＝増えたときは古い表示を保持→演出後に「＋¥」→カウントアップ（refundHeaderText）
-          bandInv.textContent = bt ? refundHeaderText(rc, bt) : "";
+          setBandInv(bandInv, bt ? refundHeaderText(rc, bt) : "");
         }
         if (color) {
           bandHead.style.background = color;
