@@ -288,8 +288,10 @@
     State.data.finish = null;
     setHint('決着 ' + order.join('-') + ' を計算しています…');
     setTimeout(function () {
+      /* 先頭の進み（dd）は渡さない＝今の先頭→行き先の先頭の差で自動に決まる。
+         🐞9/27 Naoto「ボタンを押した瞬間、みんなの位置がずれる」：旧＝dd: 0 − lead（先頭の行き先＝ゴール線の前提）。
+         決着で3人がゴール線を越えるようにした（行き先の先頭＝ゴール線の先）ので、その差だけ動き出しで全員が飛んでいた */
       Anim.reform(target, {
-        dd: 0 - lead,
         ms: CONFIG.ANIM.finishMs,
         onFrame: function () { renderPositions(); },
         onDone: function (ok) {
