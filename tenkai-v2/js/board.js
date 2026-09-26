@@ -97,31 +97,57 @@ var Board = (function () {
     g.appendChild(narabiG);
   }
 
-  /* 見出し帯の真ん中に並び（9/27 Naoto）：「並び」＋枠色の丸をラインごとに帯でつなぐ。出力にも出る（視聴者に見える）。
-     場名（左）と局面の札（右）のあいだ＝中心 x 480 にそろえる。9車・三分戦で幅約330px */
-  var NB_R = 13, NB_IN = 4, NB_BETWEEN = 18, NB_LABEL = 44, NB_Y = T.HEAD / 2;
+  /* 見出し帯の並び（9/27 Naoto「レース観戦タブと同じように名前も」）＝②の並びの窓と同じ作り：
+     「←」＋角丸の四角い車番チップ＋その下に苗字、ラインの間は「・」。出力にも出る（視聴者に見える）。
+     置き場所＝帯の上の段（下の段の級班とは高さをずらして重ねない）。横は場名の右〜局面の札が一番長いとき
+     （「決着 x-y-z」）の左のあいだに中央寄せ。入り切らないときだけ全体を縮める（②の fitNarabi と同じ考え） */
+  var NB = { chip: 26, font: 24, name: 14, inGap: 4, dot: 16, arrow: 26, top: 10, pad: 18 };
+  var BADGE_MAX_W = Array.from('決着 9-9-9').length * BADGE_FONT + 40;   // 札が一番長いとき
+  function textW(s, px) {   // 苗字の幅の見積もり（全角≒1文字=px・半角≒0.6）
+    var w = 0; Array.from(s || '').forEach(function (ch) { w += /[\x00-\x7f]/.test(ch) ? px * 0.6 : px * 0.98; });
+    return w;
+  }
   function drawNarabi(d) {
     while (narabiG.firstChild) narabiG.removeChild(narabiG.firstChild);
+    narabiG.removeAttribute('transform');
     var cars = d.cars || [];
     var lines = (d.lines || []).map(function (l) { return l.filter(function (n) { return cars.indexOf(n) !== -1; }); })
                                .filter(function (l) { return l.length; });
     if (!lines.length) return;
-    var n = 0; lines.forEach(function (l) { n += l.length; });
-    var w = NB_LABEL + n * 2 * NB_R + (n - lines.length) * NB_IN + (lines.length - 1) * NB_BETWEEN;
-    var x = T.CX - w / 2;
-    label(narabiG, x + NB_LABEL / 2 - 4, NB_Y + 6, '並び', 17, 'rgba(255,255,255,.75)', 700);
-    x += NB_LABEL;
-    lines.forEach(function (l) {
-      var lw = l.length * 2 * NB_R + (l.length - 1) * NB_IN;
-      if (l.length > 1) narabiG.appendChild(el('rect', { x: x - 3, y: NB_Y - NB_R - 3, width: lw + 6, height: 2 * NB_R + 6, rx: NB_R + 3, fill: 'rgba(255,255,255,.18)' }));
-      l.forEach(function (no) {
-        var c = CONFIG.COLORS[no] || CONFIG.COLORS[1];
-        narabiG.appendChild(el('circle', { cx: x + NB_R, cy: NB_Y, r: NB_R, fill: c.bg, stroke: c.ring, 'stroke-width': 1.5 }));
-        label(narabiG, x + NB_R, NB_Y + 6, String(no), 17, c.fg, 800);
-        x += 2 * NB_R + NB_IN;
-      });
-      x += NB_BETWEEN - NB_IN;
+    var names = d.showNames === 'off' ? {} : (d.names || {});
+    /* 1人ぶんの幅＝チップと苗字の広いほう */
+    var cellW = {};
+    lines.forEach(function (l) { l.forEach(function (no) { cellW[no] = Math.max(NB.chip, textW(names[no], NB.name) + 2); }); });
+    var w = NB.arrow;
+    lines.forEach(function (l, i) {
+      if (i) w += NB.dot;
+      l.forEach(function (no, j) { w += cellW[no] + (j ? NB.inGap : 0); });
     });
+    /* 横の空き＝場名の右端（計れなければ見積もり）〜一番長い札の左端 */
+    var left = HEAD_PAD + textW(d.titleMain, 42);
+    try { var bb = titleMain.getBBox(); if (bb && bb.width) left = bb.x + bb.width; } catch (e) {}
+    left += NB.pad;
+    var right = T.W - HEAD_PAD - BADGE_MAX_W - NB.pad;
+    var avail = Math.max(120, right - left);
+    var k = Math.min(1, avail / w);
+    var x0 = left + (avail - w * k) / 2;
+
+    var x = 0, cy = NB.top + NB.chip / 2;
+    label(narabiG, x + NB.arrow / 2 - 3, cy + 8, '←', 24, 'rgba(255,255,255,.9)', 900);
+    x += NB.arrow;
+    lines.forEach(function (l, i) {
+      if (i) { label(narabiG, x + NB.dot / 2, cy + 7, '・', 18, 'rgba(255,255,255,.6)', 900); x += NB.dot; }
+      l.forEach(function (no, j) {
+        if (j) x += NB.inGap;
+        var c = CONFIG.COLORS[no] || CONFIG.COLORS[1], mid = x + cellW[no] / 2;
+        narabiG.appendChild(el('rect', { x: mid - NB.chip / 2, y: NB.top, width: NB.chip, height: NB.chip, rx: 5,
+          fill: c.bg, stroke: no === 2 ? 'rgba(255,255,255,.5)' : 'rgba(0,0,0,.35)', 'stroke-width': 2 }));
+        label(narabiG, mid, NB.top + NB.chip * 0.84, String(no), NB.font, c.fg, 900);
+        if (names[no]) label(narabiG, mid, NB.top + NB.chip + NB.name + 2, names[no], NB.name, '#fff', 900);
+        x += cellW[no];
+      });
+    });
+    narabiG.setAttribute('transform', 'translate(' + x0.toFixed(1) + ',0) scale(' + k.toFixed(3) + ')');
   }
 
   /** 先頭の位置 → 局面名。先頭が到達済みの局面のうち最後のもの（スタートを出た後〜赤板の前は「周回中」） */
