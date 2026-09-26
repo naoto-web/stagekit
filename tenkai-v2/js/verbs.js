@@ -1,6 +1,6 @@
 /* ===========================================================
    verbs.js — 動詞ボタン（展開の台本）  v2.1（要件定義_v2 §6.5・9/27 Naoto確定＝6つ＋順番の入れ替え）
-   9/27 追加＝カマシ・突っ張り・飛びつき（打鐘〜最終ホームの主導権争い）
+   9/27 追加＝カマシ・カマシ失敗・飛びつき・飛びつき失敗（打鐘〜最終ホームの主導権争い。成功は無印・失敗は「失敗」付き）
 
    各動詞は「主語（選んだ選手 or ライン）」と「相手（自動で決める）」から、
    各選手の通り道（キーフレーム {t, d, lane} の並び）を作って返すだけ。動かすのは Anim.path()。
@@ -172,21 +172,17 @@ var Verbs = (function () {
   }
   /* ---------- 動詞 ---------- */
 
-  /** 上昇（押さえ）：選んだラインが外を上がって先頭に入る。前受けは引いて最後尾へ（9/27 Naoto確定）。
-      あいだにいたラインは真ん中のレーンで前受けを追い越して主語の後ろに続く。全体＋1車身 */
+  /** 上昇（押さえ）：選んだラインが外を上がって、先頭（前受け）ラインの前に入る。前受けは主語のすぐ後ろへ。全体＋1車身。
+      ※9/27に一度「前受けは引いて最後尾へ」に変えたが、あいだのラインまで一緒に上がってくる絵になるため元に戻した（Naoto） */
   function joushou(sel) {
     var L = lineOf(sel.nos[0]);
     var order = linesInOrder();
     var front = order[0];
     if (sameLine(front, L)) return { error: 'すでに先頭のラインです（上昇は後ろのラインを選んでください）' };
     var rest = order.filter(function (l) { return !sameLine(l, L) && !sameLine(l, front); });
-    var newOrder = [L].concat(rest, [front]);
-    var lanes = {};
-    rest.forEach(function (l) { l.forEach(function (no) { lanes[no] = 0; }); });
-    L.forEach(function (no) { lanes[no] = 1; });
+    var newOrder = [L, front].concat(rest);
     var head = Math.max(0, headD(front) - 1 * CAR);
-    return { paths: requeueLanes(newOrder, head, lanes),
-             hint: '上昇：' + L.join('') + ' が上がって前を押さえ、' + front.join('') + ' は引いて最後尾へ' };
+    return { paths: requeue(newOrder, head, L), hint: '上昇：' + L.join('') + ' が上がって、' + front.join('') + ' の前に入りました' };
   }
 
   /** カマシ：打鐘〜ホーム。選んだラインが外を一気に上がって先頭に入る。叩かれたラインは引かずにすぐ後ろへ。
@@ -204,13 +200,13 @@ var Verbs = (function () {
              hint: 'カマシ：' + L.join('') + ' が一気に叩いて先頭へ、' + front.join('') + ' はその後ろ' };
   }
 
-  /** 突っ張り：カマシの失敗形。選ぶのは上がってくる側。真ん中のレーンを上がり、先頭ラインの番手の横で並んだところで
-      突っ張られ、そのまま下がって最後尾の内へ。先頭ラインは先行を続ける。全体＋2車身 */
-  function tsuppari(sel) {
+  /** カマシ失敗（旧名「突っ張り」）：選ぶのはカマシと同じく上がっていく側。真ん中のレーンを上がり、先頭ラインの番手の横で
+      並んだところで突っ張られ、そのまま下がって最後尾の内へ。先頭ラインは先行を続ける。全体＋2車身 */
+  function kamashiFail(sel) {
     var L = lineOf(sel.nos[0]);
     var order = linesInOrder();
     var front = order[0];
-    if (sameLine(front, L)) return { error: '突っ張りは上がってくる側（突っ張られるライン）を選んでください' };
+    if (sameLine(front, L)) return { error: 'すでに先頭のラインです（カマシ失敗は後ろのラインを選んでください）' };
     var newOrder = order.filter(function (l) { return !sameLine(l, L); }).concat([L]);
     var head = Math.max(0, headD(front) - 2 * CAR);
     var fin = Lineup.layout(newOrder, head), paths = {};
@@ -235,26 +231,64 @@ var Verbs = (function () {
         { t: 1, d: f.d, lane: f.lane }
       ];
     });
-    return { paths: paths, hint: '突っ張り：' + front.join('') + ' が突っ張って、' + L.join('') + ' は出られず最後尾へ' };
+    return { paths: paths, hint: 'カマシ失敗：' + front.join('') + ' に突っ張られて、' + L.join('') + ' は出切れず最後尾へ' };
   }
 
-  /** 飛びつき：選んだ選手が先頭ラインの番手の位置に入り込む。真ん中のレーンを上がって番手の外で並ぶ（競りの形）。
-      元の番手は内のまま。全体＋1車身 */
-  function tobitsuki(sel) {
+  /** 飛びつき（成功／失敗）の共通：主語と先頭ラインを決める。できなければ { error } */
+  function tobiPrep(sel, name) {
     var no = sel.type === 'line' ? lineOf(sel.nos[0])[0] : sel.nos[0];
     var front = linesInOrder()[0];
-    if (front.indexOf(no) !== -1) return { error: label(no) + ' は先頭のラインです（飛びつきは後ろの選手を選んでください）' };
+    if (front.indexOf(no) !== -1) return { error: label(no) + ' は先頭のラインです（' + name + 'は後ろの選手を選んでください）' };
     if (front.length < 2) return { error: '先頭が単騎なので、飛びつく番手の位置がありません' };
-    var paths = basePaths(1);
-    var bf = finalOf(paths, front[1]);
-    var p = pos(no);
+    return { no: no, front: front, paths: basePaths(1) };
+  }
+  /** 直線の通り道の t の時点の d（basePaths の選手用） */
+  function dAt(path, t) { return path[0].d + (path[path.length - 1].d - path[0].d) * t; }
+
+  /** 飛びつき（成功）：選んだ選手が先頭ラインの番手を奪う。真ん中のレーンを上がって番手の横に並び、内へ入る。
+      元の番手から後ろの全員（主語を除く）は1車身ずつ下がって場所を空ける（主語が内へ入る前に下がり終える＝重ならない）。
+      先頭ラインの後ろだけ下げると、主語が遠くから来たときに先頭ラインの最後尾が次のラインに詰まって重なるため全員。全体＋1車身 */
+  function tobitsuki(sel) {
+    var r = tobiPrep(sel, '飛びつき');
+    if (r.error) return r;
+    var paths = r.paths, no = r.no, front = r.front, p = pos(no);
+    var bf = finalOf(paths, front[1]);   // 番手の行き先＝主語が収まる場所
+    var gap = CONFIG.LAYOUT.gapInLine * CAR;
+    var bd = pos(front[1]).d;
+    cars().filter(function (o) { return o !== no && pos(o).d >= bd - 1e-9; }).forEach(function (o) {
+      var base = paths[o], f = finalOf(paths, o);
+      paths[o] = [
+        { t: 0, d: base[0].d, lane: base[0].lane },
+        { t: 0.5, d: dAt(base, 0.5), lane: f.lane },
+        { t: 0.8, d: f.d + gap, lane: f.lane },   // 主語が内へ入る前に1車身下がる
+        { t: 1, d: f.d + gap, lane: f.lane }
+      ];
+    });
     paths[no] = [
       { t: 0, d: p.d, lane: p.lane },
       { t: 0.25, d: p.d + (bf.d - p.d) * 0.2, lane: 0 },
-      { t: 0.85, d: bf.d, lane: 0 },
-      { t: 1, d: bf.d, lane: 0 }
+      { t: 0.6, d: bf.d, lane: 0 },       // 番手の横に並ぶ
+      { t: 0.8, d: bf.d, lane: 0 },
+      { t: 1, d: bf.d, lane: -1 }         // 内へ入って番手を奪う
     ];
-    return { paths: paths, hint: '飛びつき：' + label(no) + ' が ' + label(front[1]) + ' の番手に飛びついて外で並びました（競り）' };
+    return { paths: paths, hint: '飛びつき：' + label(no) + ' が ' + label(front[0]) + ' の番手を奪いました' };
+  }
+
+  /** 飛びつき失敗：番手の横まで来て弾かれ、元の位置（全体と一緒に進んだ位置）へ戻る。全体＋1車身 */
+  function tobitsukiFail(sel) {
+    var r = tobiPrep(sel, '飛びつき失敗');
+    if (r.error) return r;
+    var paths = r.paths, no = r.no, front = r.front, p = pos(no);
+    var mate = paths[front[1]], back = finalOf(paths, no);
+    paths[no] = [
+      { t: 0, d: p.d, lane: p.lane },
+      { t: 0.15, d: p.d + (dAt(mate, 0.45) - p.d) * 0.2, lane: 0 },
+      { t: 0.45, d: dAt(mate, 0.45), lane: 0 },   // 番手の横に並ぶ
+      { t: 0.6, d: dAt(mate, 0.6), lane: 0 },     // 弾かれる
+      { t: 0.88, d: back.d, lane: 0 },            // 元の位置へ下がる
+      { t: 1, d: back.d, lane: p.lane }
+    ];
+    return { paths: paths, hint: '飛びつき失敗：' + label(no) + ' は ' + label(front[1]) + ' に弾かれて元の位置へ' };
   }
 
   /** まくり：選んだ選手（ラインの先頭ならライン全員）が外を上がって先頭の横まで。全体＋1車身 */
@@ -376,8 +410,9 @@ var Verbs = (function () {
   var TABLE = {
     joushou: { label: '上昇', fn: joushou },
     kamashi: { label: 'カマシ', fn: kamashi },
-    tsuppari: { label: '突っ張り', fn: tsuppari },
+    kamashiFail: { label: 'カマシ失敗', fn: kamashiFail },
     tobitsuki: { label: '飛びつき', fn: tobitsuki },
+    tobitsukiFail: { label: '飛びつき失敗', fn: tobitsukiFail },
     makuri: { label: 'まくり', fn: makuri },
     sashi: { label: '差し', fn: sashi },
     tsukinuke: { label: '突き抜け', fn: tsukinuke },

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>競輪 展開ボード v2</title>
-<link rel="stylesheet" href="css/style.css?v=20260927-054540">
+<link rel="stylesheet" href="css/style.css?v=20260927-055712">
 </head>
 <body>
 
@@ -78,10 +78,11 @@
     <div class="panel-row panel-row-verb">
       <span class="sel-label is-empty" id="sel-label">選択なし（丸かラインをクリック）</span>
       <div class="phase-group">
-        <button type="button" class="btn btn-verb" data-verb="joushou" title="赤板〜打鐘：選んだラインが外を上がって前を押さえる。前受けは引いて最後尾へ">上昇</button>
+        <button type="button" class="btn btn-verb" data-verb="joushou" title="赤板〜打鐘：選んだラインが上がって前を押さえる。前受けはすぐ後ろへ">上昇</button>
         <button type="button" class="btn btn-verb" data-verb="kamashi" title="打鐘〜ホーム：選んだラインが一気に叩いて先頭へ。叩かれたラインはすぐ後ろへ">カマシ</button>
-        <button type="button" class="btn btn-verb" data-verb="tsuppari" title="上がってくる側のラインを選ぶ：番手の横まで来て突っ張られ、最後尾へ下がる">突っ張り</button>
-        <button type="button" class="btn btn-verb" data-verb="tobitsuki" title="選んだ選手が先頭ラインの番手に飛びつき、外で並ぶ（競り）">飛びつき</button>
+        <button type="button" class="btn btn-verb" data-verb="kamashiFail" title="選んだラインが番手の横まで来て突っ張られ、最後尾へ下がる">カマシ失敗</button>
+        <button type="button" class="btn btn-verb" data-verb="tobitsuki" title="選んだ選手が先頭ラインの番手に飛びつき、番手を奪う">飛びつき</button>
+        <button type="button" class="btn btn-verb" data-verb="tobitsukiFail" title="選んだ選手が番手の横まで来て弾かれ、元の位置へ戻る">飛びつき失敗</button>
         <button type="button" class="btn btn-verb" data-verb="makuri" title="外を上がって先頭の横まで（ラインの先頭を選ぶと後続も続く）">まくり</button>
         <button type="button" class="btn btn-verb" data-verb="sashi" title="すぐ前の選手を空いている側から交わす">差し</button>
         <button type="button" class="btn btn-verb" data-verb="tsukinuke" title="番手が同じラインの先頭を交わす">突き抜け</button>
@@ -111,20 +112,20 @@
 
 </div>
 
-<script src="../autoupdate.js?v=20260927-054540" data-au="output-only"></script>
-<script src="js/config.js?v=20260927-054540"></script>
-<script src="js/track.js?v=20260927-054540"></script>
-<script src="js/state.js?v=20260927-054540"></script>
-<script src="js/icons.js?v=20260927-054540"></script>
-<script src="js/bars.js?v=20260927-054540"></script>
-<script src="js/board.js?v=20260927-054540"></script>
-<script src="js/racecard.js?v=20260927-054540"></script>
-<script src="js/live.js?v=20260927-054540"></script>
-<script src="js/lineup.js?v=20260927-054540"></script>
-<script src="js/anim.js?v=20260927-054540"></script>
-<script src="js/undo.js?v=20260927-054540"></script>
-<script src="js/verbs.js?v=20260927-054540"></script>
-<script src="js/drag.js?v=20260927-054540"></script>
-<script src="js/main.js?v=20260927-054540"></script>
+<script src="../autoupdate.js?v=20260927-055712" data-au="output-only"></script>
+<script src="js/config.js?v=20260927-055712"></script>
+<script src="js/track.js?v=20260927-055712"></script>
+<script src="js/state.js?v=20260927-055712"></script>
+<script src="js/icons.js?v=20260927-055712"></script>
+<script src="js/bars.js?v=20260927-055712"></script>
+<script src="js/board.js?v=20260927-055712"></script>
+<script src="js/racecard.js?v=20260927-055712"></script>
+<script src="js/live.js?v=20260927-055712"></script>
+<script src="js/lineup.js?v=20260927-055712"></script>
+<script src="js/anim.js?v=20260927-055712"></script>
+<script src="js/undo.js?v=20260927-055712"></script>
+<script src="js/verbs.js?v=20260927-055712"></script>
+<script src="js/drag.js?v=20260927-055712"></script>
+<script src="js/main.js?v=20260927-055712"></script>
 </body>
 </html>
