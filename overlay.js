@@ -890,13 +890,79 @@
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
     // （9/25 RB2のB「幅の行は下限だけ『49〜』」は撤回＝Naoto「11〜で文字が切れて見える」→①③と同じ「11〜14」）
     // 「倍」は付けない（9/25 Naoto「文字数大事・みんな分かる」）。合成オッズの「倍」は残す
-    return txt ? '<span class="pl-odds' + (small ? " sm" : "") + '">' + txt + "</span>" : "";
+    if (!txt) return "";
+    // 数字1つずつ .odn（上下の演出の単位・9/26 §35）。幅の表示は両端を別々に＝id は レース｜組の並び｜lo/hi
+    var sig = k + "|" + l.combos.map(function (c) { return c.join(""); }).join(",");
+    var parts = txt.split("〜");
+    var inner = parts.map(function (p, i) {
+      return '<span class="odn" data-ok="' + esc(sig + "|" + (i ? "hi" : "lo")) + '">' + p + "</span>";
+    }).join("〜");
+    return '<span class="pl-odds' + (small ? " sm" : "") + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '">' + inner + "</span>";
   }
-  /** 合成オッズ（9/25 Naoto）＝keirin.js synthOdds（1÷Σ(1/倍率)）。出せないときは "" */
+  /** 合成オッズ（9/25 Naoto）＝keirin.js synthOdds（1÷Σ(1/倍率)）。出せないときは ""。
+      9/26 §35＝数字は .odn（上下の演出）・「数字＋倍」は .od-v（最終で金色） */
   function synthText(k, rp) {
     if (!ODDS || !k || !rp || !oddsData[k]) return "";
     var s = window.Keirin.synthOdds(rp.parsed, oddsData[k].o);
-    return s ? "合成 " + window.Keirin.synthFmt(s) + "倍" : "";
+    if (!s) return "";
+    var sig = k + "|syn|" + rp.parsed.lines.map(function (l) {
+      return l.ok && !l.cut && !l.allDup && l.combos ? l.combos.map(function (c) { return c.join(""); }).join(",") : "";
+    }).join(";");
+    return '合成 <span class="od-v' + (oddsData[k].fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '">' +
+      '<span class="odn" data-ok="' + esc(sig) + '">' + window.Keirin.synthFmt(s) + "</span>倍</span>";
+  }
+  /* オッズの上下と最終の演出（9/26 Naoto・要件定義§35・OBSだけ＝コンソールは演出なし）
+     ・上下＝表示の数字が変わった瞬間だけ、その数字を赤▲（上がった）／青▼（下がった）で0.9秒。全行・絞りなし。
+       表示が変わらない小さな動き（10倍以上の小数など）は出さない
+     ・最終＝GASの fin（締切後に票数が止まった・odds.gs oddsSettled_）に変わった瞬間、倍率と合成が金色に一度光り
+       薄い金の光が左→右へ1回（1.3秒）。**その後も金色のまま**（.od-fin）。読み直した後に最初から最終だったレースは光らせず金色だけ
+     ⚠️renderPreds は何度も描き直す＝演出は「始まった時刻」を覚えておき、描き直すたびに負の animation-delay で続きから再生する */
+  var odShown = {}, odMove = {}, odFinAt = {};
+  var OD_MOVE_MS = 900, OD_FIN_MS = 1600, OD_SWEEP_MS = 1300, OD_STALE_MS = 120000;
+  function markOdds() {
+    document.querySelectorAll(".od-sweep").forEach(function (o) { o.remove(); });
+    if (!ODDS) return;
+    var now = Date.now();
+    document.querySelectorAll(".odn").forEach(function (e) {
+      var id = e.getAttribute("data-ok"), t = e.textContent, prev = odShown[id];
+      if (prev && prev.t !== t && now - prev.at < OD_STALE_MS) { // 長く画面に無かった数字の変化は演出しない
+        var a = parseFloat(prev.t), b = parseFloat(t);
+        if (!isNaN(a) && !isNaN(b) && a !== b) odMove[id] = { dir: b > a ? "up" : "down", at: now };
+      }
+      odShown[id] = { t: t, at: now };
+      var mv = odMove[id];
+      if (mv && now - mv.at < OD_MOVE_MS) {
+        e.classList.add(mv.dir === "up" ? "od-up" : "od-down");
+        e.style.setProperty("--odd", -(now - mv.at) + "ms");
+      }
+    });
+    var swept = []; // 同じ帯に帯を2本重ねない（1つの帯に同じレースの数字は何個もある）
+    document.querySelectorAll(".od-fin").forEach(function (e) {
+      var rk = e.getAttribute("data-rk"), at = odFinAt[rk];
+      if (!at || now - at >= OD_FIN_MS) return;
+      e.classList.add("od-finfx");
+      e.style.setProperty("--odf", -(now - at) + "ms");
+      if (now - at >= OD_SWEEP_MS) return;
+      // 光の帯＝その人の予想パネルの見出しより下（①の2〜3場はそのレースの区画 .race-col だけ）。
+      // パネル（.panel＝position:relative・overflow:hidden）基準に重ねる
+      var panel = e.closest(".panel");
+      if (!panel || !panel.clientWidth) return; // 表示していないシーンのパネル
+      var col = e.closest(".race-col"), area = col || panel;
+      if (swept.indexOf(area) >= 0) return;
+      swept.push(area);
+      var box, cb = col ? boxIn(col, panel) : null; // .race-col は拡大縮小（transform）される＝見た目の箱でなく本来の箱
+      if (cb) {
+        box = [cb.l, cb.t, cb.r - cb.l, cb.b - cb.t];
+      } else {
+        var head = panel.querySelector(".panel-head"), ht = head ? head.offsetTop + head.offsetHeight : 0;
+        box = [0, ht, panel.clientWidth, panel.clientHeight - ht];
+      }
+      var sw = document.createElement("div");
+      sw.className = "od-sweep";
+      sw.style.cssText = "left:" + box[0] + "px;top:" + box[1] + "px;width:" + box[2] + "px;height:" + box[3] + "px;";
+      sw.style.setProperty("--ods", -(now - at) + "ms");
+      panel.appendChild(sw);
+    });
   }
   /** 合計・合成・投資の中身（9/25 Naoto）＝1段目 合計｜合成・2段目 投資（合成の真下）。合成が無いときは従来の1行 */
   function metaPartsHtml(points, st, invest) {
@@ -945,6 +1011,8 @@
           var k = g.name + "|" + r, d = res[r];
           delete oddsPending[k];
           if (d && d.o && JSON.stringify(d.o) !== JSON.stringify((oddsData[k] || {}).o)) changed = true;
+          // 最終に変わった瞬間（§35）＝このページで最終前の値を見ていたレースだけ光らせる（読み直し直後から最終なら金色だけ）
+          if (d && d.o && d.fin && oddsData[k] && !oddsData[k].fin) { odFinAt[k] = Date.now(); changed = true; }
           if (d && d.o) oddsData[k] = d;
         });
         if (changed) renderPreds();
@@ -2163,21 +2231,22 @@
     setTimeout(fitTalkBands, 300);
     placeNoteFires();
     requestAnimationFrame(placeNoteFires);
+    markOdds(); // オッズの上下・最終の演出（§35）＝描き終わった数字を前回と比べる
   }
 
   /* 🧪燃える枠の光は .note-fire（目印）の上に別の層（.nfire-ov）を重ねて描く（9/25 FB「3場表示で枠がずれる・下枠が無い」）。
      .race-col／1場の .buy-line は fitColBox が transform:scale（0.35〜1.6倍）で中身に合わせるため、要素自身に
      影を付けると影ごと拡大されてずれ・はみ出して切れた。offsetLeft/Top/Width/Height は transform の影響を受けない
      ＝本来の区画の位置にパネル基準（.panel は position:relative）で重ねれば、拡大縮小に関係なく区画の内側にぴったり乗る */
+  // パネル基準の本来の箱（transform を無視した layout の位置）＝燃える枠・最終オッズの光の帯（§35）で共用
+  function boxIn(el, panel) {
+    var x = 0, y = 0, n = el;
+    while (n && n !== panel) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+    return n === panel ? { l: x, t: y, r: x + el.offsetWidth, b: y + el.offsetHeight } : null;
+  }
   function placeNoteFires() {
     document.querySelectorAll(".nfire-ov").forEach(function (o) { o.remove(); });
     if (!NFIRE) return;
-    // パネル基準の本来の箱（transform を無視した layout の位置）
-    function boxIn(el, panel) {
-      var x = 0, y = 0, n = el;
-      while (n && n !== panel) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
-      return n === panel ? { l: x, t: y, r: x + el.offsetWidth, b: y + el.offsetHeight } : null;
-    }
     document.querySelectorAll(".note-fire").forEach(function (el) {
       var panel = el.closest(".panel");
       if (!panel || !el.offsetWidth || !el.offsetHeight) return;

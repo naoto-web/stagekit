@@ -3402,3 +3402,30 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
   75%  { opacity: 1; transform: translate(-100%, -115%) scale(1); }
   100% { opacity: 0; transform: translate(-100%, -160%) scale(1); }
 }
+
+/* ============ オッズの上下・最終の演出（9/26 Naoto・要件定義§35・overlay.js markOdds） ============
+   ・上下＝変わった数字だけ赤▲／青▼で0.9秒（▼も数字の上＝下の段と重ならない）。描き直しても続きから（--odd＝負の遅れ）
+   ・最終＝倍率と合成が金色に一度光る（1.6秒）＋薄い金の光が左→右（1.3秒）→**その後も金色のまま**（.od-fin） */
+.odn { position: relative; display: inline-block; }
+.odn.od-up   { animation: odUp .9s ease-out; animation-delay: var(--odd, 0ms); }
+.odn.od-down { animation: odDown .9s ease-out; animation-delay: var(--odd, 0ms); }
+@keyframes odUp   { 0% { color: #e0282e; transform: translateY(-3px); } 60% { color: #e0282e; } 100% { transform: none; } }
+@keyframes odDown { 0% { color: #1f5fd6; transform: translateY(3px); } 60% { color: #1f5fd6; } 100% { transform: none; } }
+.odn.od-up::after, .odn.od-down::after { position: absolute; left: 50%; top: -.62em; transform: translateX(-50%);
+  font-size: .45em; line-height: 1; opacity: 0; animation: odMark .9s ease-out; animation-delay: var(--odd, 0ms); }
+.odn.od-up::after { content: "▲"; color: #e0282e; }
+.odn.od-down::after { content: "▼"; color: #1f5fd6; }
+@keyframes odMark { 0% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0; } }
+.od-fin { color: #c28400; }
+.od-fin.od-finfx { animation: odFin 1.6s ease-out; animation-delay: var(--odf, 0ms); }
+@keyframes odFin {
+  0%   { color: var(--txt); text-shadow: none; }
+  25%  { color: #c98a00; text-shadow: 0 0 10px rgba(255, 200, 40, .95), 0 0 2px #fff; }
+  55%  { color: #e0a800; text-shadow: 0 0 16px rgba(255, 210, 60, .9); }
+  100% { color: #c28400; text-shadow: none; }
+}
+.od-sweep { position: absolute; pointer-events: none; overflow: hidden; z-index: 5; }
+.od-sweep::before { content: ""; position: absolute; top: 0; bottom: 0; width: 180px; left: -220px;
+  background: linear-gradient(100deg, transparent, rgba(255, 200, 40, .28), rgba(255, 236, 150, .42), rgba(255, 200, 40, .28), transparent);
+  mix-blend-mode: multiply; animation: odSweep 1.3s ease-in-out forwards; animation-delay: var(--ods, 0ms); }
+@keyframes odSweep { to { left: 110%; } }
