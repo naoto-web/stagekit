@@ -113,17 +113,14 @@ var Verbs = (function () {
 
   /* ---------- 決着（9/27 Naoto）：最終ストレートの差し・突き抜け・ズブズブ／3連単の入力 ---------- */
 
-  function straightD() {
-    var d = null;
-    CONFIG.PHASES.forEach(function (p) { if (p.key === 'straight') d = p.d; });
-    return d;
-  }
-  /** 先頭が最終ストレート（4角を抜けた後〜ゴール前）にいるか */
+  /** 決着に入れるか＝先頭が最終周回（最終ホーム以降）でゴール前にいるか。
+      🐞9/27 Naoto「差しを押してもゴールインまでいかない」：旧＝最終ストレートの入口より先でだけ決着
+      （最終バックなどで押すと前の選手を交わすだけ）。押切・3連単と同じ「最終周回ならどこからでも」にそろえた */
   function atStraight() {
     var ln = leaderNo();
     if (ln === null) return false;
     var ld = data().riders[ln].d;
-    return ld <= straightD() + 0.004 && ld > 1e-6;
+    return ld <= 1.0 + 1e-6 && ld > 1e-6;
   }
 
   /** 着順（上位3人）→ ゴールでの並び。
@@ -488,7 +485,7 @@ var Verbs = (function () {
     block: { label: 'ブロック', fn: block },
     /* ズブズブ＝ラインで決着（先頭・番手・3番手がそのままの順でゴール）。最終ストレートでだけ使える */
     zubu: { label: 'ズブズブ', fn: function (sel) {
-      if (!atStraight()) return { error: 'ズブズブは最終ストレートで使ってください（局面ボタン「最終ストレート」）' };
+      if (!atStraight()) return { error: 'ズブズブは最終周回（最終ホーム以降）で使ってください' };
       var L = lineOf(sel.nos[0]);
       return { finish: fillTop(L.slice(0, 3)), hint: 'ズブズブ：ライン ' + L.join('') + ' で決着' };
     } },
