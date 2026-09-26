@@ -81,6 +81,8 @@
   var STACK_GROW = params.get("stack") === "grow";
   // ②の1人配信＝右下の合計欄を買目の倍率に合わせて大きく・列間を広く（9/26 Naoto）。&solorb=0 で2人配信と同じに
   var SOLORB = params.get("solorb") !== "0";
+  // 1人配信の②で買目2行は縦に積む（9/26 Naoto・packRaceBand）。&solov2=0 で倍率優先（横並びもあり）に戻す
+  var SOLOV2 = params.get("solov2") !== "0";
   // ②の並びの窓の上端（px）＝パネルの枠線の内側から（9/26 Naoto「上が映像と被って切れる」）。旧＝0（帯の外側）
   var RL_TOP = +(params.get("rltop") || 6);
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
@@ -1259,6 +1261,14 @@
       };
       seqs.push(byW(1), byW(-1));
     }
+    /* 1人配信で買目が2行以下なら縦に積む（9/26 Naoto「2行なら横じゃなくて縦の方が見やすい」）＝買目行を別々の列に分ける配置は候補から外す
+       （帯が2人分の幅＝横に並べた方が倍率は上がるが、読みにくい）。俺たち目の列・メモ行は従来どおり。戻す＝&solov2=0 */
+    var predIdx = [];
+    rows.forEach(function (el, i) { if (el.classList.contains("pred-line")) predIdx.push(i); });
+    var KEEP_PRED_COL = SOLO_RB && SOLOV2 && predIdx.length === 2;
+    function predTogether(cols) {
+      return cols.some(function (c) { return predIdx.every(function (i) { return c.indexOf(i) >= 0; }); });
+    }
     function search() {
       var b = null;
       seqs.forEach(function (seq) {
@@ -1266,6 +1276,7 @@
           for (var end = start + 1; end <= seq.length; end++) {
             cols.push(seq.slice(start, end));
             if (end === seq.length) {
+              if (KEEP_PRED_COL && !predTogether(cols)) { cols.pop(); continue; }
               var k = evalCols(cols);
               if (!b || k > b.k + 1e-6) b = { k: k, cols: cols.map(function (c) { return c.slice(); }) };
             } else if (cols.length < maxCols) {
