@@ -67,9 +67,10 @@ var Icons = (function () {
     var hit = g.querySelector('.rider-hit');
     var num = g.querySelector('.rider-num');
     if (body) body.setAttribute('r', r);
-    /* 当たり判定は丸とほぼ同じ大きさに留める。1.3倍にすると隊列の丸どうし（間隔59px）の判定が
-       つながって連結バーを完全に覆い、ラインを掴めなくなった（v1で踏んだのと同じ罠・9/27の検査で再発） */
-    if (hit) hit.setAttribute('r', r * 1.05);
+    /* 当たり判定＝丸の1.2倍。1.3倍だと隊列の丸どうし（間隔56px）の判定がつながって連結バーを覆い、
+       ラインを掴めなくなった（v1と同じ罠）。1.05倍では「ドラッグが難しい」（9/27 Naoto実機）→1.2倍。
+       帯は丸の上下（帯の当たり判定1.8倍の残り）で掴める */
+    if (hit) hit.setAttribute('r', r * 1.2);
     if (num) {
       num.setAttribute('font-size', (px * (g.classList.contains('pacer') ? 0.46 : 0.56)).toFixed(1));
       num.setAttribute('y', (px * 0.03).toFixed(1));

@@ -59,13 +59,17 @@ var Drag = (function () {
       /* 掴んだ点と丸の中心のずれを保つ（丸の端を掴んでも中心へ跳ねない） */
       active = { id: ev.pointerId, offD: r.d - pr.d, offLane: r.lane - pr.lane, moved: false };
       g.classList.add('is-dragging');
-      try { g.setPointerCapture(ev.pointerId); } catch (e) {}
+      /* ⚠️onStart（丸を最前面へ＝要素の付け替え）は捕捉より**前**に呼ぶ。
+         捕捉の後に付け替えると捕捉が外れ、丸の外で離した合図が届かず「放しても掴んだまま」になった（9/27 Naoto実機） */
       if (h.onStart) h.onStart(no);
+      try { g.setPointerCapture(ev.pointerId); } catch (e) {}
       ev.preventDefault();
     });
 
     g.addEventListener('pointermove', function (ev) {
       if (!active || ev.pointerId !== active.id) return;
+      /* 保険：ボタンが離れているのに動きが来た＝離した合図を取りこぼした。ここで終える */
+      if (ev.pointerType === 'mouse' && ev.buttons === 0) { finish(ev); return; }
       var r = State.data.riders[no];
       var p = Board.toBoard(ev.clientX, ev.clientY);
       var pr = Track.project(p.x, p.y, r.d - active.offD);
@@ -91,6 +95,9 @@ var Drag = (function () {
     }
     g.addEventListener('pointerup', finish);
     g.addEventListener('pointercancel', finish);
+    /* 保険：捕捉が外れた／丸の外で離した場合も必ず終える */
+    g.addEventListener('lostpointercapture', finish);
+    window.addEventListener('pointerup', finish);
   }
 
   /**
@@ -130,6 +137,7 @@ var Drag = (function () {
 
     item.hit.addEventListener('pointermove', function (ev) {
       if (!active || ev.pointerId !== active.id) return;
+      if (ev.pointerType === 'mouse' && ev.buttons === 0) { finish(ev); return; }   // 離した合図の取りこぼし
       var dl = deltas(ev);
       active.lastDD = dl.dd;
       active.lastDL = dl.dl;
@@ -161,6 +169,8 @@ var Drag = (function () {
     }
     item.hit.addEventListener('pointerup', finish);
     item.hit.addEventListener('pointercancel', finish);
+    item.hit.addEventListener('lostpointercapture', finish);
+    window.addEventListener('pointerup', finish);
   }
 
   return {
