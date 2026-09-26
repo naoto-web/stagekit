@@ -79,6 +79,8 @@
   var HEAD_EMPTY_PX2 = +(params.get("headpx2") || 38); // 2〜3場
   // 幅のある倍率を下の段へ回すのは、右に並べると等倍未満に縮むときだけ（9/26 Naoto）。&stack=grow で旧ルール（拡大の途中でも5%以上なら回す）
   var STACK_GROW = params.get("stack") === "grow";
+  // ②の1人配信＝右下の合計欄を買目の倍率に合わせて大きく・列間を広く（9/26 Naoto）。&solorb=0 で2人配信と同じに
+  var SOLORB = params.get("solorb") !== "0";
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
@@ -1191,10 +1193,17 @@
     var hasPred = false;
     hard.forEach(function (v) { if (v) hasPred = true; });
     var ROWGAP = 5, COLGAP = RB2 ? 14 : 40, MARGIN = 6; // gapはCSSの.rb-col/.rb-flowと一致させること（RB2＝②は列間を詰める・CSS .rb2 .rb-flow）
+    var COLGAP_CSS = COLGAP, COLGAP_MAX = 40;
+    /* 1人配信（9/26 Naoto「右下の合成・点数・投資と買目の大きさが合っていない・買目の間ももう少し離して」）＝帯が2人分の幅＝
+       ①右下の合計欄も買目の倍率に合わせて大きく（上限1.5倍・下で2回目の探索）②列間は36〜72px（2人配信は14〜40px）。戻す＝&solorb=0 */
+    var SOLO_RB = RB2 && SOLORB && band.closest(".race-band") &&
+      document.body.classList.contains("seat-a-off") !== document.body.classList.contains("seat-b-off");
+    if (SOLO_RB) { COLGAP = 36; COLGAP_MAX = 72; }
     var CAP = hasPred ? 3.0 : 1.5;           // ラベルだけの帯は控えめに留める
     // 右下固定の合計/投資：表示中なら帯コンテンツ原点からの左端・上端（renderPredsが先にmetaを確定させる前提）
     var metaL = Infinity, metaT = Infinity;
     var meta = band.parentElement ? band.parentElement.querySelector(".band-meta") : null;
+    if (meta) meta.style.fontSize = ""; // 1人配信で大きくした分を毎回戻してから測る（席が2人に戻ったとき残らないように）
     function measureMeta() {
       metaL = Infinity; metaT = Infinity;
       if (meta && !meta.classList.contains("hidden")) {
@@ -1268,16 +1277,35 @@
     }
     /* 🧪RB2＝右下の 合計・合成・投資 の形を2通り試して、買目が大きく入る方を採る（9/25 Naoto「バランスで選んで」）：
        2段（合成を投資の上に乗せる＝既定の has-synth）／1行（.m1）。同じ大きさなら2段を優先 */
-    if (RB2 && meta && meta.classList.contains("has-synth") && !meta.classList.contains("hidden")) {
-      meta.classList.remove("m1"); measureMeta();
-      var bStack = search();
-      meta.classList.add("m1"); measureMeta();
-      var bLine = search();
-      if (bLine.k > bStack.k * 1.01) { best = bLine; }
-      else { best = bStack; meta.classList.remove("m1"); measureMeta(); }
-    } else {
-      if (meta) meta.classList.remove("m1");
-      best = search();
+    function choose() {
+      if (RB2 && meta && meta.classList.contains("has-synth") && !meta.classList.contains("hidden")) {
+        meta.classList.remove("m1"); measureMeta();
+        var bStack = search();
+        meta.classList.add("m1"); measureMeta();
+        var bLine = search();
+        if (bLine.k > bStack.k * 1.01) { best = bLine; }
+        else { best = bStack; meta.classList.remove("m1"); measureMeta(); }
+      } else {
+        if (meta) meta.classList.remove("m1");
+        best = search();
+      }
+    }
+    choose();
+    /* 1人配信＝合計欄を買目の倍率に合わせて大きくし（上限1.5倍）、その大きさで配置を測り直す。
+       ⚠️買目優先：合計欄を大きくすると買目の場所が減る＝1.5倍から0.1刻みで下げ、買目の倍率が元の95%以上を保てる一番大きい倍率を採る
+       （1.5倍固定だと買目が多い帯で買目が2〜3割小さくなった＝撮影で確認） */
+    if (SOLO_RB && meta && !meta.classList.contains("hidden") && best && best.k > 1.02) {
+      var mBase = parseFloat(getComputedStyle(meta).fontSize) || 26;
+      var k0 = best.k, keep = { best: best, m1: meta.classList.contains("m1") }, ok = false;
+      for (var ms = Math.min(1.5, k0); ms > 1.02; ms -= 0.1) {
+        meta.style.fontSize = (mBase * ms).toFixed(1) + "px";
+        choose();
+        if (best.k >= k0 * 0.95) { ok = true; break; }
+      }
+      if (!ok) { // どの大きさでも買目が小さくなる＝合計欄は元の大きさ
+        meta.style.fontSize = "";
+        best = keep.best; meta.classList.toggle("m1", keep.m1); measureMeta();
+      }
     }
     if (RB2) best.cols.forEach(function (c) { c.sort(function (a, b) { return a - b; }); }); // 列の中は書いた順
     /* RB2＝横が余っているときは列間を広げる（9/25夜 Naoto「1列目と2列目が近い・右にスペースあるならもう少し離して」）。
@@ -1285,11 +1313,11 @@
        ＝縦で頭打ちのとき（横が余る）だけ広がり、横で頭打ちのときは14pxのまま */
     var colGapUsed = COLGAP;
     if (RB2 && best.cols.length > 1) {
-      for (var tg = 40; tg > COLGAP; tg -= 2) {
+      for (var tg = COLGAP_MAX; tg > COLGAP; tg -= 2) {
         if (evalCols(best.cols, tg) >= best.k - 1e-6) { colGapUsed = tg; break; }
       }
     }
-    if (colGapUsed !== COLGAP) flow.style.columnGap = colGapUsed + "px";
+    if (colGapUsed !== COLGAP_CSS) flow.style.columnGap = colGapUsed + "px";
     // 診断フック（body.debug系と同趣旨・通常は不発）：パッキングの入力と採用解を記録
     if (window.__RB_DEBUG) window.__RB_DEBUG.push({ availW: availW, availH: availH, metaL: metaL, metaT: metaT,
       hs: hs, ws: ws, hard: hard, bestK: best.k, cols: best.cols });
