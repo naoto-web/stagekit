@@ -81,6 +81,8 @@
   var STACK_GROW = params.get("stack") === "grow";
   // ②の1人配信＝右下の合計欄を買目の倍率に合わせて大きく・列間を広く（9/26 Naoto）。&solorb=0 で2人配信と同じに
   var SOLORB = params.get("solorb") !== "0";
+  // ②の並びの窓の上端（px）＝パネルの枠線の内側から（9/26 Naoto「上が映像と被って切れる」）。旧＝0（帯の外側）
+  var RL_TOP = +(params.get("rltop") || 6);
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
@@ -2526,8 +2528,9 @@
     var br = band.getBoundingClientRect();
     var ar = na.getBoundingClientRect(), brr = nbB.getBoundingClientRect();
     var PAD = 10; // 配信者名とラインの間に空ける余白（8/13 FB「もっと横に広げてOK」で22→10）
-    var left = Math.max(0, ar.right - br.left + PAD);
-    var right = Math.min(br.width, brr.left - br.left - PAD);
+    // 1人配信で空いている側（パネルごと非表示＝幅0）は帯の端を基準にする（9/26 席1だけの1人配信で窓ごと消えていた）
+    var left = ar.width > 0 ? Math.max(0, ar.right - br.left + PAD) : PAD;
+    var right = brr.width > 0 ? Math.min(br.width, brr.left - br.left - PAD) : br.width - PAD;
     var w = right - left;
     if (w < 140) { box.classList.add("hidden"); return; } // 名前が長すぎて隙間が無い日は諦める
     box.classList.remove("hidden");
@@ -2546,8 +2549,10 @@
          高さ＝帯の上端からヘッダー行の下端まで＝買い目エリアには一切かからない */
       // 下端はヘッダー帯の下辺から1px上げる（8/13 FB）＝帯の色が下に1本残って窓が締まって見える。
       // 上端は詰め切っているので、そのぶん枠の高さが1px短くなる
-      var h = hr.bottom - br.top - 1;
-      box.style.top = "0px";
+      /* 🔄9/26 Naoto「本番では上がレース映像と被って切れている」＝上端を帯の外側（映像のすぐ下）に合わせていたため、
+         OBSで映像がわずかに重なると窓の上辺が隠れた→パネルの枠線（RL_TOP＝6px）の内側から始める。&rltop= で調整 */
+      var h = hr.bottom - br.top - 1 - RL_TOP;
+      box.style.top = RL_TOP + "px";
       box.style.height = Math.round(h) + "px";
       var inner = h - 10;                   // padding 3×2＋border 2×2
       var nm = 0, chip;
@@ -2560,7 +2565,8 @@
       box.style.setProperty("--rbchip", chip + "px");
       box.style.setProperty("--rbnm", nm + "px");
       // 場名Rは1行（8/13 FB「縦より横に余裕があるから1行で大きく」）＝内寸の62%まで使う
-      box.style.setProperty("--rbrace", Math.round(inner * 0.62) + "px");
+      // 🔄9/26 Naoto「買目の帯にレース名を出さなくなったので、ここの『青森4R』がとても重要＝大きく」→80%
+      box.style.setProperty("--rbrace", Math.round(inner * 0.8) + "px");
     }
     fitNarabi("narabi-race"); // 幅が確定してから縮小判定（先に測ると常に0幅になる）
   }
@@ -2570,6 +2576,18 @@
     var nb = $(nbId);
     if (!nb || nb.classList.contains("hidden")) return;
     nb.style.transform = "";
+    /* ②の並びの窓（9/26）＝白い枠を中身ぴったりの幅にしてから、置き場所（.rb-line）に入るまで枠ごと縮める（上辺の中央を基準）。
+       旧＝枠の幅を max-width:100% で抑えたまま枠ごと縮めていた＝中身が枠からはみ出したまま一緒に縮むだけで、
+       ガールズ7車＋2人ともnoteの日に中身が白い枠の外（🔥note札の上）へはみ出した（撮影で確認） */
+    if (nbId === "narabi-race") {
+      nb.style.maxWidth = "none";
+      var host = nb.parentElement, hw = host ? host.clientWidth : 0, nw = nb.offsetWidth;
+      if (hw > 0 && nw > hw) {
+        nb.style.transform = "scale(" + Math.max(0.5, hw / nw).toFixed(3) + ")";
+        nb.style.transformOrigin = "center top";
+      }
+      return;
+    }
     var nr = nb.getBoundingClientRect();
     if (nr.width <= 0) return;
     var padR = parseFloat(getComputedStyle(nb).paddingRight) || 0;
