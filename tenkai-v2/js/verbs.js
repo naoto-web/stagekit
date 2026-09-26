@@ -104,7 +104,7 @@ var Verbs = (function () {
   }
 
   /** 着順（上位3人）→ ゴールでの並び。
-      1着はゴール線ちょうど、2着・3着は0.35車身ずつ後ろ（ハナ差・半車身差の絵）。
+      上位3人は1車身ずつの差（config.js の LAYOUT.finishGap）。3着までゴール線を完全に越えたところで止める。
       上位3人は内外が重ならないよう、いまの内外の順に 内・中・外 へ振る。
       4着以下はいまの並び順のまま、1.6車身後ろから内に一列 */
   function finishTarget(top) {
@@ -117,13 +117,16 @@ var Verbs = (function () {
     /* 3人ともゴール線を完全に越えるまで走る（9/27 Naoto）：3着の丸の後ろの縁がゴール線から約0.2車身先。
        1着はその0.7車身先、2着は0.35車身先。4着以下は1着からの間隔を今までどおり（1.6車身〜）＝ゴール線の手前に残る */
     var third = -(CONFIG.iconPx(data().iconRatio) / 2 + 0.2 * 56) / CONFIG.LAP;   // 丸の半径＋0.2車身（56px基準）ぶん先
-    var win = third - 0.7 * CAR;
+    /* 着差＝1車身ずつ（9/27 Naoto「着順が分かりづらい」→旧0.35車身から広げた）。4着以下は3着から1.3車身後ろ〜 */
+    var GAP = CONFIG.LAYOUT.finishGap;
+    var win = third - (t.length - 1) * GAP * CAR;
     var target = {};
     t.forEach(function (no, i) {
-      target[no] = { d: win + i * 0.35 * CAR, lane: [-1, 0, 1][byLane.indexOf(no)] };
+      target[no] = { d: win + i * GAP * CAR, lane: [-1, 0, 1][byLane.indexOf(no)] };
     });
+    var restHead = win + ((t.length - 1) * GAP + 1.3) * CAR;
     byD(c.filter(function (n) { return t.indexOf(n) === -1; })).forEach(function (no, j) {
-      target[no] = { d: win + (1.6 + j * CONFIG.LAYOUT.gapInLine) * CAR, lane: -1 };
+      target[no] = { d: restHead + j * CONFIG.LAYOUT.gapInLine * CAR, lane: -1 };
     });
     return target;
   }
