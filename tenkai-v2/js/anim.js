@@ -397,6 +397,47 @@ var Anim = (function () {
     me.id = raf(frame);
     return { overlap: bestCost };
   }
+  /**
+   * 通り道（キーフレーム）をなぞる（動詞ボタン用・v2.1）
+   * @param {Object} paths { no: [{t:0,d,lane}, ..., {t:1,d,lane}] }  t は 0〜1
+   * @param {{ms?:number, onFrame:Function, onDone?:Function}} o
+   */
+  function path(paths, o) {
+    stop();
+    var nos = Object.keys(paths);
+    var ms = (o && o.ms) || CONFIG.ANIM.verbMs;
+    function at(ks, t) {
+      for (var i = 0; i < ks.length - 1; i++) {
+        var a = ks[i], b = ks[i + 1];
+        if (t <= b.t) {
+          var x = b.t > a.t ? (t - a.t) / (b.t - a.t) : 1;
+          var e = x * x * (3 - 2 * x);
+          return { d: a.d + (b.d - a.d) * e, lane: a.lane + (b.lane - a.lane) * e };
+        }
+      }
+      var z = ks[ks.length - 1];
+      return { d: z.d, lane: z.lane };
+    }
+    function finish() {
+      nos.forEach(function (no) { var z = paths[no][paths[no].length - 1]; State.moveRider(+no, z.d, z.lane); });
+      if (o && o.onFrame) o.onFrame(true);
+      if (o && o.onDone) o.onDone(true);
+    }
+    if (isHidden()) { finish(); return; }
+    var t0 = null, me = { id: 0, done: o && o.onDone };
+    cur = me;
+    function frame(ts) {
+      if (cur !== me) return;
+      if (t0 === null) t0 = ts;
+      var t = Math.min(1, (ts - t0) / ms);
+      if (t >= 1) { cur = null; finish(); return; }
+      nos.forEach(function (no) { var p = at(paths[no], t); State.moveRider(+no, p.d, p.lane); });
+      if (o && o.onFrame) o.onFrame(false);
+      me.id = raf(frame);
+    }
+    me.id = raf(frame);
+  }
+
   /** 出力側：届いた状態へ毎フレーム追いつく表示用の写し */
   function Smoother(onFrame) {
     this.view = {};
@@ -456,6 +497,7 @@ var Anim = (function () {
   return {
     to: to,
     reform: reform,
+    path: path,
     prepare: prepare,
     stop: stop,
     busy: function () { return !!cur; },

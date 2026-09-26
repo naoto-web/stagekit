@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>競輪 展開ボード v2</title>
-<link rel="stylesheet" href="css/style.css?v=20260927-034721">
+<link rel="stylesheet" href="css/style.css?v=20260927-035731">
 </head>
 <body>
 
@@ -73,6 +73,23 @@
       </div>
     </div>
 
+    <!-- 動詞ボタン（v2.1）＝選手かラインをクリックして選んでから押す。要件定義_v2 §6.5 -->
+    <div class="panel-row panel-row-verb">
+      <span class="sel-label is-empty" id="sel-label">選択なし（丸かラインをクリック）</span>
+      <div class="phase-group">
+        <button type="button" class="btn btn-verb" data-verb="joushou" title="選んだラインが外を上がって、先頭ラインの前に入る">上昇</button>
+        <button type="button" class="btn btn-verb" data-verb="makuri" title="外を上がって先頭の横まで（ラインの先頭を選ぶと後続も続く）">まくり</button>
+        <button type="button" class="btn btn-verb" data-verb="sashi" title="すぐ前の選手を空いている側から交わす">差し</button>
+        <button type="button" class="btn btn-verb" data-verb="tsukinuke" title="番手が同じラインの先頭を交わす">突き抜け</button>
+        <button type="button" class="btn btn-verb" data-verb="oshikiri" title="先頭がそのままゴールへ（最終周回で）">押切</button>
+        <button type="button" class="btn btn-verb" data-verb="block" title="外へ振って、外にいる選手を止める">ブロック</button>
+      </div>
+      <div class="phase-group">
+        <button type="button" class="btn btn-order" data-verb="up" title="選んだラインを1つ前のラインと入れ替える">▲ 順番を前へ</button>
+        <button type="button" class="btn btn-order" data-verb="down" title="選んだラインを1つ後ろのラインと入れ替える">▼ 順番を後ろへ</button>
+      </div>
+    </div>
+
     <p class="hint" id="hint">局面ボタンで全体が進みます。<b>盤面の上でホイール（奥へ＝進む／手前へ＝戻す）</b>や → ← キーで少しずつ。<b>丸をドラッグ＝1台</b>（コースに沿って動く・離すと内/中/外にそろう）／<b>ラインの帯をドラッグ＝ライン全員</b>。</p>
   </header>
 
@@ -83,19 +100,20 @@
 
 </div>
 
-<script src="../autoupdate.js?v=20260927-034721" data-au="output-only"></script>
-<script src="js/config.js?v=20260927-034721"></script>
-<script src="js/track.js?v=20260927-034721"></script>
-<script src="js/state.js?v=20260927-034721"></script>
-<script src="js/icons.js?v=20260927-034721"></script>
-<script src="js/bars.js?v=20260927-034721"></script>
-<script src="js/board.js?v=20260927-034721"></script>
-<script src="js/racecard.js?v=20260927-034721"></script>
-<script src="js/live.js?v=20260927-034721"></script>
-<script src="js/lineup.js?v=20260927-034721"></script>
-<script src="js/anim.js?v=20260927-034721"></script>
-<script src="js/undo.js?v=20260927-034721"></script>
-<script src="js/drag.js?v=20260927-034721"></script>
-<script src="js/main.js?v=20260927-034721"></script>
+<script src="../autoupdate.js?v=20260927-035731" data-au="output-only"></script>
+<script src="js/config.js?v=20260927-035731"></script>
+<script src="js/track.js?v=20260927-035731"></script>
+<script src="js/state.js?v=20260927-035731"></script>
+<script src="js/icons.js?v=20260927-035731"></script>
+<script src="js/bars.js?v=20260927-035731"></script>
+<script src="js/board.js?v=20260927-035731"></script>
+<script src="js/racecard.js?v=20260927-035731"></script>
+<script src="js/live.js?v=20260927-035731"></script>
+<script src="js/lineup.js?v=20260927-035731"></script>
+<script src="js/anim.js?v=20260927-035731"></script>
+<script src="js/undo.js?v=20260927-035731"></script>
+<script src="js/verbs.js?v=20260927-035731"></script>
+<script src="js/drag.js?v=20260927-035731"></script>
+<script src="js/main.js?v=20260927-035731"></script>
 </body>
 </html>

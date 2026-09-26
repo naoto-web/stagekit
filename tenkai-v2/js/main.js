@@ -16,6 +16,8 @@
   var inputEl, applyBtn, resetBtn, sizeRange, sizeVal, undoBtn, redoBtn;
   var venueSel, raceSel, reloadBtn, followChk, followDiffEl, nowRaceEl, liveDot;
   var phaseBtns = [];
+  var verbBtns = [], selLabelEl;
+  var sel = null;          // 選択中（v2.1）＝ { type:'rider'|'line', nos:[…] }。ドックだけ・保存も配信もしない
   var pendingRace = null;   // URLで指定されたレース（出走表の取得完了後に適用する）
 
   /* 'control'＝操作画面（OBSのカスタムブラウザドックに入れる）
@@ -237,6 +239,38 @@
     setHint(ph.label + 'へ進めました。ホイール（奥へ＝進む／手前へ＝戻す）や → ← キーで少しずつ動かせます。');
   }
 
+  /* ---------- 選択と動詞ボタン（v2.1・要件定義_v2 §6.1 / §6.5） ---------- */
+
+  /** 選択を変える。丸を掴む＝その1台、帯を掴む＝ライン全員、盤面の空きをクリック＝解除 */
+  function setSel(s) {
+    sel = (s && s.nos && s.nos.length) ? s : null;
+    Board.setSelected(sel ? sel.nos : []);
+    if (!selLabelEl) return;
+    if (!sel) {
+      selLabelEl.textContent = '選択なし（丸かラインをクリック）';
+      selLabelEl.classList.add('is-empty');
+      return;
+    }
+    selLabelEl.classList.remove('is-empty');
+    selLabelEl.textContent = '選択中：' + (sel.type === 'line'
+      ? 'ライン ' + sel.nos.join('')
+      : Verbs.label(sel.nos[0]));
+  }
+
+  /** 動詞ボタン：通り道を作って動かす。できないときは理由をヒント欄に出して何もしない */
+  function runVerb(key) {
+    if (VIEW !== 'control') return;
+    Anim.stop();
+    var res = Verbs.run(key, sel);
+    if (!res || res.error) { setHint((res && res.error) || 'この動きはできません', true); return; }
+    Undo.push();
+    Anim.path(res.paths, {
+      ms: res.long ? Math.round(CONFIG.ANIM.verbMs * 1.5) : CONFIG.ANIM.verbMs,
+      onFrame: function () { renderPositions(); },
+      onDone: function () { State.save(); publishLive(true); }
+    });
+    setHint(res.hint + '。（取り消しで元に戻せます）');
+  }
   /* ---------- 取り消し ---------- */
 
   function doUndo() {
@@ -505,6 +539,7 @@
     var raceCars = RaceCard.carsOf(r);
     Anim.stop();
     Undo.clear();   // 別レースの手を戻せてはいけない（§6.6）
+    setSel(null);
 
     State.set({
       /* date＝この出走表を読んだ時刻表の日付。翌日の同じ場・同じRと見分ける唯一の手がかり */
@@ -560,7 +595,7 @@
   function bindDrag() {
     for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
       Drag.enableRider(Board.riderEl(no), no, {
-        onStart: function (n) { Anim.stop(); Undo.push(); Board.raise(n); },
+        onStart: function (n) { Anim.stop(); Undo.push(); Board.raise(n); setSel({ type: 'rider', nos: [n] }); },
         onMove: function () { renderPositions(); },
         onEnd: function (n, moved) {
           if (!moved) Undo.dropLast();
@@ -573,7 +608,7 @@
     /* 連結バーは並びが変わるたびに作り直されるので、作られた時点で結線する */
     Bars.onCreate = function (item) {
       Drag.enableLine(item, {
-        onStart: function () { Anim.stop(); Undo.push(); },
+        onStart: function (nos) { Anim.stop(); Undo.push(); setSel({ type: 'line', nos: nos.slice() }); },
         onMove: function () { renderPositions(); },
         onEnd: function (nos, moved) {
           if (!moved) Undo.dropLast();
@@ -623,12 +658,22 @@
       b.addEventListener('click', function () { jumpPhase(b.dataset.phase); });
     });
     undoBtn.addEventListener('click', doUndo);
+    verbBtns.forEach(function (b) {
+      b.addEventListener('click', function () { runVerb(b.dataset.verb); });
+    });
     redoBtn.addEventListener('click', doRedo);
 
     /* ホイール＝全体送り（奥へ回す＝進む／手前へ回す＝戻す）。1ノッチ＝0.5車身。
        トラックパッドの細かい量はためてから1ノッチぶんずつ動かす */
     /* 出力ビュー（OBSのブラウザソース）では操作を受け付けない */
     if (VIEW !== 'control') return;
+
+    /* 盤面の空き（選手・帯以外）を押したら選択を外す */
+    stageEl.addEventListener('pointerdown', function (ev) {
+      var t = ev.target;
+      if (t && t.closest && (t.closest('.rider') || t.closest('.line-bar-hit'))) return;
+      setSel(null);
+    });
 
     var wheelAcc = 0;
     stageEl.addEventListener('wheel', function (ev) {
@@ -750,6 +795,8 @@
     nowRaceEl = document.getElementById('now-race');
     liveDot   = document.getElementById('live-dot');
     phaseBtns = Array.prototype.slice.call(document.querySelectorAll('[data-phase]'));
+    verbBtns = Array.prototype.slice.call(document.querySelectorAll('[data-verb]'));
+    selLabelEl = document.getElementById('sel-label');
 
     sizeRange.min = String(Math.round(CONFIG.ICON_RATIO_MIN * 1000));
     sizeRange.max = String(Math.round(CONFIG.ICON_RATIO_MAX * 1000));

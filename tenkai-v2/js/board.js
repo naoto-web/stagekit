@@ -228,6 +228,11 @@ var Board = (function () {
     return positions(d, view);
   }
 
+  /** 選択中の選手に金色のリング（v2.1・ドックだけ） */
+  function setSelected(nos) {
+    for (var no = 1; no <= CONFIG.MAX_CAR; no++) riderEls[no].classList.toggle('is-selected', (nos || []).indexOf(no) !== -1);
+  }
+
   /** ドラッグ中の選手を最前面へ */
   function raise(no) {
     var g = riderEls[no];
@@ -240,6 +245,7 @@ var Board = (function () {
     positions: positions,
     toBoard: toBoard,
     raise: raise,
+    setSelected: setSelected,
     phaseOf: phaseOf,
     riderEl: function (no) { return riderEls[no]; },
     get svg() { return svg; }

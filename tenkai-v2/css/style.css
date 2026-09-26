@@ -198,7 +198,18 @@ body.view-output .stage svg * { pointer-events: none !important; }
 .rider.is-dragging { cursor: grabbing; }
 .rider .rider-body { filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
 .rider.is-dragging .rider-body { filter: drop-shadow(0 5px 8px rgba(0,0,0,.65)); }
-.rider-chip, .rider-num, .rider-body { pointer-events: none; }
+.rider-chip, .rider-num, .rider-body, .rider-sel { pointer-events: none; }
+/* 選択中の金色のリング（v2.1）。出力（?view=output）では絶対に出さない */
+.rider-sel { display: none; }
+.rider.is-selected .rider-sel { display: inline; }
+body.view-output .rider-sel { display: none !important; }
+
+/* 動詞ボタン（v2.1） */
+.btn-verb { font-size: 15px; font-weight: 700; padding: 7px 11px; background: #2d3a2f; border-color: #3f5a44; }
+.btn-verb:hover { background: #38493b; }
+.btn-order { font-size: 14px; }
+.sel-label { font-size: 14px; font-weight: 700; color: #ffd166; white-space: nowrap; min-width: 150px; }
+.sel-label.is-empty { color: var(--ui-muted); font-weight: 500; }
 .rider-hit { pointer-events: all; }
 .pacer, .pacer * { pointer-events: none; }
 

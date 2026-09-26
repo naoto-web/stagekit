@@ -34,11 +34,14 @@ var Icons = (function () {
       'font-family': FONT, 'text-anchor': 'middle', 'dominant-baseline': 'central' }));
 
     var hit = el('circle', { 'class': 'rider-hit', r: 30, fill: 'transparent' });
+    /* 選択中の金色のリング（v2.1）。ドックでだけ付く＝出力は選択を受け取らないので常に消えている */
+    var ring = el('circle', { 'class': 'rider-sel', r: 29, fill: 'none', stroke: '#ffd166', 'stroke-width': 4 });
     var body = el('circle', { 'class': 'rider-body', r: 23, fill: c.bg, stroke: c.ring, 'stroke-width': 2.5 });
     var num = el('text', { 'class': 'rider-num', fill: c.fg, 'font-weight': 800, 'font-family': FONT,
       'text-anchor': 'middle', 'dominant-baseline': 'central' }, String(no));
 
     g.appendChild(chip);
+    g.appendChild(ring);
     g.appendChild(hit);
     g.appendChild(body);
     g.appendChild(num);
@@ -67,6 +70,8 @@ var Icons = (function () {
     var hit = g.querySelector('.rider-hit');
     var num = g.querySelector('.rider-num');
     if (body) body.setAttribute('r', r);
+    var ring = g.querySelector('.rider-sel');
+    if (ring) ring.setAttribute('r', r + 6);
     /* 当たり判定＝丸の1.2倍。1.3倍だと隊列の丸どうし（間隔56px）の判定がつながって連結バーを覆い、
        ラインを掴めなくなった（v1と同じ罠）。1.05倍では「ドラッグが難しい」（9/27 Naoto実機）→1.2倍。
        帯は丸の上下（帯の当たり判定1.8倍の残り）で掴める */
