@@ -83,6 +83,8 @@
   var SOLORB = params.get("solorb") !== "0";
   // 1人配信の②で買目2行は縦に積む（9/26 Naoto・packRaceBand）。&solov2=0 で倍率優先（横並びもあり）に戻す
   var SOLOV2 = params.get("solov2") !== "0";
+  // note勝負バナーは本日設定の場にある場だけ出す（9/26 Naoto・renderVenueTabs）。&nhvenue=0 で旧＝場に関係なく出す
+  var NH_VENUE = params.get("nhvenue") !== "0";
   // ②の並びの窓の上端（px）＝パネルの枠線の内側から（9/26 Naoto「上が映像と被って切れる」）。旧＝0（帯の外側）
   var RL_TOP = +(params.get("rltop") || 6);
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
@@ -282,6 +284,14 @@
     var roster = (state.roster || []).filter(function (r) { return r && r.name; });
     var groups = [], byName = {};
     var seatedNB = seatedNames();
+    /* 本日設定の場と連動（9/26 Naoto「場の選択で青森を外したのにバナーに青森が残っていた」）＝場が読める行は、
+       本日の場に無い場の分を出さない。⚠️表示だけ＝state.noteRaces は残す（場を選び直せば戻る・席にいない人の行と同じ考え方）。
+       場が読めない自由文は従来どおり出す。本日の場が1つも無いとき（設定前）は絞らない。戻す＝&nhvenue=0 */
+    var selV = null;
+    if (NH_VENUE && (state.venues || []).length) {
+      selV = {};
+      state.venues.forEach(function (v) { selV[v.name] = 1; });
+    }
     lines.forEach(function (l, seq) {
       var hit = window.Derive.matchRacer(l, roster);
       if (hit && !seatedNB[hit.name]) return; // 席にいない人のnote勝負は出さない（9/25）
@@ -326,6 +336,7 @@
       })();
       if (segs) {
         segs.forEach(function (sg) {
+          if (selV && !selV[sg.v]) return;        // 本日の場から外した場（9/26）
           var maxNo = 0;
           sg.nums.forEach(function (n) { if (+n > maxNo) maxNo = +n; });
           var b = nextRaceStartSec(sg.v, maxNo);
@@ -344,6 +355,7 @@
       for (var vi = 0; vi < sorted.length; vi++) {
         if (rest.indexOf(sorted[vi]) >= 0) { venue = sorted[vi]; break; }
       }
+      if (venue && selV && !selV[venue]) return; // 本日の場から外した場（9/26）
       // 表記の正規化＋終了商品の間引き（8/10 FB113→FB114修正）：場が特定でき、残りが
       // 数字とR・区切りだけの行は「場名␣番号R」に整形（半角スペース／番号は全角＝
       // 8/11 FB129で2桁も全角化・旧FB113の「2桁は半角」はNaoto依頼で撤回）。
