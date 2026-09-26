@@ -440,31 +440,8 @@ var Verbs = (function () {
     return { finish: fillTop(top.slice(0, 3)), hint: '押切：' + label(lead) + ' が押し切って1着、ラインもそのままゴール' };
   }
 
-  /** ブロック：主語が外へ1レーン振り、外にいた相手をさらに外へ・後ろへ（止められた絵）。
-      主語はブロックの後、元のレーンに戻る（9/27 Naoto）。旧＝外へ振ったまま止まっていた */
-  function block(sel) {
-    var no = sel.type === 'line' ? (lineOf(sel.nos[0])[1] || sel.nos[0]) : sel.nos[0];
-    var me = data().riders[no], best = null, bestGap = null;
-    cars().forEach(function (o) {
-      if (o === no) return;
-      var r = data().riders[o];
-      var gap = r.d - me.d;   // ＋＝相手が後ろ
-      if (r.lane > me.lane + 0.5 && gap > -0.6 * CAR && gap < 1.5 * CAR) {
-        if (best === null || Math.abs(gap) < Math.abs(bestGap)) { best = o; bestGap = gap; }
-      }
-    });
-    if (best === null) return { error: label(no) + ' の外（横〜少し後ろ）に選手がいません' };
-    var paths = basePaths(0.5);
-    var myF = finalOf(paths, no), tF = finalOf(paths, best);
-    var myLane = Math.min(1, Math.round(me.lane) + 1);
-    var tLane = Math.min(1, myLane + 1);
-    paths[no] = [{ t: 0, d: me.d, lane: me.lane }, { t: 0.4, d: me.d + (myF.d - me.d) * 0.4, lane: myLane },
-                 { t: 0.65, d: me.d + (myF.d - me.d) * 0.65, lane: myLane }, { t: 1, d: myF.d, lane: me.lane }];
-    var t0 = data().riders[best];
-    var tFinD = Math.max(tF.d, myF.d) + 1.2 * CAR;
-    paths[best] = [{ t: 0, d: t0.d, lane: t0.lane }, { t: 0.45, d: t0.d + (tFinD - t0.d) * 0.3, lane: tLane }, { t: 1, d: tFinD, lane: tLane }];
-    return { paths: paths, hint: 'ブロック：' + label(no) + ' が外へ振って ' + label(best) + ' を止めました' };
-  }
+  /* ブロック（単独のボタン）は9/27に廃止（Naoto）＝番手が止める場面は「まくり失敗」に含めた。
+     手で横に並べた選手を止めたいときはドラッグと取り消しで足りる */
 
   /** 順番を前へ／後ろへ：選んだラインを隣のラインと入れ替える（一列に並べ直す） */
   function reorder(sel, dir) {
@@ -495,7 +472,6 @@ var Verbs = (function () {
     sashi: { label: '差し', fn: sashi },
     tsukinuke: { label: '突き抜け', fn: tsukinuke },
     oshikiri: { label: '押切', fn: oshikiri },
-    block: { label: 'ブロック', fn: block },
     /* ズブズブ＝ラインで決着（先頭・番手・3番手がそのままの順でゴール）。最終ストレートでだけ使える */
     zubu: { label: 'ズブズブ', fn: function (sel) {
       if (!atStraight()) return { error: 'ズブズブは最終周回（最終ホーム以降）で使ってください' };

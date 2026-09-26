@@ -141,7 +141,14 @@
       if (tail === null || r.d > tail) tail = r.d;
     });
     if (lead === null) return 0;
-    if (delta > 0) return Math.max(0, Math.min(delta, lead));        // ゴール線で止まる（決着でゴール線の先にいるときは進めない＝逆に戻らない）
+    if (delta > 0) {
+      /* 先頭がゴール線の手前なら、まずゴール線で止まる（今までどおり） */
+      if (lead > 1e-6) return Math.max(0, Math.min(delta, lead));
+      /* ゴール後（決着のあと・先頭がゴール線に着いたあと）は、最後尾がゴール線を越え切るまで送れる（9/27 Naoto）。
+         越え切った＝最後尾の丸の後ろの縁がゴール線の0.5車身先（決着の3着と同じ基準）。旧＝ゴール後は一切進めなかった */
+      var past = -(CONFIG.iconPx(d.iconRatio) / 2 + 0.5 * 56) / CONFIG.LAP;
+      return Math.max(0, Math.min(delta, tail - past));
+    }
     return Math.max(delta, tail - CONFIG.D_MAX);                     // 後ろは上限まで
   }
 
@@ -154,7 +161,9 @@
   /** ホイール・矢印キー用。即時に動かす（出力側は Smoother で滑らかになる） */
   function advance(delta) {
     Anim.stop();
-    State.data.finish = null;
+    /* ゴール後に奥へ送るあいだは決着の表示（金色の「決着 x-y-z」）を残す。戻すときは消す */
+    var ld0 = State.leaderD();
+    if (!(delta > 0 && ld0 !== null && ld0 <= 1e-6)) State.data.finish = null;
     var dd = clampAdvance(delta);
     if (!dd) return;
     Undo.push('wheel');
