@@ -2,7 +2,7 @@
    board.js — 盤面の描画（1枚のSVG・viewBox 960×572）  v2
 
    ・バンク（オーバル）・地点名・ゴール線・打鐘の印は起動時に1回だけ描く
-   ・見出し（場名 R・級班）と局面名はインフィールド中央（要件定義_v2 §4.1）
+   ・見出し（場名 R・級班）と局面名はコースの上の見出し帯（9/27 案3で移設・旧＝インフィールド中央）
    ・選手・誘導員・連結バーは State.data を見て描く
    ・ドックと出力で同じ絵（§2-7）。縦横比は保ったまま窓に合わせて拡大縮小
    =========================================================== */
@@ -73,19 +73,26 @@ var Board = (function () {
     label(g, gx, inBot - 30, 'ゴール');
     label(g, cx + 40, inTop + 42, 'バック');
     label(g, bIn.x, inTop + 42, '🔔 打鐘');
-    /* 角の名前は半円の中心寄り（半径約50px）。縁寄りだとコーナーを回る内レーンの苗字チップ（半径約97px）と被る */
-    label(g, G.XR + 38, T.CY + 42, '1角');
-    label(g, G.XR + 38, T.CY - 30, '2角');
-    label(g, G.XL - 38, T.CY - 30, '3角');
-    label(g, G.XL - 38, T.CY + 42, '4角');
+    /* 角の名前は半円の中心寄り（半径約30px）。インフィールドの半径は59px（案3・9/27）＝旧位置（約56px）だと白線にかかって切れた。
+       縁寄りだとコーナーを回る内レーンの苗字チップとも被る */
+    label(g, G.XR + 22, T.CY + 22, '1角');
+    label(g, G.XR + 22, T.CY - 8, '2角');
+    label(g, G.XL - 22, T.CY - 8, '3角');
+    label(g, G.XL - 22, T.CY + 22, '4角');
   }
 
+  /* 見出し帯（コースの上・高さ TRACK.HEAD）：左に場名 R と級班、右端に局面の札（9/27 案3）。
+     インフィールドが細くなり、中央に置くと決着の札に苗字が被ったため外へ出した */
+  var HEAD_PAD = 24, BADGE_H = 48, BADGE_FONT = 28;
   function buildTitle(g) {
-    titleMain = label(g, T.CX, T.CY - 16, '', 42, '#fff', 800);
-    titleSub = label(g, T.CX, T.CY + 12, '', 17, 'rgba(255,255,255,.84)', 700);
-    phaseBg = el('rect', { x: T.CX - 62, y: T.CY + 26, width: 124, height: 32, rx: 8, fill: '#3d8bfd' });
+    titleMain = label(g, HEAD_PAD, 50, '', 42, '#fff', 800);
+    titleMain.setAttribute('text-anchor', 'start');
+    titleSub = label(g, HEAD_PAD + 2, 80, '', 19, 'rgba(255,255,255,.84)', 700);
+    titleSub.setAttribute('text-anchor', 'start');
+    var by = (T.HEAD - BADGE_H) / 2;
+    phaseBg = el('rect', { x: T.W - HEAD_PAD - 150, y: by, width: 150, height: BADGE_H, rx: 10, fill: '#3d8bfd' });
     g.appendChild(phaseBg);
-    phaseText = label(g, T.CX, T.CY + 49, '', 19, '#fff', 800);
+    phaseText = label(g, T.W - HEAD_PAD - 75, by + BADGE_H / 2 + BADGE_FONT * 0.36, '', BADGE_FONT, '#fff', 800);
   }
 
   /** 先頭の位置 → 局面名。先頭が到達済みの局面のうち最後のもの（スタートを出た後〜赤板の前は「周回中」） */
@@ -207,9 +214,11 @@ var Board = (function () {
     phaseBg.setAttribute('fill', fin ? '#c9a227' : '#3d8bfd');
     if (fin) ph = { key: 'goal', label: '決着 ' + fin.join('-') };
     phaseText.textContent = ph ? ph.label : '';
-    var w = ph ? Math.max(124, Array.from(ph.label).length * 19 + 36) : 0;
-    phaseBg.setAttribute('x', T.CX - w / 2);
+    /* 札は右端そろえ（文字数で幅が変わっても右の縁は動かない） */
+    var w = ph ? Math.max(150, Array.from(ph.label).length * BADGE_FONT + 40) : 0;
+    phaseBg.setAttribute('x', T.W - HEAD_PAD - w);
     phaseBg.setAttribute('width', w);
+    phaseText.setAttribute('x', T.W - HEAD_PAD - w / 2);
     phaseBg.style.display = ph ? '' : 'none';
 
     Bars.sync(d, view, px);
