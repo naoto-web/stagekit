@@ -2768,6 +2768,13 @@
       return;
     }
     var key = window.Derive.raceKey(vName, rNo);
+    if (SL2 && ids === SL_TALK) { // 🧪2段版（§47・&sl2=1のときだけ）
+      if (!narabiAuto[key]) ensureNarabi(vName, rNo, key);
+      renderSl2(el, race, key);
+      renderNarabi(vName, rNo, ids.narabi);
+      fitSl2(el);
+      return;
+    }
     var scores = narabiAuto[key] ? narabiAuto[key].scores || {} : {};
     var ages = narabiAuto[key] ? narabiAuto[key].ages || {} : {}; // 年齢＝得点と同じkeirin.jp JSJ002由来（8/15）
     // 競走得点の1位＝赤・2位＝青（同点は同色）
@@ -2794,6 +2801,58 @@
     }).join("");
     renderNarabi(vName, rNo, ids.narabi);
     fitSlist(ids.list); // ライン表示で高さが変わった後に9車の収まりを確認（8/6 FB30）
+  }
+
+  /* ---------- 🧪①出走表の2段版（9/27 Naoto・要件定義§47・&sl2=1） ----------
+     「縦長で下が空いている」→1人2段にして情報を増やす。空席ワイプの出走表（renderSeatCard）と同じデータ
+     （narabi応答の cards＝級 c／脚 k／期 t／st[4..7]＝B H S 勝率）。
+     上段＝車番・選手名／下段＝府県 期 年齢。右に2段ぶちぬきで 脚｜得点｜B・H・S｜勝率（9/27 Naoto＝級は不要・脚は表の列に）。
+     得点・B・H・S・勝率はレース内の1位赤・2位青（空席ワイプと同じ）。行の高さは fitSl2 が実寸から割る */
+  var SL2 = params.get("sl2") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&sl2=0 で旧1段版
+  var SL2_COLS = [{ i: 4, h: "B" }, { i: 5, h: "H" }, { i: 6, h: "S" }, { i: 7, h: "勝率" }];
+  function rankOf(vals) { // 大きい順・重複なし・0と空は数えない
+    var vs = [];
+    vals.forEach(function (v) { v = parseFloat(v); if (v > 0 && vs.indexOf(v) < 0) vs.push(v); });
+    return vs.sort(function (a, b) { return b - a; });
+  }
+  function topCls(v, rk) {
+    v = parseFloat(v);
+    return !(v > 0) ? "" : v === rk[0] ? " top1" : (rk.length > 1 && v === rk[1]) ? " top2" : "";
+  }
+  function renderSl2(el, race, key) {
+    var na = narabiAuto[key] || {};
+    var scores = na.scores || {}, ages = na.ages || {}, cards = na.cards || {};
+    var stOf = function (p) { return (cards[String(p.no)] || {}).st || []; };
+    var scRank = rankOf(race.racers.map(function (p) { return scores[String(p.no)]; }));
+    var colRank = SL2_COLS.map(function (c) { return rankOf(race.racers.map(function (p) { return stOf(p)[c.i]; })); });
+    var head = '<li class="sl2-th"><span></span><span></span><span class="sl2-ky">脚</span><span class="sl2-sc">得点</span>' +
+      SL2_COLS.map(function (c) { return '<span class="sl2-n' + (c.i === 7 ? " sl2-wr" : "") + '">' + c.h + "</span>"; }).join("") + "</li>";
+    el.innerHTML = head + race.racers.map(function (p) {
+      var c = cards[String(p.no)] || {}, st = stOf(p);
+      var sc = scores[String(p.no)] || "";
+      var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
+      var sub = [p.pref, c.t ? c.t + "期" : "", age ? age + "歳" : ""].filter(Boolean).join(" ");
+      var nums = SL2_COLS.map(function (col, j) {
+        var v = String(st[col.i] == null ? "" : st[col.i]).trim();
+        return '<span class="sl2-n' + (col.i === 7 ? " sl2-wr" : "") + (!v || v === "0" ? " z" : "") +
+          topCls(v, colRank[j]) + '">' + esc(v === "" ? "-" : v) + "</span>";
+      }).join("");
+      return '<li class="sl2-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
+        '<span class="sl2-nm"><span class="sl2-name">' + esc(p.name) +
+        (c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
+        '<span class="sl2-sub">' + esc(sub) + "</span></span>" +
+        '<span class="sl2-ky">' + esc(c.k || p.kyaku || "") + "</span>" +
+        '<span class="sl2-sc' + topCls(sc, scRank) + '">' + esc(sc || "-") + "</span>" + nums + "</li>";
+    }).join("");
+    el.classList.add("sl2");
+  }
+  /** 行の高さ＝（リストの高さ − 見出し）÷ 車数（上限 SL2_ROW）。字の大きさは行の高さに比例（CSS --sl2-rh） */
+  var SL2_ROW = 66;
+  function fitSl2(el) {
+    var n = el.querySelectorAll(".sl2-row").length, th = el.querySelector(".sl2-th");
+    if (!n || !el.clientHeight) return;
+    var rh = Math.min(SL2_ROW, Math.floor((el.clientHeight - (th ? th.offsetHeight : 0) - 4) / n));
+    el.style.setProperty("--sl2-rh", rh + "px");
   }
 
   /* ---------- 空席ワイプの出走表（9/25 Naoto・🧪SEATCARD） ----------
