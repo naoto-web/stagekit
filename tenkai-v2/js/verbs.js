@@ -148,8 +148,9 @@ var Verbs = (function () {
       target[no] = { d: win + i * GAP * CAR, lane: laneOf(no) };
     });
     var restHead = win + ((t.length - 1) * GAP + 1.3) * CAR;
+    /* 4着以下は真ん中のレーンに一列（9/27 Naoto「最初みんな真ん中に行って、ゴール後も真ん中のまま」）。旧＝内に一列 */
     byD(c.filter(function (n) { return t.indexOf(n) === -1; })).forEach(function (no, j) {
-      target[no] = { d: restHead + j * CONFIG.LAYOUT.gapInLine * CAR, lane: -1 };
+      target[no] = { d: restHead + j * CONFIG.LAYOUT.gapInLine * CAR, lane: 0 };
     });
     return target;
   }

@@ -291,7 +291,11 @@
       /* 先頭の進み（dd）は渡さない＝今の先頭→行き先の先頭の差で自動に決まる。
          🐞9/27 Naoto「ボタンを押した瞬間、みんなの位置がずれる」：旧＝dd: 0 − lead（先頭の行き先＝ゴール線の前提）。
          決着で3人がゴール線を越えるようにした（行き先の先頭＝ゴール線の先）ので、その差だけ動き出しで全員が飛んでいた */
+      /* 4着以下は通り道も真ん中のレーン（9/27 Naoto「まずみんな外へ行って最後に内へ寄る」→「最初から真ん中・ゴール後も真ん中」） */
+      var prefLanes = {};
+      Object.keys(target).forEach(function (no) { if (order.slice(0, 3).indexOf(+no) === -1) prefLanes[no] = 0; });
       Anim.reform(target, {
+        prefLanes: prefLanes,
         ms: CONFIG.ANIM.finishMs,
         onFrame: function () { renderPositions(); },
         onDone: function (ok) {

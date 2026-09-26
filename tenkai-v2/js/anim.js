@@ -284,10 +284,11 @@ var Anim = (function () {
   function planKey(R, nos, swap) {
     return nos.slice().sort().map(function (no) {
       var s = R[no];
-      return swap ? [no, r4(s.relB), s.laneB, r4(s.relA), s.laneA].join(',') : [no, r4(s.relA), s.laneA, r4(s.relB), s.laneB].join(',');
+      return (swap ? [no, r4(s.relB), s.laneB, r4(s.relA), s.laneA] : [no, r4(s.relA), s.laneA, r4(s.relB), s.laneB]).concat([s.pref]).join(',');
     }).join(';');
   }
-  function buildR(fromPos, toPos, nos) {
+  /** prefLanes＝通り道の好みのレーンを選手ごとに固定する（決着の4着以下＝真ん中・9/27 Naoto）。無ければ動きから決める */
+  function buildR(fromPos, toPos, nos, prefLanes) {
     var CAR = CONFIG.CAR, leadFrom = null, leadTo = null;
     nos.forEach(function (no) {
       if (leadFrom === null || fromPos[no].d < leadFrom) leadFrom = fromPos[no].d;
@@ -297,7 +298,8 @@ var Anim = (function () {
     nos.forEach(function (no) {
       var relA = fromPos[no].d - leadFrom, relB = toPos[no].d - leadTo, move = relA - relB;
       R[no] = { relA: relA, relB: relB, laneA: fromPos[no].lane, laneB: toPos[no].lane, move: move,
-                pref: move > 0.5 * CAR ? 1 : (move < -0.5 * CAR ? 0 : toPos[no].lane) };
+                pref: (prefLanes && prefLanes[no] != null) ? prefLanes[no]
+                    : (move > 0.5 * CAR ? 1 : (move < -0.5 * CAR ? 0 : toPos[no].lane)) };
     });
     return R;
   }
@@ -357,7 +359,7 @@ var Anim = (function () {
 
     var cur0 = {};
     nos.forEach(function (no) { cur0[no] = { d: data.riders[no].d, lane: data.riders[no].lane }; });
-    var R = buildR(cur0, target, nos);
+    var R = buildR(cur0, target, nos, o.prefLanes);
     var plan = getPlan(R, nos);
     var bestCost = plan.overlap;
     /* 逆再生のときは t を 1−t にして同じ道をたどる */
