@@ -606,7 +606,12 @@ body.tfx .vt-rows { min-height: 0; }
 .vt-row b.cd-pulse { display: inline-block; transform-origin: right center; animation: cdPulse .7s ease-out; }
 @keyframes cdPulse { 0% { transform: scale(1.28); } 60%, 100% { transform: scale(1); } }
 /* B-3 締切＝ハンコ（枠付き・水平）。跨いだ瞬間だけ上から押す */
-body.tfx .vt-row b.closed { display: inline-block; border: 3px solid currentColor; border-radius: 6px; padding: 1px 8px 2px; }
+/* 9/26 Naoto「赤の時の締切のハンコがつぶれて見える」＝旧 padding 1px 8px 2px・line-height 1 で枠線が字に張り付いていた→余白を字の大きさに比例（em）・3〜4場は枠線2px */
+body.tfx .vt-row b.closed { display: inline-block; border: 3px solid currentColor; border-radius: 6px; padding: .08em .3em .12em; line-height: 1.05; font-size: 26px; }
+/* 2場は行の高さに余裕がない（余白を広げるとカードが181pxに伸びて最下行が切れた）＝字を30→26pxにして余白を確保・行の高さは旧と同じ約39px */
+.timer-cards.vt-n3 .vt-row b.closed, .timer-cards.vt-n4 .vt-row b.closed { border-width: 2px; border-radius: 5px; padding: .14em .32em .18em; }
+body.tfx .timer-cards.vt-n3 .vt-row b.closed { font-size: 20px; }
+body.tfx .timer-cards.vt-n4 .vt-row b.closed { font-size: 17px; }
 body.tfx .vt-row b.closed.stamp-in { animation: vtStamp .45s cubic-bezier(.3, 1.4, .5, 1) both; }
 @keyframes vtStamp { 0% { transform: scale(2.6); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1); } }
 /* 締切まで1時間以上＝残りでなく締切の時刻（JS setCount）。灰色＝残り時間（同じ「数字:数字」）と見分ける */
