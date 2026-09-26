@@ -331,27 +331,32 @@ var Verbs = (function () {
     var gap = CONFIG.LAYOUT.gapInLine * CAR;
     var bp = r.paths[blocker];
     function bAt(t) { return dAt(bp, t); }
+    /* 9/27 Naoto「めっちゃ外から抜こうとしてブロックされてるので、ブロックされた感がない」→
+       主語は番手のすぐ外（隣のレーン）まで寄る。番手が半レーン外へ振るのと同時に、主語は外へ弾き出される。
+       2人は同じ瞬間（t 0.4→0.5）に外へ動く＝間隔は常に1レーン（54px）以上 */
     var bLane = pos(blocker).lane;
-    var swing = Math.min(1, Math.round(bLane) + 1);          // 番手が振る先（1つ外）
-    var sLane = Math.min(1, swing + 1);                      // 主語はさらに外＝番手と重ならない
+    var near = Math.min(1, Math.round(bLane) + 1);    // 主語が寄るレーン＝番手のすぐ外
+    var swing = bLane + 0.5;                           // 番手が振る先（半レーン外）
+    var pushed = Math.min(1, near + 0.7);              // 主語が弾き出される先（路面からはみ出さないよう外レーンまで）
     r.S.forEach(function (no, i) {
       var p = pos(no), back = finalOf(r.paths, no);
       r.paths[no] = [
         { t: 0, d: p.d, lane: p.lane },
-        { t: 0.15, d: p.d + (bAt(0.45) + i * gap - p.d) * 0.2, lane: sLane },
-        { t: 0.45, d: bAt(0.45) + i * gap, lane: sLane },   // 番手の横まで
-        { t: 0.6, d: bAt(0.6) + i * gap, lane: sLane },     // ブロックされる
-        { t: 0.88, d: back.d, lane: sLane },                // 引く
+        { t: 0.12, d: p.d + (bAt(0.4) + i * gap - p.d) * 0.15, lane: near },
+        { t: 0.4, d: bAt(0.4) + i * gap, lane: near },      // 番手の真横まで寄る
+        { t: 0.5, d: bAt(0.5) + i * gap, lane: pushed },    // ブロックされて外へ弾かれる
+        { t: 0.62, d: bAt(0.62) + i * gap + 0.3 * CAR, lane: pushed },
+        { t: 0.88, d: back.d, lane: pushed },               // 引く
         { t: 1, d: back.d, lane: p.lane }                   // 元の位置へ
       ];
     });
     var bf = finalOf(r.paths, blocker);
     r.paths[blocker] = [
       { t: 0, d: bp[0].d, lane: bLane },
-      { t: 0.35, d: bAt(0.35), lane: bLane },
+      { t: 0.4, d: bAt(0.4), lane: bLane },
       { t: 0.5, d: bAt(0.5), lane: swing },   // 外へ振って止める
-      { t: 0.65, d: bAt(0.65), lane: swing },
-      { t: 0.9, d: bAt(0.9), lane: bLane },   // 元の位置へ戻る
+      { t: 0.62, d: bAt(0.62), lane: swing },
+      { t: 0.8, d: bAt(0.8), lane: bLane },   // 元の位置へ戻る
       { t: 1, d: bf.d, lane: bLane }
     ];
     return { paths: r.paths, hint: 'まくり失敗：' + label(blocker) + ' のブロックで ' + r.S.join('') + ' は止められて引きました' };
