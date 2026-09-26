@@ -291,8 +291,8 @@ var Verbs = (function () {
     return { paths: paths, hint: '飛びつき失敗：' + label(no) + ' は ' + label(front[1]) + ' に弾かれて元の位置へ' };
   }
 
-  /** まくり：選んだ選手（ラインの先頭ならライン全員）が外を上がって先頭の横まで。全体＋1車身 */
-  function makuri(sel) {
+  /** まくり（成功・失敗）の共通：主語（ラインの先頭を選んだら後続も続く）・先頭・外のレーン */
+  function makuriPrep(sel, adv) {
     var S = sel.type === 'line' ? lineOf(sel.nos[0]) : sel.nos.slice();
     if (sel.type === 'rider') {
       var L = lineOf(sel.nos[0]);
@@ -300,14 +300,44 @@ var Verbs = (function () {
     }
     var lead = leaderNo();
     if (S.indexOf(lead) !== -1) return { error: '先頭の選手・ラインはまくれません（後ろの選手を選んでください）' };
-    var paths = basePaths(1);
+    var paths = basePaths(adv);
     var lf = finalOf(paths, lead);
-    var laneOut = Math.min(1, Math.max(0, lf.lane + 1));
-    S.forEach(function (no, i) {
-      var fin = { d: lf.d + i * CONFIG.LAYOUT.gapInLine * CAR, lane: laneOut };
-      paths[no] = passPath(no, fin, laneOut, 0.2, 0.95);
+    return { S: S, lead: lead, paths: paths, lf: lf, laneOut: Math.min(1, Math.max(0, lf.lane + 1)) };
+  }
+
+  /** まくり（成功＝まくり切る・9/27 Naoto）：外を上がって先頭を抜き去り、前に出て内へ入る。後続も付いてくる。全体＋2車身。
+      旧＝先頭の横まで来て止まる（まくり切るか止められるかは手で決める必要があった） */
+  function makuri(sel) {
+    var r = makuriPrep(sel, 2);
+    if (r.error) return r;
+    var gap = CONFIG.LAYOUT.gapInLine * CAR, n = r.S.length;
+    r.S.forEach(function (no, i) {
+      /* 最後尾の主語が元の先頭の1.3車身前＝内へ入っても重ならない */
+      var fin = { d: r.lf.d - (n - i) * gap - 0.25 * CAR, lane: -1 };
+      r.paths[no] = passPath(no, fin, r.laneOut, 0.2, 0.82);
     });
-    return { paths: paths, hint: 'まくり：' + S.join('') + ' が外から ' + label(lead) + ' の横まで上がりました' };
+    return { paths: r.paths, hint: 'まくり：' + r.S.join('') + ' が外から ' + label(r.lead) + ' をまくり切りました' };
+  }
+
+  /** まくり失敗（まくり不発）：外を上がって先頭の横まで来たところで失速し、外のまま後ろへ下がる。全体＋1車身 */
+  function makuriFail(sel) {
+    var r = makuriPrep(sel, 1);
+    if (r.error) return r;
+    var gap = CONFIG.LAYOUT.gapInLine * CAR;
+    var L0 = pos(r.lead).d, L1 = r.lf.d;
+    function leadAt(t) { return L0 + (L1 - L0) * t; }
+    r.S.forEach(function (no, i) {
+      var p = pos(no), back = finalOf(r.paths, no);
+      var side = function (t) { return leadAt(t) + i * gap; };
+      r.paths[no] = [
+        { t: 0, d: p.d, lane: p.lane },
+        { t: 0.15, d: p.d + (side(0.45) - p.d) * 0.2, lane: r.laneOut },
+        { t: 0.45, d: side(0.45), lane: r.laneOut },   // 先頭の横まで
+        { t: 0.6, d: side(0.6), lane: r.laneOut },     // 並んだまま少し
+        { t: 1, d: back.d + 1.5 * CAR, lane: r.laneOut }   // 失速して元の位置より少し後ろへ（外のまま）
+      ];
+    });
+    return { paths: r.paths, hint: 'まくり失敗：' + r.S.join('') + ' は ' + label(r.lead) + ' の横で失速して下がりました' };
   }
 
   /** 差し／突き抜け共通：主語が相手の前へ（空いている側のレーンを通る）。全体＋2車身 */
@@ -414,6 +444,7 @@ var Verbs = (function () {
     tobitsuki: { label: '飛びつき', fn: tobitsuki },
     tobitsukiFail: { label: '飛びつき失敗', fn: tobitsukiFail },
     makuri: { label: 'まくり', fn: makuri },
+    makuriFail: { label: 'まくり失敗', fn: makuriFail },
     sashi: { label: '差し', fn: sashi },
     tsukinuke: { label: '突き抜け', fn: tsukinuke },
     oshikiri: { label: '押切', fn: oshikiri },
