@@ -294,6 +294,10 @@
       /* 4着以下は通り道も真ん中のレーン（9/27 Naoto「まずみんな外へ行って最後に内へ寄る」→「最初から真ん中・ゴール後も真ん中」） */
       var prefLanes = {};
       Object.keys(target).forEach(function (no) { if (order.slice(0, 3).indexOf(+no) === -1) prefLanes[no] = 0; });
+      /* 動詞がゴールでの内外を決めている（差し・突き抜け）ときは、上位3人もそのレーンを走り通す
+         （9/27 Naoto「差しで先頭が一度真ん中に来て、ゴール後に内へ行く」→「最初から内側をずっと」）。
+         旧＝下がる選手（先頭→2着）は真ん中を好む計画だった */
+      if (lanes) Object.keys(lanes).forEach(function (no) { prefLanes[no] = lanes[no]; });
       Anim.reform(target, {
         prefLanes: prefLanes,
         ms: CONFIG.ANIM.finishMs,
