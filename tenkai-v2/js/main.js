@@ -757,10 +757,25 @@
       }
     });
 
-    /* 配置を戻す＝「今の並びのまま、スタートの隊列を作り直す」（ラインは消えない） */
+    /* 配置を戻す（並び）（9/27 Naoto）＝並びの一列（ライン順・全員内）を赤板の位置に置き直す。ラインは消えない。
+       並びが無いレースは車番順の単騎で一列 */
+    document.getElementById('reset-line-btn').addEventListener('click', function () {
+      var d = State.data;
+      Anim.stop();
+      if (!d.cars || !d.cars.length) { setHint('出走選手がいません。', true); return; }
+      Undo.push();
+      d.finish = null;
+      State.setRiders(lineFormation(CONFIG.PHASES[1].d));
+      render();
+      setHint('並び ' + (d.lines && d.lines.length ? d.lines.map(function (l) { return l.join('-'); }).join(' / ') : '（車番順）') +
+              ' の一列（赤板の位置）に戻しました。（取り消しで元に戻せます）');
+    });
+
+    /* 配置を戻す（スタート）＝「今の並びのまま、スタートの隊列を作り直す」（ラインは消えない） */
     resetBtn.addEventListener('click', function () {
       var d = State.data;
       Anim.stop();
+      d.finish = null;
 
       if (d.lines && d.lines.length) {
         Undo.push();

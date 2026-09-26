@@ -14,7 +14,7 @@ var Board = (function () {
   var el = Icons.el;
   var FONT = Icons.FONT;
 
-  var svg, wallRect, barsLayer, ridersLayer, titleMain, titleSub, phaseBg, phaseText;
+  var svg, wallRect, barsLayer, ridersLayer, titleMain, titleSub, phaseBg, phaseText, narabiG;
   var riderEls = {};
   var pacerEl = null;
 
@@ -93,6 +93,35 @@ var Board = (function () {
     phaseBg = el('rect', { x: T.W - HEAD_PAD - 150, y: by, width: 150, height: BADGE_H, rx: 10, fill: '#3d8bfd' });
     g.appendChild(phaseBg);
     phaseText = label(g, T.W - HEAD_PAD - 75, by + BADGE_H / 2 + BADGE_FONT * 0.36, '', BADGE_FONT, '#fff', 800);
+    narabiG = el('g', { 'class': 'narabi' });
+    g.appendChild(narabiG);
+  }
+
+  /* 見出し帯の真ん中に並び（9/27 Naoto）：「並び」＋枠色の丸をラインごとに帯でつなぐ。出力にも出る（視聴者に見える）。
+     場名（左）と局面の札（右）のあいだ＝中心 x 480 にそろえる。9車・三分戦で幅約330px */
+  var NB_R = 13, NB_IN = 4, NB_BETWEEN = 18, NB_LABEL = 44, NB_Y = T.HEAD / 2;
+  function drawNarabi(d) {
+    while (narabiG.firstChild) narabiG.removeChild(narabiG.firstChild);
+    var cars = d.cars || [];
+    var lines = (d.lines || []).map(function (l) { return l.filter(function (n) { return cars.indexOf(n) !== -1; }); })
+                               .filter(function (l) { return l.length; });
+    if (!lines.length) return;
+    var n = 0; lines.forEach(function (l) { n += l.length; });
+    var w = NB_LABEL + n * 2 * NB_R + (n - lines.length) * NB_IN + (lines.length - 1) * NB_BETWEEN;
+    var x = T.CX - w / 2;
+    label(narabiG, x + NB_LABEL / 2 - 4, NB_Y + 6, '並び', 17, 'rgba(255,255,255,.75)', 700);
+    x += NB_LABEL;
+    lines.forEach(function (l) {
+      var lw = l.length * 2 * NB_R + (l.length - 1) * NB_IN;
+      if (l.length > 1) narabiG.appendChild(el('rect', { x: x - 3, y: NB_Y - NB_R - 3, width: lw + 6, height: 2 * NB_R + 6, rx: NB_R + 3, fill: 'rgba(255,255,255,.18)' }));
+      l.forEach(function (no) {
+        var c = CONFIG.COLORS[no] || CONFIG.COLORS[1];
+        narabiG.appendChild(el('circle', { cx: x + NB_R, cy: NB_Y, r: NB_R, fill: c.bg, stroke: c.ring, 'stroke-width': 1.5 }));
+        label(narabiG, x + NB_R, NB_Y + 6, String(no), 17, c.fg, 800);
+        x += 2 * NB_R + NB_IN;
+      });
+      x += NB_BETWEEN - NB_IN;
+    });
   }
 
   /** 先頭の位置 → 局面名。先頭が到達済みの局面のうち最後のもの（スタートを出た後〜赤板の前は「周回中」） */
@@ -239,6 +268,7 @@ var Board = (function () {
     wallRect.setAttribute('fill', d.bg === 'green' ? '#00b140' : '#2b313a');
     titleMain.textContent = d.titleMain || '';
     titleSub.textContent = d.titleSub || '';
+    drawNarabi(d);
     Bars.rebuild(d);
     return positions(d, view);
   }
