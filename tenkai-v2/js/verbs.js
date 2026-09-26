@@ -139,9 +139,10 @@ var Verbs = (function () {
     });
     /* laneMap＝動詞が内外を決めるとき（差し＝先頭 内・番手 中・3番手 外・9/27 Naoto）。無ければいまの内外の順 */
     function laneOf(no) { return laneMap && laneMap[no] != null ? laneMap[no] : [-1, 0, 1][byLane.indexOf(no)]; }
-    /* 3人ともゴール線を完全に越えるまで走る（9/27 Naoto）：3着の丸の後ろの縁がゴール線から約0.2車身先。
+    /* 3人ともゴール線を完全に越えるまで走る（9/27 Naoto）：3着の丸の後ろの縁がゴール線から約0.5車身先。
        1着はその0.7車身先、2着は0.35車身先。4着以下は1着からの間隔を今までどおり（1.6車身〜）＝ゴール線の手前に残る */
-    var third = -(CONFIG.iconPx(data().iconRatio) / 2 + 0.2 * 56) / CONFIG.LAP;   // 丸の半径＋0.2車身（56px基準）ぶん先
+    /* 丸の半径＋0.5車身（56px基準）ぶん先。0.2車身だと3着が線の上に乗って見えた（9/27 Naoto「ちゃんと3着までゴールイン」） */
+    var third = -(CONFIG.iconPx(data().iconRatio) / 2 + 0.5 * 56) / CONFIG.LAP;
     /* 着差＝1車身ずつ（9/27 Naoto「着順が分かりづらい」→旧0.35車身から広げた）。4着以下は3着から1.3車身後ろ〜 */
     var GAP = CONFIG.LAYOUT.finishGap;
     var win = third - (t.length - 1) * GAP * CAR;
@@ -397,17 +398,21 @@ var Verbs = (function () {
     return passOver(no, best, '差し');
   }
 
-  /** 突き抜け：番手が同じラインの先頭を交わす */
+  /** 突き抜け：最終ストレートでは、3番手が先頭・番手をまとめて抜いて1着（9/27 Naoto）＝1着 3番手・2着 番手・3着 先頭。
+      ゴールでの内外は差しと同じ＝先頭が内・番手が真ん中・3番手が外（先頭→番手→3番手の順に内側を走る）。
+      選ぶのはそのラインの誰か（ラインでも可）。3人いないラインは使えない。
+      最終ストレートより前は従来どおり、選んだ選手が同じラインの先頭の前へ出る */
   function tsukinuke(sel) {
-    var no = sel.type === 'line' ? lineOf(sel.nos[0])[1] : sel.nos[0];
-    if (no == null) return { error: '単騎のラインです（突き抜けは番手の選手を選んでください）' };
-    var L = lineOf(no);
-    if (L[0] === no) return { error: label(no) + ' はラインの先頭です（突き抜けは番手の選手を選んでください）' };
-    /* 最終ストレートなら 1着 番手・2着 ラインの先頭・3着 ラインの3番手（いなければ次の選手） */
+    var L = lineOf(sel.nos[0]);
     if (atStraight()) {
-      var third = L.length > 2 ? L[L.indexOf(no) + 1] : null;
-      return { finish: fillTop([no, L[0], third]), hint: '突き抜け：' + label(no) + ' が ' + label(L[0]) + ' を抜いて1着' };
+      if (L.length < 3) return { error: '突き抜けは3番手までいるラインで使います（ライン ' + L.join('') + ' は' + L.length + '人）' };
+      var lanes = {};
+      lanes[L[0]] = -1; lanes[L[1]] = 0; lanes[L[2]] = 1;
+      return { finish: [L[2], L[1], L[0]], lanes: lanes, hint: '突き抜け：' + label(L[2]) + ' が ' + label(L[1]) + '・' + label(L[0]) + ' を抜いて1着' };
     }
+    var no = sel.type === 'line' ? L[1] : sel.nos[0];
+    if (no == null) return { error: '単騎のラインです（突き抜けは番手の選手を選んでください）' };
+    if (L[0] === no) return { error: label(no) + ' はラインの先頭です（突き抜けは番手の選手を選んでください）' };
     return passOver(no, L[0], '突き抜け');
   }
 
