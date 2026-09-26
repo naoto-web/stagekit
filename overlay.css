@@ -545,7 +545,7 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .timer-cards.vt-n3 .vt-head { font-size: 21px; gap: 6px; }
 .timer-cards.vt-n3 .vt-head .vt-start-s { font-size: 14px; }
 .timer-cards.vt-n3 .vt-rows { padding: 4px 10px; }
-.timer-cards.vt-n3 .vt-row { font-size: 20px; }
+.timer-cards.vt-n3 .vt-row { font-size: 18px; } /* 9/26 Naoto「潰れて見える」＝20→18でラベルと数字（26px）の間に隙間を作る（①は#scene-talk側で22pxのまま） */
 .timer-cards.vt-n3 .vt-row b { font-size: 26px; }
 .timer-cards.vt-n3 .vt-row b.closed { font-size: 20px; }
 .timer-cards.vt-n4 .vt-head { font-size: 19px; gap: 5px; }
