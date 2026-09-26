@@ -130,13 +130,15 @@ var Verbs = (function () {
       上位3人は1車身ずつの差（config.js の LAYOUT.finishGap）。3着までゴール線を完全に越えたところで止める。
       上位3人は内外が重ならないよう、いまの内外の順に 内・中・外 へ振る。
       4着以下はいまの並び順のまま、1.6車身後ろから内に一列 */
-  function finishTarget(top) {
+  function finishTarget(top, laneMap) {
     var c = cars();
     var t = top.filter(function (n) { return c.indexOf(n) !== -1; }).slice(0, 3);
     var byLane = t.slice().sort(function (a, b) {
       var ra = data().riders[a], rb = data().riders[b];
       return (ra.lane - rb.lane) || (ra.d - rb.d);
     });
+    /* laneMap＝動詞が内外を決めるとき（差し＝先頭 内・番手 中・3番手 外・9/27 Naoto）。無ければいまの内外の順 */
+    function laneOf(no) { return laneMap && laneMap[no] != null ? laneMap[no] : [-1, 0, 1][byLane.indexOf(no)]; }
     /* 3人ともゴール線を完全に越えるまで走る（9/27 Naoto）：3着の丸の後ろの縁がゴール線から約0.2車身先。
        1着はその0.7車身先、2着は0.35車身先。4着以下は1着からの間隔を今までどおり（1.6車身〜）＝ゴール線の手前に残る */
     var third = -(CONFIG.iconPx(data().iconRatio) / 2 + 0.2 * 56) / CONFIG.LAP;   // 丸の半径＋0.2車身（56px基準）ぶん先
@@ -145,7 +147,7 @@ var Verbs = (function () {
     var win = third - (t.length - 1) * GAP * CAR;
     var target = {};
     t.forEach(function (no, i) {
-      target[no] = { d: win + i * GAP * CAR, lane: [-1, 0, 1][byLane.indexOf(no)] };
+      target[no] = { d: win + i * GAP * CAR, lane: laneOf(no) };
     });
     var restHead = win + ((t.length - 1) * GAP + 1.3) * CAR;
     byD(c.filter(function (n) { return t.indexOf(n) === -1; })).forEach(function (no, j) {
@@ -382,8 +384,16 @@ var Verbs = (function () {
       if (r.d < me.d - 1e-6 && (best === null || r.d > data().riders[best].d)) best = o;
     });
     if (best === null) return { error: label(no) + ' の前に選手がいません' };
-    /* 最終ストレートなら、交わしてそのままゴール＝1着 主語・2着 交わされた選手（9/27） */
-    if (atStraight()) return { finish: fillTop([no, best]), hint: '差し：' + label(no) + ' が ' + label(best) + ' を差して1着' };
+    /* 最終ストレートなら、交わしてそのままゴール（9/27 Naoto）＝1着 主語（番手）・2着 差された選手（先頭）・3着 主語のすぐ後ろ（3番手）。
+       ゴールでの内外＝先頭が内・番手が真ん中・3番手が外（番手は先頭の外から差し、3番手はさらに外を伸びる絵）。
+       主語の後ろに同じラインの選手がいなければ、3着はいまの並び順で次の選手 */
+    if (atStraight()) {
+      var L = lineOf(no), k = L.indexOf(no);
+      var top = fillTop([no, best, k >= 0 && L[k + 1] != null ? L[k + 1] : null]);
+      var lanes = {};
+      lanes[best] = -1; lanes[no] = 0; if (top[2] != null) lanes[top[2]] = 1;
+      return { finish: top, lanes: lanes, hint: '差し：' + label(no) + ' が ' + label(best) + ' を差して1着' };
+    }
     return passOver(no, best, '差し');
   }
 

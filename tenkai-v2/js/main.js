@@ -265,7 +265,7 @@
     Anim.stop();
     var res = Verbs.run(key, sel);
     if (!res || res.error) { setHint((res && res.error) || 'この動きはできません', true); return; }
-    if (res.finish) { doFinish(res.finish, res.hint); return; }   // 最終ストレートの差し・突き抜け・ズブズブ＝3着までゴール
+    if (res.finish) { doFinish(res.finish, res.hint, res.lanes); return; }   // 最終ストレートの差し・突き抜け・ズブズブ＝3着までゴール
     State.data.finish = null;
     Undo.push();
     Anim.path(res.paths, {
@@ -278,12 +278,12 @@
   /** 決着（9/27 Naoto）：着順 order（上位3人）で、今の位置からゴールまで走り切る。
       最終周回（先頭が最終ホームより前）でだけ使える。追い抜く選手の通り道は升目⇔一列と同じ計画（重ならない道）。
       計画に約1秒かかるので、ヒントを先に出してから計算する */
-  function doFinish(order, hint) {
+  function doFinish(order, hint, lanes) {
     var lead = State.leaderD();
     if (lead === null) return;
     if (lead > 1.0 + 1e-6) { setHint('決着は最終周回（最終ホーム以降）で使ってください', true); return; }
     Anim.stop();
-    var target = Verbs.finishTarget(order);
+    var target = Verbs.finishTarget(order, lanes);   // lanes＝動詞が決めたゴールでの内外（差し）。無ければいまの内外の順
     Undo.push();
     State.data.finish = null;
     setHint('決着 ' + order.join('-') + ' を計算しています…');
