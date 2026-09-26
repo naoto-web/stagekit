@@ -54,6 +54,8 @@ var State = (function () {
       lineupText: '',
       /* ライン構成。連結バーの描画と「ラインごと動かす」の単位。例：[[1,3,5],[2,7],[4,6,9]] */
       lines: [],
+      /* 決着した着順（9/27・3連単の入力や最終ストレートの動詞）。先頭がゴール線にいるあいだだけ盤面に「決着 4-2-7」と出す */
+      finish: null,
       /* 車番 → { d:周回位置, lane:内外 } */
       riders: defaultRiders()
     };
@@ -117,6 +119,11 @@ var State = (function () {
         if (l.length) cleaned.push(l);
       });
       d.lines = cleaned;
+    }
+
+    if (Array.isArray(raw.finish)) {
+      var fin = carList(raw.finish);
+      d.finish = fin.length ? fin.slice(0, 3) : null;
     }
 
     if (raw.riders && typeof raw.riders === 'object') {
@@ -225,6 +232,7 @@ var State = (function () {
       data.names = {};
       data.lines = [];
       data.lineupText = '';
+      data.finish = null;
       data.titleMain = '';
       data.titleSub = '';
       data.sel = { date: '', joCode: '', raceNo: 0 };

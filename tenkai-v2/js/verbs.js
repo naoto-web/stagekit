@@ -88,6 +88,58 @@ var Verbs = (function () {
     return '①②③④⑤⑥⑦⑧⑨'.charAt(no - 1) + (n ? ' ' + n : '');
   }
 
+  /* ---------- 決着（9/27 Naoto）：最終ストレートの差し・突き抜け・ズブズブ／3連単の入力 ---------- */
+
+  function straightD() {
+    var d = null;
+    CONFIG.PHASES.forEach(function (p) { if (p.key === 'straight') d = p.d; });
+    return d;
+  }
+  /** 先頭が最終ストレート（4角を抜けた後〜ゴール前）にいるか */
+  function atStraight() {
+    var ln = leaderNo();
+    if (ln === null) return false;
+    var ld = data().riders[ln].d;
+    return ld <= straightD() + 0.004 && ld > 1e-6;
+  }
+
+  /** 着順（上位3人）→ ゴールでの並び。
+      1着はゴール線ちょうど、2着・3着は0.35車身ずつ後ろ（ハナ差・半車身差の絵）。
+      上位3人は内外が重ならないよう、いまの内外の順に 内・中・外 へ振る。
+      4着以下はいまの並び順のまま、1.6車身後ろから内に一列 */
+  function finishTarget(top) {
+    var c = cars();
+    var t = top.filter(function (n) { return c.indexOf(n) !== -1; }).slice(0, 3);
+    var byLane = t.slice().sort(function (a, b) {
+      var ra = data().riders[a], rb = data().riders[b];
+      return (ra.lane - rb.lane) || (ra.d - rb.d);
+    });
+    var target = {};
+    t.forEach(function (no, i) {
+      target[no] = { d: i * 0.35 * CAR, lane: [-1, 0, 1][byLane.indexOf(no)] };
+    });
+    byD(c.filter(function (n) { return t.indexOf(n) === -1; })).forEach(function (no, j) {
+      target[no] = { d: (1.6 + j * CONFIG.LAYOUT.gapInLine) * CAR, lane: -1 };
+    });
+    return target;
+  }
+
+  /** 上位3人を埋める：指定の着順のあと、いまの並び順で次にいる選手から足す */
+  function fillTop(first) {
+    var out = first.filter(function (n, i, a) { return n != null && a.indexOf(n) === i; });
+    byD(cars()).forEach(function (n) { if (out.length < 3 && out.indexOf(n) === -1) out.push(n); });
+    return out.slice(0, 3);
+  }
+
+  /** 3連単の文字（例 4-2-7 / 427 / ４－２－７）→ 着順。出ていない車番・重複はエラー */
+  function parseTrifecta(text) {
+    var digits = (Lineup.normalize(text).match(/[1-9]/g) || []).map(Number);
+    if (digits.length !== 3) return { error: '3連単は車番を3つ入れてください（例 4-2-7）' };
+    if (digits[0] === digits[1] || digits[1] === digits[2] || digits[0] === digits[2]) return { error: '同じ車番が入っています（' + digits.join('-') + '）' };
+    var c = cars(), miss = digits.filter(function (n) { return c.indexOf(n) === -1; });
+    if (miss.length) return { error: miss.join('・') + ' 番は盤面に出ていません' };
+    return { finish: digits };
+  }
   /* ---------- 動詞 ---------- */
 
   /** 上昇：選んだラインが外を上がって、先頭（前受け）ラインの前に入る。前受けは引いて後ろへ。全体＋1車身 */
@@ -141,6 +193,8 @@ var Verbs = (function () {
       if (r.d < me.d - 1e-6 && (best === null || r.d > data().riders[best].d)) best = o;
     });
     if (best === null) return { error: label(no) + ' の前に選手がいません' };
+    /* 最終ストレートなら、交わしてそのままゴール＝1着 主語・2着 交わされた選手（9/27） */
+    if (atStraight()) return { finish: fillTop([no, best]), hint: '差し：' + label(no) + ' が ' + label(best) + ' を差して1着' };
     return passOver(no, best, '差し');
   }
 
@@ -150,6 +204,11 @@ var Verbs = (function () {
     if (no == null) return { error: '単騎のラインです（突き抜けは番手の選手を選んでください）' };
     var L = lineOf(no);
     if (L[0] === no) return { error: label(no) + ' はラインの先頭です（突き抜けは番手の選手を選んでください）' };
+    /* 最終ストレートなら 1着 番手・2着 ラインの先頭・3着 ラインの3番手（いなければ次の選手） */
+    if (atStraight()) {
+      var third = L.length > 2 ? L[L.indexOf(no) + 1] : null;
+      return { finish: fillTop([no, L[0], third]), hint: '突き抜け：' + label(no) + ' が ' + label(L[0]) + ' を抜いて1着' };
+    }
     return passOver(no, L[0], '突き抜け');
   }
 
@@ -218,6 +277,12 @@ var Verbs = (function () {
     tsukinuke: { label: '突き抜け', fn: tsukinuke },
     oshikiri: { label: '押切', fn: oshikiri },
     block: { label: 'ブロック', fn: block },
+    /* ズブズブ＝ラインで決着（先頭・番手・3番手がそのままの順でゴール）。最終ストレートでだけ使える */
+    zubu: { label: 'ズブズブ', fn: function (sel) {
+      if (!atStraight()) return { error: 'ズブズブは最終ストレートで使ってください（局面ボタン「最終ストレート」）' };
+      var L = lineOf(sel.nos[0]);
+      return { finish: fillTop(L.slice(0, 3)), hint: 'ズブズブ：ライン ' + L.join('') + ' で決着' };
+    } },
     up: { label: '順番を前へ', fn: function (s) { return reorder(s, -1); } },
     down: { label: '順番を後ろへ', fn: function (s) { return reorder(s, 1); } }
   };
@@ -225,6 +290,9 @@ var Verbs = (function () {
   return {
     TABLE: TABLE,
     lineOf: lineOf,
+    finishTarget: finishTarget,
+    parseTrifecta: parseTrifecta,
+    atStraight: atStraight,
     label: label,
     /** @param {string} key  @param {{type:'rider'|'line', nos:number[]}} sel */
     run: function (key, sel) {

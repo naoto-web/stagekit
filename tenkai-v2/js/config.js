@@ -65,6 +65,8 @@ var CONFIG = (function () {
     { key: 'home',    label: '最終ホーム', d: 1.0 },
     { key: 'back',    label: '最終バック', d: 1 - (P_C + TRACK.LSTR / 2) / LAP },
     { key: 'corner4', label: '4角',        d: 1 - (P_D + Math.PI * TRACK.RREF / 2) / LAP },
+    /* 最終ストレート（9/27 Naoto）＝4角を抜けてホーム直線に入ったところ。ここで差し・突き抜け・ズブズブを押すと3着までゴールする */
+    { key: 'straight', label: '最終ストレート', d: 1 - (P_D + Math.PI * TRACK.RREF) / LAP },
     { key: 'goal',    label: 'ゴール',     d: 0 }
   ];
 
@@ -101,7 +103,9 @@ var CONFIG = (function () {
       /* スタート⇔赤板などの隊形の組み替え（升目⇔一列）は別の長さ。2.6秒は「早い」（9/27 Naoto）→5秒 */
       reformMs: 5000,
       /* 動詞ボタン（まくり・差し…）の動きの長さ。押切だけは距離が長いので1.5倍 */
-      verbMs: 2600 },
+      verbMs: 2600,
+      /* 決着（最終ストレートでの差し・突き抜け・ズブズブ／3連単の入力）でゴールまで走り切る長さ */
+      finishMs: 3800 },
 
     /* 取り消しの最大手数 */
     UNDO_MAX: 30,

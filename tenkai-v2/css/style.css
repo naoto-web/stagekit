@@ -208,6 +208,11 @@ body.view-output .rider-sel { display: none !important; }
 .btn-verb { font-size: 15px; font-weight: 700; padding: 7px 11px; background: #2d3a2f; border-color: #3f5a44; }
 .btn-verb:hover { background: #38493b; }
 .btn-order { font-size: 14px; }
+/* 3連単で決着（9/27） */
+.trifecta { width: 84px; background: #171a22; border: 1px solid var(--ui-border); border-radius: 6px; color: var(--ui-text); font-size: 16px; font-family: ui-monospace, Consolas, monospace; padding: 6px 8px; text-align: center; }
+.trifecta:focus { outline: none; border-color: #ffd166; }
+.btn-finish { background: #5a4a1c; border-color: #8a7230; color: #ffe39a; font-weight: 800; }
+.btn-finish:hover { background: #6b5822; }
 .sel-label { font-size: 14px; font-weight: 700; color: #ffd166; white-space: nowrap; min-width: 150px; }
 .sel-label.is-empty { color: var(--ui-muted); font-weight: 500; }
 .rider-hit { pointer-events: all; }

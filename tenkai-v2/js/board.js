@@ -180,6 +180,8 @@ var Board = (function () {
        升目の時点ではラインがまだ組まれていない＝バーを出すとジグザグに見える */
     /* 赤板（2.0）の直前だけで浮かび上がる。早く出すと、組み替えの途中でバーがジグザグに見えた（9/27） */
     var barOp = leader === null ? 1 : Math.max(0, Math.min(1, (2.2 - leader) / 0.2));
+    /* 決着の表示中は消す：抜け出した選手までバーが斜めに伸びて帯のように残った（9/27） */
+    if (d.finish && d.finish.length && leader !== null && leader < 1e-4) barOp = 0;
     barsLayer.style.opacity = String(barOp);
     barsLayer.style.display = barOp <= 0.001 ? 'none' : '';
 
@@ -200,6 +202,10 @@ var Board = (function () {
     }
 
     var ph = phaseOf(leader);
+    /* 決着（9/27）：先頭がゴール線にいて着順が入っていれば「決着 4-2-7」を金色で出す（視聴者にも見える） */
+    var fin = (d.finish && d.finish.length && leader !== null && leader < 1e-4) ? d.finish : null;
+    phaseBg.setAttribute('fill', fin ? '#c9a227' : '#3d8bfd');
+    if (fin) ph = { key: 'goal', label: '決着 ' + fin.join('-') };
     phaseText.textContent = ph ? ph.label : '';
     var w = ph ? Math.max(124, Array.from(ph.label).length * 19 + 36) : 0;
     phaseBg.setAttribute('x', T.CX - w / 2);

@@ -154,6 +154,7 @@
   /** ホイール・矢印キー用。即時に動かす（出力側は Smoother で滑らかになる） */
   function advance(delta) {
     Anim.stop();
+    State.data.finish = null;
     var dd = clampAdvance(delta);
     if (!dd) return;
     Undo.push('wheel');
@@ -186,6 +187,7 @@
         それ以外 → スタート ＝ 逆走しながら升目へ戻る
         それ以外どうし        ＝ 今の隊列のまま全員を同じ量だけ（手で動かした形を崩さない） */
   function jumpPhase(key) {
+    State.data.finish = null;
     var ph = null;
     CONFIG.PHASES.forEach(function (p) { if (p.key === key) ph = p; });
     var lead = State.leaderD();
@@ -263,6 +265,8 @@
     Anim.stop();
     var res = Verbs.run(key, sel);
     if (!res || res.error) { setHint((res && res.error) || 'この動きはできません', true); return; }
+    if (res.finish) { doFinish(res.finish, res.hint); return; }   // 最終ストレートの差し・突き抜け・ズブズブ＝3着までゴール
+    State.data.finish = null;
     Undo.push();
     Anim.path(res.paths, {
       ms: res.long ? Math.round(CONFIG.ANIM.verbMs * 1.5) : CONFIG.ANIM.verbMs,
@@ -270,6 +274,42 @@
       onDone: function () { State.save(); publishLive(true); }
     });
     setHint(res.hint + '。（取り消しで元に戻せます）');
+  }
+  /** 決着（9/27 Naoto）：着順 order（上位3人）で、今の位置からゴールまで走り切る。
+      最終周回（先頭が最終ホームより前）でだけ使える。追い抜く選手の通り道は升目⇔一列と同じ計画（重ならない道）。
+      計画に約1秒かかるので、ヒントを先に出してから計算する */
+  function doFinish(order, hint) {
+    var lead = State.leaderD();
+    if (lead === null) return;
+    if (lead > 1.0 + 1e-6) { setHint('決着は最終周回（最終ホーム以降）で使ってください', true); return; }
+    Anim.stop();
+    var target = Verbs.finishTarget(order);
+    Undo.push();
+    State.data.finish = null;
+    setHint('決着 ' + order.join('-') + ' を計算しています…');
+    setTimeout(function () {
+      Anim.reform(target, {
+        dd: 0 - lead,
+        ms: CONFIG.ANIM.finishMs,
+        onFrame: function () { renderPositions(); },
+        onDone: function (ok) {
+          if (ok) State.set({ finish: order.slice(0, 3) });
+          State.save();
+          renderPositions();
+          publishLive(true);
+        }
+      });
+      setHint((hint ? hint + '。' : '') + '決着 ' + order.join('-') + '（取り消しで元に戻せます）');
+    }, 30);
+  }
+
+  /** 3連単の欄＋「決着」ボタン */
+  function runTrifecta() {
+    if (VIEW !== 'control') return;
+    var el = document.getElementById('trifecta-input');
+    var r = Verbs.parseTrifecta(el ? el.value : '');
+    if (r.error) { setHint(r.error, true); return; }
+    doFinish(r.finish, '3連単 ' + r.finish.join('-'));
   }
   /* ---------- 取り消し ---------- */
 
@@ -661,6 +701,9 @@
     verbBtns.forEach(function (b) {
       b.addEventListener('click', function () { runVerb(b.dataset.verb); });
     });
+    var triBtn = document.getElementById('trifecta-btn'), triIn = document.getElementById('trifecta-input');
+    if (triBtn) triBtn.addEventListener('click', runTrifecta);
+    if (triIn) triIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); runTrifecta(); } });
     redoBtn.addEventListener('click', doRedo);
 
     /* ホイール＝全体送り（奥へ回す＝進む／手前へ回す＝戻す）。1ノッチ＝0.5車身。

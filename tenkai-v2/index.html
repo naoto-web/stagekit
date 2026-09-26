@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>競輪 展開ボード v2</title>
-<link rel="stylesheet" href="css/style.css?v=20260927-035731">
+<link rel="stylesheet" href="css/style.css?v=20260927-041304">
 </head>
 <body>
 
@@ -65,6 +65,7 @@
         <button type="button" class="btn btn-phase" data-phase="home">最終ホーム</button>
         <button type="button" class="btn btn-phase" data-phase="back">バック</button>
         <button type="button" class="btn btn-phase" data-phase="corner4">4角</button>
+        <button type="button" class="btn btn-phase" data-phase="straight" title="4角を抜けてホーム直線へ。ここで差し・突き抜け・ズブズブを押すと3着までゴールする">最終ストレート</button>
         <button type="button" class="btn btn-phase" data-phase="goal">ゴール</button>
       </div>
       <div class="phase-group">
@@ -83,10 +84,17 @@
         <button type="button" class="btn btn-verb" data-verb="tsukinuke" title="番手が同じラインの先頭を交わす">突き抜け</button>
         <button type="button" class="btn btn-verb" data-verb="oshikiri" title="先頭がそのままゴールへ（最終周回で）">押切</button>
         <button type="button" class="btn btn-verb" data-verb="block" title="外へ振って、外にいる選手を止める">ブロック</button>
+        <button type="button" class="btn btn-verb" data-verb="zubu" title="最終ストレートで：選んだラインがそのまま1-2-3着">ズブズブ</button>
       </div>
       <div class="phase-group">
         <button type="button" class="btn btn-order" data-verb="up" title="選んだラインを1つ前のラインと入れ替える">▲ 順番を前へ</button>
         <button type="button" class="btn btn-order" data-verb="down" title="選んだラインを1つ後ろのラインと入れ替える">▼ 順番を後ろへ</button>
+      </div>
+      <!-- 3連単で決着（9/27）：最終周回で押すと、その着順でゴールまで走り切る -->
+      <div class="field">
+        <label for="trifecta-input">3連単</label>
+        <input type="text" id="trifecta-input" class="trifecta" placeholder="4-2-7" autocomplete="off" spellcheck="false" maxlength="12">
+        <button type="button" id="trifecta-btn" class="btn btn-finish">決着</button>
       </div>
     </div>
 
@@ -100,20 +108,20 @@
 
 </div>
 
-<script src="../autoupdate.js?v=20260927-035731" data-au="output-only"></script>
-<script src="js/config.js?v=20260927-035731"></script>
-<script src="js/track.js?v=20260927-035731"></script>
-<script src="js/state.js?v=20260927-035731"></script>
-<script src="js/icons.js?v=20260927-035731"></script>
-<script src="js/bars.js?v=20260927-035731"></script>
-<script src="js/board.js?v=20260927-035731"></script>
-<script src="js/racecard.js?v=20260927-035731"></script>
-<script src="js/live.js?v=20260927-035731"></script>
-<script src="js/lineup.js?v=20260927-035731"></script>
-<script src="js/anim.js?v=20260927-035731"></script>
-<script src="js/undo.js?v=20260927-035731"></script>
-<script src="js/verbs.js?v=20260927-035731"></script>
-<script src="js/drag.js?v=20260927-035731"></script>
-<script src="js/main.js?v=20260927-035731"></script>
+<script src="../autoupdate.js?v=20260927-041304" data-au="output-only"></script>
+<script src="js/config.js?v=20260927-041304"></script>
+<script src="js/track.js?v=20260927-041304"></script>
+<script src="js/state.js?v=20260927-041304"></script>
+<script src="js/icons.js?v=20260927-041304"></script>
+<script src="js/bars.js?v=20260927-041304"></script>
+<script src="js/board.js?v=20260927-041304"></script>
+<script src="js/racecard.js?v=20260927-041304"></script>
+<script src="js/live.js?v=20260927-041304"></script>
+<script src="js/lineup.js?v=20260927-041304"></script>
+<script src="js/anim.js?v=20260927-041304"></script>
+<script src="js/undo.js?v=20260927-041304"></script>
+<script src="js/verbs.js?v=20260927-041304"></script>
+<script src="js/drag.js?v=20260927-041304"></script>
+<script src="js/main.js?v=20260927-041304"></script>
 </body>
 </html>
