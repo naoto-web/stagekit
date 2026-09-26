@@ -1474,7 +1474,13 @@
       var ok = scope.scrollHeight <= scope.clientHeight + 1;
       for (var i = 0; ok && i < lines.length; i++) if (lines[i].scrollWidth > avail + 1) ok = false;
       // 折り返す行は2段まで（大きくしすぎて「23-／23-／156／7」と細かく折れていた）
-      for (var j = 0; ok && j < long.length; j++) if (subRows(long[j]) > SUB_WRAP_ROWS) ok = false;
+      for (var j = 0; ok && j < long.length; j++) {
+        if (subRows(long[j]) > SUB_WRAP_ROWS) { ok = false; break; }
+        // 折るなら1段目をできるだけ埋める＝最後の塊（3着）の前だけで折る（9/26 Naoto「15-／15-24 は2マスで改行？」＝
+        // 40pxだと1段目に「15-15-」が入らず「15-」だけで折れて2段＝合格になっていた）。28px未満まで縮めても無理な行はあきらめる
+        var gs = long[j].querySelectorAll(":scope > .sg").length;
+        if (gs >= 3 && cz >= SUB_WRAP_CZ && subFirstRowGroups(long[j]) < gs - 1) { ok = false; break; }
+      }
       if (ok) break;
     }
     long.forEach(subAlignRight);
@@ -1484,6 +1490,12 @@
     var tops = {};
     Array.prototype.forEach.call(line.querySelectorAll(".car, .pl-all, .pl-box"), function (c) { tops[Math.round(c.offsetTop / 4)] = 1; });
     return Object.keys(tops).length || 1;
+  }
+  /** 折り返した行の1段目に入っている塊の数 */
+  function subFirstRowGroups(line) {
+    var gs = line.querySelectorAll(":scope > .sg"), n = 0;
+    for (var i = 0; i < gs.length; i++) { if (Math.abs(gs[i].offsetTop - gs[0].offsetTop) <= 2) n++; else break; }
+    return n;
   }
   /** 折り返した2段目以降は右寄せ（9/26 Naoto）＝各段の先頭の塊に margin-left:auto（折り返し位置は変わらない） */
   function subAlignRight(line) {
