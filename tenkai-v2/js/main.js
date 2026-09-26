@@ -141,7 +141,7 @@
       if (tail === null || r.d > tail) tail = r.d;
     });
     if (lead === null) return 0;
-    if (delta > 0) return Math.min(delta, lead);                     // ゴール線で止まる
+    if (delta > 0) return Math.max(0, Math.min(delta, lead));        // ゴール線で止まる（決着でゴール線の先にいるときは進めない＝逆に戻らない）
     return Math.max(delta, tail - CONFIG.D_MAX);                     // 後ろは上限まで
   }
 

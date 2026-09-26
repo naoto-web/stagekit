@@ -66,7 +66,7 @@ var State = (function () {
   function cleanRider(r) {
     if (!r || typeof r.d !== 'number' || typeof r.lane !== 'number' ||
         !isFinite(r.d) || !isFinite(r.lane)) return null;
-    return { d: clamp(r.d, 0, CONFIG.D_MAX), lane: clamp(r.lane, -1, 1) };
+    return { d: clamp(r.d, CONFIG.D_MIN, CONFIG.D_MAX), lane: clamp(r.lane, -1, 1) };
   }
 
   /* --- 保存されたデータを取り込む（形が違っても壊れないように検証する） --- */
@@ -196,7 +196,7 @@ var State = (function () {
     moveRider: function (no, d, lane) {
       var r = data.riders[no];
       if (!r) return;
-      r.d = clamp(d, 0, CONFIG.D_MAX);
+      r.d = clamp(d, CONFIG.D_MIN, CONFIG.D_MAX);
       r.lane = clamp(lane, -1, 1);
     },
 

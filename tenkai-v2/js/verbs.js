@@ -114,12 +114,16 @@ var Verbs = (function () {
       var ra = data().riders[a], rb = data().riders[b];
       return (ra.lane - rb.lane) || (ra.d - rb.d);
     });
+    /* 3人ともゴール線を完全に越えるまで走る（9/27 Naoto）：3着の丸の後ろの縁がゴール線から約0.2車身先。
+       1着はその0.7車身先、2着は0.35車身先。4着以下は1着からの間隔を今までどおり（1.6車身〜）＝ゴール線の手前に残る */
+    var third = -(CONFIG.iconPx(data().iconRatio) / 2 + 0.2 * 56) / CONFIG.LAP;   // 丸の半径＋0.2車身（56px基準）ぶん先
+    var win = third - 0.7 * CAR;
     var target = {};
     t.forEach(function (no, i) {
-      target[no] = { d: i * 0.35 * CAR, lane: [-1, 0, 1][byLane.indexOf(no)] };
+      target[no] = { d: win + i * 0.35 * CAR, lane: [-1, 0, 1][byLane.indexOf(no)] };
     });
     byD(c.filter(function (n) { return t.indexOf(n) === -1; })).forEach(function (no, j) {
-      target[no] = { d: (1.6 + j * CONFIG.LAYOUT.gapInLine) * CAR, lane: -1 };
+      target[no] = { d: win + (1.6 + j * CONFIG.LAYOUT.gapInLine) * CAR, lane: -1 };
     });
     return target;
   }
