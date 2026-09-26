@@ -319,25 +319,42 @@ var Verbs = (function () {
     return { paths: r.paths, hint: 'まくり：' + r.S.join('') + ' が外から ' + label(r.lead) + ' をまくり切りました' };
   }
 
-  /** まくり失敗（まくり不発）：外を上がって先頭の横まで来たところで失速し、外のまま後ろへ下がる。全体＋1車身 */
+  /** まくり失敗（9/27 Naoto）：先頭ラインの番手にブロックされて引く。
+      主語は外のレーンを上がり、番手の横まで来たところで番手が外へ振って止める→主語は元の位置（全体と一緒に進んだ位置）へ引く。
+      番手はブロックの後、元の位置に戻る。先頭が単騎なら先頭が止める。全体＋1車身。
+      カマシ失敗（突っ張られる）との違い＝止めるのが番手の横の動き（ブロック）で、主語は最後尾ではなく元の位置へ */
   function makuriFail(sel) {
     var r = makuriPrep(sel, 1);
     if (r.error) return r;
+    var front = lineOf(r.lead);
+    var blocker = front.length > 1 && r.S.indexOf(front[1]) === -1 ? front[1] : r.lead;
     var gap = CONFIG.LAYOUT.gapInLine * CAR;
-    var L0 = pos(r.lead).d, L1 = r.lf.d;
-    function leadAt(t) { return L0 + (L1 - L0) * t; }
+    var bp = r.paths[blocker];
+    function bAt(t) { return dAt(bp, t); }
+    var bLane = pos(blocker).lane;
+    var swing = Math.min(1, Math.round(bLane) + 1);          // 番手が振る先（1つ外）
+    var sLane = Math.min(1, swing + 1);                      // 主語はさらに外＝番手と重ならない
     r.S.forEach(function (no, i) {
       var p = pos(no), back = finalOf(r.paths, no);
-      var side = function (t) { return leadAt(t) + i * gap; };
       r.paths[no] = [
         { t: 0, d: p.d, lane: p.lane },
-        { t: 0.15, d: p.d + (side(0.45) - p.d) * 0.2, lane: r.laneOut },
-        { t: 0.45, d: side(0.45), lane: r.laneOut },   // 先頭の横まで
-        { t: 0.6, d: side(0.6), lane: r.laneOut },     // 並んだまま少し
-        { t: 1, d: back.d + 1.5 * CAR, lane: r.laneOut }   // 失速して元の位置より少し後ろへ（外のまま）
+        { t: 0.15, d: p.d + (bAt(0.45) + i * gap - p.d) * 0.2, lane: sLane },
+        { t: 0.45, d: bAt(0.45) + i * gap, lane: sLane },   // 番手の横まで
+        { t: 0.6, d: bAt(0.6) + i * gap, lane: sLane },     // ブロックされる
+        { t: 0.88, d: back.d, lane: sLane },                // 引く
+        { t: 1, d: back.d, lane: p.lane }                   // 元の位置へ
       ];
     });
-    return { paths: r.paths, hint: 'まくり失敗：' + r.S.join('') + ' は ' + label(r.lead) + ' の横で失速して下がりました' };
+    var bf = finalOf(r.paths, blocker);
+    r.paths[blocker] = [
+      { t: 0, d: bp[0].d, lane: bLane },
+      { t: 0.35, d: bAt(0.35), lane: bLane },
+      { t: 0.5, d: bAt(0.5), lane: swing },   // 外へ振って止める
+      { t: 0.65, d: bAt(0.65), lane: swing },
+      { t: 0.9, d: bAt(0.9), lane: bLane },   // 元の位置へ戻る
+      { t: 1, d: bf.d, lane: bLane }
+    ];
+    return { paths: r.paths, hint: 'まくり失敗：' + label(blocker) + ' のブロックで ' + r.S.join('') + ' は止められて引きました' };
   }
 
   /** 差し／突き抜け共通：主語が相手の前へ（空いている側のレーンを通る）。全体＋2車身 */
@@ -395,7 +412,8 @@ var Verbs = (function () {
     return { paths: paths, hint: '押切：' + label(lead) + ' がそのままゴールへ', long: true };
   }
 
-  /** ブロック：主語が外へ1レーン振り、外にいた相手をさらに外へ・後ろへ（止められた絵） */
+  /** ブロック：主語が外へ1レーン振り、外にいた相手をさらに外へ・後ろへ（止められた絵）。
+      主語はブロックの後、元のレーンに戻る（9/27 Naoto）。旧＝外へ振ったまま止まっていた */
   function block(sel) {
     var no = sel.type === 'line' ? (lineOf(sel.nos[0])[1] || sel.nos[0]) : sel.nos[0];
     var me = data().riders[no], best = null, bestGap = null;
@@ -412,7 +430,8 @@ var Verbs = (function () {
     var myF = finalOf(paths, no), tF = finalOf(paths, best);
     var myLane = Math.min(1, Math.round(me.lane) + 1);
     var tLane = Math.min(1, myLane + 1);
-    paths[no] = [{ t: 0, d: me.d, lane: me.lane }, { t: 0.5, d: me.d + (myF.d - me.d) * 0.5, lane: myLane }, { t: 1, d: myF.d, lane: myLane }];
+    paths[no] = [{ t: 0, d: me.d, lane: me.lane }, { t: 0.4, d: me.d + (myF.d - me.d) * 0.4, lane: myLane },
+                 { t: 0.65, d: me.d + (myF.d - me.d) * 0.65, lane: myLane }, { t: 1, d: myF.d, lane: me.lane }];
     var t0 = data().riders[best];
     var tFinD = Math.max(tF.d, myF.d) + 1.2 * CAR;
     paths[best] = [{ t: 0, d: t0.d, lane: t0.lane }, { t: 0.45, d: t0.d + (tFinD - t0.d) * 0.3, lane: tLane }, { t: 1, d: tFinD, lane: tLane }];
