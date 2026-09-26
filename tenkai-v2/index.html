@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>競輪 展開ボード v2</title>
+<link rel="stylesheet" href="css/style.css?v=20260927-021519">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== 操作パネル（OBSのドック側だけ。出力 ?view=output では消える） ===== -->
+  <header class="panel" id="panel">
+
+    <div class="panel-row">
+      <!-- 場・レースは配信（コンソール）に常時追従するので通常は隠れている。?follow=0 のときだけ現れる -->
+      <div class="field manual-only">
+        <label for="venue-select">場</label>
+        <select id="venue-select" class="sel" disabled></select>
+      </div>
+      <div class="field manual-only">
+        <label for="race-select">レース</label>
+        <select id="race-select" class="sel" disabled></select>
+      </div>
+      <div class="field manual-only">
+        <label class="chk" for="follow-chk" title="コンソールが出しているレースに自動で合わせます">
+          <input type="checkbox" id="follow-chk" checked>配信に追従
+        </label>
+        <button type="button" class="diff" id="follow-diff" hidden></button>
+      </div>
+
+      <div class="field auto-only">
+        <span class="now-race" id="now-race">配信のレースに追従中…</span>
+      </div>
+
+      <div class="field field-grow">
+        <label for="lineup-input">並び</label>
+        <input type="text" id="lineup-input" placeholder="例）1-3-5 / 2-7 / 4-6-9" autocomplete="off" spellcheck="false">
+        <button type="button" id="apply-btn" class="btn btn-primary">配置</button>
+      </div>
+
+      <div class="field">
+        <button type="button" id="reset-btn" class="btn">配置を戻す</button>
+        <button type="button" id="reload-btn" class="btn btn-sub">出走表を再取得</button>
+      </div>
+
+      <div class="field">
+        <label for="size-range">サイズ</label>
+        <input type="range" id="size-range" min="40" max="56" step="1">
+        <span class="val" id="size-val">4.8%</span>
+      </div>
+
+      <div class="field">
+        <span class="live-dot" id="live-dot" data-live="off">出力：未接続</span>
+      </div>
+    </div>
+
+    <!-- 局面ボタン＝先頭がその地点に来るまで全体が進む（戻る）。要件定義_v2 §5・§6.4 -->
+    <div class="panel-row panel-row-phase">
+      <div class="phase-group">
+        <button type="button" class="btn btn-phase" data-phase="start">スタート</button>
+        <button type="button" class="btn btn-phase" data-phase="red">赤板</button>
+        <button type="button" class="btn btn-phase" data-phase="bell">🔔 打鐘</button>
+        <button type="button" class="btn btn-phase" data-phase="home">最終ホーム</button>
+        <button type="button" class="btn btn-phase" data-phase="back">バック</button>
+        <button type="button" class="btn btn-phase" data-phase="corner4">4角</button>
+        <button type="button" class="btn btn-phase" data-phase="goal">ゴール</button>
+      </div>
+      <div class="phase-group">
+        <button type="button" class="btn btn-undo" id="undo-btn" title="Ctrl+Z" disabled>↶ 取り消し</button>
+        <button type="button" class="btn btn-undo" id="redo-btn" title="Ctrl+Y" disabled>↷ やり直し</button>
+      </div>
+    </div>
+
+    <p class="hint" id="hint">局面ボタンで全体が進みます。<b>盤面の上でホイール（奥へ＝進む／手前へ＝戻す）</b>や → ← キーで少しずつ。<b>丸をドラッグ＝1台</b>（コースに沿って動く・離すと内/中/外にそろう）／<b>ラインの帯をドラッグ＝ライン全員</b>。</p>
+  </header>
+
+  <!-- ===== 表示エリア（1枚のSVG・viewBox 960×572。縦横比を保って窓に合わせる） ===== -->
+  <main class="stage-wrap">
+    <div class="stage" id="stage" data-bg="normal"></div>
+  </main>
+
+</div>
+
+<script src="../autoupdate.js?v=20260927-021519" data-au="output-only"></script>
+<script src="js/config.js?v=20260927-021519"></script>
+<script src="js/track.js?v=20260927-021519"></script>
+<script src="js/state.js?v=20260927-021519"></script>
+<script src="js/icons.js?v=20260927-021519"></script>
+<script src="js/bars.js?v=20260927-021519"></script>
+<script src="js/board.js?v=20260927-021519"></script>
+<script src="js/racecard.js?v=20260927-021519"></script>
+<script src="js/live.js?v=20260927-021519"></script>
+<script src="js/lineup.js?v=20260927-021519"></script>
+<script src="js/anim.js?v=20260927-021519"></script>
+<script src="js/undo.js?v=20260927-021519"></script>
+<script src="js/drag.js?v=20260927-021519"></script>
+<script src="js/main.js?v=20260927-021519"></script>
+</body>
+</html>

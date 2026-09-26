@@ -1,0 +1,226 @@
+/* ===========================================================
+   競輪 展開ボード v2 — スタイル
+   路面・線の配色はすべて独自設計（他所の配色を流用しない）
+   盤面そのものの色は board.js（SVG）に持つ。ここは操作パネルと器だけ
+   =========================================================== */
+
+:root {
+  --ui-bg:        #16181d;
+  --ui-panel:     #212530;
+  --ui-border:    #333949;
+  --ui-text:      #e7ebf2;
+  --ui-muted:     #8b93a5;
+  --ui-accent:    #3d8bfd;
+  --wall:         #2b313a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-family: "Segoe UI", "Yu Gothic UI", "Hiragino Sans", system-ui, sans-serif;
+}
+
+.app {
+  height: 100%;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===================== 操作パネル ===================== */
+
+.panel {
+  flex: 0 0 auto;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+}
+.panel-row + .panel-row { margin-top: 8px; }
+
+.field { display: flex; align-items: center; gap: 6px; }
+.field-grow { flex: 1 1 260px; }
+.field > label { font-size: 13px; color: var(--ui-muted); white-space: nowrap; }
+
+#lineup-input {
+  flex: 1;
+  min-width: 0;
+  background: #171a22;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font-size: 16px;
+  font-family: ui-monospace, "Consolas", monospace;
+  padding: 7px 10px;
+}
+#lineup-input:focus { outline: none; border-color: var(--ui-accent); }
+
+.btn {
+  background: #2c3242;
+  border: 1px solid var(--ui-border);
+  border-radius: 7px;
+  color: var(--ui-text);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn:hover { background: #363d50; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn:disabled:hover { background: #2c3242; }
+.btn-primary { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }
+.btn-primary:hover { background: #5a9dff; }
+.btn-sub { font-size: 13px; font-weight: 500; color: var(--ui-muted); }
+
+/* 局面ボタン＝この画面の主役。大きめ・押しやすく */
+.panel-row-phase { justify-content: space-between; }
+.phase-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn-phase { font-size: 16px; font-weight: 700; padding: 8px 13px; }
+.btn-phase.is-on { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }
+.btn-undo { background: #3a2f2f; border-color: #6b3c3c; font-size: 15px; }
+.btn-undo:hover { background: #4a3838; }
+.btn-undo:disabled:hover { background: #3a2f2f; }
+
+.chk {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--ui-border); border-radius: 6px;
+  padding: 7px 12px; font-size: 14px; white-space: nowrap; cursor: pointer;
+  color: var(--ui-muted);
+}
+.chk:has(input:checked) { border-color: var(--ui-accent); color: var(--ui-text); background: rgba(74,144,255,.14); }
+.chk input { accent-color: var(--ui-accent); cursor: pointer; }
+
+/* テスト用バックエンド接続中の目印（?gas= を付けたときだけ出る）。stagekit側と同じ見た目・同じ意味 */
+body.is-test #stage::after {
+  content: "TEST"; position: absolute; left: 12px; bottom: 12px; z-index: 9999;
+  background: #d32f2f; color: #fff; font-size: 22px; font-weight: 900;
+  letter-spacing: .12em; padding: 5px 15px; border-radius: 6px;
+  border: 3px solid #fff; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  pointer-events: none;
+}
+
+body.follow-auto .manual-only { display: none; }
+body:not(.follow-auto) .auto-only { display: none; }
+
+.now-race {
+  border: 1px solid var(--ui-accent); border-radius: 6px;
+  background: rgba(74,144,255,.14); color: var(--ui-text);
+  padding: 6px 12px; font-size: 15px; font-weight: 700; white-space: nowrap;
+}
+
+.diff {
+  border: 1px solid #d9534f; background: rgba(217,83,79,.18); color: #ff9a97;
+  border-radius: 6px; padding: 7px 12px; font-size: 14px; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+}
+.diff:hover { background: rgba(217,83,79,.3); color: #ffc9c7; }
+
+.sel {
+  background: #171a22; border: 1px solid var(--ui-border); border-radius: 6px;
+  color: var(--ui-text); font-size: 14px; padding: 7px 8px; min-width: 92px; max-width: 220px;
+}
+.sel:focus { outline: none; border-color: var(--ui-accent); }
+.sel:disabled { opacity: .5; }
+
+#size-range { width: 90px; }
+.val { font-size: 13px; color: var(--ui-muted); font-variant-numeric: tabular-nums; min-width: 40px; }
+
+.hint { margin: 8px 0 0; font-size: 12px; color: var(--ui-muted); }
+.hint.is-warn { color: #ffc46b; }
+
+.live-dot {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: 6px;
+  border: 1px solid var(--ui-border); white-space: nowrap;
+}
+.live-dot::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.live-dot[data-live="on"]  { color: #46d17f; background: rgba(70,209,127,.10); border-color: rgba(70,209,127,.40); }
+.live-dot[data-live="off"] { color: #ff7a7a; background: rgba(255,122,122,.10); border-color: rgba(255,122,122,.35); }
+.live-dot[data-live="na"]  { color: var(--ui-muted); }
+
+/* ===================== 出力ビュー（?view=output） ===================== */
+
+body.view-output { background: transparent; }
+body.view-output .panel { display: none; }
+body.view-output .app { padding: 0; }
+body.view-output .stage { border-radius: 0; }
+/* 出力側で掴めてしまうと操作側とズレるので、当たり判定を殺す */
+body.view-output .stage svg * { pointer-events: none !important; }
+
+/* ===================== 表示エリア ===================== */
+
+.stage-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--wall);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.stage[data-bg="green"] { background: #00b140; }
+
+.stage svg.board {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ===================== 選手・連結バー（SVG） ===================== */
+
+.rider { cursor: grab; }
+.rider.is-dragging { cursor: grabbing; }
+.rider .rider-body { filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.rider.is-dragging .rider-body { filter: drop-shadow(0 5px 8px rgba(0,0,0,.65)); }
+.rider-chip, .rider-num, .rider-body { pointer-events: none; }
+.rider-hit { pointer-events: all; }
+.pacer, .pacer * { pointer-events: none; }
+
+.line-bar {
+  fill: none;
+  stroke: rgba(255,255,255,.22);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.line-bar-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+  cursor: grab;
+}
+.line-bar-hit.is-dragging { cursor: grabbing; }
+
+@media (max-width: 900px) {
+  .app { padding: 6px; }
+  .panel { padding: 6px 8px; }
+  .btn-phase { font-size: 15px; padding: 7px 10px; }
+}
