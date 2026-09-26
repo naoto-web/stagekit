@@ -778,7 +778,7 @@
      予想入力の対象レースだけを30秒ごと（初回は即）に取る。表示だけ＝保存・計算には入れない */
   // 9/25 本番化＝既定ON（本番GAS v12 に action=odds 追加済み）。&odds=0 で点数表示に戻せる
   var CON_ODDS = params.get("odds") ? params.get("odds") !== "0" : true;
-  var conOdds = {}, conOddsAt = {}, conOddsPending = {};
+  var conOdds = {}, conOddsAt = {}, conOddsPending = {}, conOddsEnd = {};
   function ensureConOdds(key, force) {
     if (!CON_ODDS || !key || conOddsPending[key]) return;
     if (!force && conOddsAt[key] && Date.now() - conOddsAt[key] < 25000) return;
@@ -789,8 +789,12 @@
       delete conOddsPending[key];
       conOddsAt[key] = Date.now();
       var d = res[+p[1]];
-      if (!d || !d.o || JSON.stringify(d.o) === JSON.stringify(conOdds[key] || null)) return;
+      if (!d || !d.o) return;
+      var endChanged = !!d.end !== !!conOddsEnd[key];
+      conOddsEnd[key] = !!d.end; // 締切済みか＝払戻の自動記入（§46）はこれが立っているときだけ
+      if (!endChanged && JSON.stringify(d.o) === JSON.stringify(conOdds[key] || null)) return;
       conOdds[key] = d.o;
+      if (resultKey() === key) refreshAutoPayouts();
       if (predKey() !== key) return;
       document.querySelectorAll("#pred-forms .pred-form").forEach(function (f) { updatePredInfo(f, key); });
     }).catch(function () { delete conOddsPending[key]; conOddsAt[key] = Date.now(); });
@@ -1007,9 +1011,42 @@
         if (p.type !== "3連単" || p.amount > 0) return true;
         return !!want[window.Keirin.comboLabel(p.type, p.combo)];
       });
+      autoFillPayouts();
+      // 着順を打った＝払戻を埋めたい瞬間。手元のオッズが10秒より古ければ取り直す（締切前に取った値を使わない）
+      var k = resultKey();
+      if (k) ensureConOdds(k, Date.now() - (conOddsAt[k] || 0) > 10000);
     }
     renderPayoutRows();
     renderSettlePreview();
+  }
+
+  /* 払戻の自動記入（9/26 Naoto・要件定義§46）。3連単の払戻＝最終オッズ×100円（9/26 65レース照合）。
+     ①公式の払戻（結果の自動取得）が来ていればそれ ②無ければ締切済みのオッズから。
+     入れるのは「空欄で、人が触っていない行」と「前に自動で入れた行」だけ＝人が打った金額は上書きしない。
+     同着は払戻がオッズと一致しない＝オッズからは入れない（公式だけ）。&oddspay=0 で止める */
+  var ODDS_PAY = params.get("oddspay") !== "0";
+  function autoFillPayouts() {
+    if (!ODDS_PAY) return false;
+    var key = resultKey(), orders = parseOrdersInput();
+    if (!key || !orders) return false;
+    var off = autoResults[key] ? keepPayouts(autoResults[key].payouts) : [];
+    var o = (orders.length === 1 && conOddsEnd[key]) ? conOdds[key] : null;
+    var changed = false;
+    payoutRows.forEach(function (p) {
+      if (p.type !== "3連単" || p.manual) return;
+      if (p.amount > 0 && !p.src) return; // 確定済みから復元した金額・人が打った金額
+      var label = window.Keirin.comboLabel(p.type, p.combo);
+      var amt = 0, src = null;
+      off.forEach(function (q) { if (window.Keirin.comboLabel(q.type, q.combo) === label) { amt = q.amount; src = "official"; } });
+      if (!src && o && p.combo.length === 3 && o[p.combo.join("")] > 0) { amt = Math.round(o[p.combo.join("")] * 100); src = "odds"; }
+      if (!src || (amt === p.amount && src === p.src)) return;
+      p.amount = amt; p.src = src; changed = true;
+    });
+    return changed;
+  }
+  /** オッズ・公式結果が後から届いたとき：変わった時だけ描き直す（打っている枚数欄を無駄に作り直さない） */
+  function refreshAutoPayouts() {
+    if (autoFillPayouts()) { renderPayoutRows(); renderSettlePreview(); }
   }
 
   /** 払戻（100円あたり）→ 倍率の表示。1210→「12.1倍」／1200→「12.0倍」（小数1桁で桁をそろえる）。空・0は空欄 */
@@ -1017,6 +1054,10 @@
     var a = +amount || 0;
     if (a <= 0) return "";
     return (a / 100).toLocaleString("ja-JP", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "倍";
+  }
+
+  function payoutSrcText(src) {
+    return src === "odds" ? "最終オッズから自動" : src === "official" ? "公式の払戻" : "";
   }
 
   function renderPayoutRows() {
@@ -1029,12 +1070,18 @@
         // 9/25 Naoto「✕は出さず、1210と入れたら12.1倍と出して」＝行を消す✕は撤去。
         // 🔑打ち間違いの行は金額を空にすれば消したのと同じ＝確定は amount>0 の行しか使わない／
         //   3連単の空行は着順を打ち直すと syncPayoutPresets が掃除する
-        '<span class="pr-odds" data-i="' + i + '">' + oddsText(p.amount) + "</span></div>";
+        '<span class="pr-odds" data-i="' + i + '">' + oddsText(p.amount) + "</span>" +
+        // 自動で入れた金額の出どころ（§46）。人が打ち直したら消える
+        '<span class="pr-src" data-i="' + i + '">' + payoutSrcText(p.src) + "</span></div>";
     }).join("");
     el.querySelectorAll(".pr-amount").forEach(function (inp) {
       inp.addEventListener("input", function () {
         var i = +inp.getAttribute("data-i");
         payoutRows[i].amount = +inp.value || 0;
+        payoutRows[i].manual = true; // 人が触った行は以後自動で入れない（空にした＝消したのと同じ・も守る）
+        payoutRows[i].src = null;
+        var sr = el.querySelector('.pr-src[data-i="' + i + '"]');
+        if (sr) sr.textContent = "";
         var od = el.querySelector('.pr-odds[data-i="' + i + '"]');
         if (od) od.textContent = oddsText(payoutRows[i].amount);
         markResDirty();
@@ -1252,7 +1299,9 @@
       order: orders[0], // 従来どおり1本＝表示・的中演出（選手リスペクト）はこれを見る
       names: meta.names,
       kimarite: meta.kimarite,
-      payouts: payoutRows.filter(function (p) { return p.amount > 0; }),
+      // 自動記入の印（src・manual）は画面だけのもの＝stateには従来の3項目だけ保存
+      payouts: payoutRows.filter(function (p) { return p.amount > 0; })
+        .map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; }),
       refunds: refunds,
       refundUnits: refundUnits,
       settledAt: new Date().toISOString(),
@@ -1941,6 +1990,7 @@
           autoResults[window.Derive.raceKey(v.name, r.no)] = r;
         });
         applyAutoResults();
+        refreshAutoPayouts(); // 最終オッズから入れた払戻を公式の値に差し替える（確定前・§46）
         renderResultHint();
       }).catch(function () { /* 次回ポーリングで再試行 */ });
     }));
@@ -2009,12 +2059,35 @@
     syncPayoutPresets(); // 標準行の補完＋的中プレビュー再計算
   }
 
+  /** 確定済みの3連単の払戻と公式の払戻の食い違い（同じ組で金額が違うものだけ）。無ければ "" */
+  function payoutDiffText(rec, r) {
+    var mine = keepPayouts(rec.payouts);
+    return keepPayouts(r.payouts).map(function (q) {
+      var label = window.Keirin.comboLabel(q.type, q.combo), m = null;
+      mine.forEach(function (p) { if (window.Keirin.comboLabel(p.type, p.combo) === label) m = p; });
+      if (!m || m.amount === q.amount) return "";
+      return esc(label) + " 確定 " + m.amount.toLocaleString("ja-JP") + "円 → 公式 " + q.amount.toLocaleString("ja-JP") + "円";
+    }).filter(Boolean).join(" ／ ");
+  }
+
   function renderResultHint() {
     var el = $("auto-result-hint");
     if (!el) return;
     var key = resultKey(); // 結果フォームと同じレースの⚡を出す（固定中はそのレース・FB96）
     var r = key ? autoResults[key] : null;
-    if (!r || (state.results && state.results[key])) {
+    var done = r && state.results && state.results[key];
+    var diff = done ? payoutDiffText(done, r) : "";
+    if (diff) {
+      // 確定後に公式の払戻と食い違った（最終オッズからの自動記入がずれた等・§46）。
+      // 的中演出はもう出ている＝勝手に書き換えず、直す操作だけ用意する（公式を入れて確定し直す）
+      el.classList.remove("hidden");
+      el.innerHTML = '<span class="manche">⚠ 公式の払戻と違います：' + diff + "</span>" +
+        '　<button class="btn small" id="btn-auto-fill">公式の払戻をフォームに入れる</button>' +
+        '<span class="miss">（入れたら「確定」を押し直してください）</span>';
+      $("btn-auto-fill").addEventListener("click", function () { applyAutoToForm(key); });
+      return;
+    }
+    if (!r || done) {
       el.classList.add("hidden");
       el.innerHTML = "";
       return;

@@ -297,6 +297,8 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 .payout-row .pr-unit { flex: 0 0 auto; font-size: 13px; color: #9aa0ab; }
 /* 倍率（9/25＝行を消す✕の代わり）。「円」のすぐ右・数字の桁をそろえる */
 .payout-row .pr-odds { flex: 0 0 auto; min-width: 5.5em; font-size: 14px; font-weight: 800; color: #e6c35c; font-variant-numeric: tabular-nums; }
+/* 払戻の自動記入の出どころ（§46）＝小さく灰色。空なら何も出ない */
+.payout-row .pr-src { flex: 0 0 auto; font-size: 11px; color: #8a93a3; white-space: nowrap; }
 
 .settle-preview {
   margin-top: 10px; padding: 8px 12px; border-radius: 8px;
