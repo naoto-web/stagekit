@@ -31,6 +31,21 @@
     var ph = Board.render(State.data);
     publishLive(true);
     syncControls(ph);
+    schedulePrepare();
+  }
+
+  /* スタートの升目→並びの一列の「通り道の計画」は計算に約1秒かかる。
+     赤板を押してから止まって見えないよう、並びが決まったら裏で先に計算しておく（同じ並びなら2回目以降は即時）。
+     戻す（→スタート）は同じ道の逆再生なので計算は要らない */
+  var prepareTimer = null;
+  function schedulePrepare() {
+    if (VIEW !== 'control') return;
+    clearTimeout(prepareTimer);
+    prepareTimer = setTimeout(function () {
+      var d = State.data;
+      if (!d.cars || d.cars.length < 2 || Anim.busy()) return;
+      try { Anim.prepare(Lineup.grid(d.cars), lineFormation(CONFIG.PHASES[1].d)); } catch (e) {}
+    }, 600);
   }
 
   /** 位置だけ反映する（ドラッグ・アニメ・全体送りの途中） */
@@ -94,11 +109,11 @@
       lines: result.lines,
       cars: carsFromLines(result.lines)
     });
-    State.setRiders(result.positions);
+    State.setRiders(Lineup.grid(carsFromLines(result.lines)));   // スタート＝車番順の升目
     render();
 
     var shown = result.lines.map(function (l) { return l.join('-'); }).join(' / ');
-    var msg = '配置しました（スタートの隊列）： ' + shown;
+    var msg = '配置しました（スタートは車番順・赤板で並びの一列になります）： ' + shown;
     var warn = false;
     if (result.missing.length) {
       msg += '　／ 並びに無い ' + result.missing.join('・') + ' 番は盤面に出していません';
@@ -149,22 +164,73 @@
     saveSoon();
   }
 
-  /** 局面ボタン：先頭がその局面の位置に来るまで全員を同じ量だけ進める（戻す）。アニメ付き */
+  /** 並びの一列（ライン順・全員内）。並びが無いレースは車番順の単騎 */
+  function lineFormation(headD) {
+    var d = State.data;
+    var lines = (d.lines && d.lines.length) ? d.lines : d.cars.map(function (no) { return [no]; });
+    return Lineup.layout(lines, headD);
+  }
+
+  /** 先頭の d（与えた隊形の中で最小） */
+  function headOf(pos) {
+    var h = null;
+    Object.keys(pos).forEach(function (no) { if (h === null || pos[no].d < h) h = pos[no].d; });
+    return h;
+  }
+
+  /** 局面ボタン：先頭がその局面の位置に来るまで全員を進める（戻す）。アニメ付き。
+      隊形の切り替え（9/27 Naoto）：
+        スタート → それ以外 ＝ 車番順の升目から、走りながら並びの一列（ライン順・全員内）へ
+        それ以外 → スタート ＝ 逆走しながら升目へ戻る
+        それ以外どうし        ＝ 今の隊列のまま全員を同じ量だけ（手で動かした形を崩さない） */
   function jumpPhase(key) {
     var ph = null;
     CONFIG.PHASES.forEach(function (p) { if (p.key === key) ph = p; });
     var lead = State.leaderD();
     if (!ph || lead === null) return;
+    var d = State.data;
+    var cur = Board.phaseOf(lead);
+    var fromStart = !!cur && cur.key === 'start';
+    var target = null, hint;
+
+    if (key === 'start') {
+      target = Lineup.grid(d.cars, ph.d);
+      hint = 'スタート（車番順）に戻しました。';
+    } else if (fromStart) {
+      target = lineFormation(ph.d);
+      hint = ph.label + 'へ。走りながら並び（' + (d.lines || []).map(function (l) { return l.join(''); }).join(' ') + '）の一列になりました。';
+    }
+
+    if (target) {
+      /* 升目⇔一列：選手ごとに行き先が違う */
+      var tHead = headOf(target);
+      var same = Object.keys(target).every(function (no) {
+        var r = d.riders[no];
+        return r && Math.abs(r.d - target[no].d) < 1e-6 && Math.abs(r.lane - target[no].lane) < 1e-6;
+      });
+      if (same) { setHint(ph.label + 'の位置です。'); return; }
+      Undo.push();
+      Anim.reform(target, {
+        dd: tHead - lead,
+        lapIfWhole: true,
+        onFrame: function () { renderPositions(); },
+        onDone: function () { State.save(); publishLive(true); }
+      });
+      setHint(hint + ' ホイール（奥へ＝進む／手前へ＝戻す）や → ← キーで少しずつ動かせます。');
+      return;
+    }
+
     var delta = clampAdvance(lead - ph.d);
     if (Math.abs(delta) < 1e-6) { setHint(ph.label + 'の位置です。'); return; }
 
     Undo.push();
-    var d = State.data, target = {};
+    target = {};
     d.cars.forEach(function (no) {
       var r = d.riders[no];
       if (r) target[no] = { d: r.d - delta, lane: r.lane };
     });
     Anim.to(target, {
+      dd: -delta,
       onFrame: function () { renderPositions(); },
       onDone: function () { State.save(); publishLive(true); }
     });
@@ -464,7 +530,7 @@
   function showAllRaceCars(raceCars) {
     var solo = raceCars.map(function (no) { return [no]; });
     State.set({ lineupText: '', lines: [], cars: raceCars.slice() });
-    State.setRiders(Lineup.layout(solo));
+    State.setRiders(Lineup.grid(raceCars));
     render();
   }
 
@@ -478,7 +544,7 @@
       lines: result.lines,
       cars: carsFromLines(result.lines)
     });
-    State.setRiders(result.positions);
+    State.setRiders(Lineup.grid(carsFromLines(result.lines)));   // スタート＝車番順の升目
     render();
 
     if (nowRaceEl) nowRaceEl.textContent = RaceCard.labelOf(v, r);
@@ -600,10 +666,10 @@
 
       if (d.lines && d.lines.length) {
         Undo.push();
-        State.setRiders(Lineup.layout(d.lines));
+        State.setRiders(Lineup.grid(d.cars));
         render();
-        setHint('並び ' + d.lines.map(function (l) { return l.join('-'); }).join(' / ') +
-                ' のスタートの隊列に戻しました。（取り消しで元に戻せます）');
+        setHint('スタート（車番順）に戻しました。赤板で並び ' + d.lines.map(function (l) { return l.join('-'); }).join(' / ') +
+                ' の一列になります。（取り消しで元に戻せます）');
         return;
       }
       if (d.raceCars && d.raceCars.length) {
@@ -646,7 +712,7 @@
         lines: result.lines,
         cars: carsFromLines(result.lines)
       });
-      State.setRiders(result.positions);
+      State.setRiders(Lineup.grid(carsFromLines(result.lines)));
     }
 
     var jo = q.get('jo');

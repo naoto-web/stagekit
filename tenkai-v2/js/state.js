@@ -14,12 +14,14 @@ var State = (function () {
     return v < lo ? lo : (v > hi ? hi : v);
   }
 
-  /** スタートの隊列（先頭＝1番）。レース未選択で開いたときの見た目＝人が見て「未設定」と分かる */
+  /** スタートの升目（車番順に内→外へ3人ずつ）。レース未選択で開いたときの見た目＝人が見て「未設定」と分かる。
+      lineup.js の grid() と同じ並べ方（state.js は先に読み込まれるのでここに同じ式を持つ） */
   function defaultRiders() {
     var riders = {};
-    var start = CONFIG.PHASES[0].d;
+    var start = CONFIG.PHASES[0].d, L = CONFIG.LAYOUT;
     for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
-      riders[no] = { d: start + (no - 1) * CONFIG.LAYOUT.gapInLine * CONFIG.CAR, lane: -1 };
+      var i = no - 1;
+      riders[no] = { d: start + Math.floor(i / L.gridRows) * L.gridGap * CONFIG.CAR, lane: -1 + (i % L.gridRows) };
     }
     return riders;
   }

@@ -86,7 +86,10 @@ var CONFIG = (function () {
     iconPx: function (ratio) { return TRACK.W * ratio; },
 
     /* 自動配置（要件定義_v2 §6.8）：同一ライン1.05車身・ライン間＋0.7車身・全員内 */
-    LAYOUT: { gapInLine: 1.05, gapBetween: 0.7 },
+    LAYOUT: { gapInLine: 1.05, gapBetween: 0.7,
+      /* スタートの升目（9/27 Naoto）：車番順に内→外へ3人ずつ、前から列にする（1-2-3／4-5-6／7-8-9）。
+         列の前後は2車身＝真ん中のレーンの苗字チップを丸の後ろに出す場所（5文字の名前まで入る） */
+      gridGap: 2.0, gridRows: 3 },
 
     /* ホイール1ノッチ＝0.5車身 */
     WHEEL_STEP: 0.5 * CAR,

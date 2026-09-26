@@ -91,10 +91,31 @@ var Lineup = (function () {
     return positions;
   }
 
+  /**
+   * スタートの升目（9/27 Naoto）＝車番順に 内・中・外 の3人ずつ、前から列にする
+   *   1列目：1(内) 2(中) 3(外) ／ 2列目：4 5 6 ／ 3列目：7 8 9
+   * 欠車があれば詰める（出ている車番の順で数える）
+   * @param {number[]} cars 盤面に出す車番
+   * @param {number} [headD] 1列目の周回位置（省略時＝スタート）
+   */
+  function grid(cars, headD) {
+    var L = CONFIG.LAYOUT;
+    var d0 = (typeof headD === 'number' && isFinite(headD)) ? headD : CONFIG.PHASES[0].d;
+    var positions = {};
+    (cars || []).slice().sort(function (a, b) { return a - b; }).forEach(function (no, i) {
+      positions[no] = {
+        d: d0 + Math.floor(i / L.gridRows) * L.gridGap * CONFIG.CAR,
+        lane: -1 + (i % L.gridRows)
+      };
+    });
+    return positions;
+  }
+
   return {
     normalize: normalize,
     parse: parse,
     layout: layout,
+    grid: grid,
 
     /** パース＋配置をまとめて実行 */
     apply: function (text, cars) {

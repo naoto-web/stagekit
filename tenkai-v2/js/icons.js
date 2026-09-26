@@ -95,6 +95,7 @@ var Icons = (function () {
     text.setAttribute('font-size', fs);
     bg.setAttribute('x', -w / 2); bg.setAttribute('y', -h / 2);
     bg.setAttribute('width', w); bg.setAttribute('height', h);
+    g.__chipW = w;
   }
 
   /** 苗字を差し込む。空文字ならチップは消える */
@@ -111,15 +112,34 @@ var Icons = (function () {
    * @param {{x,y}} out  外向きの単位ベクトル
    * @param {number} lane 内外（チップを出す側を決める）
    */
-  function place(g, pt, out, lane) {
+  function place(g, pt, out, lane, mode, back) {
     g.setAttribute('transform', 'translate(' + pt.x.toFixed(1) + ',' + pt.y.toFixed(1) + ')');
     var chip = g.querySelector('.rider-chip');
     if (!chip) return;
     var px = g.__px || 46;
-    /* 内レーン（-0.5未満）はインフィールド側、それ以外は外側。距離＝丸の半径＋チップの半分の高さ＋少し */
-    var side = (lane < -0.5) ? -1 : 1;
-    var dist = px / 2 + 12;
-    chip.setAttribute('transform', 'translate(' + (out.x * side * dist).toFixed(1) + ',' + (out.y * side * dist).toFixed(1) + ')');
+    var ox, oy;
+    if (mode === 'back' && back) {
+      /* 丸の後ろ（進行方向の逆）に出す＝内外の両隣が埋まっている真ん中のレーン（スタートの升目など） */
+      var dist2 = px / 2 + 3 + (g.__chipW || 50) / 2;
+      ox = back.x * dist2; oy = back.y * dist2;
+    } else {
+      /* 'in'＝インフィールド側／'out'＝外側。未指定なら 内レーンは内・それ以外は外。距離＝丸の半径＋チップの半分の高さ＋少し */
+      var side = mode === 'in' ? -1 : (mode === 'out' ? 1 : ((lane < -0.5) ? -1 : 1));
+      /* 距離＝丸の半径＋1px＋「その向きに見たチップの半分の大きさ」。
+         上下に出すときは高さの半分（9px）、コーナーの真横に出すときは幅の半分（約25px）。
+         一律の距離だとコーナーの真横でチップが丸に重なった（9/27・4角）。
+         上下のときは 23+1+9＝33px＝外レーンのチップがホーム直線で盤面の下端（572）に収まる */
+      var w2 = (g.__chipW || 50) / 2;
+      var dist = px / 2 + 1 + Math.abs(out.x) * w2 + Math.abs(out.y) * 9;
+      ox = out.x * side * dist; oy = out.y * side * dist;
+      /* 盤面（960×572）からはみ出すなら丸の後ろへ（左右のコーナーの外レーンで苗字が切れた・9/27） */
+      var W = CONFIG.TRACK.W, H = CONFIG.TRACK.H, cx = pt.x + ox, cy = pt.y + oy;
+      if (back && (cx - w2 < 0 || cx + w2 > W || cy - 9 < 0 || cy + 9 > H)) {
+        var dist3 = px / 2 + 3 + Math.abs(back.x) * w2 + Math.abs(back.y) * 9;
+        ox = back.x * dist3; oy = back.y * dist3;
+      }
+    }
+    chip.setAttribute('transform', 'translate(' + ox.toFixed(1) + ',' + oy.toFixed(1) + ')');
   }
 
   return {

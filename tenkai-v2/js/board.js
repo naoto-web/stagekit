@@ -139,17 +139,49 @@ var Board = (function () {
     return { x: p.x, y: p.y };
   }
 
+  /** 苗字チップを出す側。内レーン＝インフィールド側／外レーン＝外側／真ん中＝空いている側、
+      内外の両隣が埋まっていれば丸の後ろ（スタートの升目で真ん中の列の苗字が隠れた・9/27 Naoto） */
+  function chipMode(no, r, cars, view) {
+    if (r.lane < -0.5) return 'in';
+    if (r.lane > 0.5) return 'out';
+    var near = 0.9 * CONFIG.CAR, inner = false, outer = false;
+    cars.forEach(function (o) {
+      if (o === no) return;
+      var q = view[o];
+      if (Math.abs(q.d - r.d) >= near) return;
+      if (q.lane < -0.5) inner = true;
+      if (q.lane > 0.5) outer = true;
+    });
+    if (inner && outer) return 'back';
+    return outer ? 'in' : 'out';
+  }
+
+  /** 進行方向の逆向きの単位ベクトル */
+  function behind(dd) {
+    var a = Track.pointAt(dd, 0), b = Track.pointAt(dd + 0.002, 0);
+    var x = b.x - a.x, y = b.y - a.y, l = Math.sqrt(x * x + y * y) || 1;
+    return { x: x / l, y: y / l };
+  }
+
   /** 位置だけ更新（ドラッグ・アニメ中に毎フレーム呼ぶ） */
   function positions(d, view) {
     view = view || d.riders;
     var px = CONFIG.iconPx(d.iconRatio);
     var leader = null;
-    (d.cars || []).forEach(function (no) {
+    var cars = (d.cars || []).filter(function (no) { return !!view[no]; });
+    cars.forEach(function (no) { var r = view[no]; if (leader === null || r.d < leader) leader = r.d; });
+    cars.forEach(function (no) {
       var r = view[no];
-      if (!r) return;
-      if (leader === null || r.d < leader) leader = r.d;
-      Icons.place(riderEls[no], Track.pointAt(r.d, r.lane), Track.outward(r.d), r.lane);
+      Icons.place(riderEls[no], Track.pointAt(r.d, r.lane), Track.outward(r.d), r.lane,
+                  chipMode(no, r, cars, view), behind(r.d));
     });
+
+    /* 連結バーはスタートの升目では隠し、走り出してから赤板までに浮かび上がらせる（9/27）。
+       升目の時点ではラインがまだ組まれていない＝バーを出すとジグザグに見える */
+    /* 赤板（2.0）の直前だけで浮かび上がる。早く出すと、組み替えの途中でバーがジグザグに見えた（9/27） */
+    var barOp = leader === null ? 1 : Math.max(0, Math.min(1, (2.2 - leader) / 0.2));
+    barsLayer.style.opacity = String(barOp);
+    barsLayer.style.display = barOp <= 0.001 ? 'none' : '';
 
     /* 誘導員：先頭の1車身前・内。先頭が打鐘の位置に近づくと外へ上がりながら薄くなって消える（§5） */
     /* ⚠️境目に余裕を持たせる：先頭がちょうど打鐘の位置（1.5）のときに小数の誤差で「まだ手前」と判定され、
