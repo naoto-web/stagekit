@@ -401,20 +401,18 @@ var Verbs = (function () {
     return passOver(no, L[0], '突き抜け');
   }
 
-  /** 押切：先頭がそのままゴールへ。主語だけ＋0.5車身（差が開いて逃げ切る絵） */
+  /** 押切：先頭がそのまま1着でゴールし、ラインの後続もそのままの順でゴールする（9/27 Naoto）＝決着の仕組みで走り切る。
+      3着目はラインに3人いなければ、いまの並び順で次の選手。最終周回（最終ホーム以降）ならどこからでも押せる。
+      ズブズブとの違い＝押切は先頭ラインが対象（選ぶのは先頭の選手 or そのライン）・最終ストレートより前でも使える。
+      旧＝先頭だけゴール線へ・後続は0.5車身離れてゴール手前で止まる */
   function oshikiri(sel) {
-    var no = sel.type === 'line' ? lineOf(sel.nos[0])[0] : sel.nos[0];
     var lead = leaderNo();
-    if (no !== lead) return { error: '押切は先頭の選手で使います（いまの先頭は ' + label(lead) + '）' };
-    var ld = data().riders[lead].d;
-    if (ld > 1.0 + 1e-6) return { error: '押切は最終周回（最終ホーム以降）で使ってください' };
-    var paths = {};
-    cars().forEach(function (o) {
-      var p = pos(o);
-      var fd = o === lead ? 0 : Math.max(0.2 * CAR, p.d - ld + 0.5 * CAR);
-      paths[o] = [{ t: 0, d: p.d, lane: p.lane }, { t: 1, d: fd, lane: p.lane }];
-    });
-    return { paths: paths, hint: '押切：' + label(lead) + ' がそのままゴールへ', long: true };
+    var L = lineOf(lead);
+    var picked = sel.type === 'line' ? lineOf(sel.nos[0]) : [sel.nos[0]];
+    if (picked.indexOf(lead) === -1) return { error: '押切は先頭の選手（かそのライン）で使います（いまの先頭は ' + label(lead) + '）' };
+    if (data().riders[lead].d > 1.0 + 1e-6) return { error: '押切は最終周回（最終ホーム以降）で使ってください' };
+    var top = [lead].concat(L.filter(function (n) { return n !== lead; }));
+    return { finish: fillTop(top.slice(0, 3)), hint: '押切：' + label(lead) + ' が押し切って1着、ラインもそのままゴール' };
   }
 
   /** ブロック：主語が外へ1レーン振り、外にいた相手をさらに外へ・後ろへ（止められた絵）。
