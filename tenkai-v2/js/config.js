@@ -59,7 +59,7 @@ var CONFIG = (function () {
   var CAR = CAR_PX / LAP;   // 周単位
 
   /* 局面（要件定義_v2 §5）。d＝そのとき先頭がいる周回位置
-     バック・4角は「場所」で決めてから d に換算する（ゴール線がホーム直線の端にあるため0.5周≠バック中央） */
+     バック・最終ストレートは「場所」で決めてから d に換算する（ゴール線がホーム直線の端にあるため0.5周≠バック中央） */
   var P_C = TRACK.GOAL_OFF + Math.PI * TRACK.RREF;         // バック直線の始まり（2角の出口）
   var P_D = P_C + TRACK.LSTR;                               // バック直線の終わり（3角の入口）
   var PHASES = [
@@ -68,7 +68,7 @@ var CONFIG = (function () {
     { key: 'bell',    label: '打鐘',       d: 1.5 },
     { key: 'home',    label: '最終ホーム', d: 1.0 },
     { key: 'back',    label: '最終バック', d: 1 - (P_C + TRACK.LSTR / 2) / LAP },
-    { key: 'corner4', label: '4角',        d: 1 - (P_D + Math.PI * TRACK.RREF / 2) / LAP },
+    /* 4角は9/27に廃止（最終バックと最終ストレートの間で押し分ける場面がない・Naoto）。ホイールでは今までどおり止められる */
     /* 最終ストレート（9/27 Naoto）＝4角を抜けてホーム直線に入ったところ。ここで差し・突き抜け・ズブズブを押すと3着までゴールする */
     { key: 'straight', label: '最終ストレート', d: 1 - (P_D + Math.PI * TRACK.RREF) / LAP },
     { key: 'goal',    label: 'ゴール',     d: 0 }
