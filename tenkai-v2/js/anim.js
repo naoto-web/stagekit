@@ -59,7 +59,9 @@ var Anim = (function () {
       });
       maxAbs = 0.5;
     }
-    var ms = (o && o.ms) || Math.round(Math.min(1100, 350 + maxAbs * 1200));
+    /* 速さは config.js の ANIM（9/27 Naoto「速いのでもっとゆっくり」→半周で約2.4秒） */
+    var A = CONFIG.ANIM;
+    var ms = (o && o.ms) || Math.round(Math.min(A.maxMs, A.baseMs + maxAbs * A.msPerLap));
     /* ドックが隠れている（別タブ等）ときは rAF が止まる＝途中の隊列のまま出力に残る。
        rAF を待たずにその場で目標へ置く */
     if (isHidden()) {
