@@ -3247,7 +3247,14 @@
      このページの寿命内は「的中1件＝演出1回」をここで確定させる。
      リロード後の再生はseenHits初回初期化が抑止する従来のまま。
      fxlabは発火ごとにレース番号を進める＝IDが毎回変わるので連打に影響なし */
-  var firedFx = {};
+  /* 9/26 リロードと結果確定が重なった取りこぼし対策（別府7R・えーす的中で演出が出なかった）：
+     公開直後の自動読み直しの最中に結果が確定すると、読み直したページは初回の seenHits にその的中を入れてしまい演出が出ない。
+     ⇒ 出した演出の記録（firedFx）を sessionStorage に残し（読み直しても消えない＝二度出しはしない）、
+       初回でも「HIT_REPLAY_MS 以内に手動確定した的中で、このページがまだ出していないもの」は演出する */
+  var FIRED_SS = "okl-firedfx-" + todayStr();
+  var HIT_REPLAY_MS = 90000;
+  var firedFx = (function () { try { return JSON.parse(sessionStorage.getItem(FIRED_SS) || "{}") || {}; } catch (e) { return {}; } })();
+  function saveFired() { try { sessionStorage.setItem(FIRED_SS, JSON.stringify(firedFx)); } catch (e) {} }
   var HIT_FX_MS = 35000; // 8/6 FB46：12秒→20秒→8/7 FB62：27秒→8/10 FB121：35秒に延長（バッジ・買目チップ強調共通）
 
   /* 的中買目の車番強調（8/10 FB119・Naoto依頼「当たった買目の車番だけ強調」）＝
@@ -3327,7 +3334,19 @@
     var ids = {};
     var glowAdded = false; // FB119：この呼び出しで買目強調が追加されたか
     derived.hits.forEach(function (h) { ids[h.id] = h; });
-    if (seenHits === null) { seenHits = ids; return; }
+    if (seenHits === null) {
+      seenHits = {};
+      var replay = 0;
+      Object.keys(ids).forEach(function (id) {
+        var h = ids[id], p = String(id).split("|");
+        var r = p.length >= 5 ? (state.results || {})[p[0] + "|" + p[1]] : null;
+        var t = r && r.settledAt ? Date.parse(r.settledAt) : 0;
+        // 直前（90秒以内）に手動確定した・まだ出していない的中だけ「新規」として下の通常処理へ回す。それ以外は従来どおり既知扱い
+        if (!h.resAuto && t && Date.now() - t < HIT_REPLAY_MS && !firedFx[id]) { replay++; return; }
+        seenHits[id] = h;
+      });
+      if (!replay) { seenHits = ids; return; }
+    }
     var groups = {}, groupOrder = []; // 「同じレース×同じ人」の同時的中をまとめる（8/27 FB148）
     var fresh = [];                   // この回の新規的中（ダブル判定に使う・8/28）
     Object.keys(ids).forEach(function (id) {
@@ -3339,6 +3358,7 @@
       if (h.resAuto) return;
       if (firedFx[id]) return; // 同じ的中で二度は鳴らさない（8/26根治・firedFxのコメント参照）
       firedFx[id] = true;
+      saveFired();
       addHitGlow(h); // 予想帯の的中買目チップ強調（8/10 FB119・演出と同条件・同尺）
       glowAdded = true;
       fresh.push(h);
