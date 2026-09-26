@@ -919,6 +919,7 @@
      ⚠️renderPreds は何度も描き直す＝演出は「始まった時刻」を覚えておき、描き直すたびに負の animation-delay で続きから再生する */
   var odShown = {}, odMove = {}, odFinAt = {};
   var OD_MOVE_MS = 900, OD_FIN_MS = 1600, OD_SWEEP_MS = 1300, OD_STALE_MS = 120000;
+  var OD_BIG_RATIO = 0.2, OD_BIG_MS = 1500; // 大きい変動＝±20%以上・1.5秒（CSS .od-big と同じ長さ）
   function markOdds() {
     document.querySelectorAll(".od-sweep").forEach(function (o) { o.remove(); });
     if (!ODDS) return;
@@ -927,12 +928,19 @@
       var id = e.getAttribute("data-ok"), t = e.textContent, prev = odShown[id];
       if (prev && prev.t !== t && now - prev.at < OD_STALE_MS) { // 長く画面に無かった数字の変化は演出しない
         var a = parseFloat(prev.t), b = parseFloat(t);
-        if (!isNaN(a) && !isNaN(b) && a !== b) odMove[id] = { dir: b > a ? "up" : "down", at: now };
+        if (!isNaN(a) && !isNaN(b) && a !== b) {
+          /* 大きい変動（9/26 Naoto）＝前の表示から±20%以上なら、動いた幅を「+4」「−60」で矢印と一緒に出し、1.5秒に延ばす。
+             判定は割合・見せるのは差（倍）＝案A。差の書式は倍率と同じ（10未満は小数第1位・以上は整数） */
+          var big = Math.abs(b - a) / a >= OD_BIG_RATIO;
+          odMove[id] = { dir: b > a ? "up" : "down", at: now, big: big,
+            dv: big ? (b > a ? "+" : "−") + window.Keirin.oddsInt(Math.abs(b - a)) : "" };
+        }
       }
       odShown[id] = { t: t, at: now };
       var mv = odMove[id];
-      if (mv && now - mv.at < OD_MOVE_MS) {
+      if (mv && now - mv.at < (mv.big ? OD_BIG_MS : OD_MOVE_MS)) {
         e.classList.add(mv.dir === "up" ? "od-up" : "od-down");
+        if (mv.big) { e.classList.add("od-big"); e.setAttribute("data-dv", mv.dv); }
         e.style.setProperty("--odd", -(now - mv.at) + "ms");
       }
     });

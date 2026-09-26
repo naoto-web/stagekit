@@ -3428,7 +3428,16 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 .odn.od-down::after { content: "▼"; color: #1f5fd6; animation-name: odMarkDown; }
 @keyframes odMarkUp   { 0% { opacity: 1; transform: translate(-50%, -50%); } 60% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -2.1em); } }
 @keyframes odMarkDown { 0% { opacity: 1; transform: translate(-50%, -50%); } 60% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 1.1em); } }
-.od-fin { color: #c28400; }
+/* 大きい変動（前の表示から±20%以上・9/26 Naoto）＝矢印と動いた幅をひとまとまり「▲+12」「▼−6」にして、ふだんの矢印と同じ道筋で動かす。
+   長さは1.5秒（JS OD_BIG_MS と同じ）＝数字を読める長さ。字は矢印より一回り大きく＋白フチ（上下の段の矢印と重なっても読める）。
+   旧＝幅だけ別の小さな字（.42em≒11px）で矢印の外側に出した→小さすぎ・②の上下2段で段の間の「−6」「+5」がぶつかった */
+.odn.od-up.od-big, .odn.od-down.od-big { animation-duration: 1.5s; }
+.odn.od-up.od-big::after, .odn.od-down.od-big::after { font-size: .65em; font-weight: 900; white-space: nowrap; animation-duration: 1.5s;
+  text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff; }
+.odn.od-up.od-big::after { content: "▲" attr(data-dv); animation-name: odBigUp; }
+.odn.od-down.od-big::after { content: "▼" attr(data-dv); animation-name: odBigDown; }
+@keyframes odBigUp   { 0% { opacity: 1; transform: translate(-50%, -50%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -1.8em); } }
+@keyframes odBigDown { 0% { opacity: 1; transform: translate(-50%, -50%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, .8em); } }.od-fin { color: #c28400; }
 .od-fin.od-finfx { animation: odFin 1.6s ease-out; animation-delay: var(--odf, 0ms); }
 @keyframes odFin {
   0%   { color: var(--txt); text-shadow: none; }
