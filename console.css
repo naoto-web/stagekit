@@ -257,6 +257,12 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 #pred-forms .pred-opts:not(.pf-ore-row) .lbl { flex: 0 1 auto; min-width: 0; }
 #pred-forms .pf-invest { flex: 0 1 6.5em; width: 6.5em; min-width: 3em; padding-left: 6px; padding-right: 6px; }
 #pred-forms .btn.pf-invstep { width: 32px; flex: none; }
+/* 入れ忘れの欄（9/26 Naoto）＝買目があるのに俺たち目／投資が空。枠線の太さは変えず box-shadow で太く見せる（行がずれない）。
+   カーソルを置いても赤のまま（金の枠にしない）＝打ち終わるまで「まだ空」と分かる */
+#pred-forms .inp.pf-missing,
+#pred-forms .inp.pf-missing:focus { border-color: #e5484d; box-shadow: 0 0 0 2px #e5484d; background: rgba(229, 72, 77, .14); }
+#pred-forms .inp.pf-missing::placeholder { color: #ff9a9d; font-weight: 700; opacity: 1; }
+#pred-forms .lbl.pf-missing { color: #ff6b70; font-weight: 800; }
 .unit-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffb3b3; line-height: 2; }
 /* 未保存の下書きがある予想フォーム（8/8 FB75）＝入力は保持されるが放送には出ていない状態 */
 .draft-warn { margin-top: 6px; font-size: 12px; font-weight: 700; color: #ffd88a; line-height: 2; }

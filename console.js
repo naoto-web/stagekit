@@ -796,6 +796,15 @@
     }).catch(function () { delete conOddsPending[key]; conOddsAt[key] = Date.now(); });
   }
 
+  /** 入れ忘れの欄の印（9/26）：欄と見出し（包んでいる label）に .pf-missing、欄の中に「未入力」 */
+  function markMissing(inp, on) {
+    if (!inp) return;
+    inp.classList.toggle("pf-missing", on);
+    var lbl = inp.closest("label");
+    if (lbl) lbl.classList.toggle("pf-missing", on);
+    inp.placeholder = on ? "未入力" : "";
+  }
+
   function updatePredInfo(form, key) {
     ensureConOdds(key); // 買目オッズ（§13）＝初回は即・以後は25秒以内の重複を抑える
     var odds = CON_ODDS ? conOdds[key] : null;
@@ -831,6 +840,12 @@
       return '<div class="pl-row pl-ok" title="' + esc(tip) + '">' + typeMark + "<b>" + l.points + "点</b>" + (l.dupCount ? '<span class="pl-memo">*</span>' : "") + "</div>";
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;
+    /* 入れ忘れの欄を強調（9/26 Naoto「買目を入れたのに投資額と俺たち目を入れ忘れた」）＝買目が1点以上あるのに
+       俺たち目／投資が空なら、その欄だけ赤枠＋「未入力」。買目を打った瞬間から出す（Naoto(a)）・カードの枠は変えない。
+       保存・放送は止めない（買目だけ先に出す運用＝FB97はそのまま）。文章の注意（.unit-warn）は非表示のまま */
+    var needFill = parsed.points > 0;
+    markMissing(form.querySelector(".pf-ore"), needFill && !form.querySelector(".pf-ore").value.trim());
+    markMissing(form.querySelector(".pf-invest"), needFill && !investInput);
     var syn = odds ? window.Keirin.synthOdds(parsed, odds) : null; // 合成オッズ＝投資の右（9/25 Naoto）
     // 俺たち目の右にもオッズ（9/25 Naoto）＝「126」は1-2-6（oreNormalize）で組を出す。OBSと同じ関数
     var oreBox = form.querySelector(".pf-ore-odds");
