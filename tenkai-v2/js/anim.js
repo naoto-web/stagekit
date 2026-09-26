@@ -362,8 +362,8 @@ var Anim = (function () {
     var bestCost = plan.overlap;
     /* 逆再生のときは t を 1−t にして同じ道をたどる */
     function posAt(s, t) { var tt = s.rev ? 1 - t : t; return { rel: relAt(s, s.op, tt), lane: laneAt(s, s.op, tt) }; }
-    var A = CONFIG.ANIM;
-    var ms = Math.round(Math.min(A.maxMs, A.baseMs + Math.max(Math.abs(v), 0.35) * A.msPerLap));
+    /* 組み替えは位置取りを見せたいので、ふつうの局面アニメとは別の長さ（config.js の ANIM.reformMs） */
+    var ms = CONFIG.ANIM.reformMs;
     if (isHidden()) {
       nos.forEach(function (no) { State.moveRider(+no, target[no].d, target[no].lane); });
       if (o.onFrame) o.onFrame(true);
