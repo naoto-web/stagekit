@@ -150,7 +150,7 @@ var Verbs = (function () {
     var restHead = win + ((t.length - 1) * GAP + 1.3) * CAR;
     /* 4着以下は真ん中のレーンに一列（9/27 Naoto「最初みんな真ん中に行って、ゴール後も真ん中のまま」）。旧＝内に一列 */
     byD(c.filter(function (n) { return t.indexOf(n) === -1; })).forEach(function (no, j) {
-      target[no] = { d: restHead + j * CONFIG.LAYOUT.gapInLine * CAR, lane: 0 };
+      target[no] = { d: restHead + j * CONFIG.LAYOUT.gapInLine * CAR, lane: laneMap && laneMap[no] != null ? laneMap[no] : 0 };   // 差しで前にいて抜かれる選手は内のまま
     });
     return target;
   }
@@ -390,7 +390,19 @@ var Verbs = (function () {
       var L = lineOf(no), k = L.indexOf(no);
       var top = fillTop([no, best, k >= 0 && L[k + 1] != null ? L[k + 1] : null]);
       var lanes = {};
-      lanes[best] = -1; lanes[no] = 0; if (top[2] != null) lanes[top[2]] = 1;
+      var bestD = data().riders[best].d;
+      var ahead = cars().filter(function (o) { return o !== no && o !== best && data().riders[o].d < bestD - 1e-6; });
+      if (!ahead.length) {
+        lanes[best] = -1; lanes[no] = 0; if (top[2] != null) lanes[top[2]] = 1;
+      } else {
+        /* 差される選手の前（内）に誰かいる＝内は詰まっている（9/27 Naoto・5-3 のラインの前に 4・1・7 がいた）。
+           差される選手は真ん中・差す選手は外へ出て、ゴールの前に差す。前にいた選手は内のまま抜かれる。
+           旧＝差される選手が内のまま前に詰まり、差す選手は真ん中で4着以下とぶつかって、差す前にゴールしていた */
+        lanes[best] = 0; lanes[no] = 1;
+        ahead.forEach(function (o) { lanes[o] = -1; });
+        /* 3着：前にいた選手なら内のまま（上で -1）・後ろから来る選手（主語のライン）なら主語に続いて外 */
+        if (top[2] != null && lanes[top[2]] == null) lanes[top[2]] = 1;
+      }
       return { finish: top, lanes: lanes, hint: '差し：' + label(no) + ' が ' + label(best) + ' を差して1着' };
     }
     return passOver(no, best, '差し');
