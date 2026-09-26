@@ -388,6 +388,15 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .stc-cmp .stc-row > .nm { font-size: min(23px, calc(var(--stc-rh, 36px) * .56)); } /* 9/25 20→23px（上限） */
 .stc-cmp .stc-row > .nm small { font-size: min(15px, calc(var(--stc-rh, 36px) * .36));
   margin-top: 0; line-height: inherit; } /* 9/25 Naoto「②③は下の人に近づく→元に戻して」＝名前との間あけは①だけ */ /* 9/25 13→15px（上限） */
+/* B・H・S の1位赤・2位青（9/26 Naoto）＝得点と同じ色 */
+.stc-tr .n.top1 { color: #d63b3b; }
+.stc-tr .n.top2 { color: #2f66d0; }
+/* 9車立て＝1段（9/26 Naoto）：名前の下の段をやめ、府県だけ名前の右に小さく（期・年齢は出さない）。
+   名前は行の高さの70%まで大きく（上限は2段と同じ ①20px／②③23px） */
+.stc-one .stc-row > .nm { white-space: nowrap; font-size: min(20px, calc(var(--stc-rh, 36px) * .7)); }
+.stc-one.stc-cmp .stc-row > .nm { font-size: min(23px, calc(var(--stc-rh, 36px) * .7)); }
+.stc-one .stc-row > .nm .nm1 { display: inline; }
+.stc-one .stc-row > .nm small, .stc-one.stc-cmp .stc-row > .nm small { display: inline; margin: 0 0 0 6px; font-size: .62em; line-height: 1; }
 
 .nameplate {
   position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px;

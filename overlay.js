@@ -2431,6 +2431,7 @@
     if (!race || !race.racers || !race.racers.length) {
       html = '<div class="stc-hd"><b class="stc-vr">' + esc(vName && rNo ? vName + " " + rNo + "R" : "") +
         '</b></div><div class="stc-empty">出走表データ取得待ち</div>';
+      boxes.forEach(function (b) { b.classList.remove("stc-one"); });
     } else {
       var key = window.Derive.raceKey(vName, rNo);
       if (!narabiAuto[key]) ensureNarabi(vName, rNo, key);
@@ -2446,6 +2447,18 @@
         if (!isNaN(v) && vals.indexOf(v) < 0) vals.push(v);
       });
       vals.sort(function (a, b) { return b - a; });
+      /* B・H・S も得点と同じ＝レース内の1位赤・2位青（同じ数字は同じ色・0と空は数えない）（9/26 Naoto）。st[4..6]＝B H S */
+      var bhsRank = {};
+      [4, 5, 6].forEach(function (i) {
+        var vs = [];
+        race.racers.forEach(function (p) {
+          var v = parseFloat(((cards[String(p.no)] || {}).st || [])[i]);
+          if (v > 0 && vs.indexOf(v) < 0) vs.push(v);
+        });
+        bhsRank[i] = vs.sort(function (a, b) { return b - a; });
+      });
+      // 9車立て＝名前の下の段（府県・期・年齢）をやめて1段に・府県だけ名前の右に小さく（9/26 Naoto＝2段だと下の段が約11pxで読めない）
+      var one = ord.length >= 9;
       var gaps = ord.filter(function (o) { return o.gap; }).length;
       var rh = Math.min(STC_ROW, Math.floor(((cmp ? STC_H_CMP : STC_H) - STC_HD - STC_TH - gaps * STC_GAP) / ord.length));
       // 列の区切り（mid＝右の列を広げて線を左右の数字のまん中へ・試作4〜5のNaoto指定）
@@ -2463,11 +2476,13 @@
         var sv = parseFloat(sc);
         var scls = sv === vals[0] ? " top1" : (vals.length > 1 && sv === vals[1]) ? " top2" : "";
         var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
-        var sub = [p.pref, c.t ? c.t + "期" : "", age].filter(Boolean).join(" ");
+        var sub = one ? (p.pref || "") : [p.pref, c.t ? c.t + "期" : "", age].filter(Boolean).join(" ");
         var nums = "";
         for (var i = (cmp ? 4 : 0); i < (cmp ? 7 : 10); i++) { // ②③＝B H S（st[4..6]）だけ
           var v = String(st[i] == null ? "" : st[i]).trim();
-          nums += '<span class="n' + (SEP[i] ? " sep" : "") + (!v || v === "0" ? " z" : "") + '">' +
+          var rk = bhsRank[i], fv = parseFloat(v);
+          var tcls = rk && fv > 0 ? (fv === rk[0] ? " top1" : fv === rk[1] ? " top2" : "") : "";
+          nums += '<span class="n' + (SEP[i] ? " sep" : "") + (!v || v === "0" ? " z" : "") + tcls + '">' +
             esc(v === "" ? "-" : v) + "</span>";
         }
         return (o.gap ? gapRow : "") +
@@ -2490,6 +2505,7 @@
       boxes.forEach(function (b) {
         b.style.setProperty("--stc-rh", rh + "px");
         b._stcN = ord.length; b._stcGaps = gaps;
+        b.classList.toggle("stc-one", one);
       });
     }
     // 同じ中身なら触らない（毎回innerHTMLを差し替えると描画が無駄に走る）
