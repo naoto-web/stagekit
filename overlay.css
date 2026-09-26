@@ -699,12 +699,14 @@ body.tfx .vt-row b.closed.stamp-in { animation: vtStamp .45s cubic-bezier(.3, 1.
 .slist-panel { display: flex; flex-direction: column; }
 .slist-panel .slist { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 
-/* 🧪①出走表の2段版（9/27・§47・&sl2=1）。列＝車番｜名前（2段）｜脚｜得点｜B｜H｜S｜勝率。
+/* ①出走表の2段版（9/27・§47・既定ON／&sl2=0で旧）。列＝車番｜名前（2段）｜脚｜得点｜B｜H｜S｜勝率。
    9/27 Naoto＝級は出さない・脚は得点の左の列。字の大きさは行の高さ --sl2-rh に比例（fitSl2 が実寸から決める＝7車は大きく・9車は詰める） */
-.slist.sl2 { --sl2-rh: 50px; padding: 0; }
+.slist.sl2 { --sl2-rh: 50px; padding: 0; --sl2-ink: var(--txt); }
+/* 表の字は白テーマでは真っ黒（9/27 Naoto「もっと濃ゆく」）。暗色テーマは従来の字の色 */
+body[data-theme="w"] .slist.sl2 { --sl2-ink: #000; }
 .sl2-th, .sl2-row { display: grid; align-items: center; column-gap: 3px; padding: 0 6px 0 8px;
-  grid-template-columns: min(calc(var(--sl2-rh) * .56), 32px) minmax(0, 1fr) 24px 58px 23px 23px 23px 38px; }
-.sl2-th { height: 22px; font-size: 14px; font-weight: 900; color: var(--sub); border-bottom: 1.5px solid var(--panel-line); }
+  grid-template-columns: min(calc(var(--sl2-rh) * .56), 32px) minmax(0, 1fr) 22px 60px 27px 27px 27px 40px; }
+.sl2-th { height: 22px; font-size: 15px; font-weight: 900; color: var(--sl2-ink); border-bottom: 1.5px solid var(--panel-line); }
 .sl2-th span { text-align: center; }
 .sl2-row { height: var(--sl2-rh); border-bottom: 1px solid rgba(0,0,0,.08); }
 .sl2-row:last-child { border-bottom: none; }
@@ -717,17 +719,22 @@ body.tfx .vt-row b.closed.stamp-in { animation: vtStamp .45s cubic-bezier(.3, 1.
 .sl2-sub { font-size: min(calc(var(--sl2-rh) * .28), 14.5px); font-weight: 700; color: var(--sub); line-height: 1.2;
   white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }
 .sl2-ky, .sl2-sc, .sl2-n { text-align: center; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.sl2-row .sl2-ky { font-size: min(calc(var(--sl2-rh) * .36), 18px); font-weight: 800; color: var(--txt); }
-.sl2-row .sl2-sc { font-size: min(calc(var(--sl2-rh) * .40), 20px); color: var(--txt); }
-.sl2-row .sl2-n { font-size: min(calc(var(--sl2-rh) * .36), 18px); color: var(--txt); }
-.sl2-row .sl2-n.sl2-wr { font-size: min(calc(var(--sl2-rh) * .32), 17px); }
-.sl2-row .z { opacity: .35; }
+.sl2-row .sl2-ky { font-size: min(calc(var(--sl2-rh) * .38), 19px); color: var(--sl2-ink); }
+.sl2-row .sl2-sc { font-size: min(calc(var(--sl2-rh) * .40), 20px); color: var(--sl2-ink); }
+.sl2-row .sl2-n { font-size: min(calc(var(--sl2-rh) * .46), 23px); color: var(--sl2-ink); }
+.sl2-row .sl2-n.sl2-wr { font-size: min(calc(var(--sl2-rh) * .44), 22px); }
+/* 0は字の色だけ薄く（opacityだとその枠の縦線まで薄くなる＝9/27「Sと勝率の間の線が途中で薄い」の原因） */
+.sl2-row .z { color: #8d949e; }
 .sl2-row .top1 { color: #d63b3b; }
 .sl2-row .top2 { color: #2f66d0; }
 /* 得点｜B の区切り・S｜勝率 の区切り */
 .sl2-th .sl2-sc, .sl2-row .sl2-sc { border-right: 1.5px solid var(--panel-line); }
 .sl2-th .sl2-wr, .sl2-row .sl2-wr { border-left: 1.5px solid var(--panel-line); }
 .sl2-row .sl2-sc, .sl2-row .sl2-wr { align-self: stretch; display: flex; align-items: center; justify-content: center; }
+/* ライン行との境目（9/27「右側が途切れている」）＝ライン行は fitNarabi が scale で縮めるので自分の上線も一緒に縮む
+   →線はリスト側の下辺に持たせる（2段版のときだけ） */
+.slist.sl2 { border-bottom: 1.5px solid var(--panel-line); }
+.slist.sl2 ~ .narabi-row { border-top: none; }
 
 .hits-panel { flex: 1; }
 .hits-list { list-style: none; padding: 2px 0; }

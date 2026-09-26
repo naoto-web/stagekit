@@ -2853,6 +2853,14 @@
     if (!n || !el.clientHeight) return;
     var rh = Math.min(SL2_ROW, Math.floor((el.clientHeight - (th ? th.offsetHeight : 0) - 4) / n));
     el.style.setProperty("--sl2-rh", rh + "px");
+    // 長い名前（「川口 公太朗」＋(補)等）は欄に入るまでその名前だけ縮める（9/27 数字の列を広げた分、名前の欄が細くなった）
+    el.querySelectorAll(".sl2-name").forEach(function (nm) {
+      nm.style.fontSize = "";
+      if (nm.scrollWidth > nm.clientWidth + 1) {
+        var fs = parseFloat(getComputedStyle(nm).fontSize);
+        nm.style.fontSize = Math.max(12, Math.floor(fs * nm.clientWidth / nm.scrollWidth)) + "px";
+      }
+    });
   }
 
   /* ---------- 空席ワイプの出走表（9/25 Naoto・🧪SEATCARD） ----------
