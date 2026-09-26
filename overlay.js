@@ -1972,7 +1972,8 @@
         if (bandName) {
           // A（RB2・②だけ）＝帯の中のレース名ラベルは出さない（場名・Rは中央の並びの窓に出ている）。
           // note予想のレースの人だけ「🔥note」の札（9/25 Naoto）＝左の席は名前の右・右の席は名前の左（中央の並びに寄せる）
-          var bhNote = (RB2 && bp === "band-" && rp && rp.entry.isNote) ? '<span class="bh-race">🔥note</span>' : "";
+          // 「note」の字は .bhn-t＝並びの窓が入り切らない日は🔥だけにする（9/26 Naoto・fitRaceLine が body.rbn-compact を付ける）
+          var bhNote = (RB2 && bp === "band-" && rp && rp.entry.isNote) ? '<span class="bh-race">🔥<span class="bhn-t">note</span></span>' : "";
           bandName.innerHTML = !name ? ""
             : (slot === "b" && bhNote ? bhNote + " " : "") + esc(name) + " 予想" + (slot !== "b" && bhNote ? " " + bhNote : "");
         }
@@ -2514,7 +2515,18 @@
   /* ②中央ラインの位置決め（8/13 v2）＝左右の「〇〇 予想」の実測位置の隙間へ差し込む。
      配信者名の長さで空きが変わるので、CSSの固定値ではなく毎回測る。
      入り切らないぶんは fitNarabi（行ごと縮小・FB44）が最後に吸収する */
+  /* 9/26 Naoto「並びが長くて入り切らない日は🔥noteの札を🔥だけに」＝まず🔥noteのまま置く→文字を縮めないと入らなかったら
+     body.rbn-compact（「note」の字を消す）を付けて置き直す。同じ同期処理の中なので画面にちらつきは出ない */
   function fitRaceLine() {
+    document.body.classList.remove("rbn-compact");
+    fitRaceLineOnce();
+    var nb = $("narabi-race");
+    if (nb && nb.getAttribute("data-shrunk") === "1" && document.querySelector("#scene-race .bh-race")) {
+      document.body.classList.add("rbn-compact");
+      fitRaceLineOnce();
+    }
+  }
+  function fitRaceLineOnce() {
     var box = $("rb-line");
     if (!box) return;
     var inner = $("narabi-race");
@@ -2542,6 +2554,8 @@
        という買い目を削る方向に流れる）。苗字なしのときは高さを全部チップに回す */
     var head = $("band-head-a");
     var hr = head ? head.getBoundingClientRect() : null;
+    // 席1が空席（1人配信で席2だけ）＝席1の見出しは非表示で高さ0→席2の見出しで測る（9/26：高さ・上端・文字サイズが初期値のまま＝上が切れて場名が小さかった）
+    if (!hr || hr.height <= 0) { head = $("band-head-b"); hr = head ? head.getBoundingClientRect() : null; }
     if (hr && hr.height > 0) {
       /* 上端は「帯の見た目の上端」＝予想パネルの枠線の外側に合わせる（8/13 FB）。
          枠線はメンバーカラーで塗られていて帯の一部に見えるため、ヘッダー本体の上端
@@ -2554,7 +2568,7 @@
       var h = hr.bottom - br.top - 1 - RL_TOP;
       box.style.top = RL_TOP + "px";
       box.style.height = Math.round(h) + "px";
-      var inner = h - 10;                   // padding 3×2＋border 2×2
+      var inner = h - 6;                    // padding 1×2＋border 2×2（9/26 上下の余白 3→1px＝車番・苗字を大きく）
       var nm = 0, chip;
       if (LINE_NAMES) {
         nm = Math.max(12, Math.min(26, Math.round(inner * 0.37)));
@@ -2566,7 +2580,7 @@
       box.style.setProperty("--rbnm", nm + "px");
       // 場名Rは1行（8/13 FB「縦より横に余裕があるから1行で大きく」）＝内寸の62%まで使う
       // 🔄9/26 Naoto「買目の帯にレース名を出さなくなったので、ここの『青森4R』がとても重要＝大きく」→80%
-      box.style.setProperty("--rbrace", Math.round(inner * 0.8) + "px");
+      box.style.setProperty("--rbrace", Math.round(inner * 0.85) + "px"); // 9/26 2回目「もっと大きくできるはず」＝85%
     }
     fitNarabi("narabi-race"); // 幅が確定してから縮小判定（先に測ると常に0幅になる）
   }
@@ -2579,12 +2593,21 @@
     /* ②の並びの窓（9/26）＝白い枠を中身ぴったりの幅にしてから、置き場所（.rb-line）に入るまで枠ごと縮める（上辺の中央を基準）。
        旧＝枠の幅を max-width:100% で抑えたまま枠ごと縮めていた＝中身が枠からはみ出したまま一緒に縮むだけで、
        ガールズ7車＋2人ともnoteの日に中身が白い枠の外（🔥note札の上）へはみ出した（撮影で確認） */
+    /* 🔄9/26 2回目（Naoto「枠の高さは帯いっぱいに・車番や選手名を枠いっぱいに大きく」）＝枠ごと縮めると高さまで縮んで
+       文字が小さくなった→**枠の高さは帯いっぱいのまま、文字の大きさ（--rbchip/--rbnm/--rbrace）だけを入る比率まで下げる**（最大3回で詰める） */
     if (nbId === "narabi-race") {
       nb.style.maxWidth = "none";
-      var host = nb.parentElement, hw = host ? host.clientWidth : 0, nw = nb.offsetWidth;
-      if (hw > 0 && nw > hw) {
-        nb.style.transform = "scale(" + Math.max(0.5, hw / nw).toFixed(3) + ")";
-        nb.style.transformOrigin = "center top";
+      nb.setAttribute("data-shrunk", "0"); // 文字を縮めたか（fitRaceLine が🔥だけに切り替える判定に使う）
+      var host = nb.parentElement;
+      for (var t = 0; t < 3 && host; t++) {
+        var hw = host.clientWidth, nw = nb.offsetWidth;
+        if (!(hw > 0 && nw > hw)) break;
+        nb.setAttribute("data-shrunk", "1");
+        var f = Math.max(0.5, hw / nw * 0.99);
+        ["--rbchip", "--rbnm", "--rbrace"].forEach(function (v) {
+          var cur = parseFloat(host.style.getPropertyValue(v));
+          if (cur > 0) host.style.setProperty(v, Math.max(10, Math.floor(cur * f)) + "px");
+        });
       }
       return;
     }
