@@ -901,6 +901,41 @@ body.debug #scene-tenkai .slist:empty::after {
 /* 合計/投資はNEXT枠の右下へ（9/25 Naoto「①②③と同じくエリアの右下に」）＝流れの一番下・右寄せ（買目と重ならない）。
    2行とも右端でそろえる。縮小時の基準点は fitSubRows が右下にする */
 .sub-line > .bm-total { margin-top: auto; align-self: flex-end; align-items: flex-end; }
+/* 🧪②NEXT枠の見せ方（&subv=・9/26モック）：車番の大きさは --cz（JS fitSubGrow が枠いっぱいまで上げる） */
+.sub-line.subv-col .car, .sub-line.subv-tight .car { width: var(--cz, 24px); height: var(--cz, 28px);
+  font-size: calc(var(--cz, 28px) * .82); border-radius: 4px; }
+.sub-line.subv-col .ore-row .car, .sub-line.subv-tight .ore-row .car { width: calc(var(--cz, 28px) * .8);
+  height: calc(var(--cz, 28px) * .8); font-size: calc(var(--cz, 28px) * .66); }
+.sub-line.subv-col, .sub-line.subv-tight { gap: 4px; }
+/* tight＝区切り「−」を消して細い隙間に */
+/* 区切りは「ごく短い横棒」（9/26 Naoto「ハイフンは入れる・めちゃくちゃ短くてOK」）＝文字でなく線で描く（幅を読みやすく固定） */
+.sub-line.subv-tight .pl-sep { font-size: 0; padding: 0; width: calc(var(--cz, 28px) * .3);
+  display: inline-flex; align-items: center; justify-content: center; align-self: stretch; }
+.sub-line.subv-tight .pl-sep::before { content: ""; display: block; width: calc(var(--cz, 28px) * .2);
+  height: max(2px, calc(var(--cz, 28px) * .08)); background: var(--sub); border-radius: 1px; }
+.sub-line.subv-tight .pred-line.chips { gap: 1px; }
+.sub-line.subv-tight .sg { display: inline-flex; align-items: center; gap: 1px; flex-wrap: nowrap; }
+/* 長い行だけ区切りの後ろで折り返す（2段目は少し字下げ＝続きだと分かる）。塊そのものが幅を超えるときは塊の中でも折る */
+.sub-line.subv-tight .pred-line.chips { align-self: stretch; padding: 2px 4px; border-radius: 4px; }
+.sub-line.subv-tight .pred-line.chips.sg-alt { background: rgba(0,0,0,.07); }
+/* 🧪&subv=slim＝tight＋バッジを細め（幅＝高さの85%）＋余白を削る（枠の左右10→5px・縞の内側4→3px）＝1行に入る数を1個増やす */
+.sub-line.subv-slim { padding-left: 5px; padding-right: 5px; }
+.sub-line.subv-slim .pred-line.chips { padding-left: 3px; padding-right: 3px; }
+.sub-line.subv-slim .pred-line.chips .car { width: calc(var(--cz, 28px) * .85); }
+.sub-line.subv-tight .pred-line.chips.sg-wrap { flex-wrap: wrap; row-gap: 2px;
+  padding-left: calc(4px + var(--cz, 28px) * .6); }
+.sub-line.subv-tight .pred-line.chips.sg-wrap > .sg:first-child { margin-left: calc(var(--cz, 28px) * -.6); }
+.sub-line.subv-tight .sg-wrap .sg { flex-wrap: wrap; row-gap: 2px; }
+/* 合計・投資＝1行（計5点 投¥5,000） */
+.sub-line.subv-tight .bm-total, .sub-line.subv-col .bm-total { flex-direction: row; gap: .4em; align-items: baseline; }
+.sub-line.subv-tight .race-col-head, .sub-line.subv-col .race-col-head { white-space: nowrap; }
+/* col＝着順の列。列の間に細い縦線、行（買目）の間に細い横線 */
+.sub-line.subv-col .sc-row { display: flex; align-items: flex-start; gap: 0; padding: 3px 0;
+  border-top: 1px solid rgba(0,0,0,.18); }
+.sub-line.subv-col .ore-row + .sc-row { border-top: 0; }
+.sub-line.subv-col .sc-col { display: flex; flex-direction: column; gap: 2px;
+  width: calc(var(--cz, 28px) + 12px); align-items: center; }
+.sub-line.subv-col .sc-col + .sc-col { border-left: 1px dashed rgba(0,0,0,.22); }
 
 /* ---------- ③結果・的中 ---------- */
 .race-chips { position: absolute; left: 8px; right: 8px; top: 96px; height: 56px;

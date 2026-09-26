@@ -64,6 +64,14 @@
   /* 買目のリアルタイムオッズ（9/25 Naoto・要件定義§13・🧪試作）。3連単の行の右端に倍率（1点）／幅（複数点）。
      テストGAS接続時（?gas=）だけ既定ON・本番は既定OFF（本番GASに action=odds が無い）。&odds=1／0 で明示 */
   // 9/25 Naoto「いい感じ・本番反映」＝本番も既定ON（本番GAS v12 に action=odds を追加済み）。&odds=0 で消せる
+  /* ②NEXT枠の見せ方（9/26 Naoto「一番狭いところ・もっと見やすく」・要件定義§39）
+     既定＝slim（✅9/26本番）＝ごく短いハイフン・バッジ細め（幅85%）・余白を削る・車番は枠いっぱいまで全行同じ大きさ（fitSubGrow）・
+     28pxでも1行に入らない長い買目だけ区切りの後ろで折り返す（縞＋字下げ）・合計/投資は「計5点 投¥5,000」の1行・noteは札の右に🔥だけ。
+     &subv=tight＝正方形バッジ版／&subv=col＝着順の列（見送り案）／&subv=0＝従来 */
+  var SUBV = params.get("subv") || "slim";
+  if (SUBV === "0") SUBV = "";
+  var SUBV_SLIM = SUBV === "slim"; // slim＝tight の細めバッジ版（CSS .subv-tight と .subv-slim の両方を付ける）
+  if (SUBV_SLIM) SUBV = "tight";
   var ODDS = params.get("odds") || "1";
   if (ODDS === "0") ODDS = "";
   // ②レース観戦も買目の右に倍率を出す（9/25 Naoto・一度外して戻した）。②のNEXT枠（サブ）は倍率・合成とも出さない（raceBuyHtml の noOdds）
@@ -1168,6 +1176,71 @@
   }
 
   /** ②サブ予想の行フィット（8/6 FB14）：買い目・俺たち目・合計行を折り返さず幅ぴったりに縮める */
+  /** 🧪&subv=col：車番と区切りだけの行を「着順の列」に組み替える（区切りで分けた塊ごとに縦に積む）。
+      BOX・全・式別つきなど、それ以外を含む行は触らない（横並びのまま） */
+  function subColumns(scope) {
+    scope.querySelectorAll(".pred-line.chips").forEach(function (ln) {
+      if (ln.classList.contains("cut-line")) return;
+      var kids = Array.prototype.slice.call(ln.children);
+      if (!kids.length || !kids.some(function (k) { return k.classList.contains("pl-sep"); })) return;
+      if (!kids.every(function (k) { return k.classList.contains("car") || k.classList.contains("pl-sep"); })) return;
+      var cols = [[]];
+      kids.forEach(function (k) { if (k.classList.contains("pl-sep")) cols.push([]); else cols[cols.length - 1].push(k); });
+      ln.innerHTML = "";
+      ln.classList.add("sc-row");
+      cols.forEach(function (c) {
+        var d = document.createElement("span");
+        d.className = "sc-col";
+        c.forEach(function (k) { d.appendChild(k); });
+        ln.appendChild(d);
+      });
+    });
+  }
+  /** 🧪&subv=：1行に詰める（9/26 Naoto）＝note予想は札の右に🔥だけ／合計・投資は「計5点 投¥5,000」の1行 */
+  function subPolish(scope) {
+    scope.querySelectorAll(".note-tag").forEach(function (e) { e.textContent = "🔥"; });
+    var pts = scope.querySelector(".bm-pts"), inv = scope.querySelector(".bm-inv");
+    if (pts) pts.textContent = pts.textContent.replace(/^合計\s*/, "計");
+    if (inv) inv.textContent = inv.textContent.replace(/^投資\s*/, "投");
+  }
+  /** 🧪&subv=tight：車番と区切りだけの行を「塊＋直後の区切り」の単位（.sg）に分ける＝折り返すなら区切りの後ろで */
+  function subGroups(scope) {
+    var n = 0;
+    scope.querySelectorAll(".pred-line.chips").forEach(function (ln) {
+      ln.classList.toggle("sg-alt", n++ % 2 === 1); // 買目ごとの縞＝折り返した2段目が別の買目に見えないように
+      if (ln.classList.contains("cut-line")) return;
+      var kids = Array.prototype.slice.call(ln.children);
+      if (!kids.length || !kids.every(function (k) { return k.classList.contains("car") || k.classList.contains("pl-sep"); })) return;
+      ln.innerHTML = "";
+      var g = null;
+      kids.forEach(function (k) {
+        if (!g) { g = document.createElement("span"); g.className = "sg"; ln.appendChild(g); }
+        g.appendChild(k);
+        if (k.classList.contains("pl-sep")) g = null;
+      });
+    });
+  }
+  /** 🧪&subv=：車番の大きさ（--cz）を枠に収まる最大まで上げる（全行同じ大きさ）。
+      tight＝28pxでも1行に入らない長い行（1-23-45678 等）だけ区切りの後ろで折り返してよい＝その行のせいで全体を小さくしない */
+  var SUB_WRAP_CZ = 28;
+  function fitSubGrow(scope) {
+    var cs = getComputedStyle(scope);
+    var avail = scope.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    var lines = Array.prototype.slice.call(scope.querySelectorAll(".pred-line, .ore-row"));
+    lines.forEach(function (l) { l.classList.remove("sg-wrap"); });
+    var long = [];
+    if (SUBV === "tight") {
+      scope.style.setProperty("--cz", SUB_WRAP_CZ + "px");
+      long = lines.filter(function (l) { return l.querySelector(".sg") && l.scrollWidth > avail + 1; });
+      long.forEach(function (l) { l.classList.add("sg-wrap"); });
+    }
+    for (var cz = 56; cz >= 18; cz--) {
+      scope.style.setProperty("--cz", cz + "px");
+      var ok = scope.scrollHeight <= scope.clientHeight + 1;
+      for (var i = 0; ok && i < lines.length; i++) if (lines[i].scrollWidth > avail + 1) ok = false;
+      if (ok) break;
+    }
+  }
   function fitSubRows(scope) {
     if (!scope) return;
     fitCutLabels(scope); // ②サブ＝幅182pxで最タイト＝「切」への短縮を先に確定（FB122）
@@ -2268,6 +2341,13 @@
           // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
           sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true, true) : ""; // NEXT枠はオッズなし
           sBand.classList.toggle("note-fire", noteFireOn(rc, sKey)); // 🧪NEXT枠も、そのレースが note なら内側だけ
+          if (SUBV) {
+            sBand.classList.add("subv-" + SUBV);
+            if (SUBV_SLIM) sBand.classList.add("subv-slim");
+            subPolish(sBand);
+            if (SUBV === "col") subColumns(sBand); else subGroups(sBand);
+            fitSubGrow(sBand);
+          }
           fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
         }
       }
