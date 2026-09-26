@@ -181,9 +181,12 @@
     var m = params.get("mocknow"); if (!m) return null;
     var p = m.split(":"); return (+p[0] || 0) * 3600 + (+p[1] || 0) * 60;
   })();
+  // &tshift=秒＝時計を進める／戻す検証用パラメータ（9/26・タイマー演出のモック撮影用。実運用では付けない）
+  var TSHIFT_MS = (+params.get("tshift") || 0) * 1000;
+  function nowDate() { return new Date(Date.now() + TSHIFT_MS); }
   function nowSec() {
     if (MOCK_NOW !== null) return MOCK_NOW;
-    var d = new Date();
+    var d = nowDate();
     return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
   }
   function fmtCount(sec) {
@@ -200,7 +203,7 @@
     timetable.venues.forEach(function (v) {
       (v.races || []).forEach(function (r) {
         var sec = timeToSec(r.start);
-        if (sec !== null) out.push({ venue: v.name, no: r.no, start: r.start, startSec: sec });
+        if (sec !== null) out.push({ venue: v.name, no: r.no, start: r.start, startSec: sec, cls: r.cls || "" });
       });
     });
     out.sort(function (a, b) { return a.startSec - b.startSec; });
@@ -491,13 +494,37 @@
     var now = nowSec();
     var races = allRaces();
     return names.map(function (name) {
-      var next = null;
+      var next = null, last = null;
       races.forEach(function (r) {
         if (r.venue === name && r.startSec > now && !next) next = r;
+        if (r.venue === name && r.startSec <= now) last = r; // 直前に発走したレース（TFX）
       });
-      return { venue: name, race: next };
+      var c = { venue: name, race: next };
+      if (TFX && last) {
+        var el = now - last.startSec;
+        if (el < TFX_FLASH) { c.race = last; c.flash = true; }                  // 発走の瞬間＝「🚴 発走！」
+        else if (el < TFX_FLASH + TFX_RACE) { c.race = last; c.run = true; }   // その後3分＝同じレースのまま「レース中」
+      }
+      return c;
     });
   }
+  /* タイマー演出（9/26 Naoto・要件定義§40・✅本番既定ON・&tfx=0 で従来に戻す）
+     A＝締切カード（公式締切〜発走）は「発走 15:36／発走まで 2:57／🔔 締切りました！」／発走の瞬間に「🚴 発走！」（TFX_FLASH秒）／
+       その後 TFX_RACE秒は同じレースのまま黒地に「レース中」＋カウントダウン→0で次のレースへ
+     B＝残り10秒は数字が変わる瞬間に1回ずつ脈打つ／締切の瞬間に「締切」をハンコ（水平）
+     D＝note予想のレースは見出しのR番号の右に🔥（ゆらゆら） */
+  var TFX = params.get("tfx") !== "0";
+  var TFX_FLASH = 4, TFX_RACE = +params.get("trace") || 180;
+  if (TFX && document.body) document.body.classList.add("tfx");
+  /** そのレースを席にいる誰かが note予想にしているか（D） */
+  function timerNoteOn(venue, no) {
+    var k = window.Derive.raceKey(venue, no);
+    return (state.racers || []).some(function (rc) {
+      var p = rc ? window.Derive.resolvePred(state, k, rc.id) : null;
+      return !!(p && p.entry && p.entry.isNote);
+    });
+  }
+  var timerModes = {}; // 場→前回のモード（締切カードへ切り替わった瞬間だけスタンプを押すため）
 
   /* 警告音：Web Audio合成（素材ファイル不使用＝ライセンス管理外）。
      発音担当＝「いま表示されているソース」（8/7 FB60）。旧＝②固定は、①表示中に非表示の②が
@@ -685,12 +712,20 @@
     // グレードもキーに含める＝場タブ廃止（FB99）でバッジがここへ移設・後着のグレードでも再構築される
     var keys = cards.map(function (c) {
       var closed = c.race && now >= c.race.startSec - offSec;
-      return c.venue + "|" + (c.race ? c.race.no : "-") + (closed ? "C" : "") + "|" + gradeOfVenue(c.venue);
+      return c.venue + "|" + (c.race ? c.race.no : "-") + (closed ? "C" : "") + "|" + gradeOfVenue(c.venue) +
+        (TFX ? "|" + (c.flash ? "F" : "") + (c.run ? "R" : "") + (c.race && timerNoteOn(c.venue, c.race.no) ? "N" : "") : "");
     }).join(",");
     if (keys !== timerRowKeys) {
       timerRowKeys = keys;
       var html = cards.map(function (c) {
         var closed = c.race && now >= c.race.startSec - offSec;
+        if (TFX) {
+          var mode = !c.race ? "done" : c.flash ? "flash" : c.run ? "run" : closed ? "closed" : "open";
+          var prevMode = timerModes[c.venue];
+          timerModes[c.venue] = mode;
+          var liveIn = prevMode && prevMode !== mode; // 画面を見ている間に切り替わった（読み込み直後は演出しない）
+          return tfxCardHtml(c, closed, mode, liveIn);
+        }
         // グレードバッジ＝「〇R」の右（8/9 FB100・Naoto指定。FB99の場名横から移動）
         // 3〜4場でも表示する（8/11 FB126・松山GⅠ実戦でNaoto指摘）：カード幅に収めるため
         // 長い場名（3場=4字〜・4場=3字〜）はvh-tightで頭ごと一段縮小＝「いわき平＋GⅠ」でも折り返さない
@@ -729,13 +764,88 @@
     }
     tickTimerCounts();
   }
-  function setCount(el, remain) {
+  /** 🧪TFXのカード1枚（A・B・D）。従来カードと同じ部品（vt-head／vt-rows）を使い、足すだけ */
+  function tfxCardHtml(c, closed, mode, liveIn) {
+    var gb = gradeBadge(c.venue);
+    var cards = nextByVenue().length;
+    var note = c.race && timerNoteOn(c.venue, c.race.no);
+    // 3〜4場で見出しが詰まる条件（従来＝グレードあり・長い場名）に🔥も数える＝🔥の分だけ早めに一段縮める
+    var tight = (gb || note) && cards >= 3 && c.venue.length + (gb && note ? 1 : 0) >= (cards >= 4 ? 3 : 4);
+    var head = '<div class="vt-head' + (tight ? " vh-tight" : "") + '">' + esc(c.venue) +
+      (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") +
+      gb + (note ? '<span class="vt-fire">🔥</span>' : "") + "</div>"; // 🔥はグレードバッジの右（9/26 Naoto）
+    var body, cls = "vt-card";
+    if (mode === "done") {
+      body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
+    } else if (mode === "flash") {
+      cls += " vt-flash-card";
+      body = '<div class="vt-rows vt-flash"><div class="vt-flash-main">🚴 発走！</div></div>';
+    } else if (mode === "closed") {
+      // 締切カード（9/26 Naoto）＝発走時刻はほかのカードと同じ1行目／2行目に発走までの秒読み／3行目に「🔔 締切りました！」（跨いだ瞬間はハンコ）。
+      // 地は薄いグレー＝白（平常）・信号機色（締切前）と分ける（赤→グレー→金→黒と段階ごとに色が変わる）
+      cls += " vt-closed-card";
+      body = '<div class="vt-rows">' +
+        '<div class="vt-row"><span>発走</span><b>' + c.race.start + "</b></div>" +
+        '<div class="vt-row"><span>発走まで</span><b data-go="' + c.race.startSec + '"></b></div>' +
+        '<div class="vt-closed-msg"><span class="vt-stamp' + (liveIn ? " stamp-in" : "") + '">🔔 締切りました！</span></div>' +
+        "</div>";
+    } else if (mode === "run") {
+      // レース中（9/26 Naoto）＝同じレースのまま中身を黒地・白字に。3分で裏で次のレースへ（カウントダウンは出さない＝何の数字か分からないため）。
+      // 下にレースの種別（時刻表の「S級予選」等）＝今どのレースかを確かめられる
+      cls += " vt-run-card";
+      body = '<div class="vt-rows vt-racing">' +
+        '<div class="vt-racing-main"><span class="vt-live">●</span>レース中</div>' +
+        (c.race.cls ? '<div class="vt-racing-sub">' + esc(c.race.cls) + "</div>" : "") +
+        "</div>";
+    } else {
+      body = '<div class="vt-rows">' +
+        '<div class="vt-row"><span>発走</span><b>' + c.race.start + "</b></div>" +
+        '<div class="vt-row"><span>民間締切</span><b data-net="' + c.race.startSec + '"></b></div>' +
+        '<div class="vt-row"><span>公式締切</span><b data-off="' + c.race.startSec + '"></b></div>' +
+        "</div>";
+    }
+    return '<li class="' + cls + '" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
+  }
+  /** 残り10秒の脈打ち（9/26 Naoto「タイミングを合わせて」）＝表示の数字が変わった瞬間に1回だけ打つ。
+      旧＝1秒周期のアニメを回しっぱなし＝始まった時刻しだいで数字の切り替わりとズレていた */
+  function setPulseText(el, txt, pulse) {
+    if (el.textContent === txt) return;
+    el.textContent = txt;
+    el.classList.remove("cd-pulse");
+    if (pulse) { void el.offsetWidth; el.classList.add("cd-pulse"); }
+  }
+  /** TFXの毎tick（0.25秒）：締切カードの「発走まで」の秒読み。数え方はほかの行と同じ整数秒 */
+  function tfxTick() {
+    var now = nowSec();
+    document.querySelectorAll("[data-go]").forEach(function (el) {
+      var r = +el.getAttribute("data-go") - now;
+      setPulseText(el, fmtCount(Math.max(0, r)), r > 0 && r <= 10);
+    });
+  }
+  /* tgt＝締切の時刻（0時からの秒）。締切まで1時間以上あるときは残りでなく締切の時刻そのもの（9/26 Naoto）＝
+     「5:02:42」の時・分・秒は読みにくく、4場のカード幅では右端が切れていた */
+  function setCount(el, remain, tgt) {
+    // 時刻表示のときは灰色（.at-clock）＝同じ「数字:数字」の残り時間（例 15:41＝残り15分41秒）と見分ける
+    var clock = remain >= 3600 && tgt != null;
+    el.classList.toggle("at-clock", clock);
+    if (clock) {
+      el.textContent = secToHHMM(tgt);
+      el.classList.remove("closed", "stamp-in", "cd-pulse");
+      el._open = true;
+      return;
+    }
     if (remain <= 0) {
       el.textContent = "締切";
       el.classList.add("closed");
+      // TFX＝画面を見ている間に締切を跨いだときだけハンコを押す（読み込み直後から締切なら押した後の見た目だけ）
+      if (TFX && el._open) el.classList.add("stamp-in");
+      el._open = false;
+      el.classList.remove("cd-pulse");
     } else {
-      el.textContent = fmtCount(remain);
-      el.classList.remove("closed");
+      if (TFX) setPulseText(el, fmtCount(remain), remain <= 10); // 残り10秒は数字が変わるたびに脈打つ
+      else el.textContent = fmtCount(remain);
+      el.classList.remove("closed", "stamp-in");
+      el._open = true;
     }
   }
   function tickTimerCounts() {
@@ -745,14 +855,14 @@
     document.querySelectorAll("[data-net]").forEach(function (el) {
       var tgt = +el.getAttribute("data-net") - netSec; // 民間締切の絶対秒
       var remain = tgt - now;
-      setCount(el, remain);
+      setCount(el, remain, tgt);
       // 民間締切ベースの信号機色をカードに反映＋色が上がる瞬間にピピッ。
       // 色・音とも小数秒で判定（旧＝秒切り捨てで色が最大1秒先行し音が後追いだった・8/6 FB6）
       var card = el.closest(".vt-card");
       if (!card) return;
       var venue = card.getAttribute("data-venue");
       // ⚠️時刻基準はnowSec()と同じ「0時からの経過秒」（エポック秒を使うと全カード赤の事故＝8/6実発生）
-      var dd = new Date();
+      var dd = nowDate();
       var nowF = dd.getHours() * 3600 + dd.getMinutes() * 60 + dd.getSeconds() + dd.getMilliseconds() / 1000;
       var remainF = tgt - nowF;
       var z = zoneOf(remainF);
@@ -771,8 +881,10 @@
       }
     });
     document.querySelectorAll("[data-off]").forEach(function (el) {
-      setCount(el, +el.getAttribute("data-off") - offSec - now);
+      var tgtOff = +el.getAttribute("data-off") - offSec;
+      setCount(el, tgtOff - now, tgtOff);
     });
+    if (TFX) tfxTick();
   }
 
   /* ---------- 予想・投資（①トーク／②バンド） ---------- */
