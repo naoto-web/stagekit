@@ -2954,7 +2954,8 @@
       // 場名＋R＝②は場名バーを置いていない（7/29 FB4）ので、ラインの左に添えて「どのレースの並びか」を示す
       // 場名とRは2段組み＝1行だと「西武園 11R」で240px近く食い、そのぶん苗字が縮小される。
       // 縦は枠を広げた分の余りがあるので、高さを使って幅を節約する（8/13 FB）
-      (o.race ? '<span class="nb-race"><b>' + esc(vName) + "</b><b>" + esc(String(rNo)) + "R</b></span>" : "") +
+      // グレードバッジ＝R番号の右（9/26 Naoto「並びの左の場にグレードバッジを」）。F級は出ない（gradeBadge が空）
+      (o.race ? '<span class="nb-race"><b>' + esc(vName) + "</b><b>" + esc(String(rNo)) + "R</b>" + gradeBadge(vName) + "</span>" : "") +
       '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {
