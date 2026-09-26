@@ -771,9 +771,9 @@
     var note = c.race && timerNoteOn(c.venue, c.race.no);
     // 3〜4場で見出しが詰まる条件（従来＝グレードあり・長い場名）に🔥も数える＝🔥の分だけ早めに一段縮める
     var tight = (gb || note) && cards >= 3 && c.venue.length + (gb && note ? 1 : 0) >= (cards >= 4 ? 3 : 4);
-    var head = '<div class="vt-head' + (tight ? " vh-tight" : "") + '">' + esc(c.venue) +
-      (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") +
-      gb + (note ? '<span class="vt-fire">🔥</span>' : "") + "</div>"; // 🔥はグレードバッジの右（9/26 Naoto）
+    var head = '<div class="vt-head' + (tight ? " vh-tight" : "") + '">' +
+      (note ? '<span class="vt-fire">🔥</span>' : "") + esc(c.venue) + // 🔥は場名の前（9/26 Naoto「🔥岐阜10R」・旧＝グレードバッジの右）
+      (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + "</div>";
     var body, cls = "vt-card";
     if (mode === "done") {
       body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
@@ -1398,6 +1398,8 @@
   /** 🧪&subv=：1行に詰める（9/26 Naoto）＝note予想は札の右に🔥だけ／合計・投資は「計5点 投¥5,000」の1行 */
   function subPolish(scope) {
     scope.querySelectorAll(".note-tag").forEach(function (e) { e.textContent = "🔥"; });
+    // グレードは「GⅢ」→「Ⅲ」（9/26 Naoto「幅が狭くて字が小さくなる」）。GPはそのまま
+    scope.querySelectorAll(".grade-badge").forEach(function (e) { e.textContent = e.textContent.replace(/^G(?=[ⅠⅡⅢ])/, ""); });
     var pts = scope.querySelector(".bm-pts"), inv = scope.querySelector(".bm-inv");
     if (pts) pts.textContent = pts.textContent.replace(/^合計\s*/, "計");
     if (inv) inv.textContent = inv.textContent.replace(/^投資\s*/, "投");
@@ -1421,24 +1423,45 @@
   }
   /** 🧪&subv=：車番の大きさ（--cz）を枠に収まる最大まで上げる（全行同じ大きさ）。
       tight＝28pxでも1行に入らない長い行（1-23-45678 等）だけ区切りの後ろで折り返してよい＝その行のせいで全体を小さくしない */
-  var SUB_WRAP_CZ = 28;
+  // 9/26 Naoto「2マスで改行しているのがある・デフォルトはそこまで大きくなくていい」＝上限40px／折り返す行は2段まで
+  var SUB_WRAP_CZ = 28, SUB_MAX_CZ = 40, SUB_WRAP_ROWS = 2;
   function fitSubGrow(scope) {
     var cs = getComputedStyle(scope);
     var avail = scope.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
     var lines = Array.prototype.slice.call(scope.querySelectorAll(".pred-line, .ore-row"));
-    lines.forEach(function (l) { l.classList.remove("sg-wrap"); });
+    lines.forEach(function (l) {
+      l.classList.remove("sg-wrap");
+      Array.prototype.forEach.call(l.querySelectorAll(".sg"), function (g) { g.style.marginLeft = ""; });
+    });
     var long = [];
     if (SUBV === "tight") {
       scope.style.setProperty("--cz", SUB_WRAP_CZ + "px");
       long = lines.filter(function (l) { return l.querySelector(".sg") && l.scrollWidth > avail + 1; });
       long.forEach(function (l) { l.classList.add("sg-wrap"); });
     }
-    for (var cz = 56; cz >= 18; cz--) {
+    for (var cz = SUB_MAX_CZ; cz >= 18; cz--) {
       scope.style.setProperty("--cz", cz + "px");
       var ok = scope.scrollHeight <= scope.clientHeight + 1;
       for (var i = 0; ok && i < lines.length; i++) if (lines[i].scrollWidth > avail + 1) ok = false;
+      // 折り返す行は2段まで（大きくしすぎて「23-／23-／156／7」と細かく折れていた）
+      for (var j = 0; ok && j < long.length; j++) if (subRows(long[j]) > SUB_WRAP_ROWS) ok = false;
       if (ok) break;
     }
+    long.forEach(subAlignRight);
+  }
+  /** 折り返した行の段数（車番バッジの縦位置の種類で数える） */
+  function subRows(line) {
+    var tops = {};
+    Array.prototype.forEach.call(line.querySelectorAll(".car, .pl-all, .pl-box"), function (c) { tops[Math.round(c.offsetTop / 4)] = 1; });
+    return Object.keys(tops).length || 1;
+  }
+  /** 折り返した2段目以降は右寄せ（9/26 Naoto）＝各段の先頭の塊に margin-left:auto（折り返し位置は変わらない） */
+  function subAlignRight(line) {
+    var top0 = null;
+    Array.prototype.forEach.call(line.querySelectorAll(":scope > .sg"), function (g) {
+      if (top0 === null) { top0 = g.offsetTop; return; }
+      if (g.offsetTop > top0 + 2) { g.style.marginLeft = "auto"; top0 = g.offsetTop; }
+    });
   }
   function fitSubRows(scope) {
     if (!scope) return;

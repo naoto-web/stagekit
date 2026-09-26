@@ -976,9 +976,14 @@ body.debug #scene-tenkai .slist:empty::after {
 .sub-line.subv-slim { padding-left: 5px; padding-right: 5px; }
 .sub-line.subv-slim .pred-line.chips { padding-left: 3px; padding-right: 3px; }
 .sub-line.subv-slim .pred-line.chips .car { width: calc(var(--cz, 28px) * .85); }
-.sub-line.subv-tight .pred-line.chips.sg-wrap { flex-wrap: wrap; row-gap: 2px;
-  padding-left: calc(4px + var(--cz, 28px) * .6); }
-.sub-line.subv-tight .pred-line.chips.sg-wrap > .sg:first-child { margin-left: calc(var(--cz, 28px) * -.6); }
+/* 折り返した行＝2段目以降は右寄せ（9/26 Naoto・旧＝字下げ）。JS subAlignRight が各段の先頭の塊に margin-left:auto。
+   塊そのものが折れるとき（1567 が 156／7）も続きは右へ */
+.sub-line.subv-tight .pred-line.chips.sg-wrap { flex-wrap: wrap; row-gap: 2px; }
+.sub-line.subv-tight .sg-wrap .sg { justify-content: flex-end; }
+/* 「全」「BOX」も車番バッジと同じ高さ（9/26 Naoto「全のバッジが車番と同じサイズになってない」） */
+.sub-line.subv-tight .pl-all { height: var(--cz, 28px); min-width: calc(var(--cz, 28px) * .85); font-size: calc(var(--cz, 28px) * .7);
+  display: inline-flex; align-items: center; justify-content: center; padding: 0; box-sizing: border-box; }
+.sub-line.subv-tight .pl-box { height: var(--cz, 28px); font-size: calc(var(--cz, 28px) * .6); display: inline-flex; align-items: center; box-sizing: border-box; }
 .sub-line.subv-tight .sg-wrap .sg { flex-wrap: wrap; row-gap: 2px; }
 /* 合計・投資＝1行（計5点 投¥5,000） */
 .sub-line.subv-tight .bm-total, .sub-line.subv-col .bm-total { flex-direction: row; gap: .4em; align-items: baseline; }
