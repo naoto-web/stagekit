@@ -101,15 +101,34 @@ var Board = (function () {
      「←」＋角丸の四角い車番チップ＋その下に苗字、ラインの間は「・」。出力にも出る（視聴者に見える）。
      置き場所＝帯の上の段（下の段の級班とは高さをずらして重ねない）。横は場名の右〜局面の札が一番長いとき
      （「決着 x-y-z」）の左のあいだに中央寄せ。入り切らないときだけ全体を縮める（②の fitNarabi と同じ考え） */
-  var NB = { chip: 26, font: 24, name: 14, inGap: 4, dot: 16, arrow: 26, top: 10, pad: 18 };
-  var BADGE_MAX_W = Array.from('決着 9-9-9').length * BADGE_FONT + 40;   // 札が一番長いとき
+  /* 9/27 Naoto「小さくて見づらい・もっと中央に大きく」＝チップ26→34px・苗字14→17px・帯の高さの真ん中にそろえる。
+     右の空きは「そのとき出ている札」の左端まで（旧＝一番長い札を想定して右を大きく空けていた）。札の長さが変われば合わせ直す */
+  var NB = { chip: 34, font: 31, name: 17, inGap: 5, dot: 20, arrow: 32, gap: 3, pad: 20 };
+  NB.top = Math.round((T.HEAD - (NB.chip + NB.gap + NB.name)) / 2);
+  var nbNat = null;   // { w, left }＝並びの素の幅と、左の空きの始まり（場名・級班の右端）
   function textW(s, px) {   // 苗字の幅の見積もり（全角≒1文字=px・半角≒0.6）
     var w = 0; Array.from(s || '').forEach(function (ch) { w += /[\x00-\x7f]/.test(ch) ? px * 0.6 : px * 0.98; });
     return w;
   }
+  function rightEdge(elm, fallback) {
+    try { var bb = elm.getBBox(); if (bb && bb.width) return bb.x + bb.width; } catch (e) {}
+    return fallback;
+  }
+  /** 並びの大きさと位置を、札の左端 badgeLeft に合わせる。収まるなら盤面の中央（x 480）・収まらなければ縮める */
+  function fitNarabi(badgeLeft) {
+    if (!nbNat) return;
+    var right = badgeLeft - NB.pad, left = nbNat.left;
+    var avail = Math.max(120, right - left);
+    var k = Math.min(1, avail / nbNat.w), w = nbNat.w * k;
+    var x0 = Math.max(left, Math.min(right - w, T.CX - w / 2));
+    var y0 = (T.HEAD - (NB.chip + NB.gap + NB.name) * k) / 2 - NB.top * k;   // 縮めても帯の高さの真ん中
+    narabiG.setAttribute('transform', 'translate(' + x0.toFixed(1) + ',' + y0.toFixed(1) + ') scale(' + k.toFixed(3) + ')');
+  }
+  var lastBadgeLeft = null;
   function drawNarabi(d) {
     while (narabiG.firstChild) narabiG.removeChild(narabiG.firstChild);
     narabiG.removeAttribute('transform');
+    nbNat = null;
     var cars = d.cars || [];
     var lines = (d.lines || []).map(function (l) { return l.filter(function (n) { return cars.indexOf(n) !== -1; }); })
                                .filter(function (l) { return l.length; });
@@ -123,31 +142,27 @@ var Board = (function () {
       if (i) w += NB.dot;
       l.forEach(function (no, j) { w += cellW[no] + (j ? NB.inGap : 0); });
     });
-    /* 横の空き＝場名の右端（計れなければ見積もり）〜一番長い札の左端 */
-    var left = HEAD_PAD + textW(d.titleMain, 42);
-    try { var bb = titleMain.getBBox(); if (bb && bb.width) left = bb.x + bb.width; } catch (e) {}
-    left += NB.pad;
-    var right = T.W - HEAD_PAD - BADGE_MAX_W - NB.pad;
-    var avail = Math.max(120, right - left);
-    var k = Math.min(1, avail / w);
-    var x0 = left + (avail - w * k) / 2;
+    /* 左の空きの始まり＝場名と級班の右端（帯の高さいっぱいを使うので、下の段の級班とも横で分ける） */
+    var left = Math.max(rightEdge(titleMain, HEAD_PAD + textW(d.titleMain, 42)),
+                        rightEdge(titleSub, HEAD_PAD + textW(d.titleSub, 19))) + NB.pad;
+    nbNat = { w: w, left: left };
 
     var x = 0, cy = NB.top + NB.chip / 2;
-    label(narabiG, x + NB.arrow / 2 - 3, cy + 8, '←', 24, 'rgba(255,255,255,.9)', 900);
+    label(narabiG, x + NB.arrow / 2 - 3, cy + 10, '←', 30, 'rgba(255,255,255,.9)', 900);
     x += NB.arrow;
     lines.forEach(function (l, i) {
-      if (i) { label(narabiG, x + NB.dot / 2, cy + 7, '・', 18, 'rgba(255,255,255,.6)', 900); x += NB.dot; }
+      if (i) { label(narabiG, x + NB.dot / 2, cy + 9, '・', 24, 'rgba(255,255,255,.65)', 900); x += NB.dot; }
       l.forEach(function (no, j) {
         if (j) x += NB.inGap;
         var c = CONFIG.COLORS[no] || CONFIG.COLORS[1], mid = x + cellW[no] / 2;
         narabiG.appendChild(el('rect', { x: mid - NB.chip / 2, y: NB.top, width: NB.chip, height: NB.chip, rx: 5,
           fill: c.bg, stroke: no === 2 ? 'rgba(255,255,255,.5)' : 'rgba(0,0,0,.35)', 'stroke-width': 2 }));
         label(narabiG, mid, NB.top + NB.chip * 0.84, String(no), NB.font, c.fg, 900);
-        if (names[no]) label(narabiG, mid, NB.top + NB.chip + NB.name + 2, names[no], NB.name, '#fff', 900);
+        if (names[no]) label(narabiG, mid, NB.top + NB.chip + NB.gap + NB.name * 0.88, names[no], NB.name, '#fff', 900);
         x += cellW[no];
       });
     });
-    narabiG.setAttribute('transform', 'translate(' + x0.toFixed(1) + ',0) scale(' + k.toFixed(3) + ')');
+    fitNarabi(lastBadgeLeft != null ? lastBadgeLeft : T.W - HEAD_PAD - 150);
   }
 
   /** 先頭の位置 → 局面名。先頭が到達済みの局面のうち最後のもの（スタートを出た後〜赤板の前は「周回中」） */
@@ -275,6 +290,9 @@ var Board = (function () {
     phaseBg.setAttribute('width', w);
     phaseText.setAttribute('x', T.W - HEAD_PAD - w / 2);
     phaseBg.style.display = ph ? '' : 'none';
+    /* 札の長さが変わったら並びの大きさ・位置を合わせ直す（札の左端まで使う） */
+    var bl = ph ? T.W - HEAD_PAD - w : T.W - HEAD_PAD;
+    if (bl !== lastBadgeLeft) { lastBadgeLeft = bl; fitNarabi(bl); }
 
     Bars.sync(d, view, px);
     return ph;
