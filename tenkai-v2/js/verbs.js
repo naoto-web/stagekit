@@ -1,5 +1,6 @@
 /* ===========================================================
    verbs.js — 動詞ボタン（展開の台本）  v2.1（要件定義_v2 §6.5・9/27 Naoto確定＝6つ＋順番の入れ替え）
+   9/27 追加＝カマシ・突っ張り・飛びつき（打鐘〜最終ホームの主導権争い）
 
    各動詞は「主語（選んだ選手 or ライン）」と「相手（自動で決める）」から、
    各選手の通り道（キーフレーム {t, d, lane} の並び）を作って返すだけ。動かすのは Anim.path()。
@@ -74,10 +75,17 @@ var Verbs = (function () {
 
   /** ラインを並べ直した一列（全員内）に移る通り道。前へ出るライン（movers）は真ん中のレーンを通る */
   function requeue(order, head, movers) {
+    var lanes = {};
+    movers.forEach(function (no) { lanes[no] = 0; });
+    return requeueLanes(order, head, lanes);
+  }
+  /** requeue の一般形：passLanes＝{車番: 追い抜きに使うレーン}。載っていない選手は内のまま前後だけ動く。
+      上昇＝主語は外・あいだのラインは真ん中、のように追い抜く側どうしのレーンを分けて重ならないようにする */
+  function requeueLanes(order, head, passLanes) {
     var fin = Lineup.layout(order, head), paths = {};
     cars().forEach(function (no) {
       var p = pos(no), f = fin[no] || { d: p.d, lane: p.lane };
-      if (movers.indexOf(no) !== -1) paths[no] = passPath(no, f, 0);
+      if (passLanes[no] != null) paths[no] = passPath(no, f, passLanes[no]);
       else paths[no] = [{ t: 0, d: p.d, lane: p.lane }, { t: 0.6, d: p.d + (f.d - p.d) * 0.6, lane: f.lane }, { t: 1, d: f.d, lane: f.lane }];
     });
     return paths;
@@ -149,16 +157,88 @@ var Verbs = (function () {
   }
   /* ---------- 動詞 ---------- */
 
-  /** 上昇：選んだラインが外を上がって、先頭（前受け）ラインの前に入る。前受けは引いて後ろへ。全体＋1車身 */
+  /** 上昇（押さえ）：選んだラインが外を上がって先頭に入る。前受けは引いて最後尾へ（9/27 Naoto確定）。
+      あいだにいたラインは真ん中のレーンで前受けを追い越して主語の後ろに続く。全体＋1車身 */
   function joushou(sel) {
     var L = lineOf(sel.nos[0]);
     var order = linesInOrder();
     var front = order[0];
     if (sameLine(front, L)) return { error: 'すでに先頭のラインです（上昇は後ろのラインを選んでください）' };
     var rest = order.filter(function (l) { return !sameLine(l, L) && !sameLine(l, front); });
-    var newOrder = [L, front].concat(rest);
+    var newOrder = [L].concat(rest, [front]);
+    var lanes = {};
+    rest.forEach(function (l) { l.forEach(function (no) { lanes[no] = 0; }); });
+    L.forEach(function (no) { lanes[no] = 1; });
     var head = Math.max(0, headD(front) - 1 * CAR);
-    return { paths: requeue(newOrder, head, L), hint: '上昇：' + L.join('') + ' が上がって、' + front.join('') + ' の前に入りました' };
+    return { paths: requeueLanes(newOrder, head, lanes),
+             hint: '上昇：' + L.join('') + ' が上がって前を押さえ、' + front.join('') + ' は引いて最後尾へ' };
+  }
+
+  /** カマシ：打鐘〜ホーム。選んだラインが外を一気に上がって先頭に入る。叩かれたラインは引かずにすぐ後ろへ。
+      上昇より速い（config.js の ANIM.kamashiMs）。全体＋2車身 */
+  function kamashi(sel) {
+    var L = lineOf(sel.nos[0]);
+    var order = linesInOrder();
+    var front = order[0];
+    if (sameLine(front, L)) return { error: 'すでに先頭のラインです（カマシは後ろのラインを選んでください）' };
+    var rest = order.filter(function (l) { return !sameLine(l, L) && !sameLine(l, front); });
+    var lanes = {};
+    L.forEach(function (no) { lanes[no] = 1; });
+    var head = Math.max(0, headD(front) - 2 * CAR);
+    return { paths: requeueLanes([L, front].concat(rest), head, lanes), ms: CONFIG.ANIM.kamashiMs,
+             hint: 'カマシ：' + L.join('') + ' が一気に叩いて先頭へ、' + front.join('') + ' はその後ろ' };
+  }
+
+  /** 突っ張り：カマシの失敗形。選ぶのは上がってくる側。真ん中のレーンを上がり、先頭ラインの番手の横で並んだところで
+      突っ張られ、そのまま下がって最後尾の内へ。先頭ラインは先行を続ける。全体＋2車身 */
+  function tsuppari(sel) {
+    var L = lineOf(sel.nos[0]);
+    var order = linesInOrder();
+    var front = order[0];
+    if (sameLine(front, L)) return { error: '突っ張りは上がってくる側（突っ張られるライン）を選んでください' };
+    var newOrder = order.filter(function (l) { return !sameLine(l, L); }).concat([L]);
+    var head = Math.max(0, headD(front) - 2 * CAR);
+    var fin = Lineup.layout(newOrder, head), paths = {};
+    cars().forEach(function (no) {
+      var p = pos(no), f = fin[no] || { d: p.d, lane: p.lane };
+      paths[no] = [{ t: 0, d: p.d, lane: p.lane }, { t: 1, d: f.d, lane: f.lane }];
+    });
+    /* 並ぶ相手＝先頭ラインの番手（単騎なら先頭）。t の時点での位置は、その選手の直線の通り道から求める */
+    var mate = front[1] != null ? front[1] : front[0];
+    var m0 = pos(mate).d, m1 = fin[mate].d;
+    function mateAt(t) { return m0 + (m1 - m0) * t; }
+    var gap = CONFIG.LAYOUT.gapInLine * CAR;
+    L.forEach(function (no, i) {
+      var p = pos(no), f = fin[no];
+      paths[no] = [
+        { t: 0, d: p.d, lane: p.lane },
+        { t: 0.15, d: p.d + (mateAt(0.45) + i * gap - p.d) * 0.2, lane: 0 },
+        { t: 0.45, d: mateAt(0.45) + i * gap, lane: 0 },   // 番手の横で並ぶ
+        { t: 0.6, d: mateAt(0.6) + i * gap, lane: 0 },     // 突っ張られて並んだまま少し
+        { t: 0.88, d: f.d - 0.3 * CAR, lane: 0 },          // 下がって最後尾へ
+        { t: 1, d: f.d, lane: f.lane }
+      ];
+    });
+    return { paths: paths, hint: '突っ張り：' + front.join('') + ' が突っ張って、' + L.join('') + ' は出られず最後尾へ' };
+  }
+
+  /** 飛びつき：選んだ選手が先頭ラインの番手の位置に入り込む。真ん中のレーンを上がって番手の外で並ぶ（競りの形）。
+      元の番手は内のまま。全体＋1車身 */
+  function tobitsuki(sel) {
+    var no = sel.type === 'line' ? lineOf(sel.nos[0])[0] : sel.nos[0];
+    var front = linesInOrder()[0];
+    if (front.indexOf(no) !== -1) return { error: label(no) + ' は先頭のラインです（飛びつきは後ろの選手を選んでください）' };
+    if (front.length < 2) return { error: '先頭が単騎なので、飛びつく番手の位置がありません' };
+    var paths = basePaths(1);
+    var bf = finalOf(paths, front[1]);
+    var p = pos(no);
+    paths[no] = [
+      { t: 0, d: p.d, lane: p.lane },
+      { t: 0.25, d: p.d + (bf.d - p.d) * 0.2, lane: 0 },
+      { t: 0.85, d: bf.d, lane: 0 },
+      { t: 1, d: bf.d, lane: 0 }
+    ];
+    return { paths: paths, hint: '飛びつき：' + label(no) + ' が ' + label(front[1]) + ' の番手に飛びついて外で並びました（競り）' };
   }
 
   /** まくり：選んだ選手（ラインの先頭ならライン全員）が外を上がって先頭の横まで。全体＋1車身 */
@@ -279,6 +359,9 @@ var Verbs = (function () {
 
   var TABLE = {
     joushou: { label: '上昇', fn: joushou },
+    kamashi: { label: 'カマシ', fn: kamashi },
+    tsuppari: { label: '突っ張り', fn: tsuppari },
+    tobitsuki: { label: '飛びつき', fn: tobitsuki },
     makuri: { label: 'まくり', fn: makuri },
     sashi: { label: '差し', fn: sashi },
     tsukinuke: { label: '突き抜け', fn: tsukinuke },

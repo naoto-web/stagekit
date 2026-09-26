@@ -269,7 +269,7 @@
     State.data.finish = null;
     Undo.push();
     Anim.path(res.paths, {
-      ms: res.long ? Math.round(CONFIG.ANIM.verbMs * 1.5) : CONFIG.ANIM.verbMs,
+      ms: res.ms || (res.long ? Math.round(CONFIG.ANIM.verbMs * 1.5) : CONFIG.ANIM.verbMs),   // res.ms＝動詞ごとの長さ（カマシ）
       onFrame: function () { renderPositions(); },
       onDone: function () { State.save(); publishLive(true); }
     });
