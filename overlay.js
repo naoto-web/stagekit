@@ -2101,9 +2101,11 @@
           // A（RB2・②だけ）＝帯の中のレース名ラベルは出さない（場名・Rは中央の並びの窓に出ている）。
           // note予想のレースの人だけ「🔥note」の札（9/25 Naoto）＝左の席は名前の右・右の席は名前の左（中央の並びに寄せる）
           // 「note」の字は .bhn-t＝並びの窓が入り切らない日は🔥だけにする（9/26 Naoto・fitRaceLine が body.rbn-compact を付ける）
-          var bhNote = (RB2 && bp === "band-" && rp && rp.entry.isNote) ? '<span class="bh-race">🔥<span class="bhn-t">note</span></span>' : "";
+          // ③も同じ（9/26 Naoto「熊本1Rのバッジいらない」＝場名Rは左の出走表の見出しに出ている）。③は並びの窓が無いので🔥noteは両席とも名前の右
+          var bhNote = (RB2 && (bp === "band-" || bp === "kband-") && rp && rp.entry.isNote) ? '<span class="bh-race">🔥<span class="bhn-t">note</span></span>' : "";
+          var bhLeft = slot === "b" && bp === "band-";
           bandName.innerHTML = !name ? ""
-            : (slot === "b" && bhNote ? bhNote + " " : "") + esc(name) + " 予想" + (slot !== "b" && bhNote ? " " + bhNote : "");
+            : (bhLeft && bhNote ? bhNote + " " : "") + esc(name) + " 予想" + (!bhLeft && bhNote ? " " + bhNote : "");
         }
         var bandInv = $(bp + "inv-" + slot);
         if (bandInv) {
@@ -2212,7 +2214,7 @@
           // 空席は中身ごと空にする＝③は席を畳まないので、誰もいない枠にレースラベルだけ
           // 残ると「予想を出し忘れている」ように見える（8/12）
           band.innerHTML = !rc ? ""
-            : (key && !(RB2 && bp === "band-") ? raceColHead(rc, key, true) : "") + // A：②はラベルを見出しへ移した
+            : (key && !(RB2 && (bp === "band-" || bp === "kband-")) ? raceColHead(rc, key, true) : "") + // A：②はラベルを見出しへ移した／③は左の出走表に出ているので出さない（9/26）
               raceBuyHtml(rc, key, false, true, true);
           band.classList.toggle("note-fire", noteFireOn(rc, key)); // 🧪燃える枠＝買目エリアの内側だけ
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
