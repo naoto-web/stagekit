@@ -782,6 +782,9 @@ body.debug #scene-tenkai .slist:empty::after {
 /* ①1場の札は1行（9/26 Naoto「1場は🔥note予想まで1行・2場は2行」）。2〜3場は raceColHead の split で🔥note予想の前に <br>
    ＝明示の改行なので灰色の枠は長い方の行の幅に縮む（自然な折り返しだと枠が区画の幅いっぱいに広がっていた） */
 .talk-band .buy-line > .race-col-head { white-space: nowrap; }
+/* 1人配信の広い区画（9/26）＝2人配信の1場と同じく札は1行／3場は横に3列＝左半分｜1/4｜1/4 */
+.talk-band .race-col.wide > .race-col-head { white-space: nowrap; }
+.race-split.solo3 > .race-col:first-child { flex: 2 1 0; }
 /* 予想帯の車番チップは競輪の車番風に縦長（横幅半分） */
 /* ②レース観戦の帯＝俺たち目＋買い目3行が1列に収まるサイズ（8/6 FB）。①トークは出走表と同じ正方形 */
 .race-band .buy-line { gap: 5px 40px; padding: 8px 16px; } /* 旧・下48px一律予約は廃止＝合計/投資はJSが列ごとに衝突回避（8/6 FB58） */

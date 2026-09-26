@@ -77,6 +77,8 @@
   var HEADBIG = params.get("headbig") !== "0";
   var HEAD_EMPTY_PX = +(params.get("headpx") || 44);   // 1場
   var HEAD_EMPTY_PX2 = +(params.get("headpx2") || 38); // 2〜3場
+  // 幅のある倍率を下の段へ回すのは、右に並べると等倍未満に縮むときだけ（9/26 Naoto）。&stack=grow で旧ルール（拡大の途中でも5%以上なら回す）
+  var STACK_GROW = params.get("stack") === "grow";
   /* 🧪②レース観戦の買目を大きく（9/25 Naoto「買目が多いと字が小さくて見づらい」・A+B+C案）。②のページだけ：
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
@@ -1378,7 +1380,7 @@
          2〜3場の札は🔥note予想の前で必ず改行（raceColHead の split）＝1行目の幅で入るかを見る */
       var hBase = parseFloat(getComputedStyle(head).fontSize) || 26;
       var hRoom = (col.getBoundingClientRect().width - (parseFloat(getComputedStyle(col).paddingLeft) || 0) - (parseFloat(getComputedStyle(col).paddingRight) || 0)) * 0.96;
-      var hTarget = col.classList.contains("race-col") ? HEAD_EMPTY_PX2 : HEAD_EMPTY_PX;
+      var hTarget = col.classList.contains("race-col") && !col.classList.contains("wide") ? HEAD_EMPTY_PX2 : HEAD_EMPTY_PX; // 1人配信の広い区画は1場扱い
       head.style.whiteSpace = "nowrap"; // 折り返し前の幅（2〜3場は <br> で区切った長い方の行）
       var hW = head.getBoundingClientRect().width;
       head.style.whiteSpace = "";
@@ -1415,6 +1417,13 @@
       /* 9/26 Naoto「2場も投資額を大きく（note予想は締切後まで買目を書かず投資額だけ先に入れる＝空いた感じ）」＝
          買目の倍率（上限1.6）を決めたあと、**余った高さの範囲で**合計欄も大きくする（上限1.4倍＝1場の固定枠と同じ）。
          買目が小さくなる大きさにはしない（9/25夜＝合計欄を一緒に拡大したら買目が大きくならなかった教訓）。戻す＝&tmetak=0 */
+      // 1人配信の広い区画（.wide）は2人配信の1場と同じ＝合計欄も区画の倍率に合わせて大きく（上限1.4）し、その高さを先に取ってから買目の倍率を決める
+      if (TMETAK && col.classList.contains("wide") && k1 > 1.02) {
+        // 買目が無い区画は区画を拡大しない＝倍率で頭打ちにしない（札が長い区画だけ合計欄が小さくなった）
+        var sw = Math.min(1.4, emptyCol ? 1.4 : Math.min(1.6, k1), (availW - padL) / Math.max(1, mw));
+        var kw = Math.min(availW / needW, (availH - mh * sw - MGAP) / needH);
+        if (sw > 1.02 && kw >= 1) { mScale = sw; return kw; }
+      }
       if (TMETAK) {
         var kUse = Math.min(1.6, k1);
         var s = Math.min(1.4, (availW - padL) / Math.max(1, mw), (availH - MGAP - kUse * needH) / Math.max(1, mh));
@@ -1425,13 +1434,16 @@
     var k = measureK();
     if (needW <= 0 || needH <= 0) return;
     /* ODDS2（①）＝1段で入った倍率つきの行も、倍率を下の段へ回した方が区画全体を大きくできるなら回す（9/25夜 Naoto
-       「川崎2R」＝横幅で頭打ち・縦は余っていた）。回した結果が5%以上大きいときだけ採用＝1段で足りる行はそのまま */
+       「川崎2R」＝横幅で頭打ち・縦は余っていた）。
+       🔄9/26 Naoto「改行しないでいいのに改行しているのが多い」＝**右に並べたままだと等倍未満に縮めないと入らないときだけ**回す
+       （旧＝拡大の途中でも5%以上大きくなれば回した。幅の狭い区画では短い買目でも+19〜42%と出て改行されていた・実測）。
+       戻す＝&stack=grow（旧ルール） */
     var flat = col.querySelectorAll(".pred-line.pl-2row:not(.stack)");
-    if (flat.length && k < 1.6) {
+    if (flat.length && (STACK_GROW ? k < 1.6 : k < 1)) {
       var saved = [];
       flat.forEach(function (el) { saved.push(el.style.transform); el.style.transform = ""; el.classList.add("stack"); });
       var wOld = needW, hOld = needH, kStack = measureK();
-      if (kStack > k * 1.05) { k = kStack; }
+      if (kStack > k * (STACK_GROW ? 1.05 : 1)) { k = kStack; }
       else {
         flat.forEach(function (el, j) { el.classList.remove("stack"); el.style.transform = saved[j]; });
         needW = wOld; needH = hOld;
@@ -1968,7 +1980,19 @@
         if (bp === "tband-") {
           // 第5引数keepAll=true＝①トークも「全」を展開せず元記法で描く（8/8 FB77で②に合わせた）。
           // 第4引数noMetaはfalse固定＝①は合計/投資を帯の中にインラインで出す仕様のまま
-          if (talkKeys.length >= 3) {
+          /* 1人配信（9/26 Naoto「2人分の買目欄を1人で使う」）＝区画が2人配信の1人分と同じくらい広い＝「広い区画」（.wide）は
+             2人配信の1場と同じルール（札は1行・チップは通常サイズ・買目前の札は HEAD_EMPTY_PX）。
+             2場＝左右とも広い区画／3場＝横に3列（左半分｜1/4｜1/4・左だけ広い区画）＝右上下の2段は使わない */
+          var solo = !seats.a !== !seats.b;
+          var colHtml = function (k, wide) {
+            return '<div class="race-col' + (wide ? " wide" : "") + '">' + raceColHead(rc, k, !wide) + raceBuyHtml(rc, k, !wide, false, true) + "</div>";
+          };
+          if (talkKeys.length >= 3 && solo) {
+            var tk = talkKeys.slice().sort(function (a, b) { return predRowCount(rc, b) - predRowCount(rc, a); }); // 左半分＝行数最多（FB33）
+            band.innerHTML = '<div class="race-split solo3">' + colHtml(tk[0], true) + colHtml(tk[1], false) + colHtml(tk[2], false) + "</div>";
+          } else if (talkKeys.length === 2 && solo) {
+            band.innerHTML = '<div class="race-split">' + colHtml(talkKeys[0], true) + colHtml(talkKeys[1], true) + "</div>";
+          } else if (talkKeys.length >= 3) {
             // 左＝フル高の大枠／右＝上下2段（8/6 FB26・Naotoスケッチ準拠）。
             // 大枠には行数最多のレースを自動配置（FB33・同数なら開催の早い順のまま＝安定ソート）
             var tk = talkKeys.slice().sort(function (a, b) { return predRowCount(rc, b) - predRowCount(rc, a); });
