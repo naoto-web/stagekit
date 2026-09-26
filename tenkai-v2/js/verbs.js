@@ -83,12 +83,27 @@ var Verbs = (function () {
       上昇＝主語は外・あいだのラインは真ん中、のように追い抜く側どうしのレーンを分けて重ならないようにする */
   function requeueLanes(order, head, passLanes) {
     var fin = Lineup.layout(order, head), paths = {};
+    if (pacerGone()) noRetreat(fin);
     cars().forEach(function (no) {
       var p = pos(no), f = fin[no] || { d: p.d, lane: p.lane };
       if (passLanes[no] != null) paths[no] = passPath(no, f, passLanes[no]);
       else paths[no] = [{ t: 0, d: p.d, lane: p.lane }, { t: 0.6, d: p.d + (f.d - p.d) * 0.6, lane: f.lane }, { t: 1, d: f.d, lane: f.lane }];
     });
     return paths;
+  }
+
+  /** 誘導員がもう退いているか（先頭が打鐘の位置を過ぎた）。board.js の出し入れと同じ境目 */
+  function pacerGone() {
+    var ln = leaderNo();
+    return ln !== null && data().riders[ln].d <= CONFIG.BELL_D + 1e-4;
+  }
+  /** 誰も後ろ向きに進まないよう、行き先を全体に前へずらす（打鐘を過ぎた後の並べ替え用）。
+      🐞9/27 Naoto「打鐘でカマシを入れると一瞬誘導員が出る」＝叩かれたラインが引く途中で先頭が打鐘の手前へ戻り、
+      誘導員の出し入れ（先頭の位置で決まる）が反応した。全員が前へ進めば先頭は戻らない＝実際のレースとも同じ */
+  function noRetreat(fin) {
+    var s = 0;
+    cars().forEach(function (no) { if (fin[no]) s = Math.max(s, fin[no].d - pos(no).d); });
+    if (s > 0) Object.keys(fin).forEach(function (no) { fin[no].d -= s; });
   }
 
   function label(no) {
@@ -199,6 +214,7 @@ var Verbs = (function () {
     var newOrder = order.filter(function (l) { return !sameLine(l, L); }).concat([L]);
     var head = Math.max(0, headD(front) - 2 * CAR);
     var fin = Lineup.layout(newOrder, head), paths = {};
+    if (pacerGone()) noRetreat(fin);
     cars().forEach(function (no) {
       var p = pos(no), f = fin[no] || { d: p.d, lane: p.lane };
       paths[no] = [{ t: 0, d: p.d, lane: p.lane }, { t: 1, d: f.d, lane: f.lane }];
