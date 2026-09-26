@@ -918,8 +918,8 @@
        薄い金の光が左→右へ1回（1.3秒）。**その後も金色のまま**（.od-fin）。読み直した後に最初から最終だったレースは光らせず金色だけ
      ⚠️renderPreds は何度も描き直す＝演出は「始まった時刻」を覚えておき、描き直すたびに負の animation-delay で続きから再生する */
   var odShown = {}, odMove = {}, odFinAt = {};
-  var OD_MOVE_MS = 900, OD_FIN_MS = 1600, OD_SWEEP_MS = 1300, OD_STALE_MS = 120000;
-  var OD_BIG_RATIO = 0.2, OD_BIG_MS = 1500; // 大きい変動＝±20%以上・1.5秒（CSS .od-big と同じ長さ）
+  var OD_MOVE_MS = 1500, OD_FIN_MS = 1600, OD_SWEEP_MS = 1300, OD_STALE_MS = 120000;
+  var OD_BIG_RATIO = 0.2, OD_BIG_MS = 3000; // 大きい変動＝±20%以上・3秒（CSS .od-big と同じ長さ）。9/26 Naoto＝通常0.9→1.5秒・大きい変動1.5→3秒
   function markOdds() {
     document.querySelectorAll(".od-sweep").forEach(function (o) { o.remove(); });
     if (!ODDS) return;

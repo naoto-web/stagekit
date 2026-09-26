@@ -3416,14 +3416,14 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
    ・上下＝変わった数字だけ赤▲／青▼で0.9秒（▼も数字の上＝下の段と重ならない）。描き直しても続きから（--odd＝負の遅れ）
    ・最終＝倍率と合成が金色に一度光る（1.6秒）＋薄い金の光が左→右（1.3秒）→**その後も金色のまま**（.od-fin） */
 .odn { position: relative; display: inline-block; }
-.odn.od-up   { animation: odUp .9s ease-out; animation-delay: var(--odd, 0ms); }
-.odn.od-down { animation: odDown .9s ease-out; animation-delay: var(--odd, 0ms); }
+.odn.od-up   { animation: odUp 1.5s ease-out; animation-delay: var(--odd, 0ms); }
+.odn.od-down { animation: odDown 1.5s ease-out; animation-delay: var(--odd, 0ms); }
 /* 9/26 Naoto「数字が動くのでなく矢印が動く・上なら数字の真ん中から上に、下なら真ん中から下に・数字は固定」
    ＝数字は色が変わるだけ（位置は動かさない）。矢印は数字の上下の真ん中から出て、▲は上・▼は下へ抜けながら消える（数字に被ってよい） */
 @keyframes odUp   { 0% { color: #e0282e; } 60% { color: #e0282e; } }
 @keyframes odDown { 0% { color: #1f5fd6; } 60% { color: #1f5fd6; } }
 .odn.od-up::after, .odn.od-down::after { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  font-size: .45em; line-height: 1; opacity: 0; animation-duration: .9s; animation-timing-function: ease-out; animation-delay: var(--odd, 0ms); }
+  font-size: .45em; line-height: 1; opacity: 0; animation-duration: 1.5s; animation-timing-function: ease-out; animation-delay: var(--odd, 0ms); }
 .odn.od-up::after { content: "▲"; color: #e0282e; animation-name: odMarkUp; }
 .odn.od-down::after { content: "▼"; color: #1f5fd6; animation-name: odMarkDown; }
 @keyframes odMarkUp   { 0% { opacity: 1; transform: translate(-50%, -50%); } 60% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -2.1em); } }
@@ -3431,8 +3431,8 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 /* 大きい変動（前の表示から±20%以上・9/26 Naoto）＝矢印と動いた幅をひとまとまり「▲+12」「▼−6」にして、ふだんの矢印と同じ道筋で動かす。
    長さは1.5秒（JS OD_BIG_MS と同じ）＝数字を読める長さ。字は矢印より一回り大きく＋白フチ（上下の段の矢印と重なっても読める）。
    旧＝幅だけ別の小さな字（.42em≒11px）で矢印の外側に出した→小さすぎ・②の上下2段で段の間の「−6」「+5」がぶつかった */
-.odn.od-up.od-big, .odn.od-down.od-big { animation-duration: 1.5s; }
-.odn.od-up.od-big::after, .odn.od-down.od-big::after { font-size: .65em; font-weight: 900; white-space: nowrap; animation-duration: 1.5s;
+.odn.od-up.od-big, .odn.od-down.od-big { animation-duration: 3s; } /* 9/26 Naoto＝通常1.5秒・大きい変動3秒（JS OD_MOVE_MS／OD_BIG_MS と同じ） */
+.odn.od-up.od-big::after, .odn.od-down.od-big::after { font-size: .65em; font-weight: 900; white-space: nowrap; animation-duration: 3s;
   text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff; }
 .odn.od-up.od-big::after { content: "▲" attr(data-dv); animation-name: odBigUp; }
 .odn.od-down.od-big::after { content: "▼" attr(data-dv); animation-name: odBigDown; }
