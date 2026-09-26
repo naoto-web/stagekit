@@ -4,8 +4,8 @@
    2種類ある
    ① Anim.to()      ＝ドック側。局面ボタンなどで「目標の隊列」へ滑らかに動かす。
                        途中経過をそのまま State に書いて出力へ流す＝ドックと出力で同じ動き
-                       遠いジャンプ（0.75周超）は「目的地の半周手前へ瞬間移動→そこから進む」
-                       ＝スタート→赤板で3周回して目が回らない
+                       遠いジャンプは周回数だけ裏で合わせ、見た目は今の位置から1周以内で動かす
+                       （戻すときは逆走・進むときは前へ）
    ② Anim.Smoother  ＝出力側。届いた状態（約30fps）へ毎フレーム追いつく＝カクつかない。
                        大きく飛んだとき（0.2周超）は追わずに瞬間移動（①のワープをそのまま見せる）
    =========================================================== */
@@ -52,12 +52,29 @@ var Anim = (function () {
       if (Math.abs(dd) > maxAbs) { maxAbs = Math.abs(dd); sign = dd < 0 ? -1 : 1; }
     });
 
-    /* 遠いジャンプは半周手前へワープしてから進む */
-    if (maxAbs > 0.75) {
-      Object.keys(from).forEach(function (no) {
-        from[no] = { d: target[no].d - sign * 0.5, lane: from[no].lane };
-      });
-      maxAbs = 0.5;
+    /* 今いる位置から動かす（9/27 Naoto「スタート・赤板を押すとどこかへ移動してしまう」）。
+       旧＝遠いジャンプは「目的地の半周手前へワープ」→見た目が飛んでいた。
+       新＝コース上の見た目は1周ごとに同じなので、**周回数だけ裏で合わせる（見た目は動かない）**。
+         戻す（d が増える）＝今の位置からコースを逆走して1周未満で戻る
+         進む（d が減る）  ＝今の位置から前へ。ちょうど整数周なら1周回って同じ場所へ */
+    var dd0 = sign * maxAbs, v;
+    if (dd0 > 0) {
+      v = dd0 % 1;
+      if (v < 1e-6 || 1 - v < 1e-6) v = 0;            // 同じ場所＝動かさない
+    } else {
+      v = -((-dd0) % 1);
+      if (-v < 0.02 || 1 + v < 1e-6) v = (-dd0 >= 0.98) ? -1 : v;   // ちょうど整数周＝1周回る
+    }
+    var shift = dd0 - v;                               // 整数周（見た目は変わらない）
+    Object.keys(from).forEach(function (no) {
+      from[no] = { d: from[no].d + shift, lane: from[no].lane };
+    });
+    maxAbs = Math.abs(v);
+    if (maxAbs < 1e-6) {
+      Object.keys(from).forEach(function (no) { State.moveRider(+no, target[no].d, target[no].lane); });
+      if (o && o.onFrame) o.onFrame(true);
+      if (o && o.onDone) o.onDone(true);
+      return;
     }
     /* 速さは config.js の ANIM（9/27 Naoto「速いのでもっとゆっくり」→半周で約2.4秒） */
     var A = CONFIG.ANIM;
