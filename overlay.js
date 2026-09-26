@@ -83,6 +83,8 @@
   var SOLORB = params.get("solorb") !== "0";
   // 1人配信の②で買目2行は縦に積む（9/26 Naoto・packRaceBand）。&solov2=0 で倍率優先（横並びもあり）に戻す
   var SOLOV2 = params.get("solov2") !== "0";
+  // ③の右下の合計欄を買目の倍率に合わせて大きく（9/26 Naoto・packRaceBand の META_RB）。&tkmeta=0 で従来の大きさ
+  var TKMETA = params.get("tkmeta") !== "0";
   // note勝負バナーは本日設定の場にある場だけ出す（9/26 Naoto・renderVenueTabs）。&nhvenue=0 で旧＝場に関係なく出す
   var NH_VENUE = params.get("nhvenue") !== "0";
   // ②の並びの窓の上端（px）＝パネルの枠線の内側から（9/26 Naoto「上が映像と被って切れる」）。旧＝0（帯の外側）
@@ -91,7 +93,11 @@
      A＝「別府 7R 🔥」を買目の帯から見出し行（〇〇予想 と 投資/回収 の間）へ移す＝帯の1列ぶんが買目に使える
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
      9/25 Naoto「OK・本番反映」＝本番も既定ON。&rb2=0 で従来の②に戻せる（OBSのソースURLだけで） */
-  var RB2 = SCENE === "race" && params.get("rb2") !== "0";
+  var RB2 = (SCENE === "race" || SCENE === "tenkai") && params.get("rb2") !== "0";
+  /* ③レース展開も②の詰め方（RB2）を使う（9/26 Naoto「③は買目と右下の投資額の文字サイズの調整ができていない・トークと同じ要領で」）。
+     ③の予想帯は②と同じ .race-band の部品＝パッキング（並べ替え総当たり・列間の自動調整・合計欄2段/1行の選択）と
+     チップの詰め（CSS .rb2 .race-band）がそのまま効く。②だけのもの（見出しへ移す場名・🔥note札・並びの窓・俺たち目の「俺」1文字）は
+     従来どおり②（bp "band-"／SCENE==="race"）に限る。右下の合計欄の拡大は③では2人配信でも行う（packRaceBand の META_RB）。戻す＝&rb2=0 */
   // ②NEXT枠は入力があるレースだけ出す（9/25 Naoto・詳細は renderPreds の subHasContent）。9/25 本番既定ON・&subauto=0 で従来（選べば常に出す）
   var SUBAUTO = params.get("subauto") !== "0";
   // NEXT枠の補完（サブの場が空なら入力のある別の場のレース・renderPreds の effSubOf）。9/25 本番既定ON・&subfb=0 で止める
@@ -1057,7 +1063,7 @@
     // 俺たち目の右にもオッズ（9/25 Naoto）。俺たち目は「126」＝1-2-6 の記法補正を通してから組を出す
     var oreOdds = ore && !noOdds ? oddsHtml(k, window.Keirin.parseLine(window.Keirin.oreNormalize(ore), "3連単"), small) : "";
     // ②レース観戦（RB2）は札の文字を「俺」だけに（9/25 Naoto・狭い②だけ。①③は「俺たち目」のまま＝言葉を覚えてもらう）
-    return (ore ? '<div class="ore-row"><span class="ore-label">' + (RB2 ? "俺" : "俺たち目") + "</span>" + lineChips(ore, small, oreGlow, true) + oreOdds + "</div>" : "") +
+    return (ore ? '<div class="ore-row"><span class="ore-label">' + (RB2 && SCENE === "race" ? "俺" : "俺たち目") + "</span>" + lineChips(ore, small, oreGlow, true) + oreOdds + "</div>" : "") +
       okLines.map(function (l) {
         // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
         // チップは通常色のまま・的中強調の対象外（そもそも的中しない）
@@ -1291,6 +1297,8 @@
     var SOLO_RB = RB2 && SOLORB && band.closest(".race-band") &&
       document.body.classList.contains("seat-a-off") !== document.body.classList.contains("seat-b-off");
     if (SOLO_RB) { COLGAP = 36; COLGAP_MAX = 72; }
+    // 右下の合計欄を買目の倍率に合わせて大きくする＝②の1人配信＋③（9/26 Naoto・③は予想帯の高さが②の約2倍＝2人配信でも買目が大きくなる）
+    var META_RB = SOLO_RB || (RB2 && SCENE === "tenkai" && TKMETA && !!band.closest(".race-band"));
     var CAP = hasPred ? 3.0 : 1.5;           // ラベルだけの帯は控えめに留める
     // 右下固定の合計/投資：表示中なら帯コンテンツ原点からの左端・上端（renderPredsが先にmetaを確定させる前提）
     var metaL = Infinity, metaT = Infinity;
@@ -1340,7 +1348,9 @@
     if (RB2) {
       var head = [], mid = [], tail = [];
       rows.forEach(function (el, i) {
-        if (el.classList.contains("ore-row")) head.push(i);
+        // ③は場名の札（.race-col-head）が帯の中にある（②は見出しへ移した）＝俺たち目より前の先頭に固定（9/26）
+        if (el.classList.contains("race-col-head")) head.unshift(i);
+        else if (el.classList.contains("ore-row")) head.push(i);
         else if (hard[i]) mid.push(i);
         else tail.push(i);
       });
@@ -1395,10 +1405,17 @@
     /* 1人配信＝合計欄を買目の倍率に合わせて大きくし（上限1.5倍）、その大きさで配置を測り直す。
        ⚠️買目優先：合計欄を大きくすると買目の場所が減る＝1.5倍から0.1刻みで下げ、買目の倍率が元の95%以上を保てる一番大きい倍率を採る
        （1.5倍固定だと買目が多い帯で買目が2〜3割小さくなった＝撮影で確認） */
-    if (SOLO_RB && meta && !meta.classList.contains("hidden") && best && best.k > 1.02) {
+    if (META_RB && meta && !meta.classList.contains("hidden") && best && best.k > 1.02) {
       var mBase = parseFloat(getComputedStyle(meta).fontSize) || 26;
       var k0 = best.k, keep = { best: best, m1: meta.classList.contains("m1") }, ok = false;
-      for (var ms = Math.min(1.5, k0); ms > 1.02; ms -= 0.1) {
+      /* ③は合計欄を買目のチップの8割の大きさまで（9/26・①の1場と同じ見え方＝チップ48px:合計欄38px）。
+         ②の1人配信のルールだけだと、行が多くチップが小さい帯で合計欄の方が大きくなった（チップ28px・合計欄39px） */
+      var msMax = 1.5;
+      if (SCENE === "tenkai") {
+        var car0 = band.querySelector(".pred-line .car");
+        if (car0 && car0.offsetHeight) msMax = Math.min(msMax, TK_META_RATIO * car0.offsetHeight * k0 / mBase);
+      }
+      for (var ms = Math.min(msMax, k0); ms > 1.02; ms -= 0.1) {
         meta.style.fontSize = (mBase * ms).toFixed(1) + "px";
         choose();
         if (best.k >= k0 * 0.95) { ok = true; break; }
@@ -1445,8 +1462,20 @@
       flow.style.transform = "scale(" + k2.toFixed(3) + ")";
       flow.style.transformOrigin = "left top";
     }
+    /* ③の場名の札は①と同じく最大1.6倍まで（9/26）＝買目が1行だけだと帯ごと3倍になり札が巨大になった。
+       札だけ元に戻す向きに縮める（場所は取ったまま＝下の買目の位置は変わらない） */
+    if (SCENE === "tenkai" && k2 > LABEL_CAP) {
+      rows.forEach(function (el) {
+        if (!el.classList.contains("race-col-head")) return;
+        var s0 = parseFloat((String(el.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+        el.style.transform = "scale(" + (s0 * LABEL_CAP / k2).toFixed(3) + ")";
+        el.style.transformOrigin = "left top";
+      });
+    }
     fitRbScale(band); // 実描画ベースの最終検証（はみ出し・合計/投資への重なりが残れば縮める）
   }
+  var LABEL_CAP = 1.6;
+  var TK_META_RATIO = +(params.get("tkmr") || 0.8); // ③の合計欄の上限＝買目のチップの高さ×0.8（&tkmr= で調整）
 
   /** パッキング後の実描画検証（8/6 FB51→FB58）：パネル外へのはみ出しと、右下固定の合計/投資への
       列の重なりを実座標で検査し、残っていれば収まる倍率へ補正（縮小のみ）。毎秒巡回でも実行 */
