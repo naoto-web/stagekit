@@ -887,10 +887,14 @@
      無いまま90秒を超えて取得が止まり、買目を触るまで更新されなかった）。
      ⚠️表示だけ＝点数・投資・回収・的中の計算（derive）には一切入れない（§8の実額転記は不変） */
   var oddsData = {}, oddsWant = {}, oddsPending = {}, oddsDate = "", oddsKick = null, oddsSeq = 0;
+  /* 取得中の印＝送った時刻。20秒たっても返事が無ければ取得中とみなさない（9/26 岸和田7R＝②に切り替わってから
+     ずっと倍率が出なかった。fetch には時間切れが無い＝返事の来ない1本が残ると、その印のせいで二度と取りに行かなかった） */
+  var ODDS_PENDING_MS = 20000;
+  function oddsBusy(k, now) { return !!oddsPending[k] && now - oddsPending[k] < ODDS_PENDING_MS; }
   function oddsHtml(k, l, small) {
     if (!ODDS || !k || l.type !== "3連単" || !l.combos || !l.combos.length) return "";
     // 初めて画面に出たレース＝30秒の定期を待たずにすぐ取りに行く（9/25 Naoto「なかなか出ない」＝最悪35〜40秒かかっていた）
-    if (!oddsData[k] && !oddsPending[k] && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
+    if (!oddsData[k] && !oddsBusy(k, Date.now()) && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
     oddsWant[k] = oddsSeq;
     var d = oddsData[k];
     var txt = d ? window.Keirin.oddsLabel(l, d.o) : ""; // 整数・四捨五入（9/25 Naoto）＝コンソールと同じ関数
@@ -1011,26 +1015,29 @@
     var now = Date.now(), byJo = {};
     Object.keys(oddsWant).forEach(function (k) {
       if (oddsWant[k] < oddsSeq) { delete oddsWant[k]; return; } // 最新の描画に出ていない＝画面から消えた
-      if (oddsPending[k] || (oddsData[k] && oddsData[k].fin)) return;
+      if (oddsBusy(k, now) || (oddsData[k] && oddsData[k].fin)) return;
       var p = k.split("|"), jo = joCodeOf(p[0]);
       if (!jo || !+p[1]) return;
       (byJo[jo] = byJo[jo] || { name: p[0], races: [] }).races.push(+p[1]);
     });
     Object.keys(byJo).forEach(function (jo) {
       var g = byJo[jo];
-      g.races.forEach(function (r) { oddsPending[g.name + "|" + r] = true; });
+      var sentAt = now;
+      g.races.forEach(function (r) { oddsPending[g.name + "|" + r] = sentAt; });
       window.Sync.fetchOdds(jo, g.races).then(function (res) {
         var changed = false;
         g.races.forEach(function (r) {
           var k = g.name + "|" + r, d = res[r];
-          delete oddsPending[k];
+          if (oddsPending[k] === sentAt) delete oddsPending[k]; // 時間切れ後に送り直した分の印は消さない
           if (d && d.o && JSON.stringify(d.o) !== JSON.stringify((oddsData[k] || {}).o)) changed = true;
           // 最終に変わった瞬間（§35）＝このページで最終前の値を見ていたレースだけ光らせる（読み直し直後から最終なら金色だけ）
           if (d && d.o && d.fin && oddsData[k] && !oddsData[k].fin) { odFinAt[k] = Date.now(); changed = true; }
           if (d && d.o) oddsData[k] = d;
         });
         if (changed) renderPreds();
-      }).catch(function () { g.races.forEach(function (r) { delete oddsPending[g.name + "|" + r]; }); });
+      }).catch(function () {
+        g.races.forEach(function (r) { var k = g.name + "|" + r; if (oddsPending[k] === sentAt) delete oddsPending[k]; });
+      });
     });
   }
   var TYPING_RE = /^[\s0-9０-９\-－ー=＝→>＞]+$/;
