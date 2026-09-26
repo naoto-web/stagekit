@@ -3523,6 +3523,16 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 .odn.od-up.od-big, .odn.od-down.od-big { animation-duration: 5s; } /* 9/26 Naoto＝通常3秒・大きい変動5秒・±15%以上（JS OD_MOVE_MS／OD_BIG_MS／OD_BIG_RATIO と同じ） */
 .odn.od-up.od-big::after, .odn.od-down.od-big::after { font-size: .65em; font-weight: 900; white-space: nowrap; animation-duration: 5s;
   text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff; }
+/* 演出の真ん中で数字が変わる（JS ODHOLD・9/26 Naoto）＝元の数字は黒のまま（▲▼だけ色）→変わった瞬間から赤／青→ふつうの色へ。
+   数字の色は od-up/od-down の odUp/odDown でなく、切替時にJSが付ける od-nup/od-ndown（--odh＝演出の残り半分・--odnd＝切替からの経過） */
+body.odhold .odn.od-up, body.odhold .odn.od-down { animation: none; }
+/* じわっと切替＝数字の文字色だけ --odop の割合で薄める（JSが切替の前後0.35／0.45秒だけ入れる）。矢印（::after）は自分の色のまま */
+body.odhold .odn { -webkit-text-fill-color: color-mix(in srgb, currentColor calc(var(--odop, 1) * 100%), transparent); }
+body.odhold .odn::after, body.odhold .odn::before { -webkit-text-fill-color: currentColor; }
+body.odhold .odn.od-nup   { animation: odNumUp var(--odh, 1500ms) ease-out; animation-delay: var(--odnd, 0ms); }
+body.odhold .odn.od-ndown { animation: odNumDown var(--odh, 1500ms) ease-out; animation-delay: var(--odnd, 0ms); }
+@keyframes odNumUp   { 0% { color: #e0282e; } 70% { color: #e0282e; } }
+@keyframes odNumDown { 0% { color: #1f5fd6; } 70% { color: #1f5fd6; } }
 .odn.od-up.od-big::after { content: "▲" attr(data-dv); animation-name: odBigUp; }
 .odn.od-down.od-big::after { content: "▼" attr(data-dv); animation-name: odBigDown; }
 @keyframes odBigUp   { 0% { opacity: 1; transform: translate(-50%, -50%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -1.8em); } }

@@ -1056,6 +1056,43 @@
   var ODFX2 = params.get("odfx") !== "1";
   if (ODFX2 && document.body) document.body.classList.add("odfx2");
   var OD_KIRA_MS = 900; // キラン1回の長さ（CSS odKira と同じ）
+  /* オッズが変わったとき、演出の途中で数字を切り替える（9/26 Naoto「増減演出が入って、その真ん中あたりで数字が変わる」・&odhold=0 で旧＝すぐ切り替え）。
+     数字は先に新しい値で描かれる→ここで演出の半分（通常1.5秒／大幅2.5秒）までは元の値を書き戻して見せる＝「元の値＋▲▼→新しい値」の順に読める。
+     （カウントで進める案は Naoto「実際見ると微妙」で撤回） */
+  var ODHOLD = params.get("odhold") !== "0", odHoldRaf = 0;
+  if (ODHOLD && document.body) document.body.classList.add("odhold");
+  // じわっと切り替え（9/26 Naoto）＝切替の直前 OD_FADE_OUT で元の数字が薄れ、切替後 OD_FADE_IN で新しい数字が浮かぶ
+  var OD_FADE_OUT = 350, OD_FADE_IN = 450;
+  /** 新しい数字に変わってから赤／青（9/26 Naoto「元の数字の時は黒で、変わった時に青赤」）。残りの時間でふつうの色へ戻る */
+  function odNumColor(el, mv, now) {
+    el.classList.add(mv.dir === "up" ? "od-nup" : "od-ndown");
+    el.style.setProperty("--odnd", -(now - mv.switchAt) + "ms");
+    el.style.setProperty("--odh", ((mv.big ? OD_BIG_MS : OD_MOVE_MS) / 2) + "ms");
+  }
+  function odHoldKick() { if (ODHOLD && !odHoldRaf) odHoldRaf = requestAnimationFrame(odHoldStep); }
+  function odHoldStep() {
+    odHoldRaf = 0;
+    var now = Date.now(), active = false;
+    Object.keys(odMove).forEach(function (id) {
+      var mv = odMove[id];
+      if (!mv || mv.fromText == null || mv.done) return;
+      var txt, op = null, after = now >= mv.switchAt;
+      if (!after) {                                    // 元の数字（黒）＋▲▼。切替の直前だけ薄れていく
+        active = true; txt = mv.fromText;
+        if (now > mv.switchAt - OD_FADE_OUT) op = (mv.switchAt - now) / OD_FADE_OUT;
+      } else if (now < mv.switchAt + OD_FADE_IN) {     // 新しい数字が浮かび上がる
+        active = true; txt = mv.toText; op = (now - mv.switchAt) / OD_FADE_IN;
+      } else { mv.done = true; txt = mv.toText; }
+      document.querySelectorAll('.odn[data-ok="' + id.replace(/"/g, '\\"') + '"]').forEach(function (el) {
+        if (el.textContent !== txt) el.textContent = txt;
+        // 数字の文字だけ薄くする（opacity だと▲▼の矢印まで一緒に薄れる）＝CSS の --odop（color-mix）
+        if (op === null) el.style.removeProperty("--odop");
+        else el.style.setProperty("--odop", Math.max(0, Math.min(1, op)).toFixed(3));
+        if (after) odNumColor(el, mv, now);
+      });
+    });
+    if (active) odHoldRaf = requestAnimationFrame(odHoldStep);
+  }
   var OD_BIG_RATIO = 0.15, OD_BIG_MS = 5000; // 大きい変動＝±15%以上・5秒（CSS .od-big と同じ長さ）。9/26 Naoto＝20%→15%・3秒→5秒
   function markOdds() {
     document.querySelectorAll(".od-sweep").forEach(function (o) { o.remove(); });
@@ -1063,6 +1100,9 @@
     var now = Date.now();
     document.querySelectorAll(".odn").forEach(function (e) {
       var id = e.getAttribute("data-ok"), t = e.textContent, prev = odShown[id];
+      var hold = odMove[id];
+      // 切り替え待ち（odHoldStep が元の値を書き戻している）＝その字を「変化」と取り違えない
+      if (ODHOLD && hold && hold.fromText != null && !hold.done && t === hold.fromText) t = hold.toText;
       if (prev && prev.t !== t && now - prev.at < OD_STALE_MS) { // 長く画面に無かった数字の変化は演出しない
         var a = parseFloat(prev.t), b = parseFloat(t);
         if (!isNaN(a) && !isNaN(b) && a !== b) {
@@ -1070,7 +1110,10 @@
              判定は割合・見せるのは差（倍）＝案A。差の書式は倍率と同じ（10未満は小数第1位・以上は整数） */
           var big = Math.abs(b - a) / a >= OD_BIG_RATIO;
           odMove[id] = { dir: b > a ? "up" : "down", at: now, big: big,
-            dv: big ? (b > a ? "+" : "−") + window.Keirin.oddsInt(Math.abs(b - a)) : "" };
+            dv: big ? (b > a ? "+" : "−") + window.Keirin.oddsInt(Math.abs(b - a)) : "",
+            // 演出の半分までは元の値を見せる（9/26 Naoto「何から何に変わったか分かりづらい」）
+            fromText: prev.t, toText: t, switchAt: now + (big ? OD_BIG_MS : OD_MOVE_MS) / 2 };
+          odHoldKick();
         }
       }
       odShown[id] = { t: t, at: now };
@@ -1079,8 +1122,11 @@
         e.classList.add(mv.dir === "up" ? "od-up" : "od-down");
         if (mv.big) { e.classList.add("od-big"); e.setAttribute("data-dv", mv.dv); }
         e.style.setProperty("--odd", -(now - mv.at) + "ms");
+        if (ODHOLD && mv.fromText != null && now >= mv.switchAt) odNumColor(e, mv, now); // 描き直しても色の続きを出す
       }
     });
+    // 描き直し直後は新しい値が一瞬見える＝切り替え待ちなら元の値をすぐ書き戻す
+    if (ODHOLD && odHoldRaf) { cancelAnimationFrame(odHoldRaf); odHoldStep(); }
     var swept = []; // 同じ帯に帯を2本重ねない（1つの帯に同じレースの数字は何個もある）
     document.querySelectorAll(".od-fin").forEach(function (e) {
       var rk = e.getAttribute("data-rk"), at = odFinAt[rk];
@@ -1189,6 +1235,14 @@
     });
   }
   // 検証用（&debug=1 のときだけ）＝そのレースのオッズを「今この瞬間に確定した」扱いにする（確定演出の撮影用）
+  // 検証用（&debug=1）＝そのレースの倍率を全部 factor 倍にする（オッズの上下・カウントの撮影用）
+  if (DEBUG) window.__odBump = function (k, factor) {
+    var d = oddsData[k];
+    if (!d) return "no odds for " + k;
+    var o = {};
+    Object.keys(d.o).forEach(function (c) { o[c] = Math.round(d.o[c] * factor * 10) / 10; });
+    oddsData[k] = Object.assign({}, d, { o: o }); renderPreds(); return "ok";
+  };
   if (DEBUG) window.__odFin = function (k) {
     if (!oddsData[k]) return "no odds for " + k;
     oddsData[k].fin = true; odFinAt[k] = Date.now(); renderPreds(); return "ok";
