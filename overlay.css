@@ -3420,7 +3420,8 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 .odn.od-down { animation: odDown .9s ease-out; animation-delay: var(--odd, 0ms); }
 @keyframes odUp   { 0% { color: #e0282e; transform: translateY(-3px); } 60% { color: #e0282e; } 100% { transform: none; } }
 @keyframes odDown { 0% { color: #1f5fd6; transform: translateY(3px); } 60% { color: #1f5fd6; } 100% { transform: none; } }
-.odn.od-up::after, .odn.od-down::after { position: absolute; left: 50%; top: -.62em; transform: translateX(-50%);
+/* 9/26 Naoto「矢印はもっと数字に近づけていい・被ってもOK」＝-.62em→-.3em（数字の上端に少し掛かる） */
+.odn.od-up::after, .odn.od-down::after { position: absolute; left: 50%; top: -.3em; transform: translateX(-50%);
   font-size: .45em; line-height: 1; opacity: 0; animation: odMark .9s ease-out; animation-delay: var(--odd, 0ms); }
 .odn.od-up::after { content: "▲"; color: #e0282e; }
 .odn.od-down::after { content: "▼"; color: #1f5fd6; }
