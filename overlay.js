@@ -761,17 +761,19 @@
         // 場数に応じてカードをコンパクト化（3〜4場＝モーニング→昼の並走帯）
         el.className = "timer-cards vt-n" + Math.max(2, Math.min(cards.length, 4));
       });
+      // 見出し・ハンコの実測フィット（フォントの読み込みが遅れることがある＝少し後にもう2回）
+      if (TFX) { fitTimerHeads(); setTimeout(fitTimerHeads, 800); setTimeout(fitTimerHeads, 2500); }
     }
     tickTimerCounts();
   }
   /** 🧪TFXのカード1枚（A・B・D）。従来カードと同じ部品（vt-head／vt-rows）を使い、足すだけ */
   function tfxCardHtml(c, closed, mode, liveIn) {
-    var gb = gradeBadge(c.venue);
     var cards = nextByVenue().length;
+    // 3〜4場はグレードを「Ⅲ」だけに（9/26 Naoto「字が小さい・必要ならGⅢ→Ⅲでよい」）。2場は「GⅢ」のまま
+    var gb = cards >= 3 ? gradeBadgeShort(c.venue) : gradeBadge(c.venue);
     var note = c.race && timerNoteOn(c.venue, c.race.no);
-    // 3〜4場で見出しが詰まる条件（従来＝グレードあり・長い場名）に🔥も数える＝🔥の分だけ早めに一段縮める
-    var tight = (gb || note) && cards >= 3 && c.venue.length + (gb && note ? 1 : 0) >= (cards >= 4 ? 3 : 4);
-    var head = '<div class="vt-head' + (tight ? " vh-tight" : "") + '">' +
+    // 見出しの縮小は文字数の当て推量（vh-tight）でなく実測（fitTimerHeads＝入るまで1pxずつ）に変更（9/26）
+    var head = '<div class="vt-head">' +
       (note ? '<span class="vt-fire">🔥</span>' : "") + esc(c.venue) + // 🔥は場名の前（9/26 Naoto「🔥岐阜10R」・旧＝グレードバッジの右）
       (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + "</div>";
     var body, cls = "vt-card";
@@ -787,7 +789,7 @@
       body = '<div class="vt-rows">' +
         '<div class="vt-row"><span>発走</span><b>' + c.race.start + "</b></div>" +
         '<div class="vt-row"><span>発走まで</span><b data-go="' + c.race.startSec + '"></b></div>' +
-        '<div class="vt-closed-msg"><span class="vt-stamp' + (liveIn ? " stamp-in" : "") + '">🔔 締切りました！</span></div>' +
+        '<div class="vt-closed-msg"><span class="vt-stamp' + (liveIn ? " stamp-in" : "") + '"><i class="vt-bell">🔔</i> 締切りました！</span></div>' +
         "</div>";
     } else if (mode === "run") {
       // レース中（9/26 Naoto）＝同じレースのまま中身を黒地・白字に。3分で裏で次のレースへ（カウントダウンは出さない＝何の数字か分からないため）。
@@ -813,6 +815,29 @@
     el.textContent = txt;
     el.classList.remove("cd-pulse");
     if (pulse) { void el.offsetWidth; el.classList.add("cd-pulse"); }
+  }
+  /** 3〜4場のタイマー用＝「GⅢ」→「Ⅲ」（GPはそのまま） */
+  function gradeBadgeShort(venueName) { return gradeBadge(venueName).replace(/>G([ⅠⅡⅢ])</, ">$1<"); }
+  /** 見出し（🔥場名R グレード）と締切のハンコを、カードの幅に入るまで1pxずつ縮める（表示中の容器だけ＝非表示は幅0で測れない）。
+      旧＝文字数の当て推量で一段縮めていた（4場＋🔥＋GⅢで14pxまで落ちて「字が小さい」9/26 Naoto）。
+      ハンコは字を縮める前に🔔を落とす（「締切りました！」の大きさを守る） */
+  function fitTimerHeads() {
+    ["timer-talk", "timer-race", "timer-tk"].forEach(function (id) {
+      var box = $(id);
+      if (!box || !box.clientWidth) return;
+      box.querySelectorAll(".vt-head").forEach(function (h) {
+        h.style.fontSize = "";
+        var fs = parseFloat(getComputedStyle(h).fontSize), g = 0;
+        while (h.scrollWidth > h.clientWidth + 1 && fs > 13 && g++ < 12) { fs -= 1; h.style.fontSize = fs + "px"; }
+      });
+      box.querySelectorAll(".vt-stamp").forEach(function (s) {
+        s.style.fontSize = ""; s.classList.remove("no-bell");
+        var room = s.parentElement.clientWidth;
+        if (s.offsetWidth > room) s.classList.add("no-bell");
+        var fs = parseFloat(getComputedStyle(s).fontSize), g = 0;
+        while (s.offsetWidth > room && fs > 12 && g++ < 12) { fs -= 1; s.style.fontSize = fs + "px"; }
+      });
+    });
   }
   /** TFXの毎tick（0.25秒）：締切カードの「発走まで」の秒読み。数え方はほかの行と同じ整数秒 */
   function tfxTick() {
@@ -1314,6 +1339,11 @@
     var badge = headEl.querySelector(".note-badge");
     var race = headEl.querySelector(".bh-race"); // RB2（②）＝見出しに移したレース名も一緒に縮める
     [inv, badge, race].forEach(function (el) { if (el) el.style.fontSize = ""; });
+    // 🔥note の札は、字を縮める前に「note」を落として🔥だけにする（9/26 Naoto「スペースがなければ炎だけでいいので大きく」）
+    if (race) {
+      race.classList.remove("fire-only");
+      if (headEl.scrollWidth > headEl.clientWidth + 1 && race.querySelector(".bhn-t")) race.classList.add("fire-only");
+    }
     var guard = 0;
     while (headEl.scrollWidth > headEl.clientWidth + 1 && guard < 8) {
       var shrunk = false;
@@ -2002,6 +2032,57 @@
        一時的なへこみ（新しいレースの発走で投資が先に増えた）ではプラ転しない（Naotoの例：投資10,000回収12,000→追加5,000が的中＝非プラ転）
      ・1レース目の的中は非プラ転（一度も負けていない）／返還は収支不変／同額は非プラ／毎回出す（1日何回でも・打ち直しで出るのは許容）
      ・演出＝ピコーンのカウントアップが投資を追い越した瞬間に、帯の金フラッシュ＋「プラ転！」。&platen=0 で金色ごと止める */
+  /* 🧪①トークのワイプ左右の黒い帯の活用（9/26 Naoto・モック段階・&talkbar=1）
+     ①のワイプ穴は752×423・カメラは4:3（564×423）＝左右に94pxずつ黒が残る（9/26 配信のコマで実測＝映像 x854〜1417・穴 x760〜1512）。穴の中に画面側から重ねる（OBS作業なし）
+     B＝各ワイプの左右の端をその人のメンバーカラーの帯に（&tbw=幅px・既定94）
+     A＝2人配信のときは真ん中の2本（左ワイプの右端＋右ワイプの左端）をつなげて成績ボード（上段＝左の人・下段＝右の人）＝回収率（大）・的中数・投資・回収 */
+  var TALKBAR = params.get("talkbar") === "1";
+  var TB_W = +params.get("tbw") || 94;
+  function renderTalkBars(seats) {
+    var host = document.querySelector(".talk-cams");
+    if (!host) return;
+    host.style.setProperty("--tbw", TB_W + "px");
+    var cams = { a: host.querySelector(".cam.slot-a"), b: host.querySelector(".cam.slot-b") };
+    var both = !!(seats.a && seats.b);
+    ["a", "b"].forEach(function (slot) {
+      var cam = cams[slot];
+      if (!cam) return;
+      var rc = seats[slot];
+      ["l", "r"].forEach(function (side) {
+        var el = cam.querySelector(".tb-" + side);
+        if (!el) { el = document.createElement("div"); el.className = "tb tb-" + side; cam.insertBefore(el, cam.firstChild); } // 先頭＝ネームプレートより下に描く
+        // 空席は出走表のカードで穴ごと覆う＝帯は出さない／2人配信の内側は成績ボードが覆う
+        var inner = both && ((slot === "a" && side === "r") || (slot === "b" && side === "l"));
+        el.hidden = !rc || inner;
+        if (rc) el.style.setProperty("--tbc", window.Derive.colorOf(rc.color) || "#444");
+      });
+    });
+    var board = document.getElementById("talk-board");
+    if (!board) { board = document.createElement("div"); board.id = "talk-board"; host.appendChild(board); }
+    board.hidden = !both;
+    if (!both) return;
+    board.innerHTML = ["a", "b"].map(function (slot) {
+      var rc = seats[slot];
+      var t = headTotals(rc.id);
+      var races = {};
+      derived.hits.forEach(function (h) {
+        if (h.racerName !== rc.name) return;
+        var p = String(h.id).split("|");
+        races[p.length >= 5 ? p[0] + "|" + p[1] : h.id] = 1;
+      });
+      var nHit = Object.keys(races).length;
+      var rate = t.invest > 0 ? Math.round(t.refund / t.invest * 100) : null;
+      var col = window.Derive.colorOf(rc.color) || "#444";
+      return '<div class="tbd-card' + (rate !== null && rate >= 100 ? " plus" : "") + '" style="--tbc:' + col + '">' +
+        '<div class="tbd-name txt-edge">' + esc(rc.name) + "</div>" +
+        '<div class="tbd-rate-l">回収率</div>' +
+        '<div class="tbd-rate">' + (rate === null ? "—" : rate + '<small>%</small>') + "</div>" +
+        '<div class="tbd-row"><span>的中</span><b>' + nHit + "本</b></div>" +
+        '<div class="tbd-row"><span>投</span><b>' + fmtYen(t.invest) + "</b></div>" +
+        '<div class="tbd-row"><span>回</span><b>' + (t.pending ? "集計中" : fmtYen(t.refund)) + "</b></div>" +
+        "</div>";
+    }).join("");
+  }
   var PLATEN = params.get("platen") !== "0";
   var platenSt = {}; // 配信者id → { refund, sInv, losing, armed }
   function headTotals(rid) {
@@ -2368,6 +2449,7 @@
     // 互換：どちらかの席に枠が出ていれば body.race-sub-on（レイアウト自体はCSSグリッドで席ごとに決まる）
     document.body.classList.toggle("race-sub-on", subFrameOf(seats.a) || subFrameOf(seats.b));
     requestAnimationFrame(buildBackdrop); // 下で席ごとに枠を出し入れする＝穴の形が変わりうる（9/26 白帯の真因の対処）
+    if (TALKBAR) renderTalkBars(seats);
     ["a", "b"].forEach(function (slot) {
       var rc = seats[slot];
       var name = rc ? rc.name : "";
@@ -2404,7 +2486,8 @@
           // note予想のレースの人だけ「🔥note」の札（9/25 Naoto）＝左の席は名前の右・右の席は名前の左（中央の並びに寄せる）
           // 「note」の字は .bhn-t＝並びの窓が入り切らない日は🔥だけにする（9/26 Naoto・fitRaceLine が body.rbn-compact を付ける）
           // ③も同じ（9/26 Naoto「熊本1Rのバッジいらない」＝場名Rは左の出走表の見出しに出ている）。③は並びの窓が無いので🔥noteは両席とも名前の右
-          var bhNote = (RB2 && (bp === "band-" || bp === "kband-") && rp && rp.entry.isNote) ? '<span class="bh-race">🔥<span class="bhn-t">note</span></span>' : "";
+          // 🔥は .bh-fire でゆらゆら（タイマーと同じ）・札は34px（9/26 Naoto「もう少し大きく」）。入らないときは note の字を落として🔥だけ大きく（fitBandHead の fire-only／rbn-compact）
+          var bhNote = (RB2 && (bp === "band-" || bp === "kband-") && rp && rp.entry.isNote) ? '<span class="bh-race"><span class="bh-fire">🔥</span><span class="bhn-t">note</span></span>' : "";
           var bhLeft = slot === "b" && bp === "band-";
           bandName.innerHTML = !name ? ""
             : (bhLeft && bhNote ? bhNote + " " : "") + esc(name) + " 予想" + (!bhLeft && bhNote ? " " + bhNote : "");

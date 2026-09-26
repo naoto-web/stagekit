@@ -411,6 +411,29 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 /* ---------- ①トーク ---------- */
 .talk-cams { position: absolute; left: 8px; top: 96px; width: 1504px; display: flex; gap: 0; }
 .talk-cams .cam { width: 752px; height: 423px; }
+/* 🧪①ワイプ左右の黒い帯（&talkbar=1・9/26モック）
+   B＝メンバーカラーの帯（上から下へ少し暗く）。ネームプレートより下に描く（JSが .cam の先頭に入れる） */
+/* .cam は枠線1.5px（absolute の基準は枠の内側）＝幅から枠のぶんを引いて映像の端にぴったり */
+.talk-cams .tb { position: absolute; top: 0; bottom: 0; width: calc(var(--tbw, 94px) - 1.5px); pointer-events: none;
+  background: linear-gradient(180deg, var(--tbc, #444) 0%, color-mix(in srgb, var(--tbc, #444) 60%, #000) 100%); }
+.talk-cams .tb-l { left: 0; box-shadow: inset -2px 0 0 rgba(0,0,0,.25); }
+.talk-cams .tb-r { right: 0; box-shadow: inset 2px 0 0 rgba(0,0,0,.25); }
+.talk-cams .tb[hidden] { display: none; }
+/* A＝2人配信の真ん中＝成績ボード（左ワイプの右端〜右ワイプの左端・上段＝左の人／下段＝右の人） */
+#talk-board { position: absolute; top: 0; height: 423px; left: calc(752px - var(--tbw, 86px)); width: calc(var(--tbw, 86px) * 2);
+  display: flex; flex-direction: column; background: #16202e; z-index: 3; pointer-events: none; }
+#talk-board[hidden] { display: none; }
+.tbd-card { flex: 1 1 0; display: flex; flex-direction: column; align-items: stretch; color: #fff; text-align: center;
+  border-top: 3px solid var(--tbc); min-height: 0; }
+.tbd-card + .tbd-card { border-top-width: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.tbd-name { background: var(--tbc); color: #fff; font-size: 20px; font-weight: 900; line-height: 1; padding: 5px 4px 6px; white-space: nowrap; }
+.tbd-rate-l { font-size: 13px; font-weight: 800; color: rgba(255,255,255,.7); margin-top: 6px; line-height: 1; }
+.tbd-rate { font-size: 46px; font-weight: 900; line-height: 1.02; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.tbd-rate small { font-size: .45em; margin-left: .05em; }
+.tbd-card.plus .tbd-rate { color: #ffd24a; text-shadow: 0 0 10px rgba(255, 200, 60, .45); }
+.tbd-row { display: flex; justify-content: space-between; align-items: baseline; padding: 1px 9px; font-size: 14px; font-weight: 800; line-height: 1.25; }
+.tbd-row span { color: rgba(255,255,255,.7); }
+.tbd-row b { font-size: 17px; font-variant-numeric: tabular-nums; }
 
 /* トークは下端に的中速報ティッカー(60px)が乗るため、パネル類は68pxで止める。
    予想帯は②レース観戦と同一様式（メンバーカラーヘッダー＋投資/回収＋買い目チップ） */
@@ -560,8 +583,11 @@ body.tfx .vt-rows { min-height: 0; }
 .vt-stamp { display: inline-block; color: #d63b3b; border: 3px solid #d63b3b; border-radius: 7px;
   font-size: 26px; font-weight: 900; padding: 3px 10px 4px; white-space: nowrap; }
 .vt-stamp.stamp-in { animation: vtStamp .45s cubic-bezier(.3, 1.4, .5, 1) both; }
-.timer-cards.vt-n3 .vt-stamp { font-size: 18px; padding: 2px 6px 3px; border-width: 2px; }
-.timer-cards.vt-n4 .vt-stamp { font-size: 13px; padding: 2px 4px 3px; border-width: 2px; }
+/* 3〜4場＝大きめから始めて、入らなければ JS fitTimerHeads が🔔を落とし→1pxずつ縮める（9/26 Naoto「4場のハンコが小さい」） */
+.timer-cards.vt-n3 .vt-stamp { font-size: 21px; padding: 2px 7px 3px; border-width: 2px; }
+.timer-cards.vt-n4 .vt-stamp { font-size: 19px; padding: 2px 5px 3px; border-width: 2px; }
+.vt-stamp.no-bell .vt-bell { display: none; }
+.vt-stamp .vt-bell { font-style: normal; }
 /* A-3 レース中＝同じレースのまま、中身を黒地・白字（「レース中」を大きく・下にカウントダウン） */
 .vt-card.vt-run-card .vt-rows { background: #16181c; color: #fff; align-items: center; justify-content: center; gap: 6px; }
 .vt-racing-main { font-size: 44px; font-weight: 900; line-height: 1; letter-spacing: .06em; white-space: nowrap; }
@@ -589,9 +615,10 @@ body.tfx .vt-row b.closed.stamp-in { animation: vtStamp .45s cubic-bezier(.3, 1.
 .vt-fire { font-size: .9em; animation: vtFlicker 1.2s ease-in-out infinite; display: inline-block; }
 @keyframes vtFlicker { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15) translateY(-1px); } }
 .timer-cards.vt-n4 .vt-fire { margin-left: -2px; }
-/* 4場でグレード＋🔥が並ぶ見出し（例「岸和田 11R GⅠ 🔥」）＝間隔を詰めて幅130pxに収める */
-.timer-cards.vt-n4 .vt-head.vh-tight { gap: 3px; }
-.timer-cards.vt-n4 .vt-head.vh-tight .grade-badge { margin-left: 2px; padding: 1px 4px; }
+/* 4場の見出し（例「🔥岸和田 11R Ⅰ」）＝間隔と札を詰めて幅130pxで字をなるべく大きく保つ（縮小は fitTimerHeads の実測） */
+.timer-cards.vt-n4 .vt-head { gap: 3px; }
+.timer-cards.vt-n4 .vt-head .grade-badge { margin-left: 2px; padding: 1px 4px; }
+.timer-cards.vt-n4 .vt-fire { font-size: .8em; margin-right: -1px; }
 .timer-cards.vt-n3 .vt-head, .timer-cards.vt-n4 .vt-head { white-space: nowrap; }
 .timer-cards.vt-n3 .vt-head .grade-badge, .timer-cards.vt-n4 .vt-head .grade-badge {
   margin-left: 5px; padding: 1px 6px; box-shadow: 0 0 0 1px rgba(255,255,255,.7); }
@@ -764,9 +791,13 @@ body.debug #scene-tenkai .slist:empty::after {
 .band-head .band-inv .bi-v { font-size: 1.1765em; }
 /* 🧪RB2（9/25 Naoto・②だけ・テストGAS接続時のみ）
    A＝帯の中の「別府 7R」ラベルは出さない。note予想の人だけ見出しに白い札「🔥note」（左の席＝名前の右／右の席＝名前の左） */
-.rb2 .bh-race { display: inline-block; margin: 0 6px; padding: 1px 10px; border-radius: 6px;
-  font-size: 26px; font-weight: 900; background: rgba(255,255,255,.94); color: #16202e;
-  text-shadow: none; vertical-align: 4px; white-space: nowrap; }
+.rb2 .bh-race { display: inline-block; margin: 0 6px; padding: 0 12px 2px; border-radius: 7px;
+  font-size: 34px; font-weight: 900; background: rgba(255,255,255,.94); color: #16202e;
+  text-shadow: none; vertical-align: 3px; white-space: nowrap; line-height: 1.15; } /* 26→34px（9/26 Naoto「もう少し大きく」） */
+.rb2 .bh-race .bh-fire { display: inline-block; animation: vtFlicker 1.2s ease-in-out infinite; } /* 🔥ゆらゆら＝タイマーと同じ */
+/* 入らないときは「note」を落として🔥だけ大きく（fitBandHead の fire-only／並びの窓が入らない日の rbn-compact） */
+.rb2 .bh-race.fire-only, body.rbn-compact .bh-race { font-size: 42px; padding: 0 6px 2px; vertical-align: 0; }
+.rb2 .bh-race.fire-only .bhn-t { display: none; }
 .rb2 .bh-race .grade-badge { font-size: .8em; margin-left: 6px; vertical-align: 1px; }
 .rb2 .bh-race .bh-note { margin-left: 2px; }
 /* ②の俺たち目の札は「俺」1文字（9/25 Naoto）＝13pxの1文字は読みにくいので一回り大きく（幅は4文字時より細いまま） */
@@ -842,6 +873,8 @@ body.debug #scene-tenkai .slist:empty::after {
 }
 /* 🔥note予想はひと塊で扱う＝語中改行禁止・列幅に入らない時は塊ごと2行目へ（8/7 FB63） */
 .race-col-head .note-tag { white-space: nowrap; }
+/* NEXT枠の🔥（subPolish が「🔥note予想」→「🔥」にする）はタイマーと同じゆらゆら（9/26 Naoto） */
+.sub-line.subv-tight .race-col-head .note-tag { display: inline-block; animation: vtFlicker 1.2s ease-in-out infinite; }
 /* ①1場の札は1行（9/26 Naoto「1場は🔥note予想まで1行・2場は2行」）。2〜3場は raceColHead の split で🔥note予想の前に <br>
    ＝明示の改行なので灰色の枠は長い方の行の幅に縮む（自然な折り返しだと枠が区画の幅いっぱいに広がっていた） */
 .talk-band .buy-line > .race-col-head { white-space: nowrap; }
