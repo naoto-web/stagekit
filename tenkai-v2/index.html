@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>競輪 展開ボード v2</title>
-<link rel="stylesheet" href="css/style.css?v=20260927-081751">
+<link rel="stylesheet" href="css/style.css?v=20260927-083331">
 </head>
 <body>
 
@@ -74,9 +74,12 @@
     </div>
 
     <!-- 動詞ボタン（v2.1）＝選手かラインをクリックして選んでから押す。要件定義_v2 §6.5 -->
+    <!-- 9/27 Naoto「レース中の動きと、ゴールの仕方はボタンの位置を分けて分かるように」＝
+         1段目＝展開（レース中の動き・緑）／2段目＝並び（順番の入れ替え）＋決着（ゴールの仕方・金色・3連単もここ） -->
     <div class="panel-row panel-row-verb">
       <span class="sel-label is-empty" id="sel-label">選択なし（丸かラインをクリック）</span>
-      <div class="phase-group">
+      <div class="phase-group verb-group">
+        <span class="group-label">展開</span>
         <button type="button" class="btn btn-verb" data-verb="joushou" title="赤板〜打鐘：選んだラインが上がって前を押さえる。前受けはすぐ後ろへ">上昇</button>
         <button type="button" class="btn btn-verb" data-verb="kamashi" title="打鐘〜ホーム：選んだラインが一気に叩いて先頭へ。叩かれたラインはすぐ後ろへ">カマシ</button>
         <button type="button" class="btn btn-verb" data-verb="kamashiFail" title="選んだラインが番手の横まで来て突っ張られ、最後尾へ下がる">カマシ失敗</button>
@@ -84,21 +87,27 @@
         <button type="button" class="btn btn-verb" data-verb="tobitsukiFail" title="選んだ選手が番手の横まで来て弾かれ、元の位置へ戻る">飛びつき失敗</button>
         <button type="button" class="btn btn-verb" data-verb="makuri" title="外を上がって先頭を抜き去る＝まくり切る（ラインの先頭を選ぶと後続も続く）">まくり</button>
         <button type="button" class="btn btn-verb" data-verb="makuriFail" title="先頭ラインの番手にブロックされて止められ、元の位置へ引く">まくり失敗</button>
-        <button type="button" class="btn btn-verb" data-verb="sashi" title="最終周回で：番手が先頭を差して1着・3番手が3着（それより前は、すぐ前の選手を交わす）">差し</button>
-        <button type="button" class="btn btn-verb" data-verb="tsukinuke" title="最終周回で：3番手が番手・先頭をまとめて抜いて1着（それより前は、番手が先頭を交わす）">突き抜け</button>
-        <button type="button" class="btn btn-verb" data-verb="oshikiri" title="最終周回で：先頭がそのまま1着、ラインもそのままの順でゴール">押切</button>
         <button type="button" class="btn btn-verb" data-verb="block" title="外へ振って外にいる選手を止め、元の位置に戻る">ブロック</button>
-        <button type="button" class="btn btn-verb" data-verb="zubu" title="最終周回で：選んだラインがそのまま1-2-3着">ズブズブ</button>
       </div>
-      <div class="phase-group">
+    </div>
+    <div class="panel-row panel-row-verb">
+      <div class="phase-group verb-group">
+        <span class="group-label">並び</span>
         <button type="button" class="btn btn-order" data-verb="up" title="選んだラインを1つ前のラインと入れ替える">▲ 順番を前へ</button>
         <button type="button" class="btn btn-order" data-verb="down" title="選んだラインを1つ後ろのラインと入れ替える">▼ 順番を後ろへ</button>
       </div>
-      <!-- 3連単で決着（9/27）：最終周回で押すと、その着順でゴールまで走り切る -->
-      <div class="field">
-        <label for="trifecta-input">3連単</label>
-        <input type="text" id="trifecta-input" class="trifecta" placeholder="4-2-7" autocomplete="off" spellcheck="false" maxlength="12">
-        <button type="button" id="trifecta-btn" class="btn btn-finish">決着</button>
+      <div class="phase-group verb-group finish-group">
+        <span class="group-label">決着<small>（最終周回）</small></span>
+        <button type="button" class="btn btn-finish" data-verb="sashi" title="最終周回で：番手が先頭を差して1着・3番手が3着（それより前は、すぐ前の選手を交わす）">差し</button>
+        <button type="button" class="btn btn-finish" data-verb="tsukinuke" title="最終周回で：3番手が番手・先頭をまとめて抜いて1着（それより前は、番手が先頭を交わす）">突き抜け</button>
+        <button type="button" class="btn btn-finish" data-verb="oshikiri" title="最終周回で：先頭がそのまま1着、ラインもそのままの順でゴール">押切</button>
+        <button type="button" class="btn btn-finish" data-verb="zubu" title="最終周回で：選んだラインがそのまま1-2-3着">ズブズブ</button>
+        <!-- 3連単で決着（9/27）：最終周回で押すと、その着順でゴールまで走り切る -->
+        <span class="field">
+          <label for="trifecta-input">3連単</label>
+          <input type="text" id="trifecta-input" class="trifecta" placeholder="4-2-7" autocomplete="off" spellcheck="false" maxlength="12">
+          <button type="button" id="trifecta-btn" class="btn btn-finish">決着</button>
+        </span>
       </div>
     </div>
 
@@ -112,20 +121,20 @@
 
 </div>
 
-<script src="../autoupdate.js?v=20260927-081751" data-au="output-only"></script>
-<script src="js/config.js?v=20260927-081751"></script>
-<script src="js/track.js?v=20260927-081751"></script>
-<script src="js/state.js?v=20260927-081751"></script>
-<script src="js/icons.js?v=20260927-081751"></script>
-<script src="js/bars.js?v=20260927-081751"></script>
-<script src="js/board.js?v=20260927-081751"></script>
-<script src="js/racecard.js?v=20260927-081751"></script>
-<script src="js/live.js?v=20260927-081751"></script>
-<script src="js/lineup.js?v=20260927-081751"></script>
-<script src="js/anim.js?v=20260927-081751"></script>
-<script src="js/undo.js?v=20260927-081751"></script>
-<script src="js/verbs.js?v=20260927-081751"></script>
-<script src="js/drag.js?v=20260927-081751"></script>
-<script src="js/main.js?v=20260927-081751"></script>
+<script src="../autoupdate.js?v=20260927-083331" data-au="output-only"></script>
+<script src="js/config.js?v=20260927-083331"></script>
+<script src="js/track.js?v=20260927-083331"></script>
+<script src="js/state.js?v=20260927-083331"></script>
+<script src="js/icons.js?v=20260927-083331"></script>
+<script src="js/bars.js?v=20260927-083331"></script>
+<script src="js/board.js?v=20260927-083331"></script>
+<script src="js/racecard.js?v=20260927-083331"></script>
+<script src="js/live.js?v=20260927-083331"></script>
+<script src="js/lineup.js?v=20260927-083331"></script>
+<script src="js/anim.js?v=20260927-083331"></script>
+<script src="js/undo.js?v=20260927-083331"></script>
+<script src="js/verbs.js?v=20260927-083331"></script>
+<script src="js/drag.js?v=20260927-083331"></script>
+<script src="js/main.js?v=20260927-083331"></script>
 </body>
 </html>

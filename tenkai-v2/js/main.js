@@ -859,6 +859,10 @@
     raceSel   = document.getElementById('race-select');
     reloadBtn = document.getElementById('reload-btn');
     followChk = document.getElementById('follow-chk');
+    /* ?follow=0（手動モード）はチェックも外して始める。
+       🐞9/27 チェックボックスが最初からオン（HTMLの checked）のままだったので、?follow=0 でも追従し続けていた
+       （朝の配信が始まった途端、検査のドックが配信中の青森1Rへ切り替わって発覚）。OBSのドックは付けないので本番は常に追従 */
+    if (!FOLLOW_MODE && followChk) followChk.checked = false;
     followDiffEl = document.getElementById('follow-diff');
     nowRaceEl = document.getElementById('now-race');
     liveDot   = document.getElementById('live-dot');

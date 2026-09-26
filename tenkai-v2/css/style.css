@@ -208,6 +208,13 @@ body.view-output .rider-sel { display: none !important; }
 .btn-verb { font-size: 15px; font-weight: 700; padding: 7px 11px; background: #2d3a2f; border-color: #3f5a44; }
 .btn-verb:hover { background: #38493b; }
 .btn-order { font-size: 14px; }
+/* 動詞の段（9/27 Naoto「レース中の動きとゴールの仕方を分けて分かるように」）＝段ごとの見出し＋決着は金色の枠で囲む */
+.verb-group { align-items: center; }
+.group-label { font-size: 13px; font-weight: 800; color: var(--ui-muted); margin-right: 2px; white-space: nowrap; }
+.group-label small { font-size: 11px; font-weight: 600; }
+.finish-group { border: 1px solid #8a7230; border-radius: 8px; padding: 4px 8px; background: rgba(90,74,28,.18); }
+.finish-group .group-label { color: #ffe39a; }
+.finish-group .field { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
 /* 3連単で決着（9/27） */
 .trifecta { width: 84px; background: #171a22; border: 1px solid var(--ui-border); border-radius: 6px; color: var(--ui-text); font-size: 16px; font-family: ui-monospace, Consolas, monospace; padding: 6px 8px; text-align: center; }
 .trifecta:focus { outline: none; border-color: #ffd166; }
