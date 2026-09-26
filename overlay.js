@@ -1048,8 +1048,15 @@
        薄い金の光が左→右へ1回（1.3秒）。**その後も金色のまま**（.od-fin）。読み直した後に最初から最終だったレースは光らせず金色だけ
      ⚠️renderPreds は何度も描き直す＝演出は「始まった時刻」を覚えておき、描き直すたびに負の animation-delay で続きから再生する */
   var odShown = {}, odMove = {}, odFinAt = {};
-  var OD_MOVE_MS = 1500, OD_FIN_MS = 1600, OD_SWEEP_MS = 1300, OD_STALE_MS = 120000;
-  var OD_BIG_RATIO = 0.2, OD_BIG_MS = 3000; // 大きい変動＝±20%以上・3秒（CSS .od-big と同じ長さ）。9/26 Naoto＝通常0.9→1.5秒・大きい変動1.5→3秒
+  // 9/26 Naoto＝上下は3秒（旧1.5）・光の帯は2.6秒でゆっくり（旧1.3・CSS odSweep と同じ）
+  var OD_MOVE_MS = 3000, OD_FIN_MS = 1600, OD_SWEEP_MS = 2600, OD_STALE_MS = 120000;
+  /* オッズ確定を分かりやすく（9/26 Naoto・要件定義§41・✅本番既定ON・&odfx=1 で旧演出）＝光の帯（od-sweep）が通過した瞬間に、その位置の数字が
+     1つずつ「キラン」（膨らんで白く光り✦）→金属の金（グラデーション）に（数秒おきの光は不要＝Naoto）。
+     「確定」の文字は出さない（Naoto「ダサい・光って金色で分かれば文字はいらない」） */
+  var ODFX2 = params.get("odfx") !== "1";
+  if (ODFX2 && document.body) document.body.classList.add("odfx2");
+  var OD_KIRA_MS = 900; // キラン1回の長さ（CSS odKira と同じ）
+  var OD_BIG_RATIO = 0.15, OD_BIG_MS = 5000; // 大きい変動＝±15%以上・5秒（CSS .od-big と同じ長さ）。9/26 Naoto＝20%→15%・3秒→5秒
   function markOdds() {
     document.querySelectorAll(".od-sweep").forEach(function (o) { o.remove(); });
     if (!ODDS) return;
@@ -1077,17 +1084,16 @@
     var swept = []; // 同じ帯に帯を2本重ねない（1つの帯に同じレースの数字は何個もある）
     document.querySelectorAll(".od-fin").forEach(function (e) {
       var rk = e.getAttribute("data-rk"), at = odFinAt[rk];
-      if (!at || now - at >= OD_FIN_MS) return;
-      e.classList.add("od-finfx");
-      e.style.setProperty("--odf", -(now - at) + "ms");
-      if (now - at >= OD_SWEEP_MS) return;
+      if (!at || now - at >= (ODFX2 ? OD_SWEEP_MS + OD_KIRA_MS : OD_FIN_MS)) return;
+      if (!ODFX2) {
+        e.classList.add("od-finfx");
+        e.style.setProperty("--odf", -(now - at) + "ms");
+      }
       // 光の帯＝その人の予想パネルの見出しより下（①の2〜3場はそのレースの区画 .race-col だけ）。
       // パネル（.panel＝position:relative・overflow:hidden）基準に重ねる
       var panel = e.closest(".panel");
       if (!panel || !panel.clientWidth) return; // 表示していないシーンのパネル
       var col = e.closest(".race-col"), area = col || panel;
-      if (swept.indexOf(area) >= 0) return;
-      swept.push(area);
       var box, cb = col ? boxIn(col, panel) : null; // .race-col は拡大縮小（transform）される＝見た目の箱でなく本来の箱
       if (cb) {
         box = [cb.l, cb.t, cb.r - cb.l, cb.b - cb.t];
@@ -1095,6 +1101,28 @@
         var head = panel.querySelector(".panel-head"), ht = head ? head.offsetTop + head.offsetHeight : 0;
         box = [0, ht, panel.clientWidth, panel.clientHeight - ht];
       }
+      if (ODFX2) {
+        // 🧪光の帯が数字の上を通る瞬間に、その数字だけ「キラン」＝数字の横位置から通過時刻を出す（帯は区画の左端→右端を OD_SWEEP_MS で進む）
+        var passAt = function (el) {
+          var b = boxIn(el, panel);
+          if (!b) return null;
+          return Math.max(0, Math.min(1, ((b.l + b.r) / 2 - box[0]) / Math.max(1, box[2]))) * OD_SWEEP_MS;
+        };
+        e.querySelectorAll(".odn").forEach(function (n) {
+          var t = passAt(n);
+          if (t === null || now - at >= t + OD_KIRA_MS) return;
+          n.classList.add("od-kira");
+          n.style.setProperty("--odkr", (t - (now - at)) + "ms");
+        });
+        // 数字以外の字（合成の「倍」・幅の「〜」）も光が通るまで元の色（9/26 Naoto「光が通る前に『倍』が先に金色」）
+        var tb = passAt(e);
+        if (tb !== null && now - at < tb + OD_KIRA_MS) {
+          e.classList.add("od-kira-box");
+          e.style.setProperty("--odkb", (tb - (now - at)) + "ms");
+        }
+      }
+      if (now - at >= OD_SWEEP_MS || swept.indexOf(area) >= 0) return;
+      swept.push(area);
       var sw = document.createElement("div");
       sw.className = "od-sweep";
       sw.style.cssText = "left:" + box[0] + "px;top:" + box[1] + "px;width:" + box[2] + "px;height:" + box[3] + "px;";
@@ -1160,6 +1188,11 @@
       });
     });
   }
+  // 検証用（&debug=1 のときだけ）＝そのレースのオッズを「今この瞬間に確定した」扱いにする（確定演出の撮影用）
+  if (DEBUG) window.__odFin = function (k) {
+    if (!oddsData[k]) return "no odds for " + k;
+    oddsData[k].fin = true; odFinAt[k] = Date.now(); renderPreds(); return "ok";
+  };
   var TYPING_RE = /^[\s0-9０-９\-－ー=＝→>＞]+$/;
   var TRAIL_SEP_RE = /[\-－ー=＝→>＞]\s*$/;
   function isTypingLine(l) { return !l.ok && !l.cut && TYPING_RE.test(l.raw || "") && /[0-9０-９]/.test(l.raw || ""); }

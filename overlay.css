@@ -3505,14 +3505,14 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
    ・上下＝変わった数字だけ赤▲／青▼で0.9秒（▼も数字の上＝下の段と重ならない）。描き直しても続きから（--odd＝負の遅れ）
    ・最終＝倍率と合成が金色に一度光る（1.6秒）＋薄い金の光が左→右（1.3秒）→**その後も金色のまま**（.od-fin） */
 .odn { position: relative; display: inline-block; }
-.odn.od-up   { animation: odUp 1.5s ease-out; animation-delay: var(--odd, 0ms); }
-.odn.od-down { animation: odDown 1.5s ease-out; animation-delay: var(--odd, 0ms); }
+.odn.od-up   { animation: odUp 3s ease-out; animation-delay: var(--odd, 0ms); }
+.odn.od-down { animation: odDown 3s ease-out; animation-delay: var(--odd, 0ms); }
 /* 9/26 Naoto「数字が動くのでなく矢印が動く・上なら数字の真ん中から上に、下なら真ん中から下に・数字は固定」
    ＝数字は色が変わるだけ（位置は動かさない）。矢印は数字の上下の真ん中から出て、▲は上・▼は下へ抜けながら消える（数字に被ってよい） */
 @keyframes odUp   { 0% { color: #e0282e; } 60% { color: #e0282e; } }
 @keyframes odDown { 0% { color: #1f5fd6; } 60% { color: #1f5fd6; } }
 .odn.od-up::after, .odn.od-down::after { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  font-size: .45em; line-height: 1; opacity: 0; animation-duration: 1.5s; animation-timing-function: ease-out; animation-delay: var(--odd, 0ms); }
+  font-size: .45em; line-height: 1; opacity: 0; animation-duration: 3s; animation-timing-function: ease-out; animation-delay: var(--odd, 0ms); }
 .odn.od-up::after { content: "▲"; color: #e0282e; animation-name: odMarkUp; }
 .odn.od-down::after { content: "▼"; color: #1f5fd6; animation-name: odMarkDown; }
 @keyframes odMarkUp   { 0% { opacity: 1; transform: translate(-50%, -50%); } 60% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -2.1em); } }
@@ -3520,8 +3520,8 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 /* 大きい変動（前の表示から±20%以上・9/26 Naoto）＝矢印と動いた幅をひとまとまり「▲+12」「▼−6」にして、ふだんの矢印と同じ道筋で動かす。
    長さは1.5秒（JS OD_BIG_MS と同じ）＝数字を読める長さ。字は矢印より一回り大きく＋白フチ（上下の段の矢印と重なっても読める）。
    旧＝幅だけ別の小さな字（.42em≒11px）で矢印の外側に出した→小さすぎ・②の上下2段で段の間の「−6」「+5」がぶつかった */
-.odn.od-up.od-big, .odn.od-down.od-big { animation-duration: 3s; } /* 9/26 Naoto＝通常1.5秒・大きい変動3秒（JS OD_MOVE_MS／OD_BIG_MS と同じ） */
-.odn.od-up.od-big::after, .odn.od-down.od-big::after { font-size: .65em; font-weight: 900; white-space: nowrap; animation-duration: 3s;
+.odn.od-up.od-big, .odn.od-down.od-big { animation-duration: 5s; } /* 9/26 Naoto＝通常3秒・大きい変動5秒・±15%以上（JS OD_MOVE_MS／OD_BIG_MS／OD_BIG_RATIO と同じ） */
+.odn.od-up.od-big::after, .odn.od-down.od-big::after { font-size: .65em; font-weight: 900; white-space: nowrap; animation-duration: 5s;
   text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff; }
 .odn.od-up.od-big::after { content: "▲" attr(data-dv); animation-name: odBigUp; }
 .odn.od-down.od-big::after { content: "▼" attr(data-dv); animation-name: odBigDown; }
@@ -3537,5 +3537,27 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
 .od-sweep { position: absolute; pointer-events: none; overflow: hidden; z-index: 5; }
 .od-sweep::before { content: ""; position: absolute; top: 0; bottom: 0; width: 180px; left: -220px;
   background: linear-gradient(100deg, transparent, rgba(255, 200, 40, .28), rgba(255, 236, 150, .42), rgba(255, 200, 40, .28), transparent);
-  mix-blend-mode: multiply; animation: odSweep 1.3s ease-in-out forwards; animation-delay: var(--ods, 0ms); }
+  mix-blend-mode: multiply; animation: odSweep 2.6s ease-in-out forwards; animation-delay: var(--ods, 0ms); }
 @keyframes odSweep { to { left: 110%; } }
+/* オッズ確定を分かりやすく（9/26・要件定義§41・既定ON／&odfx=1 で旧演出）
+   確定後＝倍率の数字を金属の金（上が明るく下が濃いグラデーション）に（数秒おきの光は不要＝Naoto）
+   瞬間＝光の帯が通過した数字から1つずつ「キラン」＝膨らんで白く光り、右上に✦（--odkr＝その数字の通過時刻） */
+body.odfx2 .od-fin .odn { position: relative; display: inline-block;
+  background: linear-gradient(180deg, #f0c12a 0%, #d9a300 45%, #a87800 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 .5px rgba(90, 60, 0, .55)); }
+body.odfx2 .od-fin .odn::after { -webkit-text-fill-color: currentColor; } /* 上下の矢印（▲▼）まで透明にしない */
+body.odfx2 .od-fin .odn.od-kira { animation: odKira .9s cubic-bezier(.2, 1.4, .4, 1) both; animation-delay: var(--odkr, 0ms); }
+/* 数字以外の字（「倍」「〜」）＝入れ物の文字色。光が入れ物の真ん中を通るまで元の色→金 */
+body.odfx2 .od-fin.od-kira-box { animation: odBoxGold .5s ease-out both; animation-delay: var(--odkb, 0ms); }
+@keyframes odBoxGold { 0% { color: var(--txt); } 100% { color: #c28400; } }
+@keyframes odKira {
+  0%   { transform: scale(1); -webkit-text-fill-color: var(--txt); filter: none; }
+  30%  { transform: scale(1.32); -webkit-text-fill-color: #fff6cc; filter: drop-shadow(0 0 6px rgba(255, 214, 80, 1)) drop-shadow(0 0 2px #fff); }
+  100% { transform: scale(1); -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 .5px rgba(90, 60, 0, .55)); }
+}
+body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; right: -.45em; top: -.5em; font-size: .62em;
+  -webkit-text-fill-color: #ffc93a; color: #ffc93a; text-shadow: 0 0 6px #fff3b0; pointer-events: none;
+  animation: odSpark .9s ease-out both; animation-delay: var(--odkr, 0ms); }
+@keyframes odSpark { 0% { opacity: 0; transform: scale(.2) rotate(0deg); } 35% { opacity: 1; transform: scale(1.2) rotate(45deg); }
+  100% { opacity: 0; transform: scale(.6) rotate(90deg); } }
