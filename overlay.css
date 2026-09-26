@@ -3540,21 +3540,17 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
   mix-blend-mode: multiply; animation: odSweep 2.6s ease-in-out forwards; animation-delay: var(--ods, 0ms); }
 @keyframes odSweep { to { left: 110%; } }
 /* オッズ確定を分かりやすく（9/26・要件定義§41・既定ON／&odfx=1 で旧演出）
-   確定後＝倍率の数字を金属の金（上が明るく下が濃いグラデーション）に（数秒おきの光は不要＝Naoto）
-   瞬間＝光の帯が通過した数字から1つずつ「キラン」＝膨らんで白く光り、右上に✦（--odkr＝その数字の通過時刻） */
-body.odfx2 .od-fin .odn { position: relative; display: inline-block;
-  background: linear-gradient(180deg, #f0c12a 0%, #d9a300 45%, #a87800 100%);
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 .5px rgba(90, 60, 0, .55)); }
-body.odfx2 .od-fin .odn::after { -webkit-text-fill-color: currentColor; } /* 上下の矢印（▲▼）まで透明にしない */
-body.odfx2 .od-fin .odn.od-kira { animation: odKira .9s cubic-bezier(.2, 1.4, .4, 1) both; animation-delay: var(--odkr, 0ms); }
+   確定後＝従来どおりの平らな金色の文字（.od-fin の #c28400）。9/26 Naoto「金属グラデ＋薄い影はにじんで見える・前の色とフォントに戻して」
+   瞬間＝光の帯が通過した数字から1つずつ「キラン」＝膨らんで白く光り、右上に✦（--odkr＝その数字の通過時刻）→ #c28400 で止まる */
+/* backwards＝光が来るまでは0%（元の色）で待つ／終わったら何も残さない＝.od-fin の平らな金色に戻る（forwards だと透明の影 filter が残り字が甘くなる） */
+body.odfx2 .od-fin .odn.od-kira { animation: odKira .9s cubic-bezier(.2, 1.4, .4, 1) backwards; animation-delay: var(--odkr, 0ms); }
 /* 数字以外の字（「倍」「〜」）＝入れ物の文字色。光が入れ物の真ん中を通るまで元の色→金 */
 body.odfx2 .od-fin.od-kira-box { animation: odBoxGold .5s ease-out both; animation-delay: var(--odkb, 0ms); }
 @keyframes odBoxGold { 0% { color: var(--txt); } 100% { color: #c28400; } }
 @keyframes odKira {
-  0%   { transform: scale(1); -webkit-text-fill-color: var(--txt); filter: none; }
-  30%  { transform: scale(1.32); -webkit-text-fill-color: #fff6cc; filter: drop-shadow(0 0 6px rgba(255, 214, 80, 1)) drop-shadow(0 0 2px #fff); }
-  100% { transform: scale(1); -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 .5px rgba(90, 60, 0, .55)); }
+  0%   { transform: scale(1); color: var(--txt); filter: none; }
+  30%  { transform: scale(1.32); color: #fff6cc; filter: drop-shadow(0 0 6px rgba(255, 214, 80, 1)) drop-shadow(0 0 2px #fff); }
+  100% { transform: scale(1); color: #c28400; filter: none; }
 }
 body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; right: -.45em; top: -.5em; font-size: .62em;
   -webkit-text-fill-color: #ffc93a; color: #ffc93a; text-shadow: 0 0 6px #fff3b0; pointer-events: none;
