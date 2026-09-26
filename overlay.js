@@ -2859,10 +2859,13 @@
     Object.keys(refAnim).forEach(function (k) { if (refAnim[k].running || refAnim[k].waiting) t = Math.max(t, Date.now() + 500); });
     return t;
   }
+  /* 9/26 Naoto「的中速報に足すのは回収額の更新が終わって10秒後でいい」＝演出が一段落（fxQuietAt＝カウントアップの後の
+     プラ転・節目・最高額まで含む）してから10秒待つ。&tickwait=ms で調整 */
+  var TICK_WAIT_MS = params.get("tickwait") !== null ? +params.get("tickwait") : 10000;
   function tickRelease() {
     tickTimer = null;
-    var at = fxQuietAt();
-    if (Date.now() < at) { tickTimer = setTimeout(tickRelease, Math.min(500, at - Date.now())); return; }
+    var at = fxQuietAt() + TICK_WAIT_MS;
+    if (Date.now() < at) { tickTimer = setTimeout(tickRelease, Math.max(50, Math.min(500, at - Date.now()))); return; }
     Object.keys(tickHold).forEach(function (k) { tickGlow[k] = true; });
     tickHold = {};
     renderTicker();
