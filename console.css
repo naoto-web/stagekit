@@ -757,3 +757,20 @@ html.theme-light .venue-pick .vp.sel {
 }
 html.con2 .np-venue { align-items: center; }
 html.con2 .np-vname { flex: 0 0 6.2em; padding-top: 0; overflow: hidden; }
+/* §72（9/28 Naoto）
+   ・買目欄の字を少し小さく＝24→21px・行32px（右列もそろえる）
+   ・右列のオッズ・俺たち目のオッズは黒字（白背景）
+   ・合計の行＝「合計〇点」「投資¥〇」「合成〇倍」をそれぞれひとまとまり（.pt-u・console.js）
+   ・投資額＝欄から離れたらカンマ付き・右寄せを欄の上に重ねる（.pf-invfmt・console.js）。欄の字は隠すだけ（値は数字のまま） */
+html.con2 .pf-body .pf-text { font-size: 21px; line-height: 32px; }
+html.con2 .pf-body .pf-info { line-height: 32px; }
+html.theme-light.con2 .parse-info .pl-ok b, html.theme-light.con2 #pred-forms .pf-ore-odds { color: var(--lt-text); }
+html.con2 .parse-total .pt-u { white-space: nowrap; }
+html.con2 .pf-invlbl { position: relative; }
+html.con2 .pf-invest { text-align: right; }
+html.con2 .pf-invest.pf-inv-covered { color: transparent; }
+html.con2 .pf-invfmt {
+  position: absolute; display: flex; align-items: center; justify-content: flex-end; box-sizing: border-box;
+  padding: 0 10px; font-size: 16px; font-weight: 700; color: var(--lt-text, #e8e8ec); cursor: text; font-variant-numeric: tabular-nums;
+}
+html.con2 .venue-auto-hint { margin-top: 8px; }html.con2 .parse-total { line-height: 1.45; } /* §72 2行になったときに詰まって見えない */

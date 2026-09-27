@@ -185,7 +185,9 @@
       card.className = "card"; card.id = "note-card"; card.open = true;
       card.innerHTML = '<summary><h2>note勝負レース</h2> <span class="h-sub">押すと選択・もう一度押すと解除</span></summary>';
       card.appendChild(np);
-      predCard.after(card);
+      // §72（9/28 Naoto）置き場所＝本日設定の下（旧＝予想入力のすぐ下）
+      var setup = document.getElementById("setup-card");
+      (setup || predCard).after(card);
     }
     var sw = document.getElementById("btn-seat-swap");
     if (sw && sw.parentElement) sw.parentElement.classList.add("hidden"); // ⚠️消さない＝クリックの配線（addEventListener）がidで引く
@@ -792,6 +794,29 @@
         form.querySelector("." + cls).addEventListener("input", live);
       });
       form.querySelector(".pf-note").addEventListener("change", live);
+      /* §72（9/28 Naoto「投資額は入力完了したらカンマ付けて右寄りに」）CON2＝欄から離れたら「2,000」を欄の上に重ねて表示（右寄せ）。
+         欄の値は数字のまま＝保存・計算・未保存判定は従来どおり。クリック（フォーカス）で重ねた表示を消して元の数字を編集 */
+      if (CON2) (function () {
+        var inp = form.querySelector(".pf-invest");
+        var lbl = inp.parentElement;
+        var fmt = document.createElement("span");
+        fmt.className = "pf-invfmt";
+        lbl.classList.add("pf-invlbl");
+        lbl.insertBefore(fmt, inp.nextSibling);
+        var sync = function () {
+          var v = +inp.value;
+          var show = document.activeElement !== inp && v > 0;
+          fmt.textContent = show ? v.toLocaleString("ja-JP") : "";
+          fmt.style.display = show ? "" : "none";
+          inp.classList.toggle("pf-inv-covered", show);
+          if (show) { fmt.style.left = inp.offsetLeft + "px"; fmt.style.top = inp.offsetTop + "px"; fmt.style.width = inp.offsetWidth + "px"; fmt.style.height = inp.offsetHeight + "px"; }
+        };
+        fmt.addEventListener("mousedown", function (e) { e.preventDefault(); inp.focus(); });
+        inp.addEventListener("focus", sync);
+        inp.addEventListener("blur", sync);
+        inp.addEventListener("input", function () { if (document.activeElement !== inp) sync(); });
+        requestAnimationFrame(sync);
+      })();
       // 投資額の −／＋（9/25）：1000円ずつ。0以下は空欄（＝未入力。保存値の「投資なし」と同じ扱い＝未保存にならない）。
       // 値を入れたら input を発火＝手打ちと同じ経路（下書き退避・合計・未保存表示）に乗せる
       [[".pf-invdown", -1000], [".pf-invup", 1000]].forEach(function (pair) {
@@ -952,8 +977,12 @@
       var oreL = odds && oreV ? window.Keirin.oddsLabel(window.Keirin.parseLine(window.Keirin.oreNormalize(oreV), "3連単", cars), odds) : "";
       oreBox.textContent = oreL ? oreL + "倍" : "";
     }
-    var html = "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
-      (syn ? "　合成 " + window.Keirin.synthFmt(syn) + "倍" : "") + cutWarn;
+    // §72 CON2＝「合計〇点」「投資¥〇」「合成〇倍」をそれぞれひとまとまり（途中で折り返さない＝入り切らなければまとまりごと次の行へ）
+    var html = CON2
+      ? '<span class="pt-u">合計 ' + parsed.points + '点</span>　<span class="pt-u">投資 ' + fmtYen(investInput) + "</span>" +
+        (syn ? '　<span class="pt-u">合成 ' + window.Keirin.synthFmt(syn) + "倍</span>" : "") + cutWarn
+      : "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
+        (syn ? "　合成 " + window.Keirin.synthFmt(syn) + "倍" : "") + cutWarn;
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
     var oreOut = oreMissingInBuys(key, form.querySelector(".pf-text").value, form.querySelector(".pf-ore").value.trim());
     if (oreOut) {
@@ -1687,6 +1716,14 @@
      人が外した場は state.venueOff = {date, names} に覚えて自動では戻さない（その日だけ・足し直せば解除）。
      テスト（?gas=）だけ既定ON（&autovenue=1／0）。書込キーのあるコンソールが保存する（複数あっても同じ式＝同じ結果） */
   var AUTOVENUE = params.get("autovenue") ? params.get("autovenue") !== "0" : !!params.get("gas");
+  if (AUTOVENUE) (function () { // §72 本日の場の注意書き（9/28 Naoto「自動で追加・削除する設定になってる旨を記載」）
+    var vp = document.getElementById("venue-pick");
+    if (!vp) return;
+    var h = document.createElement("div");
+    h.className = "hint venue-auto-hint";
+    h.textContent = "※本日の場は時刻表に合わせて自動で追加・削除されます（1R発走の60分前に追加／最終レースの結果確定から10分後に削除・同時に最大4場）。手で外した場は、その日は自動では戻りません。";
+    vp.after(h);
+  })();
   function venueOffNames() {
     var o = state && state.venueOff;
     return o && o.date === state.date && Array.isArray(o.names) ? o.names.slice() : [];
