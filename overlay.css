@@ -709,7 +709,7 @@ html.slink :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head, html.slink 
 html.slink :is(#scene-talk, #scene-tenkai) .sl-cls { opacity: 1; }
 html.slink :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head-sub { align-items: center; }
 /* 7・8＝高さ45pxのまま・「出走表」なし・クラスは右詰め・場名Rは残りの左の中央（fitSlHeadMid が大きさを決める） */
-html.slmid :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head { height: 45px; box-sizing: border-box; padding: 0 10px 0 8px; font-size: 0; border-bottom: 2px solid #b8860b; } /* 白地の見出しと白地の表の境目＝金の線（9/27） */
+html.slmid :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head { height: 45px; box-sizing: border-box; padding: 0 10px 0 8px; font-size: 0; } /* 下の金の線は撤去（9/27 Naoto「クリームで線なし」） */
 html.slmid :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head-sub { margin-left: 0; flex: 1 1 auto; min-width: 0; height: 100%; display: flex; align-items: center; gap: 8px; }
 html.slmid :is(#scene-talk, #scene-tenkai) .sl-vr { flex: 1 1 auto; min-width: 0; text-align: center; line-height: 1; white-space: nowrap; }
 html.slmid :is(#scene-talk, #scene-tenkai) .sl-cls { flex: 0 0 auto; margin-left: auto; line-height: 1; white-space: nowrap; opacity: 1; }
