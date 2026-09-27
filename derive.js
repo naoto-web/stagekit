@@ -338,6 +338,27 @@
     return next;
   }
 
+  /** 🧪§58（9/28 Naoto）②の放送のレース＝保存せず毎回この式で決める（コンソールとOBSで共用＝必ず一致）。
+      「最後に発走したレース」を出し、次のどちらか早い方で「次に発走するレース」へ：
+        (a) 最後のレースの結果を最初に確定した時刻＋120秒（払戻を見せる時間）
+        (b) 次のレースの公式締切（発走−closeSec）
+      その日の最初のレースの前＝次のレース／最後のレースの後＝最後のレース。
+      races＝[{venue, no, startSec}]（本日の場だけ）・settleSecOf(key)＝最初に確定した時刻（0時からの秒・無ければnull） */
+  function broadcastRace(races, settleSecOf, nowSec, closeSec) {
+    var last = null, next = null;
+    (races || []).forEach(function (r) {
+      if (r.startSec <= nowSec) { if (!last || r.startSec > last.startSec) last = r; }
+      else if (!next || r.startSec < next.startSec) next = r;
+    });
+    if (!last) return next;
+    if (!next) return last;
+    var sw = next.startSec - (closeSec || 0);
+    var st = settleSecOf ? settleSecOf(raceKey(last.venue, last.no)) : null;
+    // 発走より前の確定は数えない（テスト入力や前日のデータで、走る前に次へ移ってしまうのを防ぐ・9/28 テストGASで実際に起きた）
+    if (typeof st === "number" && st >= last.startSec && st + 120 < sw) sw = st + 120;
+    return nowSec >= sw ? next : last;
+  }
+
   /* ②サブ（NEXT）の値の意味（9/7・§10項99／9/9・項100）。raceSubBy[配信者id] は
        ・undefined（キー無し）＝未設定 → ensureSub が既定＝ON（自動）で埋める（新しい日・シフト交代の直後）
        ・場名＝ON（その場の currentRace を出す）
@@ -492,6 +513,7 @@
     day: day,
     justStartedRace: justStartedRace,
     videoRaceAt: videoRaceAt,
+    broadcastRace: broadcastRace,
     alignToRace: alignToRace,
     alignSub: alignSub,
     nextSubRace: nextSubRace,

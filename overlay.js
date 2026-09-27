@@ -947,10 +947,36 @@
     });
     if (TFX) tfxTick();
     applyRaceClosed(); // §53 ①の買目区画を締切でグレーに（既定ON・&rcclose=0で旧）
-    if (SCENE === "talk" && TALK_SL && (talkSlKey() || "") !== talkSlLast) renderStartList(); // §57 覚えたレースが発走した瞬間にメインへ戻す
+    if (SPLIT && SCENE !== "talk" && broadcastKey() !== bcastLast) { renderPreds(); renderStartList(); } // §58 放送のレースが変わった瞬間に②を描き直す
   }
 
   /* ---------- 予想・投資（①トーク／②バンド） ---------- */
+  /* 🧪§58（9/28 Naoto）「トークのレース」と「放送のレース」を分ける。テスト（?gas=）だけ既定ON（&split=1／0）。
+     currentKey()＝トークのレース（コンソールの場・レース＝人だけが選ぶ）＝①の出走表・③。
+     broadcastKey()＝放送のレース（derive.broadcastRace＝最後に発走したレース→結果の最初の確定＋2分か次の締切で次へ）＝②の下・NEXT枠の基準。
+     放送のレースは保存しない＝コンソールと同じ式で毎秒決める（変わったら描き直す＝timer の tick） */
+  var SPLIT = params.get("split") ? params.get("split") !== "0" : !!params.get("gas");
+  function settleSecOf(key) {
+    var r = state && state.results ? state.results[key] : null;
+    var t = r && (r.firstAt || r.settledAt);
+    if (!t) return null;
+    var d = new Date(Date.parse(t)), now = nowDate();
+    if (isNaN(d) || d.toDateString() !== now.toDateString()) return null; // 前日の確定は数えない
+    return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+  }
+  function broadcastRaceObj() {
+    if (!state || !timetable) return null;
+    var names = {};
+    (state.venues || []).forEach(function (v) { names[v.name] = 1; });
+    var races = allRaces().filter(function (r) { return names[r.venue]; });
+    return window.Derive.broadcastRace(races, settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60);
+  }
+  function broadcastKey() {
+    if (!SPLIT) return currentKey();
+    var b = broadcastRaceObj();
+    return b ? window.Derive.raceKey(b.venue, b.no) : null;
+  }
+  var bcastLast = null; // 前回描いた放送のレース＝変わった瞬間に②を描き直す
   function currentKey() {
     var v = state.venues[state.activeVenue];
     if (!v) return null;
@@ -2519,6 +2545,11 @@
     oddsSeq++; // 買目オッズ（§13）＝この描画で oddsHtml を通ったレースが「今画面に出ている」レース
     var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
+    // §58 ②（band-）とNEXT枠の基準＝放送のレース。①（tband-・talkKeys）と③（kband-）はトークのレース（key）のまま
+    var bKey = broadcastKey();
+    bcastLast = bKey;
+    var bRace = SPLIT ? broadcastRaceObj() : null;
+    if (SPLIT) mainName = bKey ? bKey.split("|")[0] : "";
     // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
     // コンソールの操作用の場切替に引きずられない。旧データ（talkRaces無し）はメイン＋人別サブで互換
     // 並び＝開催の早い順（1Rの発走が早い順・選手DBと同じ定義）＝2場は左→右、3場は左→右上→右下が基準
@@ -2600,8 +2631,42 @@
       });
       return best || svn;
     };
+    /* §58 NEXT枠＝常に自動（コンソールの「②サブ予想」は撤去・保存済みの「なし」も自動扱い）。レース単位で決める：
+       放送のレースの次に発走する別場のレース（Derive.nextSubRace）→その人の入力が無ければ、放送の場以外の各場の今のレース
+       （場・レースのR＝トーク側）のうち入力のあるものを発走の早い順に1つ（SUBFBと同じ）→どちらも無ければ自動のレース */
+    var hasContentKey = function (rc, k) {
+      if (!rc || !k) return false;
+      var p = window.Derive.resolvePred(state, k, rc.id);
+      var e = (p && p.entry) || {};
+      return !!(e.isNote || String(e.text || "").trim() || String(e.oreTachi || "").trim() || (p && p.invest > 0));
+    };
+    var splitAutoNext = null;
+    if (SPLIT) {
+      var vnames = {};
+      state.venues.forEach(function (v) { vnames[v.name] = 1; });
+      var nx = window.Derive.nextSubRace(allRaces().filter(function (r) { return vnames[r.venue]; }),
+        bRace ? bRace.venue : null, bRace ? bRace.startSec : null, nowSec());
+      splitAutoNext = nx ? window.Derive.raceKey(nx.venue, nx.no) : null;
+    }
+    var nextKeyOf = function (rc) {
+      if (!rc) return null;
+      if (splitAutoNext && hasContentKey(rc, splitAutoNext)) return splitAutoNext;
+      var best = null, bestSec = Infinity;
+      state.venues.forEach(function (v) {
+        var vn = v.name, r = state.currentRace[vn];
+        if (vn === mainName || !r) return;
+        var k = window.Derive.raceKey(vn, r);
+        if (k === splitAutoNext || !hasContentKey(rc, k)) return;
+        var sec = raceStartSecOf(k);
+        if (sec !== null && sec <= nowSec()) return; // 発走済みはNEXTに出さない
+        if (sec === null) sec = Infinity - 1;
+        if (sec < bestSec) { bestSec = sec; best = k; }
+      });
+      return best || splitAutoNext;
+    };
     var subFrameOf = function (rc) {
       if (!rc) return false;
+      if (SPLIT) { var nk = nextKeyOf(rc); return !!nk && (SUB_FIXED || !SUBAUTO || hasContentKey(rc, nk)); }
       if (SUB_FIXED) return true;
       var svn0 = effSubOf(rc);
       if (svn0) return SUBAUTO ? subHasContent(rc, svn0) : true;
@@ -2640,6 +2705,9 @@
       ["band-", "tband-", "kband-"].forEach(function (bp) {
         var bandHead = $(bp + "head-" + slot);
         if (!bandHead) return;
+        // §58 帯ごとのレース＝②（band-）は放送のレース／③（kband-）はトークのレース（SPLIT無しなら同じ）
+        var k = bp === "band-" ? bKey : key;
+        var rpk = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
         var bandName = $(bp + "name-" + slot);
         // note予想バッジは廃止（8/6 FB25・レースラベル側の🔥表記のみ残す）。
         // 空席は文言ごと出さない＝③は席を畳まないので「名前の無い『予想』」が画面に残るため（8/12）
@@ -2649,7 +2717,7 @@
           // 「note」の字は .bhn-t＝並びの窓が入り切らない日は🔥だけにする（9/26 Naoto・fitRaceLine が body.rbn-compact を付ける）
           // ③も同じ（9/26 Naoto「熊本1Rのバッジいらない」＝場名Rは左の出走表の見出しに出ている）。③は並びの窓が無いので🔥noteは両席とも名前の右
           // 🔥は .bh-fire でゆらゆら（タイマーと同じ）・札は34px（9/26 Naoto「もう少し大きく」）。入らないときは note の字を落として🔥だけ大きく（fitBandHead の fire-only／rbn-compact）
-          var bhNote = (RB2 && (bp === "band-" || bp === "kband-") && rp && rp.entry.isNote) ? '<span class="bh-race"><span class="bh-fire">🔥</span><span class="bhn-t">note</span></span>' : "";
+          var bhNote = (RB2 && (bp === "band-" || bp === "kband-") && rpk && rpk.entry.isNote) ? '<span class="bh-race"><span class="bh-fire">🔥</span><span class="bhn-t">note</span></span>' : "";
           var bhLeft = slot === "b" && bp === "band-";
           bandName.innerHTML = !name ? ""
             : (bhLeft && bhNote ? bhNote + " " : "") + esc(name) + " 予想" + (!bhLeft && bhNote ? " " + bhNote : "");
@@ -2761,15 +2829,15 @@
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）。
           // 合計/投資は右下の固定枠へ分離（8/6 FB57）。パッキングが実座標で衝突判定するため
           // metaを先に確定させてから買い目を組む（FB58・順序に意味あり）
-          fillBandMeta($(bp + "meta-" + slot), rc, key);
+          fillBandMeta($(bp + "meta-" + slot), rc, k);
           band.classList.remove("buy-xl", "buy-lg");
           // 第5引数keepAll=true＝②メイン帯も「全」を展開せず元記法で描く（8/8 FB74）。
           // 空席は中身ごと空にする＝③は席を畳まないので、誰もいない枠にレースラベルだけ
           // 残ると「予想を出し忘れている」ように見える（8/12）
           band.innerHTML = !rc ? ""
-            : (key && !(RB2 && (bp === "band-" || bp === "kband-")) ? raceColHead(rc, key, true) : "") + // A：②はラベルを見出しへ移した／③は左の出走表に出ているので出さない（9/26）
-              raceBuyHtml(rc, key, false, true, true);
-          band.classList.toggle("note-fire", noteFireOn(rc, key)); // 🧪燃える枠＝買目エリアの内側だけ
+            : (k && !(RB2 && (bp === "band-" || bp === "kband-")) ? raceColHead(rc, k, true) : "") + // A：②はラベルを見出しへ移した／③は左の出走表に出ているので出さない（9/26）
+              raceBuyHtml(rc, k, false, true, true);
+          band.classList.toggle("note-fire", noteFireOn(rc, k)); // 🧪燃える枠＝買目エリアの内側だけ
           packRaceBand(band); // 自前パッキング＋最適倍率（8/6 FB51→FB58で全分割総当たり化）
         }
       });
@@ -2810,7 +2878,8 @@
         }
         var sBand = $("sband-pred-" + slot);
         if (sBand) {
-          var sKey = svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
+          var sKey = SPLIT ? nextKeyOf(rc) // §58 NEXT枠はレース単位の自動
+            : svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
           // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
           sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true, true) : ""; // NEXT枠はオッズなし
           sBand.classList.toggle("note-fire", noteFireOn(rc, sKey)); // 🧪NEXT枠も、そのレースが note なら内側だけ
@@ -2878,25 +2947,15 @@
   var SL_TALK = { list: "slist-talk", sub: "slist-sub", narabi: "narabi-talk" };
   var SL_TK = { list: "slist-tk", sub: "slist-sub-tk", narabi: "narabi-tk" };
 
-  /* §57（9/28 Naoto）①の出走表は state.talkSl（コンソールの上の場・レースで人が選んだレース）を**そのレースの発走まで**出す。
-     発走後・前日の分・無いときは従来どおりメイン。🧪テスト（?gas=）だけ既定ON（&talksl=1/0） */
-  var TALK_SL = params.get("talksl") ? params.get("talksl") !== "0" : !!params.get("gas");
-  var talkSlLast = "";
-  function talkSlKey() {
-    if (!TALK_SL || !state) return null;
-    var t = state.talkSl;
-    if (!t || !t.key || (t.date && state.date && t.date !== state.date)) return null;
-    var s = raceStartSecOf(t.key);
-    return s !== null && nowSec() < s ? t.key : null;
-  }
   function renderStartList() {
     var v = state.venues[state.activeVenue];
     var vName = v ? v.name : "";
     var rNo = v ? state.currentRace[v.name] : null;
-    // §57 ①の出走表＝人がコンソールで選んだレース（発走まで）。②の自動追従でメインが動いても①は動かない
-    var tk = SCENE === "talk" ? talkSlKey() : null;
-    if (tk) { vName = tk.split("|")[0]; rNo = +tk.split("|")[1]; }
-    talkSlLast = tk || "";
+    // §58 ②（並びの窓・空席ワイプ）は放送のレース。①③はトークのレース（コンソールの場・レース）のまま
+    if (SPLIT && SCENE === "race") {
+      var bk = broadcastKey();
+      vName = bk ? bk.split("|")[0] : ""; rNo = bk ? +bk.split("|")[1] : null;
+    }
     var sh = SCENE === "talk" ? slHitNow() : null; // §54 的中の間だけ①の出走表を的中レースへ（ほかの描画は今のレースのまま）
     var hp = sh ? sh.key.split("|") : null;
     renderStartListInto(SL_TALK, hp ? hp[0] : vName, hp ? +hp[1] : rNo);

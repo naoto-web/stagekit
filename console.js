@@ -133,79 +133,28 @@
     return true;
   }
 
-  /* 放送中のレースを切り替える前の確認（9/28 Naoto・要件定義§56）。
-     事故＝Aのレース映像を流している最中に「Bの予想を書こう」と上の場・レースでBを押し、②の下の場だけBに変わった（映像はAのまま）。
-     メインの場のレースが「発走〜発走＋3分」（タイマーの「レース中」と同じ3分）の間に、上の場・レースで別のレースを押したら
-     すぐ切り替えずに確認を出す：①入力先だけ変える（放送はそのまま・おすすめ）②放送も切り替える ③やめる。
-     それ以外の時間は今まで通り1回で切り替わる。⚠️「入力先だけ」は予想入力の入力先（editVenue/editRace＝コンソール内だけ）を固定する */
-  var LIVE_GUARD_SEC = 180;
-  // 🧪まずテスト用コンソール（?gas=）だけ既定ON・本番ドックは従来どおり（&liveguard=1／0 で明示）
-  var LIVE_GUARD = params.get("liveguard") ? params.get("liveguard") !== "0" : !!params.get("gas");
-  function liveMainRace() {
-    var name = activeVenueName();
-    var no = name ? state.currentRace[name] : null;
-    if (!name || !no) return null;
-    var r = venueRaces(name).filter(function (x) { return x.no === +no; })[0];
-    var s = r ? timeToSec(r.start) : null;
-    var now = nowSec();
-    return s !== null && now >= s && now < s + LIVE_GUARD_SEC ? { venue: name, no: +no } : null;
+  /* 🧪§58（9/28 Naoto）「トークのレース」と「放送のレース」を分ける。テスト（?gas=）だけ既定ON（&split=1／0）。
+     トークのレース＝上の場・レース（activeVenue／currentRace）＝人だけが選ぶ＝①の出走表・予想入力（常に同じ）・③。自動追従では動かさない
+     放送のレース＝保存せず derive.broadcastRace で毎秒決める（オーバーレイと同じ式）＝②の下・結果入力の既定。
+     撤去したもの（9/28）＝§56 放送中の切替確認・§57 ①だけ覚える（talkSl）。SPLIT中は予想入力の場ボタン・②サブ予想・俺たち目の警告も出さない */
+  var SPLIT = params.get("split") ? params.get("split") !== "0" : !!params.get("gas");
+  function settleSecOf(key) {
+    var r = state && state.results ? state.results[key] : null;
+    var t = r && (r.firstAt || r.settledAt);
+    if (!t) return null;
+    var d = new Date(Date.parse(t)), now = new Date();
+    if (isNaN(d) || d.toDateString() !== now.toDateString()) return null; // 前日の確定は数えない
+    return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
   }
-  function guardMainSwitch(toVenue, toNo, apply) {
-    if (!LIVE_GUARD) return apply();
-    var live = liveMainRace();
-    var target = toNo || state.currentRace[toVenue];
-    if (!live || (live.venue === toVenue && live.no === +target)) return apply();
-    var old = $("live-guard");
-    if (old) old.parentNode.removeChild(old);
-    var toLabel = toVenue + (target ? " " + target + "R" : "");
-    var box = document.createElement("div");
-    box.id = "live-guard";
-    box.innerHTML = '<div class="lg-card">' +
-      '<div class="lg-msg">いま <b>' + esc(live.venue + " " + live.no + "R") + "</b> を放送中です（レース中）。<br>" +
-      "放送の場を <b>" + esc(toLabel) + "</b> に切り替えますか？</div>" +
-      '<button class="btn primary lg-input">' + esc(toLabel) + " の予想を書く（放送はそのまま）</button>" +
-      '<button class="btn lg-switch">放送も ' + esc(toLabel) + " に切り替える</button>" +
-      '<button class="btn small lg-cancel">やめる</button></div>';
-    document.body.appendChild(box);
-    var close = function () { if (box.parentNode) box.parentNode.removeChild(box); };
-    box.querySelector(".lg-input").onclick = function () {
-      close();
-      editVenue = toVenue;
-      editRace = toNo || null;
-      var card = $("pred-forms").closest("details");
-      if (card) card.open = true;
-      renderPredTarget();
-      renderPredForms();
-      $("pred-forms").scrollIntoView({ behavior: "smooth" });
-    };
-    box.querySelector(".lg-switch").onclick = function () { close(); apply(); };
-    box.querySelector(".lg-cancel").onclick = close;
-    box.onclick = function (e) { if (e.target === box) close(); }; // 外側を押したら「やめる」
+  function broadcastRaceObj() {
+    if (!state || !timetable) return null;
+    return window.Derive.broadcastRace(selectedRaces(), settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60);
   }
-
-  /* ①の出走表は「人が上の場・レースで選んだレース」（9/28 Naoto・要件定義§57）。
-     事故＝①でA2Rを押してA2Rの話→②でさっきのオッズを見せる→②の自動追従でメインが次の発走B1Rへ→①に戻るとB1Rの出走表。
-     ⇒ 手で選んだレースを state.talkSl に覚える（自動追従は触らない）。①の出走表はこれを**そのレースの発走まで**出す→発走後はメインに戻る。
-     手で別のレースを選び直せばそれが新しい覚えたレース。date＝「新しい日を開始」で前日の分を無効に */
-  // 🧪まずテスト（?gas=）だけ既定ON＝表示だけの切替（覚えること自体は常に行う・無害）。オーバーレイ側は overlay.js TALK_SL
-  var TALK_SL = params.get("talksl") ? params.get("talksl") !== "0" : !!params.get("gas");
-  function rememberTalkSl(venue, no) {
-    if (!venue || !no) return;
-    state.talkSl = { key: window.Derive.raceKey(venue, +no), date: state.date || "" };
+  function broadcastKey() {
+    if (!SPLIT) return currentKey();
+    var b = broadcastRaceObj();
+    return b ? window.Derive.raceKey(b.venue, b.no) : null;
   }
-  /** いま①の出走表に出るレース（オーバーレイ overlay.js talkSlKey と同じ判定）＝コンソールの表示用 */
-  function talkSlShown() {
-    var t = state.talkSl;
-    if (t && t.key && (!t.date || !state.date || t.date === state.date)) {
-      var p = String(t.key).split("|");
-      var r = venueRaces(p[0]).filter(function (x) { return x.no === +p[1]; })[0];
-      var s = r ? timeToSec(r.start) : null;
-      if (s !== null && nowSec() < s) return { key: t.key, held: true };
-    }
-    var name = activeVenueName();
-    return name && state.currentRace[name] ? { key: window.Derive.raceKey(name, state.currentRace[name]), held: false } : null;
-  }
-
   function nextRaceOf(name) {
     var now = nowSec();
     var rs = venueRaces(name).filter(function (r) {
@@ -342,13 +291,10 @@
     el.querySelectorAll(".vbtn").forEach(function (b) {
       b.addEventListener("click", function () {
         var i = +b.getAttribute("data-i");
-        guardMainSwitch(state.venues[i].name, null, function () { // §56 レース中は確認を挟む
-          state.activeVenue = i;
-          manualNav(true); // 手動の場切替＝結果フォームの固定解除＋自動追従に手動優先を通知（FB96）
-          rememberTalkSl(state.venues[i].name, state.currentRace[state.venues[i].name]); // §57 ①の出走表はこのレース（発走まで）
-          save();
-          renderAll();
-        });
+        state.activeVenue = i;
+        manualNav(!SPLIT); // 手動の場切替＝自動追従に手動優先を通知（FB96）。§58＝トークの操作では結果入力の入力途中を解除しない
+        save();
+        renderAll();
       });
     });
 
@@ -411,6 +357,7 @@
   function renderRaceSubRow() {
     var el = $("race-sub-row");
     if (!el) return;
+    if (SPLIT) { el.innerHTML = ""; el.classList.add("hidden"); return; } // §58 NEXT枠は常に自動＝「②サブ予想」は出さない（Naoto）
     if (!state.raceSubBy || typeof state.raceSubBy !== "object") state.raceSubBy = {};
     // 旧・共通1場（raceSubVenue）からの移行：全員に同じ場を入れて旧フィールドは空に
     if (state.raceSubVenue) {
@@ -474,13 +421,10 @@
     el.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
         var no = +b.getAttribute("data-no");
-        guardMainSwitch(name, no, function () { // §56 レース中は確認を挟む
-          state.currentRace[name] = no;
-          manualNav(true); // 手動のレース切替＝結果フォームの固定解除＋手動優先を通知（FB96）
-          rememberTalkSl(name, no); // §57 ①の出走表はこのレース（発走まで）
-          save();
-          renderAll();
-        });
+        state.currentRace[name] = no;
+        manualNav(!SPLIT); // 手動のレース切替＝手動優先を通知（FB96）。§58＝トークの操作では結果入力の入力途中を解除しない
+        save();
+        renderAll();
       });
     });
   }
@@ -495,7 +439,7 @@
     var next = nextRaceOf(name);
     if (next) {
       state.currentRace[name] = next.no;
-      manualNav(true); // 手動のレース送り（FB96）
+      manualNav(!SPLIT); // 手動のレース送り（FB96）。§58＝トークの操作は結果入力の入力途中を解除しない
       save();
       renderAll();
     }
@@ -507,6 +451,7 @@
      コンソール内だけのローカル状態＝GASにも配信画面にも影響しない */
   var editVenue = null, editRace = null;
   function predKey() {
+    if (SPLIT) { editVenue = null; editRace = null; return currentKey(); } // §58 予想入力＝常にトークのレース（場・レース）
     if (editVenue && !state.venues.some(function (v) { return v.name === editVenue; })) { editVenue = null; editRace = null; }
     if (!editVenue) return currentKey();
     var rNo = editRace || state.currentRace[editVenue];
@@ -515,6 +460,12 @@
   function renderPredTarget() {
     var vr = $("pred-venue-row"), rg = $("pred-race-chips");
     if (!vr || !rg) return;
+    if (SPLIT) { // §58 予想入力の場ボタンは出さない（入力先＝場・レース）。説明の行も隠す
+      vr.innerHTML = ""; rg.innerHTML = ""; vr.classList.add("hidden"); rg.classList.add("hidden");
+      var hint = vr.previousElementSibling;
+      if (hint && hint.classList.contains("hint")) hint.classList.add("hidden");
+      return;
+    }
     if (!state.venues.length) { vr.innerHTML = ""; rg.innerHTML = ""; return; }
     /* 8/27 FB139（Naoto「放送に追従ボタンの意味が分かりづらい」）＝常設をやめ、固定中だけ出す。
        ⚠️このボタンは固定を解除する唯一の手段（他は「固定先の場が本日の場から外れた時」と再読み込みだけ）
@@ -1029,13 +980,50 @@
      入力途中（resDirty）の間は表示中のレース（resKeyShown）に固定＝自動追従（発走・②切替）で
      currentKeyが動いても、打ちかけの着順・払戻・回収を巻き込まない。
      手動のレース移動（場ボタン・レースチップ等）は manualNav(true) で固定を解除＝従来どおり仕切り直し */
-  function resultKey() { return (resDirty && resKeyShown) ? resKeyShown : currentKey(); }
+  /* §58 結果入力の既定＝放送のレース（Naoto「走り終わったB1Rに自動で合わせてよい」）。
+     前のレースを直す・「回収額が未入力」から飛ぶときは resPin（手で選び直したレース）＝確定するか放送のレースが変わると解除 */
+  var resPin = null;
+  function resBaseKey() { return SPLIT ? (resPin || broadcastKey()) : currentKey(); }
+  function resultKey() { return (resDirty && resKeyShown) ? resKeyShown : resBaseKey(); }
+  /** 結果入力の「レースを選び直す」（§58）＝カードの見出しの下。放送のレース（自動）＋今日の発走済みレース（新しい順） */
+  function renderResPick() {
+    var tgt = $("result-target");
+    if (!tgt) return;
+    var card = tgt.closest("details");
+    var el = $("res-pick-row");
+    if (!SPLIT) { if (el) el.classList.add("hidden"); return; }
+    if (!el && card) {
+      el = document.createElement("div"); el.id = "res-pick-row";
+      var sum = card.querySelector("summary");
+      sum.parentNode.insertBefore(el, sum.nextSibling);
+    }
+    if (!el) return;
+    var bk = broadcastKey(), now = nowSec();
+    var opts = selectedRaces().filter(function (r) { return r.startSec <= now; })
+      .sort(function (a, b) { return b.startSec - a.startSec; }).slice(0, 16);
+    var html = "結果を入れるレース：<select id=\"res-pick\"><option value=\"\">放送のレース（自動）" + (bk ? "＝" + esc(bk.replace("|", " ")) + "R" : "") + "</option>" +
+      opts.map(function (r) {
+        var k = window.Derive.raceKey(r.venue, r.no);
+        return "<option value=\"" + esc(k) + "\"" + (resPin === k ? " selected" : "") + ">" + esc(r.venue + " " + r.no + "R") + "</option>";
+      }).join("") + "</select>" + (resPin ? "<span class=\"rp-pin\">📌手で選んだレース（確定すると自動に戻ります）</span>" : "");
+    if (el.getAttribute("data-h") !== html) {
+      el.setAttribute("data-h", html);
+      el.innerHTML = html;
+      $("res-pick").addEventListener("change", function () {
+        resPin = this.value || null;
+        resDirty = false;
+        renderResultForm();
+        refreshResultFire();
+      });
+    }
+  }
 
   function renderResultForm() {
     var key = resultKey(); // 入力途中は表示中のレースに固定（自動追従で巻き戻さない・FB96）
     // 見出しのレースは予想入力と同じ丸枠（9/24 Naoto）＋誰かが note予想で保存していれば🔥
     $("result-target").innerHTML = (key ? raceTagHtml(key, raceHasNote(key), true) : "（場・レース未選択）") + // 9/25 Naoto「結果入力も同じ記載に」
-      (resDirty && key !== currentKey() ? "　📌入力途中のため固定中（レースを選ぶと切替）" : "");
+      (resDirty && key !== resBaseKey() ? "　📌入力途中のため固定中（レースを選ぶと切替）" : "");
+    renderResPick(); // §58
     if (key !== resKeyShown) { resDirty = false; resKeyShown = key; } // レースが変わったら仕切り直し
     else if (resDirty) {                                             // 入力途中＝触らずに帰る
       renderPayoutRows();
@@ -1387,6 +1375,8 @@
       refundUnits: refundUnits,
       settledAt: new Date().toISOString(),
     };
+    // §58 最初に確定した時刻＝②の放送のレースが次へ移る「確定＋2分」はこれで数える（入れ直しで②が前のレースへ戻らない）
+    rec.firstAt = (state.results[key] && (state.results[key].firstAt || state.results[key].settledAt)) || rec.settledAt;
     // 同着のときだけ着順2本を持つ（8/27 FB148）。旧データ・通常レースは order だけのまま＝読み手は無改修
     if (orders.length > 1) rec.orders = orders.map(function (o) { return o.slice(); });
     state.results[key] = rec;
@@ -1394,6 +1384,7 @@
     // resultViewの更新はマークアップが残っているための保険（?scene=resultで直接開いた時だけ効く）
     state.resultView = key;
     resDirty = false;       // 確定できた＝以後はstateの値が正（8/8 FB75）
+    resPin = null;          // §58 手で選び直した結果入力のレースは確定したら放送のレースへ戻す
     save();
     renderHitAdmin();
     renderSettlePreview();
@@ -1891,22 +1882,16 @@
   });
 
   /* ---------- ステータスバー・警告 ---------- */
-  /* §57 「①の出走表：岐阜 2R」＝上の場・レースのすぐ下。手で選んだレースを発走まで出している間は「手で選んだレース・発走まで」、
-     それ以外は「放送と同じ」。毎秒（tickStatus）＝発走で表示が戻る */
-  function renderTalkSlNote() {
-    if (!TALK_SL) return;
-    var chips = $("race-chips");
-    if (!chips) return;
-    var el = $("talk-sl-note");
-    if (!el) { el = document.createElement("div"); el.id = "talk-sl-note"; chips.parentNode.insertBefore(el, chips.nextSibling); }
-    var t = talkSlShown();
-    var html = t ? "①の出走表：<b>" + esc(t.key.replace("|", " ")) + "R</b>" +
-      (t.held ? '<span class="tsn-held">手で選んだレース・発走まで</span>' : '<span class="tsn-live">放送と同じ</span>') : "";
-    if (el.innerHTML !== html) el.innerHTML = html;
-  }
+  var bcastShown = null; // §58 前回の放送のレース＝変わった瞬間に結果入力を描き直す
   function tickStatus() {
     if (!state) return;
-    renderTalkSlNote();
+    if (SPLIT) {
+      var bk = broadcastKey();
+      if (bk !== bcastShown) {
+        if (bcastShown !== null && !resDirty) resPin = null; // 放送のレースが次へ移った＝手で選び直した結果入力のレースも自動に戻す（入力途中は触らない）
+        bcastShown = bk; renderResultForm(); refreshResultFire();
+      }
+    }
     var now = nowSec();
     // 追跡中の場から次レース（未選択なら全場から）
     var pool = state.venues.length ? state.venues.map(function (v) { return v.name; })
@@ -1936,8 +1921,14 @@
       var races = venueRaces(name).filter(function (r) { return r.no === rNo; });
       var s = races.length ? timeToSec(races[0].start) : null;
       var next = nextRaceOf(name);
-      if (s !== null && now > s + 180 && next && next.no !== rNo) {
-        warn.textContent = "⚠ " + name + rNo + "R は発走済み → タップで " + next.no + "R（" + next.start + "）へ切替";
+      // §58＝トークのレースの警告は「②の放送がそのレースから次へ移った後も①がまだそのレース」のときだけ
+      //（発走〜払戻は②でそのレースを見ている時間＝出さない・Naoto）
+      var bro = SPLIT ? broadcastRaceObj() : null;
+      var staleNow = SPLIT ? (s !== null && now >= s && bro && bro.startSec > s && next && next.no !== rNo)
+        : (s !== null && now > s + 180 && next && next.no !== rNo);
+      if (staleNow) {
+        warn.textContent = SPLIT ? "⚠ ①はまだ " + name + " " + rNo + "R（終了済み）→ タップで " + name + " " + next.no + "R へ"
+          : "⚠ " + name + rNo + "R は発走済み → タップで " + next.no + "R（" + next.start + "）へ切替";
         warn.classList.remove("hidden");
       } else {
         warn.classList.add("hidden");
@@ -1951,6 +1942,7 @@
     // 保存・表示は一切ブロックしない（買い目先出しの運用が正）。タップで入力先を
     // そのレースに固定（📌）して予想入力へジャンプ＝1タップで書ける
     var ow = $("ore-warn");
+    if (ow && SPLIT) { ow.classList.add("hidden"); ow.onclick = null; ow = null; } // §58 俺たち目の警告は出さない（Naoto「買目を入れたら赤字表示される」）
     if (ow) {
       var oreMiss = [];
       if (best && best.startSec - now <= 600 && now < best.startSec) {
@@ -2026,6 +2018,7 @@
     }
   }
   function autoAlignTick() {
+    if (SPLIT) return; // §58 トークのレースは人だけが選ぶ＝発走時の自動追従はしない（放送のレースは毎回計算・NEXTも自動計算）
     if (!state || !timetable || !state.venues.length) return;
     if (state.cfg.autoAlign === false || state.date !== todayStr()) return;
     var just = window.Derive.justStartedRace(selectedRaces(), nowSec(), ALIGN_WIN);
@@ -2127,6 +2120,7 @@
         settledAt: new Date().toISOString(),
         auto: true,
       };
+      rec.firstAt = (state.results[key] && (state.results[key].firstAt || state.results[key].settledAt)) || rec.settledAt; // §58
       if (ords.length > 1) rec.orders = ords.map(function (o) { return o.slice(); });
       state.results[key] = rec;
       addedKey = key;
@@ -2287,6 +2281,14 @@
       var idx = -1;
       state.venues.forEach(function (v, i) { if (v.name === parts[0]) idx = i; });
       if (idx < 0) return;
+      if (SPLIT) { // §58 トークのレースは動かさず、結果入力だけそのレースへ（放送のレースを手で選び直した扱い）
+        resPin = gap.key; resDirty = false;
+        var rcard = $("result-target") && $("result-target").closest("details");
+        if (rcard) rcard.open = true;
+        renderResultForm(); refreshResultFire();
+        if (rcard) rcard.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
       state.activeVenue = idx;
       state.currentRace[parts[0]] = +parts[1];
       manualNav(true); // 回収入力のための手動ジャンプ（FB96）
@@ -2301,6 +2303,7 @@
         全席が黙って「なし」に落ち、畳まれた穴（項98）に下のページ背景が透けていた（白帯4回目・朝も夜も）。
      人が「なし」を選んだ席（SUB_OFF）と選択済みの席は触らない。時刻表が無い間は何もしない（純関数側で判定） */
   function ensureSubDefaults() {
+    if (SPLIT) return false; // §58 NEXT枠はオーバーレイが自動計算＝raceSubBy・場ごとのRを書かない
     if (!state || !timetable || !state.venues.length || !state.racers.length) return false;
     return window.Derive.ensureSub(state, selectedRaces(), nowSec());
   }
@@ -2340,6 +2343,7 @@
     // タイマー基準の「映像に映っているはずのレース」へ盤面を合わせる。
     // 直前45秒以内に手動で盤面を触っていたら手動優先（特別なレースを出したまま切り替えられる）
     if (msg && msg.type === "sceneShown" && msg.scene === "race") {
+      if (SPLIT) return; // §58 ②を開いてもトークのレースは動かさない（②は放送のレースを自分で計算）
       if (lastManualNavSec >= 0 && nowSec() - lastManualNavSec < 45) return;
       alignBoard(window.Derive.videoRaceAt(selectedRaces(), nowSec(), ALIGN_LIVE));
     }
