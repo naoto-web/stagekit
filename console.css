@@ -595,3 +595,42 @@ html.theme-light .pred-form h3 .alt { color: #c62828; }
 html.bigtext .rc { width: 50px; }
 html.bigtext .np-rc { width: 43px; }
 html.theme-light .kb { filter: drop-shadow(0 0 1px rgba(0, 0, 0, .55)); }
+/* §65 追補2（9/28 Naoto「タブがどこからどこまでか分かりづらい・もっと立体感」）：
+   ページの地を一段濃く／カードは白寄り＋濃いめの枠＋影で浮かせる／見出しに帯（カードの始まりが一目で分かる）／ボタンに薄い影と下辺 */
+html.theme-light { --lt-page: #d8d4ca; }
+html.theme-light .card { background: #fbfaf7; }
+html.theme-light .card {
+  border-color: #b3aea2;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .06), 0 4px 12px rgba(40, 30, 10, .16);
+}
+/* 見出しの帯＝カードの上端いっぱい（カードの余白 12px を打ち消す）。閉じたカードは帯だけ＝下の角も丸く */
+html.theme-light details.card > summary,
+html.theme-light .card > .card-head {
+  margin: -12px -12px 12px; padding: 10px 12px;
+  background: #ebe6da; border-bottom: 1px solid #c9c3b5; border-radius: 10px 10px 0 0;
+}
+html.theme-light .card > .card-head h2 { margin-bottom: 0; }
+html.theme-light details.card:not([open]) > summary { margin-bottom: -12px; border-bottom: none; border-radius: 10px; }
+@media (min-width: 960px) {
+  html.theme-light details.card > summary,
+  html.theme-light .card > .card-head { margin: -16px -18px 14px; padding: 12px 18px; }
+  html.theme-light details.card:not([open]) > summary { margin-bottom: -16px; }
+}
+/* カードの中の囲み（予想カード・並び・note勝負の人ごと）は白＋はっきりした枠＝カードの地と区別 */
+html.theme-light .pred-form, html.theme-light .np-person, html.theme-light .pred-narabi, html.theme-light .settle-preview {
+  background: #fff; border-color: #c4bfb3;
+}
+/* ボタン＝上が明るいごく薄いグラデ＋下辺の影＝押せるものに見える。選択中は影を少し強く */
+html.theme-light .btn, html.theme-light .vbtn, html.theme-light .rc, html.theme-light .vp, html.theme-light .np-rc,
+html.theme-light .exp.btn-sum > summary {
+  background-image: linear-gradient(#ffffff, #efece5);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .10), 0 1px 3px rgba(0, 0, 0, .10);
+}
+html.theme-light .vbtn.active, html.theme-light .rc.cur, html.theme-light .vp.sel, html.theme-light .np-rc.on,
+html.theme-light .btn.primary, html.theme-light .btn.seat-swap, html.theme-light #pred-venue-row .vbtn.live {
+  background-image: none;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .18), 0 2px 5px rgba(0, 0, 0, .18);
+}
+html.theme-light .rc.next { box-shadow: 0 0 0 1px #e5484d inset, 0 1px 3px rgba(0, 0, 0, .10); }
+html.theme-light .rc.done, html.theme-light .np-rc.done { box-shadow: none; }
+html.theme-light .switcher { box-shadow: 0 1px 0 rgba(0, 0, 0, .18), 0 2px 5px rgba(0, 0, 0, .18); }html.theme-light .card { margin-top: 14px; margin-bottom: 14px; }
