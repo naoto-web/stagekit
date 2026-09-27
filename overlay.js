@@ -2783,6 +2783,7 @@
       return;
     }
     var key = window.Derive.raceKey(vName, rNo);
+    if (ids === SL_TALK || ids === SL_TK) fitSlHead(subEl); // ③の出走表も同じ見出し（9/27）
     if (SL2 && ids === SL_TALK) { // 🧪2段版（§47・&sl2=1のときだけ）
       if (!narabiAuto[key]) ensureNarabi(vName, rNo, key);
       renderSl2(el, race, key);
@@ -2831,6 +2832,16 @@
   if (params.get("vth") !== "0") document.documentElement.classList.add("vth"); // 9/27 本番化（Naoto OK）＝既定ON。&vth=0 で旧
   // 🧪&vtshort=1（9/27）＝②の3〜4場だけラベルを「民間」「公式」に（「締切」＝.vt-lx を隠す）＝空いた幅で数字を大きく
   if (params.get("vtshort") !== "0") document.documentElement.classList.add("vtshort"); // 9/27 本番化（B案）＝既定ON。&vtshort=0 で「民間締切」表記
+  // 🧪&slhd=1|2|3（9/27 Naoto「出走表の見出しのレース名・A級予選が見えづらい」）＝①出走表の金帯の見せ方の案（CSS html.slhd1〜3）
+  (function (v) { // 🧪見出しの案＝クラスの組み合わせ（slfit＝レースごとに最大へ／slnolab＝「出走表」の文字なし／slink＝金の地に黒字）
+    var map = { "1": "slhd1", "2": "slhd2", "3": "slhd3", "4": "slhd3 slfit slnolab", "5": "slink slfit", "6": "slink slfit slnolab", "7": "slink slmid", "8": "slink slmid slyel" };
+    if (map[v]) map[v].split(" ").forEach(function (c) { document.documentElement.classList.add(c); });
+    // 🧪色の見比べ用＝&slbg=ffd54f&slfg=14204a（16進6桁）で見出しの地と字を差し替え（slhd=8のとき）
+    ["slbg", "slfg"].forEach(function (k) {
+      var x = params.get(k) || (k === "slbg" ? "ffffff" : ""); // 地の既定＝白（9/27 Naoto「普通に白でいい」・黄はムネオカラーに近い）
+      if (x && /^[0-9a-f]{6}$/i.test(x)) document.documentElement.style.setProperty("--" + k, "#" + x);
+    });
+  })(params.get("slhd") || "8"); // 9/27 本番化＝既定は8（高さ45px固定・「出走表」なし・クラス右詰め・場名R中央・白地×紺字）。&slhd=0 で旧の金帯
   var SL3 = params.get("sl3") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&sl3=0 で勝率つき・(補)札の版
   if (SL3) SL2_COLS = SL2_COLS.slice(0, 3);
   function rankOf(vals) { // 大きい順・重複なし・0と空は数えない
@@ -2873,6 +2884,33 @@
     }).join("");
     el.classList.add("sl2");
     el.classList.toggle("sl3", SL3);
+  }
+  /** 🧪slhd=4：①出走表の見出し＝場名R（上限40px）とクラス（×0.63）を、どちらも1行に収まる最大へ（9/27 Naoto「もっと大きく」）。
+      実測＝案3で「出走表」ありだと いわき平12R＋Ｓ級一次予選は27px・武雄3Rなら41px＝長さで大きく違うのでレースごとに決める */
+  function fitSlHead(subEl) {
+    if (subEl && document.documentElement.classList.contains("slmid")) return fitSlHeadMid(subEl);
+    if (!subEl || !document.documentElement.classList.contains("slfit")) return;
+    var vr = subEl.querySelector(".sl-vr"), cls = subEl.querySelector(".sl-cls");
+    if (!vr) return;
+    for (var fs = 40; fs >= 20; fs--) {
+      var cf = Math.round(fs * 0.63);
+      vr.style.fontSize = fs + "px"; if (cls) cls.style.fontSize = cf + "px";
+      if (!vr.offsetHeight) return; // 非表示（①以外のシーン）＝測れない
+      if (vr.offsetHeight < fs * 1.6 && (!cls || cls.offsetHeight < cf * 1.9)) break;
+    }
+  }
+  /** 🧪slhd=7|8（9/27 Naoto「高さは変えない・出走表の文字は不要・その範囲で最大・クラスは右詰め・場名Rは残りの左の中央」）。
+      見出しの高さ45pxは固定（CSS）。場名R＝高さに入る上限（45−6px）から、横に入るまで1pxずつ下げる。クラスは場名Rの0.62倍（上限22px） */
+  function fitSlHeadMid(subEl) {
+    var vr = subEl.querySelector(".sl-vr"), cls = subEl.querySelector(".sl-cls");
+    var head = subEl.parentElement;
+    if (!vr || !head || !head.clientHeight) return;
+    var top = Math.min(40, head.clientHeight - 6);
+    for (var fs = top; fs >= 18; fs--) {
+      var cf = Math.min(22, Math.round(fs * 0.62));
+      vr.style.fontSize = fs + "px"; if (cls) cls.style.fontSize = cf + "px";
+      if (vr.scrollWidth <= vr.clientWidth + 0.5) break;
+    }
   }
   /** 行の高さ＝（リストの高さ − 見出し）÷ 車数（上限 SL2_ROW）。字の大きさは行の高さに比例（CSS --sl2-rh） */
   var SL2_ROW = 66;

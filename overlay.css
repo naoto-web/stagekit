@@ -687,6 +687,35 @@ html.vth #scene-talk .timer-cards.vt-n3 .vt-head.vh-tight, html.vth #scene-talk 
    最長ケース（いわき平12R＋Ｌ級ガ選抜）でも396px幅に収まるサイズ設計 */
 .slist-panel .panel-head { font-size: 22px; padding: 7px 14px; }
 .slist-panel .panel-head-sub { display: flex; align-items: baseline; gap: 10px; }
+/* 🧪①出走表の見出しの案（&slhd=1|2|3・9/27 Naoto「レース名・A級予選が見えづらい」） */
+/* 1＝金のまま・字に黒フチ・場名R 32px／クラス 21px */
+html.slhd1 #scene-talk .slist-panel .panel-head { text-shadow: -1.5px -1.5px 0 rgba(0,0,0,.75), 1.5px -1.5px 0 rgba(0,0,0,.75), -1.5px 1.5px 0 rgba(0,0,0,.75), 1.5px 1.5px 0 rgba(0,0,0,.75), 0 0 4px rgba(0,0,0,.5); }
+html.slhd1 #scene-talk .sl-vr { font-size: 32px; }
+html.slhd1 #scene-talk .sl-cls { font-size: 21px; opacity: 1; }
+/* 2＝濃い紺の地・白字・クラスは金の札 */
+html.slhd2 #scene-talk .slist-panel .panel-head { background: #1b2238; color: #fff; }
+html.slhd2 #scene-talk .sl-vr { font-size: 32px; color: #fff; }
+html.slhd2 #scene-talk .sl-cls { font-size: 19px; opacity: 1; background: var(--acc); color: #fff; padding: 1px 8px; border-radius: 5px; align-self: center; text-shadow: 0 0 2px rgba(0,0,0,.6); }
+/* 3＝金のまま・場名Rを白い札に黒字・クラスも白い札 */
+html.slhd3 #scene-talk .slist-panel .panel-head { padding: 6px 10px 6px 14px; }
+html.slhd3 #scene-talk .slist-panel .panel-head-sub { align-items: center; gap: 6px; }
+html.slhd3 #scene-talk .sl-vr { font-size: 30px; background: #fff; color: #111; padding: 1px 10px; border-radius: 6px; }
+html.slhd3 #scene-talk .sl-cls { font-size: 19px; opacity: 1; background: #fff; color: #111; padding: 2px 7px; border-radius: 5px; }
+/* 4＝案3＋「出走表」の文字なし（見出しの左の文字を消し、場名R・クラスを左から並べる）＋大きさは fitSlHead */
+html.slnolab #scene-talk .slist-panel .panel-head { font-size: 0; }
+html.slnolab #scene-talk .slist-panel .panel-head-sub { margin-left: 0; font-size: 20px; }
+/* 5・6＝金の地のまま黒字（9/27 Naoto「背景そのままで黒字では？note勝負バナーもそう」）＝白字 3.1:1 → 黒字 約6.6:1 */
+html.slink :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head, html.slink :is(#scene-talk, #scene-tenkai) .sl-vr, html.slink :is(#scene-talk, #scene-tenkai) .sl-cls { color: #111; }
+html.slink :is(#scene-talk, #scene-tenkai) .sl-cls { opacity: 1; }
+html.slink :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head-sub { align-items: center; }
+/* 7・8＝高さ45pxのまま・「出走表」なし・クラスは右詰め・場名Rは残りの左の中央（fitSlHeadMid が大きさを決める） */
+html.slmid :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head { height: 45px; box-sizing: border-box; padding: 0 10px 0 8px; font-size: 0; border-bottom: 2px solid #b8860b; } /* 白地の見出しと白地の表の境目＝金の線（9/27） */
+html.slmid :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head-sub { margin-left: 0; flex: 1 1 auto; min-width: 0; height: 100%; display: flex; align-items: center; gap: 8px; }
+html.slmid :is(#scene-talk, #scene-tenkai) .sl-vr { flex: 1 1 auto; min-width: 0; text-align: center; line-height: 1; white-space: nowrap; }
+html.slmid :is(#scene-talk, #scene-tenkai) .sl-cls { flex: 0 0 auto; margin-left: auto; line-height: 1; white-space: nowrap; opacity: 1; }
+/* 8＝note勝負バナーの札と同じ明るい黄色（#ffd54f）に紺の字（#14204a） */
+html.slyel :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head { background: var(--slbg, #ffd54f); }
+html.slyel :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head, html.slyel :is(#scene-talk, #scene-tenkai) .sl-vr, html.slyel :is(#scene-talk, #scene-tenkai) .sl-cls { color: var(--slfg, #14204a); }
 .sl-vr { font-size: 28px; font-weight: 900; line-height: 1.1; }
 .sl-cls { font-size: 18px; font-weight: 800; opacity: .95; }
 .slist { list-style: none; padding: 2px 0; }
