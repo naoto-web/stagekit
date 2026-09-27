@@ -638,3 +638,9 @@ html.theme-light .switcher { box-shadow: 0 1px 0 rgba(0, 0, 0, .18), 0 2px 5px r
 /* 🧪フォントの見比べ（&font=meiryo／bizud・console.js が html にクラス）。入力欄・ボタンは font: inherit なので body だけで効く */
 html.font-meiryo body { font-family: "Meiryo", "メイリオ", "Yu Gothic UI", sans-serif; }
 html.font-bizud body { font-family: "BIZ UDPGothic", "BIZ UDPゴシック", "Yu Gothic UI", sans-serif; }
+/* §66（9/28 Naoto）予想入力の整理：並びと見出し右の「青森 1R(6車)」を出さない（各カードの丸枠「青森 1R」で足りる）・
+   合計点数と投資額を大きく。⚠️隠すだけ（JSは描き続ける）＝&con2=0 で戻る */
+html.con2 #pred-narabi, html.con2 #pred-target { display: none !important; }
+html.con2 .parse-total { font-size: 19px; }
+/* 予想カードの枠＝メンバーカラー（白背景の .pred-form の枠色指定が上書きして灰色になっていた＝§65の不具合）。白地では少し太く */
+html.theme-light .pred-form.mc { border: 3px solid var(--mc); }

@@ -172,6 +172,7 @@
   /** メンバーカラーを「字」に使うとき（名前など）。白背景だと黄・緑が読めない＝白背景のときだけ黒を混ぜて暗くする（塗りはそのまま） */
   function mcText(mc) { return mc && LIGHT ? "color-mix(in srgb, " + mc + " 62%, #000)" : mc; }
   if (CON2) (function () {
+    document.documentElement.classList.add("con2"); // §66 予想入力の並び・見出し右のレース名を隠す（console.css）
     var np = document.getElementById("note-pick");
     var predCard = document.getElementById("pred-forms") && document.getElementById("pred-forms").closest("details");
     if (np && predCard) {
