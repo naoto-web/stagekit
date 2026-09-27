@@ -193,7 +193,7 @@
     if (sec < 0) sec = 0;
     var m = Math.floor(sec / 60), s = sec % 60;
     if (m >= 60) return Math.floor(m / 60) + ":" + pad2(m % 60) + ":" + pad2(s);
-    return pad2(m) + ":" + pad2(s);
+    return m + ":" + pad2(s); // 10分未満は頭の0なし＝「9:25」「0:45」（9/27 Naoto・旧「09:25」）
   }
 
   /* ---------- タイムテーブル ---------- */
@@ -754,8 +754,8 @@
         } else {
           body = '<div class="vt-rows">' +
             '<div class="vt-row"><span>発走</span><b>' + c.race.start + "</b></div>" +
-            '<div class="vt-row"><span>民間締切</span><b data-net="' + c.race.startSec + '"></b></div>' +
-            '<div class="vt-row"><span>公式締切</span><b data-off="' + c.race.startSec + '"></b></div>' +
+            '<div class="vt-row"><span>民間<i class="vt-lx">締切</i></span><b data-net="' + c.race.startSec + '"></b></div>' +
+            '<div class="vt-row"><span>公式<i class="vt-lx">締切</i></span><b data-off="' + c.race.startSec + '"></b></div>' +
             "</div>";
         }
         return '<li class="vt-card" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
@@ -809,8 +809,8 @@
     } else {
       body = '<div class="vt-rows">' +
         '<div class="vt-row"><span>発走</span><b>' + c.race.start + "</b></div>" +
-        '<div class="vt-row"><span>民間締切</span><b data-net="' + c.race.startSec + '"></b></div>' +
-        '<div class="vt-row"><span>公式締切</span><b data-off="' + c.race.startSec + '"></b></div>' +
+        '<div class="vt-row"><span>民間<i class="vt-lx">締切</i></span><b data-net="' + c.race.startSec + '"></b></div>' +
+        '<div class="vt-row"><span>公式<i class="vt-lx">締切</i></span><b data-off="' + c.race.startSec + '"></b></div>' +
         "</div>";
     }
     return '<li class="' + cls + '" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
@@ -2827,6 +2827,10 @@
   var SL2_LINE = params.get("slline") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&slline=0 で車番順
   var SL2_COLS = [{ i: 4, h: "B" }, { i: 5, h: "H" }, { i: 6, h: "S" }, { i: 7, h: "勝率" }];
   // 🧪&sl3=1（9/27 Naoto「名前をもっと大きく」）＝勝率の列を消して名前の欄を広げる／補充・追加は名前全体を（ ）で囲む
+  // 🧪&vth=1（9/27 Naoto「タイマーの場名をもっと大きく」）＝①のタイマー見出しを拡大（CSS html.vth）。入らないカードは fitTimerHeads が縮める
+  if (params.get("vth") !== "0") document.documentElement.classList.add("vth"); // 9/27 本番化（Naoto OK）＝既定ON。&vth=0 で旧
+  // 🧪&vtshort=1（9/27）＝②の3〜4場だけラベルを「民間」「公式」に（「締切」＝.vt-lx を隠す）＝空いた幅で数字を大きく
+  if (params.get("vtshort") !== "0") document.documentElement.classList.add("vtshort"); // 9/27 本番化（B案）＝既定ON。&vtshort=0 で「民間締切」表記
   var SL3 = params.get("sl3") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&sl3=0 で勝率つき・(補)札の版
   if (SL3) SL2_COLS = SL2_COLS.slice(0, 3);
   function rankOf(vals) { // 大きい順・重複なし・0と空は数えない

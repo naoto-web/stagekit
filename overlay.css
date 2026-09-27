@@ -649,6 +649,30 @@ body.tfx .vt-row b.closed.stamp-in { animation: vtStamp .45s cubic-bezier(.3, 1.
 #scene-talk .timer-cards.vt-n3 .vt-cta-main, #scene-talk .timer-cards.vt-n4 .vt-cta-main { font-size: 22px; }
 #scene-talk .timer-cards.vt-n3 .vt-cta-start, #scene-talk .timer-cards.vt-n4 .vt-cta-start { font-size: 28px; }
 #scene-talk .timer-cards.vt-n3 .vt-cta-line, #scene-talk .timer-cards.vt-n4 .vt-cta-line { font-size: 17px; }
+/* 🧪&vth=1（9/27 Naoto「場名をもっと大きく」）＝①のタイマー見出し：1〜2場 30→34px（時刻の行は30→28pxに詰める＝カードの高さが一杯のため）／3〜4場 24→31px（窮屈な札も30px・入らなければ fitTimerHeads が1pxずつ縮める） */
+html.vth #scene-talk .timer-cards .vt-head { font-size: 34px; padding: 1px 6px; line-height: 1.05; }
+html.vth #scene-talk .timer-cards.vt-n2 .vt-card:not(:only-child) .vt-row { font-size: 28px; } /* 2場だけ（1場も vt-n2 だが高さに余裕がある） */
+/* 🧪&vth=1 ②レース観戦（横並び・高さ168px）：1〜2場 30→34px（時刻の行は30→28px）／3場 21→27px／4場 19→23px。入らないカードは fitTimerHeads が縮める */
+html.vth #scene-race .timer-cards .vt-head { font-size: 34px; padding: 1px 6px; line-height: 1.05; }
+html.vth #scene-race .timer-cards.vt-n2 .vt-row { font-size: 28px; }
+html.vth #scene-race .timer-cards.vt-n3 .vt-head, html.vth #scene-race .timer-cards.vt-n3 .vt-head.vh-tight { font-size: 27px; padding: 3px 4px; }
+html.vth #scene-race .timer-cards.vt-n4 .vt-head, html.vth #scene-race .timer-cards.vt-n4 .vt-head.vh-tight { font-size: 23px; padding: 3px 3px; }
+/* 🧪A（&vth=1）②の3〜4場の中身＝ラベルそのまま・幅に入る上限まで数字を大きく（9/27 Naoto「3場4場の文字が小さい」） */
+.vt-row .vt-lx { font-style: normal; }
+html.vth #scene-race .timer-cards.vt-n3 .vt-rows { padding: 2px 8px; }
+html.vth #scene-race .timer-cards.vt-n3 .vt-row { font-size: 19px; }
+html.vth #scene-race .timer-cards.vt-n3 .vt-row b { font-size: 28px; }
+html.vth #scene-race .timer-cards.vt-n4 .vt-rows { padding: 2px 5px; }
+html.vth #scene-race .timer-cards.vt-n4 .vt-row { font-size: 14px; }
+html.vth #scene-race .timer-cards.vt-n4 .vt-row b { font-size: 22px; }
+/* 🧪B（&vth=1&vtshort=1）＝3〜4場はラベルを「発走／民間／公式」の2文字に＝数字をさらに大きく */
+html.vtshort #scene-race .timer-cards.vt-n3 .vt-lx, html.vtshort #scene-race .timer-cards.vt-n4 .vt-lx { display: none; }
+html.vth.vtshort #scene-race .timer-cards.vt-n3 .vt-row { font-size: 23px; }
+html.vth.vtshort #scene-race .timer-cards.vt-n3 .vt-row b { font-size: 37px; }
+html.vth.vtshort #scene-race .timer-cards.vt-n4 .vt-row { font-size: 18px; }
+html.vth.vtshort #scene-race .timer-cards.vt-n4 .vt-row b { font-size: 27px; }
+html.vth #scene-talk .timer-cards.vt-n3 .vt-head, html.vth #scene-talk .timer-cards.vt-n4 .vt-head { font-size: 31px; gap: 4px; padding: 4px 4px; }
+html.vth #scene-talk .timer-cards.vt-n3 .vt-head.vh-tight, html.vth #scene-talk .timer-cards.vt-n4 .vt-head.vh-tight { font-size: 30px; }
 
 /* 出走表パネル（①トーク右下） */
 .slist-panel { flex: 1; }
