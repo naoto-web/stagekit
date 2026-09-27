@@ -2089,7 +2089,8 @@
      ・発火は演出と同じ条件（checkNewHits の新規＝手動確定のみ）。&slhit=0／&rchit=0 で止める */
   /* 🧪9/28 まずNaotoのテスト用OBSで見る＝テストGAS接続時（?gas=）だけ既定ON・本番OBSは従来のまま（&hit54=1／0 で明示）。
      HIT54 が切るもの＝出走表の光・的中ハンコ・買目チップの光のタイミング（バッジ基準）の3つ */
-  var HIT54 = params.get("hit54") ? params.get("hit54") !== "0" : !!params.get("gas");
+  // ✅9/28 Naoto「テスト用OBSで確認できた・本番反映OK」＝本番も既定ON。&hit54=0 で従来（確定の瞬間から35秒・大小あり・出走表の光/的中ハンコなし）
+  var HIT54 = params.get("hit54") !== "0";
   if (HIT54) document.documentElement.classList.add("hit54"); // CSS側の切替（俺たち目の控えめな光）
   var SLHIT = HIT54 && params.get("slhit") !== "0", RCHIT = HIT54 && params.get("rchit") !== "0";
   var rcHitAt = {};   // 場|R|配信者 → 的中ハンコを押す時刻（新しい的中だけ＝バッジが出る時刻）
