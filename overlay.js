@@ -258,7 +258,7 @@
      経緯＝9/25のボタン式で「1人×1場＝1行」になり、別商品の5Rと9Rも同じ行＝行単位（FB114）だと10Rの発走まで残る→配信者が手で外していた
      （外すとその予想の note 印も外れる＝note的中にならない副作用）。Naoto「配信者の手間を削減・7・8Rで1商品でも残っているレースだけでいい」。
      時刻表に無い番号は残す。テスト（?gas=）だけ既定ON（&nhnum=1／0）。本番は従来の行単位 */
-  var NHNUM = params.get("nhnum") ? params.get("nhnum") !== "0" : !!params.get("gas");
+  var NHNUM = params.get("nhnum") !== "0"; // ✅9/28 本番既定ON
   var NHNUM_SEC = 180;
   function nhLiveNums(venueName, nums) {
     var tv = timetable && (timetable.venues || []).filter(function (v) { return v.name === venueName; })[0];
@@ -975,7 +975,7 @@
      currentKey()＝トークのレース（コンソールの場・レース＝人だけが選ぶ）＝①の出走表・③。
      broadcastKey()＝放送のレース（derive.broadcastRace＝最後に発走したレース→結果の最初の確定＋2分か次の締切で次へ）＝②の下・NEXT枠の基準。
      放送のレースは保存しない＝コンソールと同じ式で毎秒決める（変わったら描き直す＝timer の tick） */
-  var SPLIT = params.get("split") ? params.get("split") !== "0" : !!params.get("gas");
+  var SPLIT = params.get("split") !== "0"; // ✅9/28 本番既定ON（Naoto「本番反映OK」）
   /* §59（9/28 Naoto）①トークに出す場＝その人が予想を入れている場だけ（コンソールの手選び「①トーク（画面に出す場）」は撤去）。
      入力が1つも無い人は買目エリアを空に。&talkauto=0 で従来（state.talkRaces の手選び） */
   var TALKAUTO = params.get("talkauto") !== "0";

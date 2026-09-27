@@ -137,7 +137,7 @@
      トークのレース＝上の場・レース（activeVenue／currentRace）＝人だけが選ぶ＝①の出走表・予想入力（常に同じ）・③。自動追従では動かさない
      放送のレース＝保存せず derive.broadcastRace で毎秒決める（オーバーレイと同じ式）＝②の下・結果入力の既定。
      撤去したもの（9/28）＝§56 放送中の切替確認・§57 ①だけ覚える（talkSl）。SPLIT中は予想入力の場ボタン・②サブ予想・俺たち目の警告も出さない */
-  var SPLIT = params.get("split") ? params.get("split") !== "0" : !!params.get("gas");
+  var SPLIT = params.get("split") !== "0"; // ✅9/28 本番既定ON（Naoto「本番反映OK」）
   /* §59（9/28 Naoto）①トークに出す場はオーバーレイが自動で決める（その人が予想を入れている場だけ）＝「①トーク（画面に出す場）」の行は出さない。
      &talkauto=0 で従来の手選び（overlay も同じ引数で戻す）。state.talkRaces は残す（戻したときに使う） */
   var TALKAUTO = params.get("talkauto") !== "0";
@@ -158,16 +158,16 @@
      ・note勝負レース＝本日設定から出して、予想入力のすぐ下の独立カードへ（Naoto「朝来た時点ではまだ決まってない人多い・配信中に今日はここにしよう！」）。
        発走済みのRと、全レース発走済みの場は出さない（押す必要がない＝縦に短く）
      ・本日設定の「⇄ 席替え」は出さない（上の配信カードに同じボタン。配信者の欄は昼夜のシフト交代でしか触らない＝下のままでよい） */
-  var CON2 = params.get("con2") ? params.get("con2") !== "0" : !!params.get("gas");
+  var CON2 = params.get("con2") !== "0"; // ✅9/28 本番既定ON
   /* 🧪§65（9/28 Naoto「配信者も若くない・目に優しいコンソールに」）白背景（theme-light）＋小さい字の拡大（bigtext）。
      テスト（?gas=）だけ既定ON。&theme=dark／light・&bigtext=0／1 で切替。見た目は console.css 末尾 */
-  var LIGHT = params.get("theme") ? params.get("theme") === "light" : !!params.get("gas");
-  var BIGTEXT = params.get("bigtext") ? params.get("bigtext") !== "0" : !!params.get("gas");
+  var LIGHT = params.get("theme") !== "dark"; // ✅9/28 本番既定ON
+  var BIGTEXT = params.get("bigtext") !== "0"; // ✅9/28 本番既定ON
   if (LIGHT) document.documentElement.classList.add("theme-light");
   if (BIGTEXT) document.documentElement.classList.add("bigtext");
   /* 🧪フォント（9/28 Naoto「BIZ UDPゴシックいいね！これにして」）＝テスト（?gas=）は BIZ UDPゴシックが既定。
      &font=yugo で従来（Yu Gothic UI）・&font=meiryo でメイリオ。本番（gas無し）は従来のまま */
-  var FONT = params.get("font") || (params.get("gas") ? "bizud" : "");
+  var FONT = params.get("font") || "bizud"; // ✅9/28 本番既定＝BIZ UDPゴシック
   if (FONT === "meiryo" || FONT === "bizud") document.documentElement.classList.add("font-" + FONT);
   /* 🧪選択中の色の見比べ（9/28 Naoto「紫以外の案を」）＝&sel=navy／black／brown／teal。無指定は紫（白背景のとき） */
   var SEL = params.get("sel");
@@ -1715,7 +1715,7 @@
      （あふれた場は空きが出たら入る＝今の運用「ナイターは昼の場が終わってから足す」）。判定は derive.autoVenues。
      人が外した場は state.venueOff = {date, names} に覚えて自動では戻さない（その日だけ・足し直せば解除）。
      テスト（?gas=）だけ既定ON（&autovenue=1／0）。書込キーのあるコンソールが保存する（複数あっても同じ式＝同じ結果） */
-  var AUTOVENUE = params.get("autovenue") ? params.get("autovenue") !== "0" : !!params.get("gas");
+  var AUTOVENUE = params.get("autovenue") !== "0"; // ✅9/28 本番既定ON
   if (AUTOVENUE) (function () { // §72 本日の場の注意書き（9/28 Naoto「自動で追加・削除する設定になってる旨を記載」）
     var vp = document.getElementById("venue-pick");
     if (!vp) return;
