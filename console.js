@@ -133,6 +133,56 @@
     return true;
   }
 
+  /* 放送中のレースを切り替える前の確認（9/28 Naoto・要件定義§56）。
+     事故＝Aのレース映像を流している最中に「Bの予想を書こう」と上の場・レースでBを押し、②の下の場だけBに変わった（映像はAのまま）。
+     メインの場のレースが「発走〜発走＋3分」（タイマーの「レース中」と同じ3分）の間に、上の場・レースで別のレースを押したら
+     すぐ切り替えずに確認を出す：①入力先だけ変える（放送はそのまま・おすすめ）②放送も切り替える ③やめる。
+     それ以外の時間は今まで通り1回で切り替わる。⚠️「入力先だけ」は予想入力の入力先（editVenue/editRace＝コンソール内だけ）を固定する */
+  var LIVE_GUARD_SEC = 180;
+  // 🧪まずテスト用コンソール（?gas=）だけ既定ON・本番ドックは従来どおり（&liveguard=1／0 で明示）
+  var LIVE_GUARD = params.get("liveguard") ? params.get("liveguard") !== "0" : !!params.get("gas");
+  function liveMainRace() {
+    var name = activeVenueName();
+    var no = name ? state.currentRace[name] : null;
+    if (!name || !no) return null;
+    var r = venueRaces(name).filter(function (x) { return x.no === +no; })[0];
+    var s = r ? timeToSec(r.start) : null;
+    var now = nowSec();
+    return s !== null && now >= s && now < s + LIVE_GUARD_SEC ? { venue: name, no: +no } : null;
+  }
+  function guardMainSwitch(toVenue, toNo, apply) {
+    if (!LIVE_GUARD) return apply();
+    var live = liveMainRace();
+    var target = toNo || state.currentRace[toVenue];
+    if (!live || (live.venue === toVenue && live.no === +target)) return apply();
+    var old = $("live-guard");
+    if (old) old.parentNode.removeChild(old);
+    var toLabel = toVenue + (target ? " " + target + "R" : "");
+    var box = document.createElement("div");
+    box.id = "live-guard";
+    box.innerHTML = '<div class="lg-card">' +
+      '<div class="lg-msg">いま <b>' + esc(live.venue + " " + live.no + "R") + "</b> を放送中です（レース中）。<br>" +
+      "放送の場を <b>" + esc(toLabel) + "</b> に切り替えますか？</div>" +
+      '<button class="btn primary lg-input">' + esc(toLabel) + " の予想を書く（放送はそのまま）</button>" +
+      '<button class="btn lg-switch">放送も ' + esc(toLabel) + " に切り替える</button>" +
+      '<button class="btn small lg-cancel">やめる</button></div>';
+    document.body.appendChild(box);
+    var close = function () { if (box.parentNode) box.parentNode.removeChild(box); };
+    box.querySelector(".lg-input").onclick = function () {
+      close();
+      editVenue = toVenue;
+      editRace = toNo || null;
+      var card = $("pred-forms").closest("details");
+      if (card) card.open = true;
+      renderPredTarget();
+      renderPredForms();
+      $("pred-forms").scrollIntoView({ behavior: "smooth" });
+    };
+    box.querySelector(".lg-switch").onclick = function () { close(); apply(); };
+    box.querySelector(".lg-cancel").onclick = close;
+    box.onclick = function (e) { if (e.target === box) close(); }; // 外側を押したら「やめる」
+  }
+
   function nextRaceOf(name) {
     var now = nowSec();
     var rs = venueRaces(name).filter(function (r) {
@@ -268,10 +318,13 @@
     }).join("");
     el.querySelectorAll(".vbtn").forEach(function (b) {
       b.addEventListener("click", function () {
-        state.activeVenue = +b.getAttribute("data-i");
-        manualNav(true); // 手動の場切替＝結果フォームの固定解除＋自動追従に手動優先を通知（FB96）
-        save();
-        renderAll();
+        var i = +b.getAttribute("data-i");
+        guardMainSwitch(state.venues[i].name, null, function () { // §56 レース中は確認を挟む
+          state.activeVenue = i;
+          manualNav(true); // 手動の場切替＝結果フォームの固定解除＋自動追従に手動優先を通知（FB96）
+          save();
+          renderAll();
+        });
       });
     });
 
@@ -396,10 +449,13 @@
     }).join("");
     el.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
-        state.currentRace[name] = +b.getAttribute("data-no");
-        manualNav(true); // 手動のレース切替＝結果フォームの固定解除＋手動優先を通知（FB96）
-        save();
-        renderAll();
+        var no = +b.getAttribute("data-no");
+        guardMainSwitch(name, no, function () { // §56 レース中は確認を挟む
+          state.currentRace[name] = no;
+          manualNav(true); // 手動のレース切替＝結果フォームの固定解除＋手動優先を通知（FB96）
+          save();
+          renderAll();
+        });
       });
     });
   }
