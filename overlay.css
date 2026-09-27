@@ -230,6 +230,8 @@ body.wm-on .gbar::before { display: block; }
 .venue-tabs.note-head.nh-stack .nh-groups { display: grid; grid-auto-flow: column;
   grid-template-rows: repeat(2, auto); gap: 3px 12px; justify-items: stretch; align-self: center; }
 .venue-tabs.note-head.nh-stack .nh-group { padding-top: 1px; padding-bottom: 1px; }
+/* 縦積みのときは名前の札の幅をいちばん広い札にそろえる（9/27 Naoto「カズ／ムネオで場名の頭がずれる」）＝幅はJSが実寸で入れる。名前は中央寄せ */
+.venue-tabs.note-head.nh-stack .nh-name { text-align: center; }
 
 /* スポンサーロゴ（CTC紺地バナー・ガイドライン準拠パターンをそのまま縮小表示）
    ヘッダーが紺になったため白額装で分離（ロゴ自体は無加工）。
@@ -710,6 +712,11 @@ body[data-theme="w"] .slist.sl2 { --sl2-ink: #000; }
 .sl2-th span { text-align: center; }
 .sl2-row { height: var(--sl2-rh); border-bottom: 1px solid rgba(0,0,0,.08); }
 .sl2-row:last-child { border-bottom: none; }
+/* 🧪&sl3=1（9/27 Naoto「名前をもっと大きく」）＝勝率の列を消した分を名前へ。字の比率・上限を上げる */
+.slist.sl3 .sl2-th, .slist.sl3 .sl2-row {
+  grid-template-columns: min(calc(var(--sl2-rh) * .56), 32px) minmax(0, 1fr) 22px 60px 27px 27px 27px; }
+.slist.sl3 .sl2-name { font-size: min(calc(var(--sl2-rh) * .52), 30px); }
+.slist.sl3 .sl2-sub { font-size: min(calc(var(--sl2-rh) * .30), 16px); }
 /* 🧪ライン順（&slline=1）＝ラインの切れ目は濃い横線（空席ワイプと同じ考え方） */
 .sl2-row.sl2-lg { border-top: 3px solid var(--sl2-ink); }
 .sl2-row .car { width: calc(var(--sl2-rh) * .56); height: calc(var(--sl2-rh) * .56);
@@ -917,8 +924,10 @@ body.debug #scene-tenkai .slist:empty::after {
 }
 /* 🔥note予想はひと塊で扱う＝語中改行禁止・列幅に入らない時は塊ごと2行目へ（8/7 FB63） */
 .race-col-head .note-tag { white-space: nowrap; }
-/* NEXT枠の🔥（subPolish が「🔥note予想」→「🔥」にする）はタイマーと同じゆらゆら（9/26 Naoto） */
-.sub-line.subv-tight .race-col-head .note-tag { display: inline-block; animation: vtFlicker 1.2s ease-in-out infinite; }
+/* NEXT枠の🔥（subPolish が「🔥note予想」→「🔥」にする）はタイマーと同じゆらゆら（9/26 Naoto）＝揺らすのは下の .nt-fire */
+.sub-line.subv-tight .race-col-head .note-tag { display: inline-block; }
+/* 🔥はどこでもゆらゆら（9/27 Naoto「①の買目エリアの炎も」）＝🔥だけを .nt-fire で包む（「note予想」の字は揺らさない） */
+.race-col-head .note-tag .nt-fire { display: inline-block; animation: vtFlicker 1.2s ease-in-out infinite; }
 /* ①1場の札は1行（9/26 Naoto「1場は🔥note予想まで1行・2場は2行」）。2〜3場は raceColHead の split で🔥note予想の前に <br>
    ＝明示の改行なので灰色の枠は長い方の行の幅に縮む（自然な折り返しだと枠が区画の幅いっぱいに広がっていた） */
 .talk-band .buy-line > .race-col-head { white-space: nowrap; }

@@ -471,6 +471,13 @@
           '<span class="nh-items' + (g.items.length === 4 ? " nh-r2" : "") + '"' + (nhv ? ' style="--nhv:' + nhv + 'em"' : "") + ">" +
           items + "</span></span>";
       }).join("") + "</span>";
+    // 名前の札の幅をいちばん広い札にそろえる（9/27 Naoto「カズとムネオの文字数の違いで場名の頭がずれる」）＝縦積みのときだけ。
+    // 文字数em の見積もりでは合わなかった（書体の字幅が1emより狭い）＝描いた後に実寸で測る
+    if (el.classList.contains("nh-stack")) {
+      var nms = el.querySelectorAll(".nh-name"), mw = 0;
+      nms.forEach(function (n) { mw = Math.max(mw, n.getBoundingClientRect().width); });
+      if (mw > 0) nms.forEach(function (n) { n.style.boxSizing = "border-box"; n.style.minWidth = Math.ceil(mw) + "px"; });
+    }
   }
 
   function tickClock() {
@@ -1435,7 +1442,7 @@
   }
   /** 🧪&subv=：1行に詰める（9/26 Naoto）＝note予想は札の右に🔥だけ／合計・投資は「計5点 投¥5,000」の1行 */
   function subPolish(scope) {
-    scope.querySelectorAll(".note-tag").forEach(function (e) { e.textContent = "🔥"; });
+    scope.querySelectorAll(".note-tag").forEach(function (e) { e.innerHTML = '<span class="nt-fire">🔥</span>'; });
     // グレードは「GⅢ」→「Ⅲ」（9/26 Naoto「幅が狭くて字が小さくなる」）。GPはそのまま
     scope.querySelectorAll(".grade-badge").forEach(function (e) { e.textContent = e.textContent.replace(/^G(?=[ⅠⅡⅢ])/, ""); });
     var pts = scope.querySelector(".bm-pts"), inv = scope.querySelector(".bm-inv");
@@ -2010,7 +2017,7 @@
     var note = p && p.entry.isNote;
     return '<div class="race-col-head">' + esc(keyLabel(k)) +
       (k ? gradeBadge(String(k).split("|")[0]) : "") +
-      (note ? (split ? '<br><span class="note-tag">🔥note予想</span>' : ' <span class="note-tag">🔥note予想</span>') : "") +
+      (note ? (split ? '<br>' : " ") + '<span class="note-tag"><span class="nt-fire">🔥</span>note予想</span>' : "") + // 🔥だけゆらゆら（9/27 Naoto・①も）
       "</div>";
   }
 
@@ -2819,6 +2826,9 @@
   var SL2 = params.get("sl2") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&sl2=0 で旧1段版
   var SL2_LINE = params.get("slline") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&slline=0 で車番順
   var SL2_COLS = [{ i: 4, h: "B" }, { i: 5, h: "H" }, { i: 6, h: "S" }, { i: 7, h: "勝率" }];
+  // 🧪&sl3=1（9/27 Naoto「名前をもっと大きく」）＝勝率の列を消して名前の欄を広げる／補充・追加は名前全体を（ ）で囲む
+  var SL3 = params.get("sl3") === "1";
+  if (SL3) SL2_COLS = SL2_COLS.slice(0, 3);
   function rankOf(vals) { // 大きい順・重複なし・0と空は数えない
     var vs = [];
     vals.forEach(function (v) { v = parseFloat(v); if (v > 0 && vs.indexOf(v) < 0) vs.push(v); });
@@ -2851,13 +2861,14 @@
           topCls(v, colRank[j]) + '">' + esc(v === "" ? "-" : v) + "</span>";
       }).join("");
       return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + '"><i class="car c' + p.no + '">' + p.no + "</i>" +
-        '<span class="sl2-nm"><span class="sl2-name">' + esc(p.name) +
-        (c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
+        '<span class="sl2-nm"><span class="sl2-name">' + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
+        (!SL3 && c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
         '<span class="sl2-sub">' + esc(sub) + "</span></span>" +
         '<span class="sl2-ky">' + esc(c.k || p.kyaku || "") + "</span>" +
         '<span class="sl2-sc' + topCls(sc, scRank) + '">' + esc(sc || "-") + "</span>" + nums + "</li>";
     }).join("");
     el.classList.add("sl2");
+    el.classList.toggle("sl3", SL3);
   }
   /** 行の高さ＝（リストの高さ − 見出し）÷ 車数（上限 SL2_ROW）。字の大きさは行の高さに比例（CSS --sl2-rh） */
   var SL2_ROW = 66;
