@@ -473,10 +473,17 @@ var Verbs = (function () {
     tsukinuke: { label: '突き抜け', fn: tsukinuke },
     oshikiri: { label: '押切', fn: oshikiri },
     /* ズブズブ＝ラインで決着（先頭・番手・3番手がそのままの順でゴール）。最終ストレートでだけ使える */
+    /* ズブズブ（9/27 Naoto）＝3車ラインの先頭が、番手にも3番手にも抜かれる＝1着 番手・2着 3番手・3着 先頭。
+       ゴールでの内外＝先頭が内・番手が真ん中・3番手が外（最初からそのレーンを走る）。3人いないラインは使えない。
+       旧＝選んだラインがそのままの順（先頭→番手→3番手）で1-2-3着＝それは押切と同じ形だった */
     zubu: { label: 'ズブズブ', fn: function (sel) {
       if (!atStraight()) return { error: 'ズブズブは最終周回（最終ホーム以降）で使ってください' };
       var L = lineOf(sel.nos[0]);
-      return { finish: fillTop(L.slice(0, 3)), hint: 'ズブズブ：ライン ' + L.join('') + ' で決着' };
+      if (L.length < 3) return { error: 'ズブズブは3車ラインで使います（ライン ' + L.join('') + ' は' + L.length + '人）' };
+      var lanes = {};
+      lanes[L[0]] = -1; lanes[L[1]] = 0; lanes[L[2]] = 1;
+      return { finish: [L[1], L[2], L[0]], lanes: lanes,
+               hint: 'ズブズブ：' + label(L[0]) + ' が ' + label(L[1]) + '・' + label(L[2]) + ' に抜かれて決着' };
     } },
     up: { label: '順番を前へ', fn: function (s) { return reorder(s, -1); } },
     down: { label: '順番を後ろへ', fn: function (s) { return reorder(s, 1); } }
