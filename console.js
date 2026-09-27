@@ -159,6 +159,14 @@
        発走済みのRと、全レース発走済みの場は出さない（押す必要がない＝縦に短く）
      ・本日設定の「⇄ 席替え」は出さない（上の配信カードに同じボタン。配信者の欄は昼夜のシフト交代でしか触らない＝下のままでよい） */
   var CON2 = params.get("con2") ? params.get("con2") !== "0" : !!params.get("gas");
+  /* 🧪§65（9/28 Naoto「配信者も若くない・目に優しいコンソールに」）白背景（theme-light）＋小さい字の拡大（bigtext）。
+     テスト（?gas=）だけ既定ON。&theme=dark／light・&bigtext=0／1 で切替。見た目は console.css 末尾 */
+  var LIGHT = params.get("theme") ? params.get("theme") === "light" : !!params.get("gas");
+  var BIGTEXT = params.get("bigtext") ? params.get("bigtext") !== "0" : !!params.get("gas");
+  if (LIGHT) document.documentElement.classList.add("theme-light");
+  if (BIGTEXT) document.documentElement.classList.add("bigtext");
+  /** メンバーカラーを「字」に使うとき（名前など）。白背景だと黄・緑が読めない＝白背景のときだけ黒を混ぜて暗くする（塗りはそのまま） */
+  function mcText(mc) { return mc && LIGHT ? "color-mix(in srgb, " + mc + " 62%, #000)" : mc; }
   if (CON2) (function () {
     var np = document.getElementById("note-pick");
     var predCard = document.getElementById("pred-forms") && document.getElementById("pred-forms").closest("details");
@@ -274,7 +282,7 @@
   function personRowHtml(rc, buttonsHtml) {
     var mc = window.Derive.colorOf(rc.color);
     return '<div class="pr-row">' +
-      '<span class="pr-name"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + "</span>" +
+      '<span class="pr-name"' + (mc ? ' style="color:' + mcText(mc) + '"' : "") + ">" + esc(rc.name) + "</span>" +
       '<div class="pr-group"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" + buttonsHtml + "</div>" +
       "</div>";
   }
@@ -315,7 +323,7 @@
       var isToday = state.date === todayStr();
       dateEl.textContent = dm + "/" + dd + "（" + dows[new Date(dy, dm - 1, dd).getDay()] + "）のデータ" +
         (isToday ? "" : "　⚠今日の日付ではありません");
-      dateEl.style.color = isToday ? "" : "#ffb3b3";
+      dateEl.style.color = isToday ? "" : (LIGHT ? "#c62828" : "#ffb3b3");
     }
     var el = $("venue-row");
     if (!state.venues.length) {
@@ -714,7 +722,7 @@
       // note予想チェック＝下書き＞保存値＞（新規のみ）勝負レース照合の既定ON（8/10 FB117）
       var vNote = d ? d.note : (saved ? !!p.isNote : isNoteRaceDefault(key, rc));
       return '<div class="pred-form' + (mc ? " mc" : "") + '" data-racer="' + rc.id + '"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" +
-        '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag(vNote) +
+        '<h3><span class="' + (idx === 1 ? "alt" : "") + '"' + (mc ? ' style="color:' + mcText(mc) + '"' : "") + ">" + esc(rc.name) + " の予想</span>" + raceTag(vNote) +
         /* 9/25 Naoto「チェックボックスはやっぱりいらない（本日設定で勝負レースを決めている）。🔥の右に『note勝負レース』の文字を」
            ＝チェックは隠すだけ（hidden）。⚠️消さない＝保存（isNote）・下書き・未保存判定・自動更新が .pf-note を読む。
            値は従来どおり 下書き＞保存値＞勝負レースの既定ON で入り、勝負レースのチップ操作が保存値と下書きを直接そろえる（cdc4549） */
@@ -1278,7 +1286,7 @@
          名前はメンバーカラーの字（9/25）＝予想入力の見出しと同じ色 */
       var oreHtml = "";
       var mcN = window.Derive.colorOf(rc.color);
-      var nm = '<b class="sp-name"' + (mcN ? ' style="color:' + mcN + '"' : "") + ">" + esc(rc.name) + "</b>";
+      var nm = '<b class="sp-name"' + (mcN ? ' style="color:' + mcText(mcN) + '"' : "") + ">" + esc(rc.name) + "</b>";
       if (!rp.points) return "<div>" + nm + "：予想なし</div>";
       if (!s.hits.length) return "<div>" + nm + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）</div>";
       seedUnitsFromSaved(key, rc.id, s.hits);
@@ -1567,7 +1575,7 @@
       var mc = window.Derive.colorOf(rc.color);
       var m = parsed.model[rc.name] || {};
       return '<div class="np-person">' +
-        '<div class="np-name"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + "</div>" +
+        '<div class="np-name"' + (mc ? ' style="color:' + mcText(mc) + '"' : "") + ">" + esc(rc.name) + "</div>" +
         state.venues.map(function (v) {
           var set = m[v.name] || {};
           var races = venueRaces(v.name); // 発走済みのRも残して薄く（9/28 Naoto「終わったレースも今まで通り残していい」）

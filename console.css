@@ -465,3 +465,133 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 #res-pick-row { margin: 6px 2px 8px; font-size: 13px; font-weight: 700; color: #c9cdd6; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 #res-pick-row select { background: #1c1e24; color: #e8e8ec; border: 1px solid #4a4f59; border-radius: 6px; padding: 4px 6px; font-size: 13px; font-weight: 700; }
 #res-pick-row .rp-pin { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #3d3320; border: 1px solid #d9a441; color: #f5d99a; }
+/* ══════════ 🧪§65 目に優しい白背景（html.theme-light）＋小さい字の拡大（html.bigtext）（9/28 Naoto「配信者も若くない・目に優しいコンソールに」） ══════════
+   テスト（?gas=）だけ既定ON。&theme=dark で黒に・&bigtext=0 で元の字の大きさに戻す（console.js が html にクラスを付ける）。
+   白背景＝真っ白は疲れるので少し温かいオフホワイト／字は真っ黒でない濃いグレー。薄い灰色の字は年配の目に読みにくい＝補足の字も濃いめ。
+   選択中の塗り＝紫（仮・Naotoが白背景の上で決め直す）。金は☀️🌙⭐が見えにくく、ムネオの黄色と似ている（9/28 Naoto）。
+   メンバーカラーの「字」は白地だと黄・緑が読めない → console.js の mcText() が白背景のときだけ暗くする（塗りはそのまま） */
+html.theme-light {
+  --lt-page: #e9e7e1; --lt-card: #f7f6f2; --lt-sunk: #fdfcfa; --lt-line: #d3d0c7; --lt-line2: #b8b5ab;
+  --lt-text: #23252a; --lt-sub: #555a63; --lt-btn: #e4e2db; --lt-btn-h: #d9d6ce;
+  --lt-sel: #5b3fd6; --lt-sel-text: #fff; --lt-gold-text: #8a5d00; --lt-green: #16804a; --lt-red: #c62828;
+}
+html.theme-light body { background: var(--lt-page); color: var(--lt-text); }
+html.theme-light .statusbar { background: #dfddd6; border-bottom-color: var(--lt-line); }
+html.theme-light .sync-text { color: var(--lt-sub); }
+html.theme-light .next-race { color: var(--lt-gold-text); }
+html.theme-light .warn { background: #fbefd5; border-color: #d9a441; color: #5e4200; }
+html.theme-light .warn.key-warn { background: #fbe1e1; border-color: #e5484d; color: #8a1f1f; }
+html.theme-light #stale-warn:hover, html.theme-light #refund-warn:hover { background: #f6e2b8; }
+html.theme-light .ore-guard { background: #fbefd5; color: #5e4200; }
+html.theme-light .ore-guard b { color: #3d2b00; }
+html.theme-light .card { background: var(--lt-card); border-color: var(--lt-line); }
+html.theme-light .card h2 { color: var(--lt-text); }
+html.theme-light .h-sub, html.theme-light .lbl, html.theme-light .hint, html.theme-light details.card summary::before,
+html.theme-light .exp summary, html.theme-light .pr-name, html.theme-light .seat-lbl { color: var(--lt-sub); }
+html.theme-light .camp-quick-num { color: var(--lt-text); }
+html.theme-light .switcher { border-color: var(--lt-line2); background: var(--lt-btn); }
+html.theme-light .switcher.empty { color: var(--lt-sub); }
+html.theme-light .inp { color: var(--lt-text); background: var(--lt-sunk); border-color: var(--lt-line2); }
+html.theme-light .inp:focus { border-color: var(--lt-sel); box-shadow: 0 0 0 1px var(--lt-sel); }
+html.theme-light .btn { background: var(--lt-btn); border-color: var(--lt-line2); color: var(--lt-text); }
+html.theme-light .btn:hover { background: var(--lt-btn-h); }
+html.theme-light .btn.primary { background: #d9a441; border-color: #c28f2e; color: #1a1a1a; }
+html.theme-light .btn.primary:hover { background: #e5b455; }
+html.theme-light .btn.seat-swap { background: #29c7d6; border-color: #1fb3c1; color: #04181b; }
+html.theme-light .btn.seat-swap.done { background: #37d67a; border-color: #37d67a; color: #06240f; }
+html.theme-light .btn.danger { background: #fbe1e1; border-color: #e5484d; color: #8a1f1f; }
+html.theme-light .btn.on { background: #fbefd5; border-color: #d9a441; color: #5e4200; }
+html.theme-light .dh-badge { color: var(--lt-gold-text); }
+html.theme-light .vbtn, html.theme-light .rc, html.theme-light .vp, html.theme-light .np-rc {
+  background: var(--lt-sunk); border-color: var(--lt-line2); color: var(--lt-text);
+}
+html.theme-light .vbtn.active, html.theme-light .rc.cur,
+html.theme-light #pred-venue-row .vbtn.live { background: var(--lt-sel); border-color: var(--lt-sel); color: var(--lt-sel-text); }
+html.theme-light #pred-venue-row .vbtn.unpin { background: #fbefd5; border-color: #d9a441; color: #5e4200; }
+html.theme-light .rc.next { border-color: #e5484d; box-shadow: 0 0 0 1px #e5484d inset; }
+html.theme-light .rc.done, html.theme-light .np-rc.done { opacity: .4; }
+html.theme-light .vp.sel { background: #29c7d6; border-color: #1fb3c1; color: #04181b; }
+html.theme-light .seat-btns .vp { color: color-mix(in srgb, var(--mc, #555a63) 62%, #000); }
+html.theme-light .seat-btns .vp.sel { color: #111; }
+html.theme-light .seat-btns .vp.sp-none { color: var(--lt-sub); }
+html.theme-light .seat-btns .vp.sp-none.sel { background: #6b7079; border-color: #6b7079; color: #fff; }
+html.theme-light .pred-form { background: var(--lt-sunk); border-color: var(--lt-line); }
+html.theme-light .parse-info { color: var(--lt-sub); }
+html.theme-light .parse-info .pl-ok b, html.theme-light #pred-forms .pf-ore-odds { color: var(--lt-gold-text); }
+html.theme-light .parse-info .pl-memo { color: #7a7f88; }
+html.theme-light .parse-total { color: var(--lt-text); }
+html.theme-light .pred-narabi { background: var(--lt-sunk); border-color: var(--lt-line); }
+html.theme-light .pred-narabi .pn-lbl { color: var(--lt-sub); }
+html.theme-light .pred-narabi .pn-none { color: #7a7f88; }
+html.theme-light .pred-narabi .pn-manual { color: var(--lt-gold-text); border-color: var(--lt-gold-text); }
+html.theme-light .pn-car.c1 { border-color: #9a9ea6; }
+html.theme-light .pf-race { color: var(--lt-text); background: #fff; border-color: #9a9ea6; }
+html.theme-light .pf-note-tag { color: var(--lt-text); }
+html.theme-light #pred-forms .inp.pf-missing, html.theme-light #pred-forms .inp.pf-missing:focus { background: #fdecec; }
+html.theme-light #pred-forms .inp.pf-missing::placeholder { color: var(--lt-red); }
+html.theme-light #pred-forms .lbl.pf-missing, html.theme-light .unit-warn { color: var(--lt-red); }
+html.theme-light .draft-warn { color: #7a5500; }
+html.theme-light .payout-row .pr-label, html.theme-light .payout-row .pr-unit, html.theme-light .payout-row .pr-src { color: var(--lt-sub); }
+html.theme-light .payout-row .pr-odds { color: var(--lt-gold-text); }
+html.theme-light .settle-preview { background: var(--lt-sunk); border-color: var(--lt-line2); }
+html.theme-light .settle-preview .hit, html.theme-light .settle-preview .sp-yen, html.theme-light .settle-preview .sp-total { color: var(--lt-green); }
+html.theme-light .settle-preview .manche, html.theme-light .hit-admin li.manche .ha-mult { color: var(--lt-red); }
+html.theme-light .settle-preview .miss, html.theme-light .hit-admin .ha-del { color: #7a7f88; }
+html.theme-light .hit-admin li { border-bottom-color: var(--lt-line); }
+html.theme-light .hit-admin .ha-name { color: var(--lt-gold-text); }
+html.theme-light .np-person { background: var(--lt-sunk); border-color: var(--lt-line); }
+html.theme-light .np-name, html.theme-light .np-vname { color: var(--lt-text); }
+html.theme-light .np-rc.on { color: #111; }
+html.theme-light .np-kline { border-color: var(--lt-line2); color: var(--lt-text); }
+html.theme-light .np-kdel { color: var(--lt-red); }
+html.theme-light .exp.btn-sum > summary { color: var(--lt-text); background: var(--lt-btn); border-color: var(--lt-line2); }
+html.theme-light .exp.btn-sum[open] > summary { background: var(--lt-btn-h); border-color: #8f939b; }
+html.theme-light #res-pick-row { color: var(--lt-text); }
+html.theme-light #res-pick-row select { background: var(--lt-sunk); color: var(--lt-text); border-color: var(--lt-line2); }
+html.theme-light #res-pick-row .rp-pin { background: #fbefd5; border-color: #d9a441; color: #5e4200; }
+
+/* 小さい字の拡大（html.bigtext）。いちばん小さかった字（Rボタンの発走時刻9px・補足11〜12px）を中心に、本文も一回り上げる。
+   ⚠️ワイド画面（≥960px）の上書きより強い指定（html.bigtext …）＝値はワイド側以上にしてある */
+html.bigtext body { font-size: 15px; }
+html.bigtext .sync-text { font-size: 14px; }
+html.bigtext .next-race { font-size: 15px; }
+html.bigtext .warn { font-size: 15px; }
+html.bigtext .card h2 { font-size: 18px; }
+html.bigtext .h-sub, html.bigtext .lbl, html.bigtext .hint, html.bigtext .exp summary { font-size: 14px; }
+html.bigtext .camp-quick-num { font-size: 15px; }
+html.bigtext .switcher .sw-lbl, html.bigtext .btn.seat-swap .ss-sub { font-size: 13px; }
+html.bigtext .inp { font-size: 16px; }
+html.bigtext .btn { font-size: 16px; }
+html.bigtext .btn.small { font-size: 14px; }
+html.bigtext .btn.primary { font-size: 17px; }
+html.bigtext .rc { font-size: 16px; width: 54px; padding: 8px 0; }
+html.bigtext .rc small { font-size: 12px; }
+html.bigtext .pred-form h3 { font-size: 17px; }
+html.bigtext .pf-race { font-size: 16px; }
+html.bigtext .parse-info { font-size: 14px; }
+html.bigtext .pf-body .pf-info { font-size: 16px; }
+html.bigtext .parse-total { font-size: 15px; }
+html.bigtext .pred-narabi .pn-lbl { font-size: 15px; }
+html.bigtext .pred-narabi .pn-manual { font-size: 13px; }
+html.bigtext .unit-warn, html.bigtext .draft-warn { font-size: 14px; }
+html.bigtext .pr-name, html.bigtext .seat-lbl { font-size: 15px; }
+html.bigtext .payout-row .pr-label, html.bigtext .payout-row .pr-unit { font-size: 15px; }
+html.bigtext .payout-row .pr-odds { font-size: 16px; }
+html.bigtext .payout-row .pr-src { font-size: 13px; }
+html.bigtext .settle-preview { font-size: 15px; }
+html.bigtext .hit-admin li, html.bigtext .hit-admin .ha-del { font-size: 15px; }
+html.bigtext .vp { font-size: 15px; }
+html.bigtext .seat-btns .vp { font-size: 16px; }
+html.bigtext .np-name { font-size: 17px; }
+html.bigtext .np-vname { font-size: 15px; }
+html.bigtext .np-rc { font-size: 14px; width: 48px; padding: 6px 0; }
+html.bigtext .np-keep, html.bigtext .np-kdel { font-size: 14px; }
+html.bigtext .exp.btn-sum > summary { font-size: 14px; }
+html.bigtext .btn.pf-invstep[data-tip]:hover::after { font-size: 13px; }
+html.bigtext #res-pick-row, html.bigtext #res-pick-row select { font-size: 15px; }
+html.bigtext #res-pick-row .rp-pin { font-size: 13px; }html.theme-light .pred-form h3 { color: #0b7f8a; }
+html.theme-light .pred-form h3 .alt { color: #c62828; }
+/* §65 追補：12Rまで1段に収める（740px幅のドックで12個＝1個あたり約52px）／白地で🌙☀️⭐が薄い＝薄い影で輪郭を出す */
+html.bigtext .rc { width: 50px; }
+html.bigtext .np-rc { width: 43px; }
+html.theme-light .kb { filter: drop-shadow(0 0 1px rgba(0, 0, 0, .55)); }

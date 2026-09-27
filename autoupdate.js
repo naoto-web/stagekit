@@ -28,7 +28,7 @@
 
 (function () {
   "use strict";
-  var AU_BUILD = "20260928-051907";
+  var AU_BUILD = "20260928-053525";
 
   var params;
   try { params = new URLSearchParams(location.search); } catch (e) { return; }
