@@ -742,3 +742,18 @@ html.con2 .pf-race .pf-note-tag { color: #fff; }
 html.con2 .pred-form h3 > span:first-child, html.con2 .np-name, html.con2 .pf-body .pf-text { -webkit-text-stroke: 0; }
 html.con2 .pred-form h3 > span:first-child, html.con2 .np-name { font-weight: 700; }
 html.con2 .np-rc { width: 36px; padding: 8px 0 6px; }html.con2 .pred-form h3 > span:first-child, html.con2 .np-name { text-shadow: .6px 0 0 currentColor; } /* §70 擬似太字＝同じ色の字を横に0.6pxずらして重ねる（輪郭線と違ってにじまない） */
+
+/* §71（9/28 Naoto）本日設定・note勝負の整え（白背景）
+   ・配信者ボタン：選ばれた人＝メンバーカラーの塗り（🐞§65/§67の html.theme-light .vp.sel＝水色 が .seat-btns の指定を上書きしていた）
+   ・本日の場：選ばれた場＝黒（選択中の色）
+   ・note勝負：場名の欄を固定幅（一番長い「いわき平⭐」が入る幅）＝1Rの位置が全行でそろう。場名は行の縦の真ん中 */
+html.theme-light .seat-btns .vp.sel {
+  background: var(--mc, #6b7079); border-color: var(--mc, #6b7079);
+  border-bottom-color: color-mix(in srgb, var(--mc, #6b7079) 65%, #000); color: #111;
+}
+html.theme-light .seat-btns .vp.sp-none.sel { background: #6b7079; border-color: #6b7079; border-bottom-color: #43474e; color: #fff; }
+html.theme-light .venue-pick .vp.sel {
+  background: var(--lt-sel); border-color: var(--lt-sel); border-bottom-color: var(--lt-sel-b); color: #fff;
+}
+html.con2 .np-venue { align-items: center; }
+html.con2 .np-vname { flex: 0 0 6.2em; padding-top: 0; overflow: hidden; }
