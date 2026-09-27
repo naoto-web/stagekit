@@ -758,7 +758,7 @@
             '<div class="vt-row"><span>公式<i class="vt-lx">締切</i></span><b data-off="' + c.race.startSec + '"></b></div>' +
             "</div>";
         }
-        return '<li class="vt-card" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
+        return '<li class="vt-card' + (!c.race ? " vt-done-card" : "") + '" data-venue="' + esc(c.venue) + '">' + head + body + "</li>";
       }).join("");
       // ③レース展開も②と同じタイマー（8/12 Step3）＝右レールは②と同一構造
       ["timer-talk", "timer-race", "timer-tk"].forEach(function (id) {
@@ -785,6 +785,7 @@
       (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + "</div>";
     var body, cls = "vt-card";
     if (mode === "done") {
+      cls += " vt-done-card"; // 本日終了のカード（9/27・CSSは :has を使わずこのクラスで）
       body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
     } else if (mode === "flash") {
       cls += " vt-flash-card";
@@ -838,7 +839,7 @@
         while (h.scrollWidth > h.clientWidth + 1 && fs > 13 && g++ < 12) { fs -= 1; h.style.fontSize = fs + "px"; }
       });
       // 「レース中」とレース種別（🧪&vrun=1で拡大）＝カード幅に入るまで1pxずつ縮める（長い種別「Ａ級チャレンジ予選」等）
-      box.querySelectorAll(".vt-racing-main, .vt-racing-sub").forEach(function (t) {
+      box.querySelectorAll(".vt-racing-main, .vt-racing-sub, .vt-done").forEach(function (t) {
         t.style.fontSize = "";
         var room = t.parentElement.clientWidth - 8, fs = parseFloat(getComputedStyle(t).fontSize), g = 0;
         while (t.scrollWidth > room && fs > 10 && g++ < 20) { fs -= 1; t.style.fontSize = fs + "px"; }
@@ -2840,6 +2841,8 @@
   if (params.get("vtshort") !== "0") document.documentElement.classList.add("vtshort"); // 9/27 本番化（B案）＝既定ON。&vtshort=0 で「民間締切」表記
   // 🧪&vrun=1（9/27 Naoto「レース中の下の種別が小さい・レース中も大きく」）＝CSS html.vrun
   if (params.get("vrun") !== "0") document.documentElement.classList.add("vrun"); // 9/27 本番化（Naoto OK）＝既定ON。&vrun=0 で旧
+  // 🧪&vdone=1（9/27 Naoto「本日終了はどうする？」）＝本日終了のカードを大きく・地を薄いグレーに（CSS html.vdone）
+  if (params.get("vdone") === "1") document.documentElement.classList.add("vdone");
   // 🧪&slhd=1|2|3（9/27 Naoto「出走表の見出しのレース名・A級予選が見えづらい」）＝①出走表の金帯の見せ方の案（CSS html.slhd1〜3）
   (function (v) { // 🧪見出しの案＝クラスの組み合わせ（slfit＝レースごとに最大へ／slnolab＝「出走表」の文字なし／slink＝金の地に黒字）
     var map = { "1": "slhd1", "2": "slhd2", "3": "slhd3", "4": "slhd3 slfit slnolab", "5": "slink slfit", "6": "slink slfit slnolab", "7": "slink slmid", "8": "slink slmid slyel" };
