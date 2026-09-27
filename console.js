@@ -141,6 +141,19 @@
   /* §59（9/28 Naoto）①トークに出す場はオーバーレイが自動で決める（その人が予想を入れている場だけ）＝「①トーク（画面に出す場）」の行は出さない。
      &talkauto=0 で従来の手選び（overlay も同じ引数で戻す）。state.talkRaces は残す（戻したときに使う） */
   var TALKAUTO = params.get("talkauto") !== "0";
+  /* §60（9/28 Naoto「この場の情報からが予想入力タブじゃん？」）§58では場・レース＝予想を書くレース。
+     場のボタンとRのボタンを予想入力カードの先頭へ移す（場→R→並び→予想が1枚で上から下）。上のカードは「配信」（スイッチャー・席替え・応募・日付）。
+     §58（SPLIT）とセット＝SPLITのときだけ。要素のidは変えない＝描画・検証ハーネスはidで引くので移すだけでよい */
+  if (SPLIT) (function () {
+    var vr = document.getElementById("venue-row"), rc = document.getElementById("race-chips");
+    var predCard = document.getElementById("pred-forms") && document.getElementById("pred-forms").closest("details");
+    var sum = predCard && predCard.querySelector("summary");
+    if (!vr || !rc || !sum) return;
+    sum.after(vr); vr.after(rc);
+    vr.classList.add("in-pred");
+    var h2 = document.getElementById("race-date") && document.getElementById("race-date").parentElement;
+    if (h2 && h2.firstChild && h2.firstChild.nodeType === 3) h2.firstChild.nodeValue = "配信 ";
+  })();
   function settleSecOf(key) {
     var r = state && state.results ? state.results[key] : null;
     var t = r && (r.firstAt || r.settledAt);
