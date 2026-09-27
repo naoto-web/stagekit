@@ -697,3 +697,9 @@ html.theme-light .inp:focus, html.theme-light #res-pick-row select:focus {
   outline: none; border-color: #5b3fd6; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .10), 0 0 0 3px rgba(91, 63, 214, .28);
 }
 html.theme-light .inp::placeholder { color: #8a8578; }
+/* §68（9/28 Naoto）予想カードの見出し・丸枠・ラベル・枠をもっと強く（テスト接続＝con2）。
+   BIZ UDPゴシックの太字は細めに出る＝輪郭を足して太く見せる（-webkit-text-stroke） */
+html.con2 .pred-form h3 > span:first-child { font-size: 20px; font-weight: 900; -webkit-text-stroke: .7px currentColor; }
+html.con2 .pf-race { font-size: 20px; padding: 3px 12px; -webkit-text-stroke: .4px currentColor; }
+html.con2 #pred-forms .pred-opts .lbl { font-size: 16px; font-weight: 900; }
+html.con2 .pred-form.mc, html.theme-light.con2 .pred-form.mc { border-width: 5px; }
