@@ -725,3 +725,7 @@ html.theme-light.sel-brown { --lt-sel: #6b4226; --lt-sel-b: #43291a; }
 html.theme-light.sel-teal  { --lt-sel: #1d4e57; --lt-sel-b: #0f3036; }
 html.theme-light[class*="sel-"] .vbtn.active, html.theme-light[class*="sel-"] .rc.cur,
 html.theme-light[class*="sel-"] #pred-venue-row .vbtn.live { border-color: var(--lt-sel); border-bottom-color: var(--lt-sel-b); }
+/* 選択中の色＝黒（チャコール）に決定（9/28 Naoto）。&sel=navy／brown／teal での見比べは残す（black は既定と同じ） */
+html.theme-light { --lt-sel: #2b2f36; --lt-sel-b: #0f1114; }
+html.theme-light .vbtn.active, html.theme-light .rc.cur,
+html.theme-light #pred-venue-row .vbtn.live { border-color: var(--lt-sel); border-bottom-color: var(--lt-sel-b); }
