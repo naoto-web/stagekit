@@ -748,6 +748,8 @@ html.slyel :is(#scene-talk, #scene-tenkai) .slist-panel .panel-head, html.slyel 
   background: rgba(0,0,0,.25); }
 /* .nb-label＝FB115で「ライン」見出し廃止に伴い削除 */
 .nb-type { font-size: 24px; font-weight: 900; color: var(--acc); flex: 0 0 auto; }
+/* 戦型（四分戦など）は白テーマでは黒字（9/27 Naoto・金は薄い地で読みづらい）。暗色テーマは従来のアクセント色 */
+body[data-theme="w"] .narabi-row .nb-type { color: #111; }
 .nb-arrow { font-size: 26px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
 .nb-dot { font-size: 18px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
 .nb-group { display: flex; gap: 3px; flex: 0 0 auto; }
