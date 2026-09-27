@@ -2697,3 +2697,32 @@
   if (AUTOVENUE) setInterval(autoVenueTick, 30000); // §61 本日の場の自動（分単位の判定なので30秒ごとで足りる）
   if (CON2) setInterval(function () { if (state) renderNotePick(); }, 30000); // §62 発走したRを薄くする（描き直さないと薄くならない）
 })();
+
+/* §75（9/28 Naoto「本日設定をポチポチすると押した瞬間画面が移動する」）押したカードをその場に留める。
+   原因＝押すと予想入力（左列）などが描き直され、ページの高さが縮む → 下の方までスクロールしていると
+   ブラウザがスクロール位置を押し戻す（実測：場を1つ外すと本日設定のカードが20px下へずれる・縮む量が大きいほど大きく）。
+   対策①押した瞬間にページの高さを固定（body の min-height）＝縮まない＝押し戻されない（下に余白を足すだけでは一番下まで下げていると効かなかった）②押したカードの画面上の位置を3秒間固定
+   （描き直しがGASの応答や定期更新で少し遅れて来ても追従）。自分でスクロールしたら即やめる */
+(function () {
+  var pinEl = null, pinTop = 0, pinUntil = 0, raf = 0;
+  function loop() {
+    raf = 0;
+    if (!pinEl || Date.now() > pinUntil || !document.contains(pinEl)) { pinEl = null; return; }
+    var d = pinEl.getBoundingClientRect().top - pinTop;
+    if (Math.abs(d) >= 1) window.scrollBy(0, d);
+    raf = requestAnimationFrame(loop);
+  }
+  document.addEventListener("pointerdown", function (e) {
+    var card = e.target.closest && e.target.closest("main .card");
+    if (!card) return;
+    pinEl = card; pinTop = card.getBoundingClientRect().top; pinUntil = Date.now() + 3000;
+    document.body.style.minHeight = Math.max(document.documentElement.scrollHeight, parseFloat(document.body.style.minHeight) || 0) + "px";
+    if (!raf) raf = requestAnimationFrame(loop);
+  }, true);
+  function stop() { pinEl = null; document.body.style.minHeight = ""; } // 自分でスクロールしたら高さの固定も外す
+  window.addEventListener("wheel", stop, { passive: true });
+  window.addEventListener("touchmove", stop, { passive: true });
+  window.addEventListener("keydown", function (e) {
+    if (/^(PageUp|PageDown|Home|End|ArrowUp|ArrowDown| )$/.test(e.key) && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) stop();
+  });
+})();
