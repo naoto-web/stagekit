@@ -2809,6 +2809,7 @@
      上段＝車番・選手名／下段＝府県 期 年齢。右に2段ぶちぬきで 脚｜得点｜B・H・S｜勝率（9/27 Naoto＝級は不要・脚は表の列に）。
      得点・B・H・S・勝率はレース内の1位赤・2位青（空席ワイプと同じ）。行の高さは fitSl2 が実寸から割る */
   var SL2 = params.get("sl2") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&sl2=0 で旧1段版
+  var SL2_LINE = params.get("slline") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&slline=0 で車番順
   var SL2_COLS = [{ i: 4, h: "B" }, { i: 5, h: "H" }, { i: 6, h: "S" }, { i: 7, h: "勝率" }];
   function rankOf(vals) { // 大きい順・重複なし・0と空は数えない
     var vs = [];
@@ -2827,7 +2828,11 @@
     var colRank = SL2_COLS.map(function (c) { return rankOf(race.racers.map(function (p) { return stOf(p)[c.i]; })); });
     var head = '<li class="sl2-th"><span></span><span></span><span class="sl2-ky">脚</span><span class="sl2-sc">得点</span>' +
       SL2_COLS.map(function (c) { return '<span class="sl2-n' + (c.i === 7 ? " sl2-wr" : "") + '">' + c.h + "</span>"; }).join("") + "</li>";
-    el.innerHTML = head + race.racers.map(function (p) {
+    // 🧪ライン順（9/27 Naoto「空席ワイプと同じくラインごとの並び・区切りは横線」・&slline=1）。
+    //   並べ方は空席ワイプと同じ stcOrder（競りも同じ位置に並べる・並びが未発表なら車番順）
+    var ord = SL2_LINE ? stcOrder(race.racers, seatLinesOf(key, race)) : race.racers.map(function (p) { return { p: p, gap: false }; });
+    el.innerHTML = head + ord.map(function (o) {
+      var p = o.p;
       var c = cards[String(p.no)] || {}, st = stOf(p);
       var sc = scores[String(p.no)] || "";
       var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
@@ -2837,7 +2842,7 @@
         return '<span class="sl2-n' + (col.i === 7 ? " sl2-wr" : "") + (!v || v === "0" ? " z" : "") +
           topCls(v, colRank[j]) + '">' + esc(v === "" ? "-" : v) + "</span>";
       }).join("");
-      return '<li class="sl2-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
+      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + '"><i class="car c' + p.no + '">' + p.no + "</i>" +
         '<span class="sl2-nm"><span class="sl2-name">' + esc(p.name) +
         (c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
         '<span class="sl2-sub">' + esc(sub) + "</span></span>" +
@@ -2854,7 +2859,7 @@
     var rh = Math.min(SL2_ROW, Math.floor((el.clientHeight - (th ? th.offsetHeight : 0) - 4) / n));
     el.style.setProperty("--sl2-rh", rh + "px");
     // 長い名前（「川口 公太朗」＋(補)等）は欄に入るまでその名前だけ縮める（9/27 数字の列を広げた分、名前の欄が細くなった）
-    el.querySelectorAll(".sl2-name").forEach(function (nm) {
+    el.querySelectorAll(".sl2-name, .sl2-sub").forEach(function (nm) { // 下段（「神奈川 105期 43歳」等）も同じ
       nm.style.fontSize = "";
       if (nm.scrollWidth > nm.clientWidth + 1) {
         var fs = parseFloat(getComputedStyle(nm).fontSize);

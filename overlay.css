@@ -710,6 +710,8 @@ body[data-theme="w"] .slist.sl2 { --sl2-ink: #000; }
 .sl2-th span { text-align: center; }
 .sl2-row { height: var(--sl2-rh); border-bottom: 1px solid rgba(0,0,0,.08); }
 .sl2-row:last-child { border-bottom: none; }
+/* 🧪ライン順（&slline=1）＝ラインの切れ目は濃い横線（空席ワイプと同じ考え方） */
+.sl2-row.sl2-lg { border-top: 3px solid var(--sl2-ink); }
 .sl2-row .car { width: calc(var(--sl2-rh) * .56); height: calc(var(--sl2-rh) * .56);
   font-size: calc(var(--sl2-rh) * .52); border-radius: 5px; max-width: 32px; max-height: 32px; font-size: min(calc(var(--sl2-rh) * .52), 30px); }
 .sl2-nm { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-left: 4px; }
