@@ -521,7 +521,7 @@
      B＝残り10秒は数字が変わる瞬間に1回ずつ脈打つ／締切の瞬間に「締切」をハンコ（水平）
      D＝note予想のレースは見出しのR番号の右に🔥（ゆらゆら） */
   var TFX = params.get("tfx") !== "0";
-  var TFX_FLASH = 4, TFX_RACE = +params.get("trace") || 180;
+  var TFX_FLASH = 8, TFX_RACE = +params.get("trace") || 180; // 発走！は8秒（9/27 Naoto「2倍に」・旧4秒）。レース中3分は据え置き（Naoto「3分でいい感じ」）
   if (TFX && document.body) document.body.classList.add("tfx");
   /** そのレースを席にいる誰かが note予想にしているか（D） */
   function timerNoteOn(venue, no) {
@@ -836,6 +836,12 @@
         h.style.fontSize = "";
         var fs = parseFloat(getComputedStyle(h).fontSize), g = 0;
         while (h.scrollWidth > h.clientWidth + 1 && fs > 13 && g++ < 12) { fs -= 1; h.style.fontSize = fs + "px"; }
+      });
+      // 「レース中」とレース種別（🧪&vrun=1で拡大）＝カード幅に入るまで1pxずつ縮める（長い種別「Ａ級チャレンジ予選」等）
+      box.querySelectorAll(".vt-racing-main, .vt-racing-sub").forEach(function (t) {
+        t.style.fontSize = "";
+        var room = t.parentElement.clientWidth - 8, fs = parseFloat(getComputedStyle(t).fontSize), g = 0;
+        while (t.scrollWidth > room && fs > 10 && g++ < 20) { fs -= 1; t.style.fontSize = fs + "px"; }
       });
       box.querySelectorAll(".vt-stamp").forEach(function (s) {
         s.style.fontSize = ""; s.classList.remove("no-bell");
@@ -2832,6 +2838,8 @@
   if (params.get("vth") !== "0") document.documentElement.classList.add("vth"); // 9/27 本番化（Naoto OK）＝既定ON。&vth=0 で旧
   // 🧪&vtshort=1（9/27）＝②の3〜4場だけラベルを「民間」「公式」に（「締切」＝.vt-lx を隠す）＝空いた幅で数字を大きく
   if (params.get("vtshort") !== "0") document.documentElement.classList.add("vtshort"); // 9/27 本番化（B案）＝既定ON。&vtshort=0 で「民間締切」表記
+  // 🧪&vrun=1（9/27 Naoto「レース中の下の種別が小さい・レース中も大きく」）＝CSS html.vrun
+  if (params.get("vrun") === "1") document.documentElement.classList.add("vrun");
   // 🧪&slhd=1|2|3（9/27 Naoto「出走表の見出しのレース名・A級予選が見えづらい」）＝①出走表の金帯の見せ方の案（CSS html.slhd1〜3）
   (function (v) { // 🧪見出しの案＝クラスの組み合わせ（slfit＝レースごとに最大へ／slnolab＝「出走表」の文字なし／slink＝金の地に黒字）
     var map = { "1": "slhd1", "2": "slhd2", "3": "slhd3", "4": "slhd3 slfit slnolab", "5": "slink slfit", "6": "slink slfit slnolab", "7": "slink slmid", "8": "slink slmid slyel" };

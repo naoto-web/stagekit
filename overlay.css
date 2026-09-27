@@ -511,6 +511,8 @@ body.seatcard-on.seat-b-off .cam.slot-b .seat-card {
 .vt-head { display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 5px 6px; font-size: 30px; line-height: 1.1; font-weight: 900; background: rgba(255,255,255,.08); }
 /* R番号＝場名と同格に：黒字＋数字は漢字より字面が小さいので1.15emで光学的に同サイズ（8/6 FB8） */
+/* 見出しは折り返さない（9/27 🐞2場で🔥＋GⅢが付くと「岐/阜」と縦に折れていた＝折り返すと幅が余って fitTimerHeads が縮めない）。入らなければ fitTimerHeads が縮める */
+.vt-head { white-space: nowrap; }
 .vt-head .vt-r { color: var(--txt); font-size: 1.15em; }
 .vt-head .vt-start-s { font-size: 20px; font-weight: 900; }
 .vt-rows { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 2px 14px; }
@@ -600,6 +602,14 @@ body.tfx .vt-rows { min-height: 0; }
 .timer-cards.vt-n3 .vt-racing-sub { font-size: 15px; }
 .timer-cards.vt-n4 .vt-racing-main { font-size: 22px; }
 .timer-cards.vt-n4 .vt-racing-sub { font-size: 12px; }
+/* 🧪&vrun=1（9/27）＝「レース中」とレース種別を大きく。種別は白に近づけて読みやすく。入らなければ fitTimerHeads が縮める */
+html.vrun .vt-racing-main { font-size: 52px; }
+html.vrun .vt-racing-sub { font-size: 30px; color: rgba(255,255,255,.92); }
+html.vrun .vt-card.vt-run-card .vt-rows { gap: 10px; }
+html.vrun .timer-cards.vt-n3 .vt-racing-main { font-size: 38px; }
+html.vrun .timer-cards.vt-n3 .vt-racing-sub { font-size: 23px; }
+html.vrun .timer-cards.vt-n4 .vt-racing-main { font-size: 30px; }
+html.vrun .timer-cards.vt-n4 .vt-racing-sub { font-size: 19px; }
 /* 締切カード＝薄いグレーの地（白＝平常・信号機色＝締切前と区別） */
 .vt-card.vt-closed-card .vt-head, .vt-card.vt-closed-card .vt-rows { background: #d5d8dd; }
 .vt-card.vt-closed-card .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.2); }
