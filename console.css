@@ -714,3 +714,6 @@ html.con2.theme-light .pf-body .pf-info { padding-top: 9px; }
 /* note勝負レース＝人ごとの囲みをメンバーカラーの太枠・名前を大きく太く（予想カードとそろえる） */
 html.con2 .np-person[style*="--mc"] { border: 5px solid var(--mc); }
 html.con2 .np-name { font-size: 21px; font-weight: 900; -webkit-text-stroke: .7px currentColor; margin-bottom: 6px; }
+/* §69追補（9/28 Naoto「ちょっとやりすぎ・横スクロールバーは出ないように」）＝28→24px・輪郭を控えめに・行の高さは36px固定（字が自動で縮んでも右列とそろう）・横スクロールなし */
+html.con2 .pf-body .pf-text { font-size: 24px; line-height: 36px; -webkit-text-stroke: .25px currentColor; overflow-x: hidden; }
+html.con2 .pf-body .pf-info { line-height: 36px; }html.con2 .parse-total { word-break: keep-all; } /* 「合成 1111.1倍」の「倍」だけが次の行に落ちない（空白でだけ折り返す） */

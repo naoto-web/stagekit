@@ -845,6 +845,13 @@
      引数は互換のため残す（どのカードから呼ばれても全カードを測り直す） */
   function fitPredText() {
     var tas = Array.prototype.slice.call(document.querySelectorAll("#pred-forms .pf-text"));
+    /* §69追補（9/28 Naoto「横スクロールバーは出ないように」）＝長い行が入り切らない欄だけ字を1pxずつ小さく（最小16px）。
+       行の高さは px 固定（CSS）＝字が縮んでも右列の「〇点」と行はそろったまま */
+    if (CON2) tas.forEach(function (ta) {
+      ta.style.fontSize = "";
+      var fs = parseFloat(getComputedStyle(ta).fontSize) || 24;
+      while (ta.scrollWidth > ta.clientWidth + 1 && fs > 16) { fs -= 1; ta.style.fontSize = fs + "px"; }
+    });
     var need = tas.map(function (ta) {
       ta.style.height = "auto";
       var bw = ta.offsetHeight - ta.clientHeight; // 上下の枠線（＋横スクロールバー）
