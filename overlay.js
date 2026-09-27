@@ -254,6 +254,24 @@
     });
     return next ? timeToSec(next.start) : null;
   }
+  /* 🧪§64（9/28 Naoto）note勝負バナーは**発走から3分たったRを番号ごとに消す**（「武雄 ５・９R」→5Rの発走＋3分で「武雄 ９R」→9Rの＋3分で行ごと消える）。
+     経緯＝9/25のボタン式で「1人×1場＝1行」になり、別商品の5Rと9Rも同じ行＝行単位（FB114）だと10Rの発走まで残る→配信者が手で外していた
+     （外すとその予想の note 印も外れる＝note的中にならない副作用）。Naoto「配信者の手間を削減・7・8Rで1商品でも残っているレースだけでいい」。
+     時刻表に無い番号は残す。テスト（?gas=）だけ既定ON（&nhnum=1／0）。本番は従来の行単位 */
+  var NHNUM = params.get("nhnum") ? params.get("nhnum") !== "0" : !!params.get("gas");
+  var NHNUM_SEC = 180;
+  function nhLiveNums(venueName, nums) {
+    var tv = timetable && (timetable.venues || []).filter(function (v) { return v.name === venueName; })[0];
+    var now = nowSec();
+    return nums.filter(function (n) {
+      var r = tv && (tv.races || []).filter(function (x) { return +x.no === +n; })[0];
+      var s = r ? timeToSec(r.start) : null;
+      if (s === null) return true;
+      if (now >= s + NHNUM_SEC) return false;
+      if (nhBoundary === null || s + NHNUM_SEC < nhBoundary) nhBoundary = s + NHNUM_SEC; // 跨いだら毎秒ループが描き直す
+      return true;
+    });
+  }
   /* 今の席の配信者（9/25 Naoto「配信者を変更（席替え以外）したら、もともといた人のnoteレースと的中情報はOBS画面から消していい」）。
      ⚠️**データは消さない・表示だけ絞る**：
        ・的中＝derived.hits は演出の新規判定（checkNewHits の seenHits／firedFx）がそのまま使う。ここから人を抜くと、
@@ -354,6 +372,7 @@
       if (segs) {
         segs.forEach(function (sg) {
           if (selV && !selV[sg.v]) return;        // 本日の場から外した場（9/26）
+          if (NHNUM) { sg.nums = nhLiveNums(sg.v, sg.nums); if (!sg.nums.length) return; } // §64 発走＋3分のRは番号ごとに消す
           var maxNo = 0;
           sg.nums.forEach(function (n) { if (+n > maxNo) maxNo = +n; });
           var b = nextRaceStartSec(sg.v, maxNo);
@@ -389,6 +408,7 @@
           .split("レース").join(" "); // 「〜レース」表記をR相当として扱う（8/10 FB124）
         if (/^[\s0-9rRｒＲ・.．,，、\-〜~]*$/.test(half) && /\d/.test(half)) {
           var nums = half.match(/\d+/g) || [];
+          if (NHNUM) { nums = nhLiveNums(venue, nums); if (!nums.length) return; } // §64 発走＋3分のRは番号ごとに消す
           var maxNo = 0;
           nums.forEach(function (n) { if (+n > maxNo) maxNo = +n; });
           var b = nextRaceStartSec(venue, maxNo); // 最終レースの次＝商品終了の合図（時刻表に次がなければ消さない）
