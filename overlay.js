@@ -3043,10 +3043,11 @@
       }).join("");
       var shl = slHitNow(); // §54 的中の車番の行を光らせる
       var hitRow = !!(shl && shl.key === key && shl.cars[+p.no]);
-      // 的中の行＝車番バッジは買目チップと同じ hit-glow（同じ拍子）・名前も同じ拍子で大小（下段は隠して行の高さを名前に）
+      // 的中の行＝車番バッジは買目チップと同じ hit-glow（同じ拍子・光だけ）＋行を光の帯がキラーンと横切る（--shd＝全行同時・9/28 Naoto）
       var ph = hitRow ? hitPhaseStyle() : "";
-      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + '"><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
-        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '"' + ph + ">" + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
+      var shd = hitRow ? ' style="--shd:-' + (((Date.now() - hitPhase0) % 2000 + 2000) % 2000) + 'ms"' : "";
+      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + '"' + shd + '><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
+        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
         (!SL3 && c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
         '<span class="sl2-sub">' + (isJimoto(vName, p.pref) && sub.indexOf(p.pref) === 0 // 地元は下段の県名も同じ色（§52）
           ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span></span>" +

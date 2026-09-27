@@ -281,14 +281,19 @@ body[data-theme="w"] .pred-line.cut-line { background: rgba(0,0,0,.10); }
   from { box-shadow: 0 0 0 4px #ffd54f, 0 0 12px 4px rgba(255,179,0,.7); transform: scale(1); }
   to   { box-shadow: 0 0 0 5px #ffc400, 0 0 34px 14px rgba(255,179,0,1); transform: scale(1.45); }
 }
-/* 9/28 Naoto（§54）＝俺たち目はチップ同士が近く、出走表は隣が名前＝上の強い版だと光と拡大が隣にかぶる。
-   ここだけ「膨らみ1.22倍・外の光を締める」版に（拍子は同じ .9s alternate＝位相は JS の hitPhaseStyle でそろう）。
-   俺たち目は光っている間だけチップの間を広げる（1.22倍でも隣と重ならない） */
-html.hit54 .ore-row .car.hit-glow, .sl2-row .car.hit-glow { animation-name: hitGlowTight; } /* 俺たち目は §54 と一緒にテスト接続（html.hit54）から */
-html.hit54 .ore-row .car.hit-glow { margin: 0 5px; }
+/* 9/28 Naoto（§54）「演出を盛り込みすぎ・1個ずつ控えめに」＝買目のチップは**大小をやめて光だけ**（hitGlowOnly）。
+   俺たち目（チップ同士が近い）と出走表の車番（隣が名前）はさらに外の光を締めた hitGlowTight。拍子は同じ .9s alternate（位相は JS の hitPhaseStyle）。
+   テスト接続（html.hit54）だけ＝本番OBSは上の hitGlowPulse（大小あり）のまま */
+html.hit54 .car.hit-glow, html.hit54 .pl-all.hit-glow { animation-name: hitGlowOnly; }
+html.hit54 .ore-row .car.hit-glow, html.hit54 .sl2-row .car.hit-glow { animation-name: hitGlowTight; }
+html.hit54 .ore-row .car.hit-glow { margin: 0 3px; }
+@keyframes hitGlowOnly {
+  from { box-shadow: 0 0 0 4px #ffd54f, 0 0 10px 3px rgba(255,179,0,.65); }
+  to   { box-shadow: 0 0 0 5px #ffc400, 0 0 24px 9px rgba(255,179,0,1); }
+}
 @keyframes hitGlowTight {
-  from { box-shadow: 0 0 0 3px #ffd54f, 0 0 5px 1px rgba(255,179,0,.6); transform: scale(1); }
-  to   { box-shadow: 0 0 0 4px #ffc400, 0 0 9px 3px rgba(255,179,0,.95); transform: scale(1.22); }
+  from { box-shadow: 0 0 0 3px #ffd54f, 0 0 5px 1px rgba(255,179,0,.6); }
+  to   { box-shadow: 0 0 0 4px #ffc400, 0 0 9px 3px rgba(255,179,0,.95); }
 }
 
 /* グレードバッジ（8/6 FB36）：GP=金・GⅠ=赤・GⅡ=青・GⅢ=緑（F級は非表示・場タブとレースラベル共通） */
@@ -1055,12 +1060,16 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
    9/28 Naoto＝車番バッジは買目チップと同じ光り方・同じ拍子（.car.hit-glow＝hitGlowPulse・位相はJSが時計で合わせる）／
    名前も同じ拍子で大小（下段の府県・期・年齢はこの間だけ隠して、行の高さを名前に使う）。名前の色は変えない */
 /* 枠は付けない（9/28 Naoto「金の太枠で囲むとラインのどこだったか分かりづらい」＝ラインの切れ目の3px線を隠さない）。地の金だけ */
-.sl2-row.sl2-hit { background: linear-gradient(90deg, rgba(255, 214, 90, .55), rgba(255, 236, 170, .35)); position: relative; z-index: 1; }
-.sl2-row.sl2-hit .sl2-sub { display: none; }
-.sl2-row.sl2-hit .sl2-nm { padding-left: 12px; } /* 車番バッジが膨らんでも名前の頭にかぶらない */
-.slist .sl2-row.sl2-hit .sl2-name { font-size: min(calc(var(--sl2-rh) * .66), 40px); line-height: 1.05;
-  transform-origin: left center; animation: slHitName .9s ease-in-out infinite alternate; }
-@keyframes slHitName { from { transform: scale(.82); } to { transform: scale(1); } }
+.sl2-row.sl2-hit { background: linear-gradient(90deg, rgba(255, 200, 60, .62), rgba(255, 220, 120, .45)); position: relative; z-index: 1; }
+.sl2-row.sl2-hit .sl2-nm { padding-left: 8px; } /* 車番の光が名前の頭にかからない */
+/* 9/28 Naoto「名前と車番の大小はなし・その行がキラーンと光る演出」＝光の帯が行を左→右へ横切る（1.1秒で横切り0.9秒休む＝2秒周期・発走！のキラーンと同じ間）。
+   光る行は全部同時（位相は JS の --shd＝光り始めの時刻から時計で合わせる）。下段（府県・期・年齢）はそのまま出す */
+/* 帯は字の下（行の地の上）＝字にかぶると「字がかすれる」見え方になった（9/28 撮影）→ z-index:-1（行が重なりの基準） */
+.sl2-row.sl2-hit::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: -1;
+  background: linear-gradient(105deg, transparent 0 36%, rgba(255, 255, 255, .55) 44%, #fff 50%, rgba(255, 255, 255, .55) 56%, transparent 64% 100%);
+  background-size: 300% 100%; background-repeat: no-repeat;
+  animation: slShine 2s linear infinite; animation-delay: var(--shd, 0ms); }
+@keyframes slShine { 0% { background-position: 100% 0; } 55%, 100% { background-position: 0% 0; } }
 @keyframes rcShade { 0% { clip-path: inset(0 0 100% 0); } 100% { clip-path: inset(0 0 0 0); } }
 @keyframes rcStamp {
   0% { opacity: 0; transform: scale(calc(var(--rcinv) * 2.4)) translate(calc(-100% - 10px), var(--rcty, 14px)) rotate(-8deg); }
