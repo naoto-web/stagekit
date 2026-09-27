@@ -946,6 +946,7 @@
       setCount(el, tgtOff - now, tgtOff);
     });
     if (TFX) tfxTick();
+    applyRaceClosed(); // §53 ①の買目区画を締切でグレーに（既定ON・&rcclose=0で旧）
   }
 
   /* ---------- 予想・投資（①トーク／②バンド） ---------- */
@@ -2041,6 +2042,37 @@
       🔥note予想はひと塊で改行（語中でちぎれない・入らない時は塊ごと2行目へ＝8/7 FB63）。
       split=true（②用・8/7 FB64）＝note表記を常に2行目へ＝ラベル幅が半分になり、
       「ラベルは列幅まで縮小」ルール下でも約2倍の大きさで表示できる（チップの列幅計算には無影響） */
+  /* 締切の区画をグレーに（9/27 Naoto・要件定義§53・既定ON・&rcclose=0で旧）＝①の買目区画（2〜3場は .race-col、1場は帯）を、そのレースの公式締切で薄いグレーに＋「締切」ハンコ。
+     タイマーの締切カードと同じ判定（発走−closeMin）。発走後も入力先が次へ移るまでグレーのまま（勝負中の買目＝もう動かない）。
+     買目が空でも文字は足さない（Naoto A①＝グレー＋ハンコだけ）。①だけ（B①）。
+     区画は fitColBox が transform:scale（左上基準）で拡大縮小する＝グレー・ハンコ（::before/::after）は --rcinv（1/倍率）で打ち消して区画いっぱいに。
+     演出＝画面を見ている間に締切を跨いだときだけ（上からじわっとグレー＋ハンコがドン）。再描画で要素が作り直されても rcFxAt で続きから */
+  var RCCLOSE = params.get("rcclose") !== "0"; // 9/27 本番化（Naoto「本番反映して大丈夫」）＝既定ON。&rcclose=0 で旧
+  var RCFX_MS = 1400;
+  var rcPrev = {}, rcFxAt = {};
+  function raceCloseAt(k) {
+    var parts = String(k || "").split("|"), hit = null;
+    allRaces().forEach(function (r) { if (r.venue === parts[0] && +r.no === +parts[1]) hit = r; });
+    return hit ? hit.startSec - (state.cfg.closeMin || 3) * 60 : null;
+  }
+  function applyRaceClosed() {
+    if (!RCCLOSE) return;
+    var now = nowSec(), ms = Date.now();
+    document.querySelectorAll("[data-rck]").forEach(function (el) {
+      var k = el.getAttribute("data-rck");
+      var at = k ? raceCloseAt(k) : null;
+      var closed = at != null && now >= at;
+      var id = (el.getAttribute("data-slot") || "") + "|" + k;
+      if (closed && rcPrev[id] === false) rcFxAt[id] = ms;
+      rcPrev[id] = closed;
+      var sc = parseFloat((String(el.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+      el.style.setProperty("--rcinv", (1 / sc).toFixed(4));
+      el.classList.toggle("rc-closed", closed);
+      var fx = closed && rcFxAt[id] && ms - rcFxAt[id] < RCFX_MS;
+      el.classList.toggle("rc-fx", !!fx);
+      if (fx) el.style.setProperty("--rcd", -(ms - rcFxAt[id]) + "ms");
+    });
+  }
   function raceColHead(rc, k, split) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     var note = p && p.entry.isNote;
@@ -2628,6 +2660,11 @@
           var fireCols = band.querySelectorAll(".race-col");
           band.classList.toggle("note-fire", fireCols.length === 0 && noteFireOn(rc, talkKeys[0]));
           Array.prototype.forEach.call(fireCols, function (col, ci) { col.classList.toggle("note-fire", noteFireOn(rc, fireKeys[ci])); });
+          if (RCCLOSE) { // §53 締切の区画をグレーに＝区画（1場は帯）にレースのキーを付けておき、applyRaceClosed が毎秒判定
+            Array.prototype.forEach.call(fireCols, function (col, ci) { col.setAttribute("data-rck", fireKeys[ci] || ""); col.setAttribute("data-slot", slot); });
+            if (!fireCols.length && talkKeys[0]) { band.setAttribute("data-rck", talkKeys[0]); band.setAttribute("data-slot", slot); }
+            else { band.removeAttribute("data-rck"); band.classList.remove("rc-closed", "rc-fx"); }
+          }
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
           // 1場の右下の固定枠は帯の拡大率に合わせて大きく（9/26 Naoto「買目の大きさに対して点数と投資の字が小さい」）。
@@ -2645,6 +2682,7 @@
               fitRaceCols(band);
             }
           }
+          applyRaceClosed(); // §53（倍率が決まった後に打ち消し値を入れる）
         } else {
           // メイン帯にも「場名 R」ラベルを表示（サブ予想との区別・8/6 FB13）。
           // 合計/投資は右下の固定枠へ分離（8/6 FB57）。パッキングが実座標で衝突判定するため

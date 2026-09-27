@@ -1022,6 +1022,26 @@ body.debug #scene-tenkai .slist:empty::after {
 /* overflow:visible＝自身を縮小フィットで収める方式（8/6 FB52・hiddenだとクリップ窓ごと縮んで直らない） */
 .race-col { flex: 1 1 0; min-width: 0; overflow: visible; padding: 0 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .race-col + .race-col { border-left: 2px solid var(--panel-line); }
+/* §53（既定ON・&rcclose=0で旧）締切した区画＝タイマーの締切カードと同じ薄いグレー＋「締切」ハンコ（右上・-8°）。
+   区画は transform:scale（左上基準）で拡大縮小される＝ --rcinv（1/倍率）で打ち消して、見た目は常に区画いっぱい・同じ大きさ */
+.rc-closed { position: relative; isolation: isolate; --rcinv: 1; }
+.rc-closed::before { content: ""; position: absolute; left: 0; top: 0; z-index: -1; pointer-events: none;
+  width: calc(100% * var(--rcinv)); height: calc(100% * var(--rcinv)); background: #d5d8dd; }
+body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14); }
+.rc-closed::after { content: "締切"; position: absolute; left: calc(100% * var(--rcinv)); top: 0; z-index: 2; pointer-events: none;
+  transform-origin: 0 0; transform: scale(var(--rcinv)) translate(calc(-100% - 10px), 8px) rotate(-8deg);
+  color: #d63b3b; border: 3px solid #d63b3b; border-radius: 7px; background: rgba(255,255,255,.6);
+  font-size: 26px; font-weight: 900; line-height: 1; padding: 3px 9px 4px; white-space: nowrap; }
+/* 1場（帯そのもの）はハンコを大きく／3場の右上下の小さい区画は少し小さく */
+.rc-closed:not(.race-col)::after { font-size: 38px; border-width: 4px; border-radius: 9px; padding: 4px 12px 6px; }
+.race-t-side > .rc-closed::after { font-size: 22px; border-width: 2.5px; padding: 2px 7px 3px; }
+.rc-closed.rc-fx::before { animation: rcShade .7s ease-out both; animation-delay: var(--rcd, 0ms); }
+.rc-closed.rc-fx::after { animation: rcStamp .45s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--rcd, 0ms) + 500ms); }
+@keyframes rcShade { 0% { clip-path: inset(0 0 100% 0); } 100% { clip-path: inset(0 0 0 0); } }
+@keyframes rcStamp {
+  0% { opacity: 0; transform: scale(calc(var(--rcinv) * 2.4)) translate(calc(-100% - 10px), 8px) rotate(-8deg); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: scale(var(--rcinv)) translate(calc(-100% - 10px), 8px) rotate(-8deg); } }
 .race-col-head {
   font-size: 26px; font-weight: 900; color: var(--txt); /* 8/6 FB3で拡大 */
   background: rgba(0,0,0,.08); border-radius: 6px; padding: 3px 14px;
