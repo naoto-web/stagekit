@@ -191,11 +191,14 @@
     var b = broadcastRaceObj();
     return b ? window.Derive.raceKey(b.venue, b.no) : null;
   }
+  /* 🧪§63（9/28 Naoto「2分はちょっと早い・2R終わった後に的中演出もある」）場・レースのRが「終わった」扱い（薄く・赤枠＝次に発走するRが次へ移る）
+     になるのは発走から3分後（OBSのタイマーの「レース中」3分と同じ）。テスト（CON2）だけ・本番は従来の2分 */
+  var RC_DONE_SEC = CON2 ? 180 : 120;
   function nextRaceOf(name) {
     var now = nowSec();
     var rs = venueRaces(name).filter(function (r) {
       var s = timeToSec(r.start);
-      return s !== null && s + 120 > now;
+      return s !== null && s + RC_DONE_SEC > now;
     });
     return rs.length ? rs[0] : null;
   }
@@ -451,7 +454,7 @@
       var cls = "rc";
       if (state.currentRace[name] === r.no) cls += " cur";
       else if (next && next.no === r.no) cls += " next";
-      if (s !== null && s + 120 <= now) cls += " done";
+      if (s !== null && s + RC_DONE_SEC <= now) cls += " done";
       return '<button class="' + cls + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small></button>";
     }).join("");
     el.querySelectorAll(".rc").forEach(function (b) {
