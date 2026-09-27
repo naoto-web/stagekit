@@ -2827,7 +2827,7 @@
   var SL2_LINE = params.get("slline") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&slline=0 で車番順
   var SL2_COLS = [{ i: 4, h: "B" }, { i: 5, h: "H" }, { i: 6, h: "S" }, { i: 7, h: "勝率" }];
   // 🧪&sl3=1（9/27 Naoto「名前をもっと大きく」）＝勝率の列を消して名前の欄を広げる／補充・追加は名前全体を（ ）で囲む
-  var SL3 = params.get("sl3") === "1";
+  var SL3 = params.get("sl3") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&sl3=0 で勝率つき・(補)札の版
   if (SL3) SL2_COLS = SL2_COLS.slice(0, 3);
   function rankOf(vals) { // 大きい順・重複なし・0と空は数えない
     var vs = [];
