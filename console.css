@@ -779,7 +779,7 @@ html.con2 .venue-auto-hint { margin-top: 8px; }html.con2 .parse-total { line-hei
    ・金色＝白背景でも読める濃いめの金（§72の黒字を上書き）。俺たち目の右のオッズも同じ金にそろえる
    ・細く＝Bahnschrift（Windows標準）の幅75%（字幅が狭い書体）。無い環境はBIZ UDPゴシックのまま＋字間を詰める */
 html.con2 .pf-body .pl-odds b {
-  font-family: "Bahnschrift", "BIZ UDPGothic", sans-serif; font-stretch: 75%; font-weight: 700; font-size: 18px;
+  font-family: "Bahnschrift", "BIZ UDPGothic", sans-serif; font-stretch: 75%; font-weight: 400; font-size: 18px;
   letter-spacing: -.02em; font-variant-numeric: tabular-nums;
 }
 html.con2 .pf-body { gap: 6px; }
