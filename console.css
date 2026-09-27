@@ -703,3 +703,14 @@ html.con2 .pred-form h3 > span:first-child { font-size: 20px; font-weight: 900; 
 html.con2 .pf-race { font-size: 20px; padding: 3px 12px; -webkit-text-stroke: .4px currentColor; }
 html.con2 #pred-forms .pred-opts .lbl { font-size: 16px; font-weight: 900; }
 html.con2 .pred-form.mc, html.theme-light.con2 .pred-form.mc { border-width: 5px; }
+/* §69（9/28 Naoto「一番大事な買目の入力欄の文字が細い・一行が小さい。枠が縦に伸びてもいいので大きく」「note勝負の枠と名前も同様に」）テスト接続＝con2 */
+html.con2 .pf-body .pf-text {
+  font-size: 28px; font-weight: 900; line-height: 1.5; letter-spacing: .02em;
+  -webkit-text-stroke: .5px currentColor;
+}
+/* 右列の「〇点」＝買目の1行（28px×1.5＝42px）と同じ行の高さ・上の余白は欄の padding 7px＋枠（白背景2px／黒1px） */
+html.con2 .pf-body .pf-info { line-height: 42px; font-size: 17px; font-weight: 900; padding-top: 8px; }
+html.con2.theme-light .pf-body .pf-info { padding-top: 9px; }
+/* note勝負レース＝人ごとの囲みをメンバーカラーの太枠・名前を大きく太く（予想カードとそろえる） */
+html.con2 .np-person[style*="--mc"] { border: 5px solid var(--mc); }
+html.con2 .np-name { font-size: 21px; font-weight: 900; -webkit-text-stroke: .7px currentColor; margin-bottom: 6px; }

@@ -1579,7 +1579,8 @@
     el.innerHTML = state.racers.map(function (rc) {
       var mc = window.Derive.colorOf(rc.color);
       var m = parsed.model[rc.name] || {};
-      return '<div class="np-person">' +
+      return '<div class="np-person"' + (mc ? ' style="--mc:' + mc + '"' : "") + ">" + // §69 囲みのメンバーカラー（CSS html.con2 だけ使う）
+
         '<div class="np-name"' + (mc ? ' style="color:' + mcText(mc) + '"' : "") + ">" + esc(rc.name) + "</div>" +
         state.venues.map(function (v) {
           var set = m[v.name] || {};
