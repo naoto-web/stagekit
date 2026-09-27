@@ -717,3 +717,11 @@ html.con2 .np-name { font-size: 21px; font-weight: 900; -webkit-text-stroke: .7p
 /* §69追補（9/28 Naoto「ちょっとやりすぎ・横スクロールバーは出ないように」）＝28→24px・輪郭を控えめに・行の高さは36px固定（字が自動で縮んでも右列とそろう）・横スクロールなし */
 html.con2 .pf-body .pf-text { font-size: 24px; line-height: 36px; -webkit-text-stroke: .25px currentColor; overflow-x: hidden; }
 html.con2 .pf-body .pf-info { line-height: 36px; }html.con2 .parse-total { word-break: keep-all; } /* 「合成 1111.1倍」の「倍」だけが次の行に落ちない（空白でだけ折り返す） */
+
+/* 🧪選択中の色の見比べ（&sel=navy／black／brown／teal・console.js が html にクラス）。白背景だけ */
+html.theme-light.sel-navy  { --lt-sel: #1f3a68; --lt-sel-b: #10223f; }
+html.theme-light.sel-black { --lt-sel: #2b2f36; --lt-sel-b: #0f1114; }
+html.theme-light.sel-brown { --lt-sel: #6b4226; --lt-sel-b: #43291a; }
+html.theme-light.sel-teal  { --lt-sel: #1d4e57; --lt-sel-b: #0f3036; }
+html.theme-light[class*="sel-"] .vbtn.active, html.theme-light[class*="sel-"] .rc.cur,
+html.theme-light[class*="sel-"] #pred-venue-row .vbtn.live { border-color: var(--lt-sel); border-bottom-color: var(--lt-sel-b); }

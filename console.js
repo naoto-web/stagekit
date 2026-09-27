@@ -169,6 +169,9 @@
      &font=yugo で従来（Yu Gothic UI）・&font=meiryo でメイリオ。本番（gas無し）は従来のまま */
   var FONT = params.get("font") || (params.get("gas") ? "bizud" : "");
   if (FONT === "meiryo" || FONT === "bizud") document.documentElement.classList.add("font-" + FONT);
+  /* 🧪選択中の色の見比べ（9/28 Naoto「紫以外の案を」）＝&sel=navy／black／brown／teal。無指定は紫（白背景のとき） */
+  var SEL = params.get("sel");
+  if (/^(navy|black|brown|teal)$/.test(SEL || "")) document.documentElement.classList.add("sel-" + SEL);
   /** メンバーカラーを「字」に使うとき（名前など）。白背景だと黄・緑が読めない＝白背景のときだけ黒を混ぜて暗くする（塗りはそのまま） */
   function mcText(mc) { return mc && LIGHT ? "color-mix(in srgb, " + mc + " 62%, #000)" : mc; }
   if (CON2) (function () {
