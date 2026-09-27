@@ -2838,7 +2838,7 @@
     if (map[v]) map[v].split(" ").forEach(function (c) { document.documentElement.classList.add(c); });
     // 🧪色の見比べ用＝&slbg=ffd54f&slfg=14204a（16進6桁）で見出しの地と字を差し替え（slhd=8のとき）
     ["slbg", "slfg"].forEach(function (k) {
-      var x = params.get(k) || (k === "slbg" ? "ffffff" : ""); // 地の既定＝白（9/27 Naoto「普通に白でいい」・黄はムネオカラーに近い）
+      var x = params.get(k) || (k === "slbg" ? "d9dde3" : "111111"); // 既定＝銀グレーの地×黒字（9/27 Naoto・白→銀グレーに変更。黄はムネオカラーに近い）
       if (x && /^[0-9a-f]{6}$/i.test(x)) document.documentElement.style.setProperty("--" + k, "#" + x);
     });
   })(params.get("slhd") || "8"); // 9/27 本番化＝既定は8（高さ45px固定・「出走表」なし・クラス右詰め・場名R中央・白地×紺字）。&slhd=0 で旧の金帯
