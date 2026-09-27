@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260928-082007">
+<link rel="stylesheet" href="console.css?v=20260928-083414">
 </head>
 <body>
 
@@ -87,7 +87,8 @@
   <!-- 9/25 Naoto「結果を今すぐ取得」は見出しのレース丸枠の右へ。⚠️summary の中のボタン＝押すとカードが開閉してしまうので
        click で preventDefault（console.js） -->
   <summary><h2>結果入力</h2> <span class="h-sub" id="result-target"></span>
-    <button class="btn small res-refresh-inline" id="btn-res-refresh">🔄 結果を今すぐ取得</button></summary>
+    <!-- §76（9/28 Naoto「使ったことない・不要」）隠すだけ＝console.js がidで引くのでDOMは残す -->
+    <button class="btn small res-refresh-inline hidden" id="btn-res-refresh">🔄 結果を今すぐ取得</button></summary>
   <div class="hint hidden" id="auto-result-hint"></div>
   <div class="hint" id="res-refresh-hint"></div>
 
@@ -106,8 +107,9 @@
     <label class="lbl">同着の他の着順（1行に1つ）</label>
     <!-- ⚠️1行入力ではなく複数行にしてある（8/27）＝1着同着と3着同着が重なると当たりが4通りになる
          実例＝2026/5/25 静岡3R（4-7-1／4-7-6／7-4-1／7-4-6）。1行固定だと取りこぼす -->
-    <textarea id="res-order2" class="inp big" rows="1" placeholder="5-3-2"></textarea>
-    <div class="hint">例）1着5・2着が2と3の同着 → <b>5-2-3</b> と <b>5-3-2</b> の2通りが当たり。
+    <!-- §76（9/28 Naoto）例はハイフン無し（決定着順と同じ運用）・欄の見た目は決定着順とそろえる（console.css・行数に合わせて自動で伸びる） -->
+    <textarea id="res-order2" class="inp big" rows="1" placeholder="132"></textarea>
+    <div class="hint">例）1着5・2着が2と3の同着 → <b>523</b> と <b>532</b> の2通りが当たり。
       下の払戻欄に<b>公式の金額を全部</b>入れると、当たり全部が的中・回収に載ります
       （それぞれ別に「何枚買ったか」を入れられます）</div>
   </div>
@@ -257,11 +259,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260928-082007" data-au="banner"></script>
-<script src="config.js?v=20260928-082007"></script>
-<script src="keirin.js?v=20260928-082007"></script>
-<script src="derive.js?v=20260928-082007"></script>
-<script src="sync.js?v=20260928-082007"></script>
-<script src="console.js?v=20260928-082007"></script>
+<script src="autoupdate.js?v=20260928-083414" data-au="banner"></script>
+<script src="config.js?v=20260928-083414"></script>
+<script src="keirin.js?v=20260928-083414"></script>
+<script src="derive.js?v=20260928-083414"></script>
+<script src="sync.js?v=20260928-083414"></script>
+<script src="console.js?v=20260928-083414"></script>
 </body>
 </html>

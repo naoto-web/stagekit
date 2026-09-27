@@ -17,6 +17,8 @@
   if (params.get("admin") === "1") document.documentElement.classList.add("admin-on");
 
   var $ = function (id) { return document.getElementById(id); };
+  /** §76 同着の他の着順（複数行）＝行数に合わせて欄の高さを伸び縮み（1行のときは決定着順の欄と同じ高さ） */
+  function fitOrder2() { var el = $("res-order2"); if (el) el.rows = Math.max(1, String(el.value || "").split(/\r?\n/).length); }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -1128,8 +1130,9 @@
       // 確定済みが同着（orders 2本）なら同着欄を開いた状態で復元する（8/27 FB148）
       var ex = window.Keirin.normalizeOrders(
         existing.orders && existing.orders.length ? existing.orders : existing.order);
-      $("res-order").value = (ex[0] || []).join("-");
-      $("res-order2").value = ex.slice(1).map(function (o) { return o.join("-"); }).join("\n");
+      $("res-order").value = (ex[0] || []).join(""); // §76 ハイフン無しの運用（9/28 Naoto）
+      $("res-order2").value = ex.slice(1).map(function (o) { return o.join(""); }).join("\n");
+      fitOrder2();
       setDeadHeatUI(ex.length > 1);
       payoutRows = (existing.payouts || []).map(function (p) {
         return { type: p.type, combo: p.combo.slice(), amount: p.amount };
@@ -1137,6 +1140,7 @@
     } else {
       $("res-order").value = "";
       $("res-order2").value = "";
+      fitOrder2();
       setDeadHeatUI(false);
       payoutRows = [];
     }
@@ -1253,7 +1257,7 @@
 
   // 着順の手入力も「入力途中」として保護する（8/8 FB75。選手名・決まり手の欄は8/27 FB143で撤去）
   $("res-order").addEventListener("input", function () { markResDirty(); syncPayoutPresets(); });
-  $("res-order2").addEventListener("input", function () { markResDirty(); syncPayoutPresets(); });
+  $("res-order2").addEventListener("input", function () { fitOrder2(); markResDirty(); syncPayoutPresets(); });
 
   /* 同着ボタン（8/27 FB148）。開くとき2本目が空なら「2着と3着を入れ替えた並び」を下書きする
      ＝2着同着（1着5・2着が2と3 → 5-2-3 と 5-3-2）ならそのまま使える。
@@ -1264,11 +1268,12 @@
     if (deadHeat) {
       if (!$("res-order2").value) {
         var a = parseOneOrder($("res-order").value);
-        if (a && a.length === 3) $("res-order2").value = [a[0], a[2], a[1]].join("-");
+        if (a && a.length === 3) $("res-order2").value = [a[0], a[2], a[1]].join("");
       }
     } else {
       $("res-order2").value = "";
     }
+    fitOrder2();
     markResDirty();
     syncPayoutPresets();
   });
@@ -2288,9 +2293,10 @@
     var pays = keepPayouts(r.payouts);
     // 同着なら3連単の払戻が2本＝当たりの並びが2通り（8/27 FB148）。同着欄を自動で開いて両方入れる
     var ords = window.Keirin.ordersFromPayouts(pays);
-    $("res-order").value = (ords.length ? ords[0] : (r.order || [])).join("-");
+    $("res-order").value = (ords.length ? ords[0] : (r.order || [])).join("");
     // 当たりが3通り以上（1着同着×3着同着など）でも全部入れる＝1行に1つ
-    $("res-order2").value = ords.slice(1).map(function (o) { return o.join("-"); }).join("\n");
+    $("res-order2").value = ords.slice(1).map(function (o) { return o.join(""); }).join("\n");
+    fitOrder2();
     setDeadHeatUI(ords.length > 1);
     // 選手名・決まり手はフォームに出さない（8/27 FB143）＝確定時にresultMeta()が自動取得から引き継ぐ
     payoutRows = pays.map(function (p) { return { type: p.type, combo: p.combo.slice(), amount: p.amount }; });

@@ -785,3 +785,7 @@ html.con2 .pf-body .pl-odds b {
 html.con2 .pf-body { gap: 6px; }
 html.con2 .parse-info .pl-ok b, html.con2 #pred-forms .pf-ore-odds, html.con2 .parse-total .pt-syn { color: #d9a441; }
 html.theme-light.con2 .parse-info .pl-ok b, html.theme-light.con2 #pred-forms .pf-ore-odds, html.theme-light.con2 .parse-total .pt-syn { color: #a87400; }
+/* §76（9/28 Naoto「同着を入れる枠の太さが異なるのは気持ち悪い」）同着の他の着順（textarea）を決定着順（input）と同じ見た目に
+   ＝行の高さをそろえ（textarea.inp の1.6をやめる）・右下のサイズ変更つまみを消す。行数に合わせて伸びるのは console.js fitOrder2 */
+#res-order, #res-order2 { line-height: 1.3; }
+#res-order2 { resize: none; overflow: hidden; display: block; }
