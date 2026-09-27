@@ -4,43 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>競輪 展開ボード</title>
-<link rel="stylesheet" href="css/style.css?v=20260927-120346">
+<link rel="stylesheet" href="css/style.css?v=20260927-172916">
 </head>
 <body>
 
 <div class="app">
 
-  <!-- ===== 操作パネル（OBSではクロップで除外する） ===== -->
+  <!-- ===== 操作パネル（OBSのドック側だけ。出力 ?view=output では消える） ===== -->
   <header class="panel" id="panel">
 
     <div class="panel-row">
-      <!-- 場・レースは配信（コンソール）に常時追従するので通常は隠れている。
-           ?follow=0 を付けたときだけ現れる緊急用の手動操作 -->
+      <!-- 場・レースは配信（コンソール）に常時追従するので通常は隠れている。?follow=0 のときだけ現れる -->
       <div class="field manual-only">
         <label for="venue-select">場</label>
         <select id="venue-select" class="sel" disabled></select>
       </div>
-
       <div class="field manual-only">
         <label for="race-select">レース</label>
         <select id="race-select" class="sel" disabled></select>
       </div>
-
       <div class="field manual-only">
-        <label class="chk" for="follow-chk" title="コンソールが出しているレースに自動で合わせます。場やレースを手で選ぶと自動で外れます">
+        <label class="chk" for="follow-chk" title="コンソールが出しているレースに自動で合わせます">
           <input type="checkbox" id="follow-chk" checked>配信に追従
         </label>
-        <!-- 追従OFFで配信とズレているときだけ出る。押すとその場で追い付く -->
         <button type="button" class="diff" id="follow-diff" hidden></button>
       </div>
 
-      <!-- 常時追従のときは「今どのレースを描いているか」だけ出す（操作はできない） -->
       <div class="field auto-only">
         <span class="now-race" id="now-race">配信のレースに追従中…</span>
-      </div>
-
-      <div class="field">
-        <button type="button" id="reload-btn" class="btn">出走表を再取得</button>
       </div>
 
       <div class="field field-grow">
@@ -50,13 +41,15 @@
       </div>
 
       <div class="field">
-        <label for="size-range">サイズ</label>
-        <input type="range" id="size-range" min="30" max="120" step="1">
-        <span class="val" id="size-val">6.2%</span>
+        <button type="button" id="reset-btn" class="btn" title="車番順の升目（スタートの位置）に戻す">配置を戻す（スタート）</button>
+        <button type="button" id="reset-line-btn" class="btn" title="並びの一列（赤板の位置）に置き直す">配置を戻す（並び）</button>
+        <button type="button" id="reload-btn" class="btn btn-sub">出走表を再取得</button>
       </div>
 
       <div class="field">
-        <button type="button" id="reset-btn" class="btn">配置を戻す</button>
+        <label for="size-range">サイズ</label>
+        <input type="range" id="size-range" min="40" max="56" step="1">
+        <span class="val" id="size-val">4.8%</span>
       </div>
 
       <div class="field">
@@ -64,42 +57,83 @@
       </div>
     </div>
 
-    <p class="hint" id="hint">レースを選ぶと並びが入ります。<b>丸をドラッグ＝1台だけ</b>／<b>ラインの帯をドラッグ＝そのライン全員</b>。</p>
-  </header>
-
-  <!-- ===== 表示エリア（この矩形だけをOBSに映す） ===== -->
-  <main class="stage-wrap">
-    <div class="stage" id="stage" data-bg="normal">
-      <div class="bank" id="bank">
-        <div class="bank-surface"></div>
-        <div class="bank-line bank-line-outer"></div>
-        <div class="bank-line bank-line-inner"></div>
-        <div class="bank-infield"></div>
-
-        <div class="stage-title is-empty" id="stage-title">
-          <div class="stage-title-main" id="stage-title-main"></div>
-          <div class="stage-title-sub" id="stage-title-sub"></div>
-        </div>
-
-        <div class="stage-dir" id="stage-dir"></div>
-
-        <svg class="line-bars" id="line-bars"></svg>
-        <div class="riders" id="riders"></div>
+    <!-- 局面ボタン＝先頭がその地点に来るまで全体が進む（戻る）。要件定義_v2 §5・§6.4 -->
+    <div class="panel-row panel-row-phase">
+      <div class="phase-group">
+        <button type="button" class="btn btn-phase" data-phase="start">スタート</button>
+        <button type="button" class="btn btn-phase" data-phase="red">赤板</button>
+        <button type="button" class="btn btn-phase" data-phase="bell">🔔 打鐘</button>
+        <button type="button" class="btn btn-phase" data-phase="home">最終ホーム</button>
+        <button type="button" class="btn btn-phase" data-phase="back">バック</button>
+        <button type="button" class="btn btn-phase" data-phase="straight" title="4角を抜けてホーム直線へ。ここで差し・突き抜け・ズブズブを押すと3着までゴールする">最終ストレート</button>
+      </div>
+      <div class="phase-group">
+        <button type="button" class="btn btn-undo" id="undo-btn" title="Ctrl+Z" disabled>↶ 取り消し</button>
+        <button type="button" class="btn btn-undo" id="redo-btn" title="Ctrl+Y" disabled>↷ やり直し</button>
       </div>
     </div>
+
+    <!-- 動詞ボタン（v2.1）＝選手かラインをクリックして選んでから押す。要件定義_v2 §6.5 -->
+    <!-- 9/27 Naoto「レース中の動きと、ゴールの仕方はボタンの位置を分けて分かるように」＝
+         1段目＝展開（レース中の動き・緑）／2段目＝並び（順番の入れ替え）＋決着（ゴールの仕方・金色・3連単もここ） -->
+    <div class="panel-row panel-row-verb">
+      <span class="sel-label is-empty" id="sel-label">選択なし（丸かラインをクリック）</span>
+      <div class="phase-group verb-group">
+        <span class="group-label">展開</span>
+        <button type="button" class="btn btn-verb" data-verb="joushou" title="赤板〜打鐘：選んだラインが上がって前を押さえる。前受けはすぐ後ろへ">上昇</button>
+        <button type="button" class="btn btn-verb" data-verb="kamashi" title="打鐘〜ホーム：選んだラインが一気に叩いて先頭へ。叩かれたラインはすぐ後ろへ">カマシ</button>
+        <button type="button" class="btn btn-verb" data-verb="kamashiFail" title="選んだラインが番手の横まで来て突っ張られ、最後尾へ下がる">カマシ失敗</button>
+        <button type="button" class="btn btn-verb" data-verb="tobitsuki" title="選んだ選手が先頭ラインの番手に飛びつき、番手を奪う">飛びつき</button>
+        <button type="button" class="btn btn-verb" data-verb="tobitsukiFail" title="選んだ選手が番手の横まで来て弾かれ、元の位置へ戻る">飛びつき失敗</button>
+        <button type="button" class="btn btn-verb" data-verb="makuri" title="外を上がって先頭を抜き去る＝まくり切る（ラインの先頭を選ぶと後続も続く）">まくり</button>
+        <button type="button" class="btn btn-verb" data-verb="makuriFail" title="先頭ラインの番手にブロックされて止められ、元の位置へ引く">まくり失敗</button>      </div>
+    </div>
+    <div class="panel-row panel-row-verb">
+      <div class="phase-group verb-group">
+        <span class="group-label">並び</span>
+        <button type="button" class="btn btn-order" data-verb="up" title="選んだラインを1つ前のラインと入れ替える">▲ 順番を前へ</button>
+        <button type="button" class="btn btn-order" data-verb="down" title="選んだラインを1つ後ろのラインと入れ替える">▼ 順番を後ろへ</button>
+      </div>
+      <div class="phase-group verb-group finish-group">
+        <span class="group-label">決着<small>（最終周回）</small></span>
+        <button type="button" class="btn btn-finish" data-verb="oshikiri" title="最終周回で：先頭がそのまま1着、ラインもそのままの順でゴール">押切</button>
+        <button type="button" class="btn btn-finish" data-verb="sashi" title="最終周回で：番手が先頭を差して1着・3番手が3着（それより前は、すぐ前の選手を交わす）">差し</button>
+        <button type="button" class="btn btn-finish" data-verb="tsukinuke" title="最終周回で：3番手が番手・先頭をまとめて抜いて1着（それより前は、番手が先頭を交わす）">突き抜け</button>
+        <button type="button" class="btn btn-finish" data-verb="zubu" title="最終周回で：3車ラインの先頭が番手・3番手に抜かれる（番手→3番手→先頭の順でゴール）">ズブズブ</button>
+        <button type="button" class="btn btn-finish" data-verb="hako3" title="最終周回で：3車ラインの先頭が1着・3番手が番手を交わして2着（先頭→3番手→番手の順でゴール）">ハコ3</button>
+        <!-- 3連単で決着（9/27）：最終周回で押すと、その着順でゴールまで走り切る -->
+        <span class="field">
+          <label for="trifecta-input">3連単</label>
+          <input type="text" id="trifecta-input" class="trifecta" placeholder="4-2-7" autocomplete="off" spellcheck="false" maxlength="12">
+          <button type="button" id="trifecta-btn" class="btn btn-finish">決着</button>
+        </span>
+      </div>
+    </div>
+
+    <p class="hint" id="hint">局面ボタンで全体が進みます。<b>盤面の上でホイール（奥へ＝進む／手前へ＝戻す）</b>や → ← キーで少しずつ。<b>丸をドラッグ＝1台</b>（コースに沿って動く・離すと内/中/外にそろう）／<b>ラインの帯をドラッグ＝ライン全員</b>。</p>
+  </header>
+
+  <!-- ===== 表示エリア（1枚のSVG・viewBox 960×572。縦横比を保って窓に合わせる） ===== -->
+  <main class="stage-wrap">
+    <div class="stage" id="stage" data-bg="normal"></div>
   </main>
 
 </div>
 
-<script src="../autoupdate.js?v=20260927-120346" data-au="output-only"></script>
-<script src="js/config.js?v=20260927-120346"></script>
-<script src="js/state.js?v=20260927-120346"></script>
-<script src="js/icons.js?v=20260927-120346"></script>
-<script src="js/bars.js?v=20260927-120346"></script>
-<script src="js/racecard.js?v=20260927-120346"></script>
-<script src="js/live.js?v=20260927-120346"></script>
-<script src="js/lineup.js?v=20260927-120346"></script>
-<script src="js/drag.js?v=20260927-120346"></script>
-<script src="js/main.js?v=20260927-120346"></script>
+<script src="../autoupdate.js?v=20260927-172916" data-au="output-only"></script>
+<script src="js/config.js?v=20260927-172916"></script>
+<script src="js/track.js?v=20260927-172916"></script>
+<script src="js/state.js?v=20260927-172916"></script>
+<script src="js/icons.js?v=20260927-172916"></script>
+<script src="js/bars.js?v=20260927-172916"></script>
+<script src="js/board.js?v=20260927-172916"></script>
+<script src="js/racecard.js?v=20260927-172916"></script>
+<script src="js/live.js?v=20260927-172916"></script>
+<script src="js/lineup.js?v=20260927-172916"></script>
+<script src="js/anim.js?v=20260927-172916"></script>
+<script src="js/undo.js?v=20260927-172916"></script>
+<script src="js/verbs.js?v=20260927-172916"></script>
+<script src="js/drag.js?v=20260927-172916"></script>
+<script src="js/main.js?v=20260927-172916"></script>
 </body>
 </html>

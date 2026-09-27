@@ -1,12 +1,14 @@
 /* ===========================================================
-   lineup.js — 並びテキストのパース＋自動配置
+   lineup.js — 並びテキストのパース＋スタートの初期隊列  v2
 
    入力例： 1-3-5 / 2-7 / 4-6-9
             １－３－５　２－７　４－６－９   （全角でも可）
             135 27 469                      （区切りなしでも可）
 
-   考え方：ライン区切りだけ見て、ライン内は「出てきた数字の順」で読む。
-           車番は1〜9の1桁なので、これで -, =, ・ 等どんな区切りでも通る。
+   パースは v1 と同じ。配置だけ (d, lane) で作る（要件定義_v2 §6.8）：
+     先頭ラインの先頭をスタート位置（誘導員の1車身後ろ）に置き、後方へ1.05車身間隔、
+     ライン間は＋0.7車身、全員 内レーン。並び予想の左端のラインが前受け。
+     v1の「ラインごとに縦位置を段違いにする」は廃止＝コース上では段違いが併走の意味になる
    =========================================================== */
 
 var Lineup = (function () {
@@ -15,15 +17,12 @@ var Lineup = (function () {
   function normalize(text) {
     if (!text) return '';
     return String(text)
-      /* 全角数字 → 半角 */
       .replace(/[０-９]/g, function (ch) {
         return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
       })
-      /* 丸数字 ①〜⑨ → 1〜9 */
       .replace(/[①-⑨]/g, function (ch) {
         return String(ch.charCodeAt(0) - 0x2460 + 1);
       })
-      /* 全角スラッシュ・全角スペース → 半角 */
       .replace(/／/g, '/')
       .replace(/　/g, ' ')
       .trim();
@@ -32,8 +31,7 @@ var Lineup = (function () {
   /**
    * 並びテキストをラインの配列に分解する
    * @param {string} text
-   * @param {number[]|null} cars 出走している車番。null なら1〜9を無条件で受け、
-   *                             「並びに出てこなかった車番の補完」も行わない
+   * @param {number[]|null} cars 出走している車番。null なら1〜9を無条件で受ける
    * @returns {{lines:number[][], ignored:number[], missing:number[]}}
    */
   function parse(text, cars) {
@@ -55,18 +53,15 @@ var Lineup = (function () {
       var line = [];
       digits.forEach(function (d) {
         var no = parseInt(d, 10);
-        if (allowed && !allowed[no]) { ignored.push(no); return; }  // 出走していない車番
-        if (seen[no]) { ignored.push(no); return; }                 // 重複
+        if (allowed && !allowed[no]) { ignored.push(no); return; }
+        if (seen[no]) { ignored.push(no); return; }
         seen[no] = true;
         line.push(no);
       });
       if (line.length) lines.push(line);
     });
 
-    /* 並びに出てこなかった車番は「盤面に出さない」。
-       以前は最後方に単騎として足していたが、実使用で邪魔だったので廃止した。
-       ＝並びに書かれた車番が、そのまま盤面に出る車番になる。
-       missing は報告用に返すだけで、lines には足さない */
+    /* 並びに出てこなかった車番は「盤面に出さない」（v1と同じ）。missing は報告用 */
     var missing = [];
     if (allowed) {
       cars.forEach(function (no) { if (!seen[no]) missing.push(no); });
@@ -76,67 +71,43 @@ var Lineup = (function () {
   }
 
   /**
-   * ライン配列 → 各車の正規化座標
-   * 先頭ラインの先頭を最前に置き、後方へ等間隔。ライン間は余分に空ける。
-   * @returns {Object} { 1:{x,y}, 2:{x,y}, ... }
+   * ライン配列 → 各車の { d, lane }（スタートの隊列）
+   * @param {number[][]} lines
+   * @param {number} [headD] 先頭の周回位置（省略時＝スタート）
    */
-  function layout(lines, dir, iconRatio) {
-    var L = CONFIG.LAYOUT;
+  function layout(lines, headD) {
+    var L = CONFIG.LAYOUT, CAR = CONFIG.CAR;
+    var d = (typeof headD === 'number' && isFinite(headD)) ? headD : CONFIG.PHASES[0].d;
     var positions = {};
-
-    /* アイコンを大きくしたときに重ならないよう、間隔をアイコン径に連動させる */
-    var r = (typeof iconRatio === 'number' && isFinite(iconRatio))
-      ? iconRatio : CONFIG.ICON_RATIO_DEFAULT;
-    var gapInLine  = Math.max(L.gapInLine,  r * 1.02);
-    var gapBetween = Math.max(L.gapBetween, r * 0.70);
-
-    /* 全部が単騎のレース（ガールズ等）は段違いにすると意味なくギザギザに見えるので、
-       高さを揃えて一直線に並べる */
-    var allSolo = lines.every(function (line) { return line.length === 1; });
-
-    var cursor = L.headX;
-    var minX = L.headX;
-
-    lines.forEach(function (line, lineIdx) {
-      var y = allSolo ? L.lineY[0] : L.lineY[lineIdx % L.lineY.length];
-      line.forEach(function (no) {
-        positions[no] = { x: cursor, y: y };
-        if (cursor < minX) minX = cursor;
-        cursor -= gapInLine;
+    /* ライン内の間隔＝1.05車身、ライン間＝1.05＋0.7車身 */
+    var first = true;
+    lines.forEach(function (line, i) {
+      line.forEach(function (no, j) {
+        if (!first) d += L.gapInLine * CAR + (j === 0 ? L.gapBetween * CAR : 0);
+        first = false;
+        positions[no] = { d: d, lane: -1 };
       });
-      cursor -= gapBetween;   // ラインの切れ目
     });
+    return positions;
+  }
 
-    /* 入り切らない場合は、先頭を固定したまま全体を横に圧縮する */
-    if (minX < L.tailX) {
-      var factor = (L.headX - L.tailX) / (L.headX - minX);
-      for (var no in positions) {
-        if (!Object.prototype.hasOwnProperty.call(positions, no)) continue;
-        positions[no].x = L.headX - (L.headX - positions[no].x) * factor;
-      }
-    }
-
-    /* 左が先頭のときは左右反転 */
-    if (dir === 'left') {
-      var maxX = 0;
-      for (var n in positions) {
-        if (!Object.prototype.hasOwnProperty.call(positions, n)) continue;
-        positions[n].x = 1 - positions[n].x;
-        if (positions[n].x > maxX) maxX = positions[n].x;
-      }
-      /* 右寄せ（9/25 Naoto「デフォルトでアイコンが左寄り→右寄りに」）。
-         反転しただけだと先頭が左端に張り付き、車数が少ないと右が空く。
-         並び順・間隔はそのまま、最後尾が headX（右端の定位置）に来るまで全体を右へ送る。
-         ⚠️右が先頭（dir=right）はもともと先頭が headX＝右寄せなので触らない */
-      var shift = L.headX - maxX;
-      if (shift > 0) {
-        for (var m in positions) {
-          if (!Object.prototype.hasOwnProperty.call(positions, m)) continue;
-          positions[m].x += shift;
-        }
-      }
-    }
-
+  /**
+   * スタートの升目（9/27 Naoto）＝車番順に 内・中・外 の3人ずつ、前から列にする
+   *   1列目：1(内) 2(中) 3(外) ／ 2列目：4 5 6 ／ 3列目：7 8 9
+   * 欠車があれば詰める（出ている車番の順で数える）
+   * @param {number[]} cars 盤面に出す車番
+   * @param {number} [headD] 1列目の周回位置（省略時＝スタート）
+   */
+  function grid(cars, headD) {
+    var L = CONFIG.LAYOUT;
+    var d0 = (typeof headD === 'number' && isFinite(headD)) ? headD : CONFIG.PHASES[0].d;
+    var positions = {};
+    (cars || []).slice().sort(function (a, b) { return a - b; }).forEach(function (no, i) {
+      positions[no] = {
+        d: d0 + Math.floor(i / L.gridRows) * L.gridGap * CONFIG.CAR,
+        lane: -1 + (i % L.gridRows)
+      };
+    });
     return positions;
   }
 
@@ -144,12 +115,13 @@ var Lineup = (function () {
     normalize: normalize,
     parse: parse,
     layout: layout,
+    grid: grid,
 
     /** パース＋配置をまとめて実行 */
-    apply: function (text, cars, dir, iconRatio) {
+    apply: function (text, cars) {
       var parsed = parse(text, cars);
       return {
-        positions: layout(parsed.lines, dir, iconRatio),
+        positions: layout(parsed.lines),
         lines: parsed.lines,
         ignored: parsed.ignored,
         missing: parsed.missing

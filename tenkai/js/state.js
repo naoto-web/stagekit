@@ -1,25 +1,27 @@
 /* ===========================================================
-   state.js — 状態オブジェクト＋localStorage
+   state.js — 状態オブジェクト＋localStorage  v2
 
    このアプリの真実は State.data ただ1つ。描画は必ずこれを見て描く。
-   stagekit へ統合するときは、この data をそのまま同期に載せる。
+   v2は選手の位置を { d, lane }（周回位置・内外）で持つ（要件定義_v2 §8）。
+   保存キーは v2 専用＝v1の (x, y) の保存は読まない。
    =========================================================== */
 
 var State = (function () {
 
   var listeners = [];
 
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
+  }
+
+  /** スタートの升目（車番順に内→外へ3人ずつ）。レース未選択で開いたときの見た目＝人が見て「未設定」と分かる。
+      lineup.js の grid() と同じ並べ方（state.js は先に読み込まれるのでここに同じ式を持つ） */
   function defaultRiders() {
-    /* 初期は内圏線のすぐ外に1列。先頭は左（＝1番が左端） */
     var riders = {};
-    var L = CONFIG.LAYOUT;
-    /* 右寄せ（9/25 Naoto）＝最後尾（9番）が headX に来るまで右へ送る（lineup.js の layout と同じ考え方） */
-    var shift = L.headX - (1 - (L.headX - (CONFIG.MAX_CAR - 1) * L.gapInLine));
+    var start = CONFIG.PHASES[0].d, L = CONFIG.LAYOUT;
     for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
-      riders[no] = {
-        x: clamp(1 - (L.headX - (no - 1) * L.gapInLine) + Math.max(0, shift), CONFIG.BOUNDS.minX, CONFIG.BOUNDS.maxX),
-        y: L.lineY[0]
-      };
+      var i = no - 1;
+      riders[no] = { d: start + Math.floor(i / L.gridRows) * L.gridGap * CONFIG.CAR, lane: -1 + (i % L.gridRows) };
     }
     return riders;
   }
@@ -32,43 +34,40 @@ var State = (function () {
 
   function defaultData() {
     return {
+      v: 2,
       /* 盤面に出す車番。並びに書かれた車番がそのまま入る */
       cars: allCars(),
-      /* 出走表が持っている車番（＝そのレースに存在する車番）。
-         手入力を検証するときの母集合。cars と分けているのは、
-         並びを打ち直したときに一度消えた車番を復活させられるようにするため */
+      /* 出走表が持っている車番（＝そのレースに存在する車番）。手入力を検証するときの母集合 */
       raceCars: [],
-      /* 進行方向は「左が先頭」で固定（2026-08-08確定）。
-         反転ロジックは残してあるので、必要になれば 'right' を入れれば戻せる */
-      dir: 'left',
       iconRatio: CONFIG.ICON_RATIO_DEFAULT,
       bg: 'normal',
       showBars: 'on',
       showNames: 'on',
       /* 車番→苗字。出走表を読み込むと入る */
       names: {},
-      /* 選択中のレース（再読込時に選び直すため保持）。
-         date＝この盤面を組んだ時刻表の日付（yyyyMMdd）。
+      /* 選択中のレース。date＝この盤面を組んだ時刻表の日付（yyyyMMdd）。
          ⚠️日付を外さないこと。場コードとR番号だけだと**翌日の同じ場・同じR**を
-            「もう出している同じレース」と誤判定して盤面を組み直さない。
-            2026-09-21の配信で、前日の弥彦9Rの選手名・ラインが③に出たまま映った */
+            「もう出している同じレース」と誤判定して盤面を組み直さない（2026-09-21の事故） */
       sel: { date: '', joCode: '', raceNo: 0 },
-      /* 盤面左上に出す見出し。例 '和歌山 12R' / 'G3・Ｓ級決勝・三分戦' */
       titleMain: '',
       titleSub: '',
       lineupText: '',
-      /* ライン構成。連結バーの描画と「ラインごと動かす」の単位になる。
-         並びを適用したときに更新される。例：[[1,3,5],[2,7],[4,6,9]] */
+      /* ライン構成。連結バーの描画と「ラインごと動かす」の単位。例：[[1,3,5],[2,7],[4,6,9]] */
       lines: [],
+      /* 決着した着順（9/27・3連単の入力や最終ストレートの動詞）。先頭がゴール線にいるあいだだけ盤面に「決着 4-2-7」と出す */
+      finish: null,
+      /* 車番 → { d:周回位置, lane:内外 } */
       riders: defaultRiders()
     };
   }
 
-  function clamp(v, lo, hi) {
-    return v < lo ? lo : (v > hi ? hi : v);
-  }
-
   var data = defaultData();
+
+  function cleanRider(r) {
+    if (!r || typeof r.d !== 'number' || typeof r.lane !== 'number' ||
+        !isFinite(r.d) || !isFinite(r.lane)) return null;
+    return { d: clamp(r.d, CONFIG.D_MIN, CONFIG.D_MAX), lane: clamp(r.lane, -1, 1) };
+  }
 
   /* --- 保存されたデータを取り込む（形が違っても壊れないように検証する） --- */
   function sanitize(raw) {
@@ -100,9 +99,7 @@ var State = (function () {
       }
     }
     if (raw.sel && typeof raw.sel === 'object') {
-      /* 日付の無い旧データ（9/21の修正より前の保存）は date='' になる。
-         呼び出し側は「今日の時刻表と一致しない＝組み直す」と判定するので、
-         初回だけ必ず組み直されて正しい盤面に入れ替わる */
+      /* 日付の無い旧データは date='' になる＝呼び出し側は「今日の時刻表と一致しない＝組み直す」と判定する */
       d.sel = {
         date: /^\d{8}$/.test(String(raw.sel.date || '')) ? String(raw.sel.date) : '',
         joCode: String(raw.sel.joCode || ''),
@@ -124,16 +121,15 @@ var State = (function () {
       d.lines = cleaned;
     }
 
+    if (Array.isArray(raw.finish)) {
+      var fin = carList(raw.finish);
+      d.finish = fin.length ? fin.slice(0, 3) : null;
+    }
+
     if (raw.riders && typeof raw.riders === 'object') {
       for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
-        var r = raw.riders[no];
-        if (r && typeof r.x === 'number' && typeof r.y === 'number' &&
-            isFinite(r.x) && isFinite(r.y)) {
-          d.riders[no] = {
-            x: clamp(r.x, CONFIG.BOUNDS.minX, CONFIG.BOUNDS.maxX),
-            y: clamp(r.y, CONFIG.BOUNDS.minY, CONFIG.BOUNDS.maxY)
-          };
-        }
+        var r = cleanRider(raw.riders[no]);
+        if (r) d.riders[no] = r;
       }
     }
     return d;
@@ -166,11 +162,21 @@ var State = (function () {
     for (var i = 0; i < listeners.length; i++) listeners[i](data);
   }
 
+  /** 位置だけの写し（取り消し・アニメの起点に使う） */
+  function copyRiders(src) {
+    var out = {};
+    for (var no in src) {
+      if (Object.prototype.hasOwnProperty.call(src, no)) out[no] = { d: src[no].d, lane: src[no].lane };
+    }
+    return out;
+  }
+
   return {
     get data() { return data; },
 
     load: load,
     save: save,
+    sanitize: sanitize,
 
     /** false にすると localStorage への書き込みを止める（出力ビュー用） */
     setPersist: function (v) { persist = !!v; },
@@ -186,31 +192,39 @@ var State = (function () {
       emit();
     },
 
-    /** 1台だけ動かす（ドラッグ用。描画は呼び出し側が直接やる） */
-    moveRider: function (no, x, y) {
+    /** 1台だけ動かす（ドラッグ・アニメ用。保存も描画もしない＝呼び出し側がまとめてやる） */
+    moveRider: function (no, d, lane) {
       var r = data.riders[no];
       if (!r) return;
-      r.x = clamp(x, CONFIG.BOUNDS.minX, CONFIG.BOUNDS.maxX);
-      r.y = clamp(y, CONFIG.BOUNDS.minY, CONFIG.BOUNDS.maxY);
+      r.d = clamp(d, CONFIG.D_MIN, CONFIG.D_MAX);
+      r.lane = clamp(lane, -1, 1);
     },
 
-    /** 全台の座標を差し替える（自動配置用） */
+    /** 全台の位置を差し替える（自動配置・取り消し用） */
     setRiders: function (positions) {
       for (var no in positions) {
         if (!Object.prototype.hasOwnProperty.call(positions, no)) continue;
-        var p = positions[no];
-        data.riders[no] = {
-          x: clamp(p.x, CONFIG.BOUNDS.minX, CONFIG.BOUNDS.maxX),
-          y: clamp(p.y, CONFIG.BOUNDS.minY, CONFIG.BOUNDS.maxY)
-        };
+        var r = cleanRider(positions[no]);
+        if (r) data.riders[no] = r;
       }
       save();
       emit();
     },
 
+    copyRiders: copyRiders,
+
+    /** 盤面に出ている選手のうち、いちばん前（d最小）の周回位置。誰もいなければ null */
+    leaderD: function () {
+      var best = null;
+      (data.cars || []).forEach(function (no) {
+        var r = data.riders[no];
+        if (r && (best === null || r.d < best)) best = r.d;
+      });
+      return best;
+    },
+
     /** レース由来のものだけ丸ごと捨てて「まだ何も選んでいない」状態に戻す（表示の好みは残す）。
-        別の日に組んだ盤面を配信に出さないために使う＝**空**より**前日の嘘**のほうが害が大きい。
-        見た目は初めてボードを開いたときと同じ（9車・名前なし・1列）＝人が見て「未設定」と分かる */
+        別の日に組んだ盤面を配信に出さないために使う＝**空**より**前日の嘘**のほうが害が大きい */
     clearRace: function () {
       var d0 = defaultData();
       data.cars = d0.cars;
@@ -218,6 +232,7 @@ var State = (function () {
       data.names = {};
       data.lines = [];
       data.lineupText = '';
+      data.finish = null;
       data.titleMain = '';
       data.titleSub = '';
       data.sel = { date: '', joCode: '', raceNo: 0 };
@@ -242,6 +257,7 @@ var State = (function () {
       emit();
     },
 
-    clamp: clamp
+    clamp: clamp,
+    defaultRiders: defaultRiders
   };
 })();

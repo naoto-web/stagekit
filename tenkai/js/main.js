@@ -1,101 +1,77 @@
 /* ===========================================================
-   main.js — 起動・描画・イベント結線
+   main.js — 起動・描画・イベント結線  v2（バンク1周・オーバル）
+
+   v1から変わったところ（要件定義_v2）
+     ・盤面は1枚のSVG（board.js）。位置は (d, lane)＝周回位置・内外
+     ・局面ボタン（スタート〜ゴールの7つ）／ホイール・矢印キーで全体送り
+     ・取り消し・やり直し（Ctrl+Z / Ctrl+Y）
+     ・出力は届いた状態へ滑らかに追いつく（Anim.Smoother）
+     ・出力は旧ドック（v1の (x, y)）の状態も互換描画する＝公開直後にドックを開き直すまで③が空にならない
+   v1から変えていないところ：配信への追従（日付込みの sameRace）・2画面・GAS読み取り専用・?gas=
    =========================================================== */
 
 (function () {
 
-  var stageEl, ridersEl, barsEl, panelEl, hintEl;
-  var inputEl, applyBtn, resetBtn, sizeRange, sizeVal;
-  var venueSel, raceSel, reloadBtn, followChk, followDiffEl, nowRaceEl;
-  var titleEl, titleMainEl, titleSubEl, dirEl, liveDot;
+  var stageEl, panelEl, hintEl;
+  var inputEl, applyBtn, resetBtn, sizeRange, sizeVal, undoBtn, redoBtn;
+  var venueSel, raceSel, reloadBtn, followChk, followDiffEl, nowRaceEl, liveDot;
+  var phaseBtns = [];
+  var verbBtns = [], selLabelEl;
+  var sel = null;          // 選択中（v2.1）＝ { type:'rider'|'line', nos:[…] }。ドックだけ・保存も配信もしない
   var pendingRace = null;   // URLで指定されたレース（出走表の取得完了後に適用する）
 
   /* 'control'＝操作画面（OBSのカスタムブラウザドックに入れる）
      'output' ＝出力画面（OBSのブラウザソースに入れる）。?view=output で切り替える */
   var VIEW = 'control';
   var lastRemoteSig = '';   // 出力側で「構造が変わったか」を見るための署名
-  var riderEls = {};   // { 1: HTMLElement, ... }
+  var smoother = null;      // 出力側の追いつき表示
 
   /* ---------- 描画 ---------- */
 
-  /** 1台の位置を反映する（dataset にも持たせてドラッグの基準にする） */
-  function applyPosition(no, x, y) {
-    var el = riderEls[no];
-    if (!el) return;
-    el.dataset.x = String(x);
-    el.dataset.y = String(y);
-    el.style.left = (x * 100) + '%';
-    el.style.top = (y * 100) + '%';
-  }
-
-  /** ステージを残りスペースいっぱいに広げる。
-      以前は16:9で固定していたが、それだと高さが上限になって横が余っていた。
-      座標はすべて正規化（0..1）なので、縦横比が変わっても配置はそのまま成立する。
-      ※OBSに載せるときは、クロップ後にウィンドウサイズを固定すること */
-  function fitStage() {
-    var wrap = stageEl.parentElement;
-    if (!wrap) return;
-    var w = wrap.clientWidth;
-    var h = wrap.clientHeight;
-    if (!w || !h) return;
-
-    stageEl.style.width  = w + 'px';
-    stageEl.style.height = h + 'px';
-    /* 見出し・進行方向ラベルの文字サイズがステージ高に追従できるように渡す */
-    stageEl.style.setProperty('--stage-w', w + 'px');
-    stageEl.style.setProperty('--stage-h', h + 'px');
-  }
-
-  /** アイコン径を実ピクセルで決める */
-  function applyIconSize() {
-    fitStage();
-    var px = Math.round(CONFIG.iconPx(stageEl.clientWidth, stageEl.clientHeight, State.data.iconRatio));
-    stageEl.style.setProperty('--icon-px', px + 'px');
-    Bars.sync();   // 連結バーの太さ・座標もステージサイズに連動する
-  }
-
-  /** 状態を丸ごと画面に反映する */
+  /** 状態を丸ごと画面に反映する（構造が変わったとき） */
   function render() {
-    var d = State.data;
-
-    for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
-      var el = riderEls[no];
-      if (!el) continue;
-      /* 出走している車番だけ出す。6車立て・欠車もこれで正しく消える */
-      var visible = (d.cars.indexOf(no) !== -1);
-      el.classList.toggle('is-hidden', !visible);
-      if (visible) {
-        applyPosition(no, d.riders[no].x, d.riders[no].y);
-        Icons.setName(el, d.names[no] || '');
-        Icons.setDirection(el, d.dir);
-      }
-    }
-
-    stageEl.dataset.bg = d.bg;
-    stageEl.dataset.names = d.showNames;
-    stageEl.dataset.dir = d.dir;
-
-    titleMainEl.textContent = d.titleMain || '';
-    titleSubEl.textContent = d.titleSub || '';
-    titleEl.classList.toggle('is-empty', !d.titleMain);
-
-    /* 先頭がどちら側かを、ラベルの中身と置き場所の両方で示す */
-    dirEl.textContent = (d.dir === 'right') ? '先頭 ▶' : '◀ 先頭';
-
+    var ph = Board.render(State.data);
     publishLive(true);
-    Bars.rebuild();
-    applyIconSize();
-    syncControls();
+    syncControls(ph);
+    schedulePrepare();
+  }
+
+  /* スタートの升目→並びの一列の「通り道の計画」は計算に約1秒かかる。
+     赤板を押してから止まって見えないよう、並びが決まったら裏で先に計算しておく（同じ並びなら2回目以降は即時）。
+     戻す（→スタート）は同じ道の逆再生なので計算は要らない */
+  var prepareTimer = null;
+  function schedulePrepare() {
+    if (VIEW !== 'control') return;
+    clearTimeout(prepareTimer);
+    prepareTimer = setTimeout(function () {
+      var d = State.data;
+      if (!d.cars || d.cars.length < 2 || Anim.busy()) return;
+      try { Anim.prepare(Lineup.grid(d.cars), lineFormation(CONFIG.PHASES[1].d)); } catch (e) {}
+    }, 600);
+  }
+
+  /** 位置だけ反映する（ドラッグ・アニメ・全体送りの途中） */
+  function renderPositions() {
+    var ph = Board.positions(State.data);
+    publishLive();
+    syncPhaseButtons(ph);
   }
 
   /** コントロールの表示状態を state に合わせる */
-  function syncControls() {
+  function syncControls(ph) {
     var d = State.data;
-
     sizeRange.value = String(Math.round(d.iconRatio * 1000));
     sizeVal.textContent = (d.iconRatio * 100).toFixed(1) + '%';
-
     if (document.activeElement !== inputEl) inputEl.value = d.lineupText;
+    syncPhaseButtons(ph);
+  }
+
+  /** 局面ボタン：いまの局面を光らせる／取り消しボタンの可否 */
+  function syncPhaseButtons(ph) {
+    var key = ph ? ph.key : '';
+    phaseBtns.forEach(function (b) { b.classList.toggle('is-on', b.dataset.phase === key); });
+    if (undoBtn) undoBtn.disabled = !Undo.canUndo();
+    if (redoBtn) redoBtn.disabled = !Undo.canRedo();
   }
 
   function setHint(text, isWarn) {
@@ -124,25 +100,23 @@
       return;
     }
 
-    /* 出走表を読み込み済みなら、そのレースに存在する車番だけ受け付ける。
-       検証の母集合は raceCars（今の表示 cars ではない）。
-       cars で検証すると、一度並びから外して消えた車番を書き戻せなくなる */
+    /* 検証の母集合は raceCars（今の表示 cars ではない）＝一度消した車番を書き戻せるように */
     var pool = (d.raceCars && d.raceCars.length) ? d.raceCars : null;
-    var result = Lineup.apply(text, pool, d.dir, d.iconRatio);
+    var result = Lineup.apply(text, pool);
 
+    Anim.stop();
+    Undo.push();
     State.set({
       lineupText: text,
       lines: result.lines,
-      cars: carsFromLines(result.lines)   // 並びに書かれた車番だけを盤面に出す
+      cars: carsFromLines(result.lines)
     });
-    State.setRiders(result.positions);
+    State.setRiders(Lineup.grid(carsFromLines(result.lines)));   // スタート＝車番順の升目
     render();
 
-    /* 結果の要約を出す */
     var shown = result.lines.map(function (l) { return l.join('-'); }).join(' / ');
-    var msg = '配置しました： ' + shown;
+    var msg = '配置しました（スタートは車番順・赤板で並びの一列になります）： ' + shown;
     var warn = false;
-
     if (result.missing.length) {
       msg += '　／ 並びに無い ' + result.missing.join('・') + ' 番は盤面に出していません';
       warn = true;
@@ -155,33 +129,267 @@
     setHint(msg, warn);
   }
 
-  /* ---------- 出力画面との同期（C案の検証部分） ---------- */
+  /* ---------- 全体送り（要件定義_v2 §6.4） ---------- */
 
-  /** 操作側→出力側へ現状を流す。ドラッグ中に毎フレーム呼ばれるのでLive側で間引かれる */
+  /** 全体を delta 周だけ進める（負なら戻す）。先頭はゴールより先へ行かない・最後尾は上限で止める＝間隔を崩さない */
+  function clampAdvance(delta) {
+    var d = State.data, lead = null, tail = null;
+    d.cars.forEach(function (no) {
+      var r = d.riders[no];
+      if (!r) return;
+      if (lead === null || r.d < lead) lead = r.d;
+      if (tail === null || r.d > tail) tail = r.d;
+    });
+    if (lead === null) return 0;
+    if (delta > 0) {
+      /* 先頭がゴール線の手前なら、まずゴール線で止まる（今までどおり） */
+      if (lead > 1e-6) return Math.max(0, Math.min(delta, lead));
+      /* ゴール後（決着のあと・先頭がゴール線に着いたあと）は、最後尾がゴール線を越え切るまで送れる（9/27 Naoto）。
+         越え切った＝最後尾の丸の後ろの縁がゴール線の0.5車身先（決着の3着と同じ基準）。旧＝ゴール後は一切進めなかった */
+      var past = -(CONFIG.iconPx(d.iconRatio) / 2 + 0.5 * 56) / CONFIG.LAP;
+      return Math.max(0, Math.min(delta, tail - past));
+    }
+    return Math.max(delta, tail - CONFIG.D_MAX);                     // 後ろは上限まで
+  }
+
+  var saveTimer = null;
+  function saveSoon() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { State.save(); }, 400);
+  }
+
+  /** ホイール・矢印キー用。即時に動かす（出力側は Smoother で滑らかになる） */
+  function advance(delta) {
+    Anim.stop();
+    /* ゴール後に奥へ送るあいだは決着の表示（金色の「決着 x-y-z」）を残す。戻すときは消す */
+    var ld0 = State.leaderD();
+    if (!(delta > 0 && ld0 !== null && ld0 <= 1e-6)) State.data.finish = null;
+    var dd = clampAdvance(delta);
+    if (!dd) return;
+    Undo.push('wheel');
+    var d = State.data;
+    d.cars.forEach(function (no) {
+      var r = d.riders[no];
+      if (r) State.moveRider(no, r.d - dd, r.lane);
+    });
+    renderPositions();
+    saveSoon();
+  }
+
+  /** 並びの一列（ライン順・全員内）。並びが無いレースは車番順の単騎 */
+  function lineFormation(headD) {
+    var d = State.data;
+    var lines = (d.lines && d.lines.length) ? d.lines : d.cars.map(function (no) { return [no]; });
+    return Lineup.layout(lines, headD);
+  }
+
+  /** 先頭の d（与えた隊形の中で最小） */
+  function headOf(pos) {
+    var h = null;
+    Object.keys(pos).forEach(function (no) { if (h === null || pos[no].d < h) h = pos[no].d; });
+    return h;
+  }
+
+  /** 局面ボタン：先頭がその局面の位置に来るまで全員を進める（戻す）。アニメ付き。
+      隊形の切り替え（9/27 Naoto）：
+        スタート → それ以外 ＝ 車番順の升目から、走りながら並びの一列（ライン順・全員内）へ
+        それ以外 → スタート ＝ 逆走しながら升目へ戻る
+        それ以外どうし        ＝ 今の隊列のまま全員を同じ量だけ（手で動かした形を崩さない） */
+  function jumpPhase(key) {
+    State.data.finish = null;
+    var ph = null;
+    CONFIG.PHASES.forEach(function (p) { if (p.key === key) ph = p; });
+    var lead = State.leaderD();
+    if (!ph || lead === null) return;
+    var d = State.data;
+    var cur = Board.phaseOf(lead);
+    var fromStart = !!cur && cur.key === 'start';
+    var target = null, hint;
+
+    if (key === 'start') {
+      target = Lineup.grid(d.cars, ph.d);
+      hint = 'スタート（車番順）に戻しました。';
+    } else if (fromStart) {
+      target = lineFormation(ph.d);
+      hint = ph.label + 'へ。走りながら並び（' + (d.lines || []).map(function (l) { return l.join(''); }).join(' ') + '）の一列になりました。';
+    }
+
+    if (target) {
+      /* 升目⇔一列：選手ごとに行き先が違う */
+      var tHead = headOf(target);
+      var same = Object.keys(target).every(function (no) {
+        var r = d.riders[no];
+        return r && Math.abs(r.d - target[no].d) < 1e-6 && Math.abs(r.lane - target[no].lane) < 1e-6;
+      });
+      if (same) { setHint(ph.label + 'の位置です。'); return; }
+      Undo.push();
+      Anim.reform(target, {
+        dd: tHead - lead,
+        lapIfWhole: true,
+        onFrame: function () { renderPositions(); },
+        onDone: function () { State.save(); publishLive(true); }
+      });
+      setHint(hint + ' ホイール（奥へ＝進む／手前へ＝戻す）や → ← キーで少しずつ動かせます。');
+      return;
+    }
+
+    var delta = clampAdvance(lead - ph.d);
+    if (Math.abs(delta) < 1e-6) { setHint(ph.label + 'の位置です。'); return; }
+
+    Undo.push();
+    target = {};
+    d.cars.forEach(function (no) {
+      var r = d.riders[no];
+      if (r) target[no] = { d: r.d - delta, lane: r.lane };
+    });
+    Anim.to(target, {
+      dd: -delta,
+      onFrame: function () { renderPositions(); },
+      onDone: function () { State.save(); publishLive(true); }
+    });
+    setHint(ph.label + 'へ進めました。ホイール（奥へ＝進む／手前へ＝戻す）や → ← キーで少しずつ動かせます。');
+  }
+
+  /* ---------- 選択と動詞ボタン（v2.1・要件定義_v2 §6.1 / §6.5） ---------- */
+
+  /** 選択を変える。丸を掴む＝その1台、帯を掴む＝ライン全員、盤面の空きをクリック＝解除 */
+  function setSel(s) {
+    sel = (s && s.nos && s.nos.length) ? s : null;
+    Board.setSelected(sel ? sel.nos : []);
+    if (!selLabelEl) return;
+    if (!sel) {
+      selLabelEl.textContent = '選択なし（丸かラインをクリック）';
+      selLabelEl.classList.add('is-empty');
+      return;
+    }
+    selLabelEl.classList.remove('is-empty');
+    selLabelEl.textContent = '選択中：' + (sel.type === 'line'
+      ? 'ライン ' + sel.nos.join('')
+      : Verbs.label(sel.nos[0]));
+  }
+
+  /** 動詞ボタン：通り道を作って動かす。できないときは理由をヒント欄に出して何もしない */
+  function runVerb(key) {
+    if (VIEW !== 'control') return;
+    Anim.stop();
+    var res = Verbs.run(key, sel);
+    if (!res || res.error) { setHint((res && res.error) || 'この動きはできません', true); return; }
+    if (res.finish) { doFinish(res.finish, res.hint, res.lanes); return; }   // 最終ストレートの差し・突き抜け・ズブズブ＝3着までゴール
+    State.data.finish = null;
+    Undo.push();
+    Anim.path(res.paths, {
+      ms: res.ms || (res.long ? Math.round(CONFIG.ANIM.verbMs * 1.5) : CONFIG.ANIM.verbMs),   // res.ms＝動詞ごとの長さ（カマシ）
+      onFrame: function () { renderPositions(); },
+      onDone: function () { State.save(); publishLive(true); }
+    });
+    setHint(res.hint + '。（取り消しで元に戻せます）');
+  }
+  /** 決着（9/27 Naoto）：着順 order（上位3人）で、今の位置からゴールまで走り切る。
+      最終周回（先頭が最終ホームより前）でだけ使える。追い抜く選手の通り道は升目⇔一列と同じ計画（重ならない道）。
+      計画に約1秒かかるので、ヒントを先に出してから計算する */
+  function doFinish(order, hint, lanes) {
+    var lead = State.leaderD();
+    if (lead === null) return;
+    if (lead > 1.0 + 1e-6) { setHint('決着は最終周回（最終ホーム以降）で使ってください', true); return; }
+    Anim.stop();
+    var target = Verbs.finishTarget(order, lanes);   // lanes＝動詞が決めたゴールでの内外（差し）。無ければいまの内外の順
+    Undo.push();
+    State.data.finish = null;
+    setHint('決着 ' + order.join('-') + ' を計算しています…');
+    setTimeout(function () {
+      /* 先頭の進み（dd）は渡さない＝今の先頭→行き先の先頭の差で自動に決まる。
+         🐞9/27 Naoto「ボタンを押した瞬間、みんなの位置がずれる」：旧＝dd: 0 − lead（先頭の行き先＝ゴール線の前提）。
+         決着で3人がゴール線を越えるようにした（行き先の先頭＝ゴール線の先）ので、その差だけ動き出しで全員が飛んでいた */
+      /* 4着以下は通り道も真ん中のレーン（9/27 Naoto「まずみんな外へ行って最後に内へ寄る」→「最初から真ん中・ゴール後も真ん中」） */
+      var prefLanes = {};
+      Object.keys(target).forEach(function (no) { if (order.slice(0, 3).indexOf(+no) === -1) prefLanes[no] = 0; });
+      /* 動詞がゴールでの内外を決めている（差し・突き抜け）ときは、上位3人もそのレーンを走り通す
+         （9/27 Naoto「差しで先頭が一度真ん中に来て、ゴール後に内へ行く」→「最初から内側をずっと」）。
+         旧＝下がる選手（先頭→2着）は真ん中を好む計画だった */
+      if (lanes) Object.keys(lanes).forEach(function (no) { prefLanes[no] = lanes[no]; });
+      Anim.reform(target, {
+        prefLanes: prefLanes,
+        ms: CONFIG.ANIM.finishMs,
+        onFrame: function () { renderPositions(); },
+        onDone: function (ok) {
+          if (ok) State.set({ finish: order.slice(0, 3) });
+          State.save();
+          renderPositions();
+          publishLive(true);
+        }
+      });
+      setHint((hint ? hint + '。' : '') + '決着 ' + order.join('-') + '（取り消しで元に戻せます）');
+    }, 30);
+  }
+
+  /** 3連単の欄＋「決着」ボタン */
+  function runTrifecta() {
+    if (VIEW !== 'control') return;
+    var el = document.getElementById('trifecta-input');
+    var r = Verbs.parseTrifecta(el ? el.value : '');
+    if (r.error) { setHint(r.error, true); return; }
+    doFinish(r.finish, '3連単 ' + r.finish.join('-'));
+  }
+  /* ---------- 取り消し ---------- */
+
+  function doUndo() {
+    Anim.stop();
+    if (Undo.undo()) { render(); setHint('1手戻しました。'); }
+  }
+  function doRedo() {
+    Anim.stop();
+    if (Undo.redo()) { render(); setHint('やり直しました。'); }
+  }
+
+  /* ---------- 出力画面との同期 ---------- */
+
   function publishLive(force) {
     if (VIEW === 'control') Live.publish(State.data, force);
   }
 
-  /** 出力側：操作側から届いた状態を反映する。
-      構造（出走車・ライン・名前・見出し等）が変わったときだけ作り直し、
-      それ以外は座標だけ更新する。毎フレーム作り直すとライン帯がちらつくため */
-  function applyRemote(d) {
-    if (!d) return;
-    State.set(d);
-
-    var sig = JSON.stringify([d.cars, d.lines, d.names, d.titleMain, d.titleSub,
-                              d.dir, d.iconRatio, d.bg, d.showBars, d.showNames]);
-    if (sig !== lastRemoteSig) { lastRemoteSig = sig; render(); return; }
-
-    for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
-      if (d.cars.indexOf(no) !== -1 && d.riders[no]) {
-        applyPosition(no, d.riders[no].x, d.riders[no].y);
-      }
-    }
-    Bars.sync();
+  /** 旧ドック（v1＝riders が {x, y}）の状態を v2 の (d, lane) へ粗く写す（要件定義_v2 §8）。
+      公開.ps1 で出力は自動で新しくなるが、ドックは開き直すまで旧版のまま＝その間も③を空にしない。
+      v1は「左が先頭」の帯。x の小さい順に前から並べ、横の間隔をそのままコース上の距離にする。
+      y は 帯の下寄り（0.5以上）＝内／中ほど＝中／上＝外 */
+  function fromV1(d) {
+    var out = {};
+    for (var k in d) if (Object.prototype.hasOwnProperty.call(d, k)) out[k] = d[k];
+    out.v = 2;
+    var riders = {}, xmin = null;
+    var src = d.riders || {};
+    Object.keys(src).forEach(function (no) {
+      var r = src[no];
+      if (r && typeof r.x === 'number' && (xmin === null || r.x < xmin)) xmin = r.x;
+    });
+    Object.keys(src).forEach(function (no) {
+      var r = src[no];
+      if (!r || typeof r.x !== 'number' || typeof r.y !== 'number') return;
+      var lane = r.y >= 0.5 ? -1 : (r.y >= 0.35 ? 0 : 1);
+      riders[no] = { d: 1.0 + (r.x - xmin) * CONFIG.TRACK.W / CONFIG.LAP, lane: lane };
+    });
+    out.riders = riders;
+    return out;
   }
 
-  /** 接続インジケータ。これが緑になればC案は成立、赤のままなら伝送路の作り直しが要る */
+  /** 出力側：操作側から届いた状態を反映する。
+      構造（出走車・ライン・名前・見出し等）が変わったときだけ作り直し、それ以外は位置だけ追いつく */
+  function applyRemote(d) {
+    if (!d) return;
+    if (d.v !== 2) d = fromV1(d);
+    State.set(State.sanitize(d));
+
+    var sig = JSON.stringify([d.cars, d.lines, d.names, d.titleMain, d.titleSub,
+                              d.iconRatio, d.bg, d.showBars, d.showNames, d.sel]);
+    if (sig !== lastRemoteSig) {
+      lastRemoteSig = sig;
+      smoother.jump(State.copyRiders(State.data.riders));
+      Board.render(State.data, smoother.view);
+      return;
+    }
+    smoother.setTarget(State.copyRiders(State.data.riders));
+  }
+
+  /** 接続インジケータ */
   function updateLiveDot() {
     if (!liveDot) return;
     if (!Live.available()) {
@@ -224,10 +432,6 @@
     if (!v || !v.races || !v.races.length) { raceSel.disabled = true; return; }
 
     v.races.forEach(function (r) {
-      /* 以前はタイムテーブル側の並びが空のとき「※並び未」と出していたが、
-         実際は保険経路（action=narabi）でほぼ取れるため警告として機能せず、
-         「全部＊並び未なのに選ぶと出る」という誤解を招いたので廃止した（8/12）。
-         取れたかどうかは、選んだ直後のヒント欄で正確に分かる */
       raceSel.appendChild(new Option(r.no + 'R ' + (r.start || ''), r.no));
     });
     raceSel.disabled = false;
@@ -253,7 +457,6 @@
     RaceCard.fetchTimetable(refresh).then(function (tt) {
       populateVenues();
 
-      /* URLでレースを指定されていたら、ここで初めて適用できる */
       if (pendingRace) {
         var pv = RaceCard.findVenue(pendingRace.jo);
         if (pv && RaceCard.findRace(pv, pendingRace.race)) {
@@ -286,21 +489,11 @@
     });
   }
 
-  /* ---------- 配信への追従（8/12・常時ONへ変更） ----------
+  /* ---------- 配信への追従（v1から変更なし） ----------
      **出走表と展開ボードのレースは常に一致させる**（Naoto確定）。
-     ボード側でレースを選ぶ用途は無いので、場・レース選択と追従チェックはUIから隠し、
-     コンソールの操作中レースにいつでも従う。
-
-     受け取り方は2経路：
-       ①放送通知（`live-sync-v1`）＝コンソールが保存した瞬間に届く。**出走表と同時に切り替わる**
-       ②5秒ごとのGAS読み取り＝通知が届かない環境でも必ず追いつく土台
-     ①だけだと、通知は「変化の瞬間」しか流れないため後から起動したボードが取り残される
-     （③オーバーレイで実際に踏んだ罠と同じ）。②が土台、①が速度。
-
-     ⚠️追従でレースが変わると盤面の配置は組み直される（＝手で動かした隊列は消える）。
-        レースが変わる＝解説対象が変わるタイミングなので、組み直しが正しい。
-
-     緊急時のみ `?follow=0` で手動モード（場・レース選択が現れる）。通常は使わない */
+     受け取り方は2経路：①放送通知（`live-sync-v1`）＝即時 ②5秒ごとのGAS読み取り＝土台
+     ⚠️追従でレースが変わると盤面は組み直される（手で動かした隊列・取り消しの履歴は消える）。
+     緊急時のみ `?follow=0` で手動モード */
   var FOLLOW_MODE = true;
   try { FOLLOW_MODE = new URLSearchParams(location.search).get('follow') !== '0'; } catch (e) {}
 
@@ -338,9 +531,7 @@
            String(cur.joCode) === sel.joCode && +cur.raceNo === sel.raceNo;
   }
 
-  /** 追従OFFのあいだ「配信は今どこか」を出す。
-      OFFにしたこと自体は本人の操作だが、そのまま忘れて盤面だけ取り残される事故が起きる
-      （8/12実機＝出走表は松山3R・盤面は松山2Rのまま）。ズレているときだけ赤く出す */
+  /** 追従OFFのあいだ「配信は今どこか」を出す（ズレているときだけ赤く） */
   function showFollowDiff(sel) {
     if (!followDiffEl) return;
     var cur = State.data.sel;
@@ -368,14 +559,10 @@
     showFollowDiff(sel);
   }
 
-  /* 通知が届いている間はGASを読む回数を落とす（8/12）。
-     GASの実行枠はGoogleアカウント単位で、本番・テストの全オーバーレイが5秒ごとに叩いている。
-     ボードがもう1本5秒で叩くと混雑を押し上げ、コンソールの保存が失敗しやすくなる（実際に発生）。
-     通知が生きているならGASは保険でしかないので、間隔を大きく取る。
-     通知が来ていない環境では従来どおり短い間隔で回す＝遅れない */
+  /* 通知が届いている間はGASを読む回数を落とす（GASの実行枠は全オーバーレイと共用） */
   var lastBcAt = 0;
   function followDue(now) {
-    var bcAlive = lastBcAt && (now - lastBcAt) < 120000; // 直近2分に通知が来ていれば生きている
+    var bcAlive = lastBcAt && (now - lastBcAt) < 120000;
     return bcAlive ? CONFIG.FOLLOW_MS_BC : CONFIG.FOLLOW_MS;
   }
   var lastFollowAt = 0;
@@ -384,26 +571,18 @@
     var now = Date.now();
     if (!force && lastFollowAt && (now - lastFollowAt) < followDue(now)) return;
     lastFollowAt = now;
-    /* 追従OFF（?follow=0）でもコンソールは読む＝ズレていることを知らせるため */
     RaceCard.fetchConsoleRace().then(applyConsoleSel);
   }
 
-  /* 放送通知の経路＝コンソールが保存した瞬間に届く。これで**出走表と同時に**切り替わる。
-     stagekitのsync.jsが流しているのと同じチャンネル名。
-
-     ⚠️必ず聞き専にすること。あちらのオーバーレイはpingにpongを返す作りなので、
-        ボードまで返すとコンソールの「オーバーレイ疎通テスト」が、
-        オーバーレイが1つも無くてもOKと出てしまう（診断が嘘をつく）。 */
+  /* 放送通知の経路。⚠️必ず聞き専（pongを返すとコンソールの疎通テストが嘘をつく） */
   function initConsoleChannel() {
     if (VIEW !== 'control' || typeof BroadcastChannel === 'undefined') return;
     try {
-      /* ⚠️チャンネル名はバックエンドごとに分ける（stagekitのsync.jsと同じ規則）。
-         同名だとテストコンソールの通知が本番のボードにも届いてしまう */
       var ch = new BroadcastChannel('live-sync-v1' + (CONFIG.IS_TEST_BACKEND ? '-test' : ''));
       ch.onmessage = function (ev) {
         var m = ev.data || {};
         if (m.type !== 'state' || !m.state) return;
-        lastBcAt = Date.now();   // 通知が生きている＝GASの巡回は間隔を空けてよい
+        lastBcAt = Date.now();
         applyConsoleSel(RaceCard.selFromState(m.state));
       };
     } catch (e) { /* 通知が使えなくても5秒巡回で追いつく */ }
@@ -417,6 +596,9 @@
     if (!v || !r) return;
 
     var raceCars = RaceCard.carsOf(r);
+    Anim.stop();
+    Undo.clear();   // 別レースの手を戻せてはいけない（§6.6）
+    setSel(null);
 
     State.set({
       /* date＝この出走表を読んだ時刻表の日付。翌日の同じ場・同じRと見分ける唯一の手がかり */
@@ -429,36 +611,34 @@
 
     if (r.narabi) { applyRaceNarabi(r.narabi, v, r, auto); return; }
 
-    /* タイムテーブル側に並びが無いレースがある（本日は72中14）。保険経路を叩く */
     showAllRaceCars(raceCars);
     setHint(RaceCard.labelOf(v, r) + '：並び予想が未公開です。別経路で取得を試みています…');
     RaceCard.fetchNarabi(v.joCode, r.no).then(function (nb) {
       if (nb) { applyRaceNarabi(nb, v, r, auto); return; }
       setHint(RaceCard.labelOf(v, r) +
-              '：並び予想がまだ出ていません。出走選手を横一列に並べたので、並び欄に手で入力してください。', true);
+              '：並び予想がまだ出ていません。出走選手を1列に並べたので、並び欄に手で入力してください。', true);
     });
   }
 
-  /** 並びがまだ無いとき用。ライン無しで出走選手を横一列に置くだけ */
+  /** 並びがまだ無いとき用。ライン無しで出走選手をスタートに1列で置くだけ */
   function showAllRaceCars(raceCars) {
-    var d = State.data;
     var solo = raceCars.map(function (no) { return [no]; });
     State.set({ lineupText: '', lines: [], cars: raceCars.slice() });
-    State.setRiders(Lineup.layout(solo, d.dir, d.iconRatio));
+    State.setRiders(Lineup.grid(raceCars));
     render();
   }
 
   function applyRaceNarabi(narabi, v, r, auto) {
     var d = State.data;
     var pool = (d.raceCars && d.raceCars.length) ? d.raceCars : null;
-    var result = Lineup.apply(narabi, pool, d.dir, d.iconRatio);
+    var result = Lineup.apply(narabi, pool);
 
     State.set({
       lineupText: narabi,
       lines: result.lines,
       cars: carsFromLines(result.lines)
     });
-    State.setRiders(result.positions);
+    State.setRiders(Lineup.grid(carsFromLines(result.lines)));   // スタート＝車番順の升目
     render();
 
     if (nowRaceEl) nowRaceEl.textContent = RaceCard.labelOf(v, r);
@@ -471,32 +651,37 @@
 
   /* ---------- 初期化 ---------- */
 
-  function buildRiders() {
-    ridersEl.innerHTML = '';
+  function bindDrag() {
     for (var no = 1; no <= CONFIG.MAX_CAR; no++) {
-      var el = Icons.create(no);
-      ridersEl.appendChild(el);
-      riderEls[no] = el;
-
-      Drag.enable(stageEl, el, {
-        onMove: function (n, x, y) {
-          State.moveRider(n, x, y);
-          applyPosition(n, State.data.riders[n].x, State.data.riders[n].y);
-          Bars.sync();   // 1台だけ動かしたら連結バーが折れて追従する
-          publishLive();
-        },
-        onEnd: function () {
+      Drag.enableRider(Board.riderEl(no), no, {
+        onStart: function (n) { Anim.stop(); Undo.push(); Board.raise(n); setSel({ type: 'rider', nos: [n] }); },
+        onMove: function () { renderPositions(); },
+        onEnd: function (n, moved) {
+          if (!moved) Undo.dropLast();
+          renderPositions();
+          publishLive(true);
           State.save();
         }
       });
     }
+    /* 連結バーは並びが変わるたびに作り直されるので、作られた時点で結線する */
+    Bars.onCreate = function (item) {
+      Drag.enableLine(item, {
+        onStart: function (nos) { Anim.stop(); Undo.push(); setSel({ type: 'line', nos: nos.slice() }); },
+        onMove: function () { renderPositions(); },
+        onEnd: function (nos, moved) {
+          if (!moved) Undo.dropLast();
+          renderPositions();
+          publishLive(true);
+          State.save();
+        }
+      });
+    };
   }
 
   function bindControls() {
     applyBtn.addEventListener('click', applyLineup);
 
-    /* 手でレースを選んだら追従を外す＝実況の途中で勝手に飛ばされないようにするため。
-       戻したいときはチェックを入れ直す（入れた瞬間に現在レースへ合わせる） */
     venueSel.addEventListener('change', function () {
       setFollowing(false);
       populateRaces();
@@ -510,7 +695,6 @@
       if (followChk.checked) { setHint('配信に追従します。'); showFollowDiff(null); followTick(true); }
       else setHint('追従を外しました。場とレースは手動のままになります。');
     });
-    /* 警告そのものが復帰ボタン＝ズレに気づいた瞬間に1クリックで追い付ける */
     followDiffEl.addEventListener('click', function () {
       setFollowing(true, '配信に追従します。');
       showFollowDiff(null);
@@ -525,55 +709,113 @@
     sizeRange.addEventListener('input', function () {
       var ratio = parseInt(sizeRange.value, 10) / 1000;
       State.set({ iconRatio: ratio });
-      applyIconSize();
-      sizeVal.textContent = (ratio * 100).toFixed(1) + '%';
+      render();
     });
 
-    /* リセット＝「今の並びのまま、自動配置をやり直す」。
-       ドラッグで動かした分だけが取り消され、ラインは残る。
-       以前は lines・lineupText ごと空に戻していたので、実況中に押すと連結バーまで消えて
-       並びを入れ直すはめになっていた（8/12 Naoto指摘）。
-       基準にするのは「最後に適用された並び」＝ State.data.lines。
-       公式の並び予想か手入力かは問わない（手で直した並びを消さないため）。
-       公式の並びを取り直したいときは、場・レースを選び直せば再取得される */
+    /* 局面ボタン */
+    phaseBtns.forEach(function (b) {
+      b.addEventListener('click', function () { jumpPhase(b.dataset.phase); });
+    });
+    undoBtn.addEventListener('click', doUndo);
+    verbBtns.forEach(function (b) {
+      b.addEventListener('click', function () { runVerb(b.dataset.verb); });
+    });
+    var triBtn = document.getElementById('trifecta-btn'), triIn = document.getElementById('trifecta-input');
+    if (triBtn) triBtn.addEventListener('click', runTrifecta);
+    if (triIn) triIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); runTrifecta(); } });
+    redoBtn.addEventListener('click', doRedo);
+
+    /* ホイール＝全体送り（奥へ回す＝進む／手前へ回す＝戻す）。1ノッチ＝0.5車身。
+       トラックパッドの細かい量はためてから1ノッチぶんずつ動かす */
+    /* 出力ビュー（OBSのブラウザソース）では操作を受け付けない */
+    if (VIEW !== 'control') return;
+
+    /* 盤面の空き（選手・帯以外）を押したら選択を外す */
+    stageEl.addEventListener('pointerdown', function (ev) {
+      var t = ev.target;
+      if (t && t.closest && (t.closest('.rider') || t.closest('.line-bar-hit'))) return;
+      setSel(null);
+    });
+
+    var wheelAcc = 0;
+    stageEl.addEventListener('wheel', function (ev) {
+      ev.preventDefault();
+      var unit = ev.deltaMode === 1 ? 3 : (ev.deltaMode === 2 ? 1 : 100);
+      wheelAcc += ev.deltaY / unit;
+      var notches = wheelAcc > 0 ? Math.floor(wheelAcc) : Math.ceil(wheelAcc);
+      if (!notches) return;
+      wheelAcc -= notches;
+      advance(-notches * CONFIG.WHEEL_STEP);
+    }, { passive: false });
+
+    /* キー：→ 進む／← 戻す（0.5車身）・Shift付きは2車身／Ctrl+Z 取り消し／Ctrl+Y・Ctrl+Shift+Z やり直し */
+    document.addEventListener('keydown', function (ev) {
+      var tag = (ev.target && ev.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      var k = ev.key;
+      if ((ev.ctrlKey || ev.metaKey) && (k === 'z' || k === 'Z')) {
+        ev.preventDefault();
+        if (ev.shiftKey) doRedo(); else doUndo();
+        return;
+      }
+      if ((ev.ctrlKey || ev.metaKey) && (k === 'y' || k === 'Y')) { ev.preventDefault(); doRedo(); return; }
+      if (k === 'ArrowRight' || k === 'ArrowLeft') {
+        ev.preventDefault();
+        var step = ev.shiftKey ? 4 * CONFIG.WHEEL_STEP : CONFIG.WHEEL_STEP;
+        advance(k === 'ArrowRight' ? step : -step);
+      }
+    });
+
+    /* 配置を戻す（並び）（9/27 Naoto）＝並びの一列（ライン順・全員内）を赤板の位置に置き直す。ラインは消えない。
+       並びが無いレースは車番順の単騎で一列 */
+    document.getElementById('reset-line-btn').addEventListener('click', function () {
+      var d = State.data;
+      Anim.stop();
+      if (!d.cars || !d.cars.length) { setHint('出走選手がいません。', true); return; }
+      Undo.push();
+      d.finish = null;
+      State.setRiders(lineFormation(CONFIG.PHASES[1].d));
+      render();
+      setHint('並び ' + (d.lines && d.lines.length ? d.lines.map(function (l) { return l.join('-'); }).join(' / ') : '（車番順）') +
+              ' の一列（赤板の位置）に戻しました。（取り消しで元に戻せます）');
+    });
+
+    /* 配置を戻す（スタート）＝「今の並びのまま、スタートの隊列を作り直す」（ラインは消えない） */
     resetBtn.addEventListener('click', function () {
       var d = State.data;
+      Anim.stop();
+      d.finish = null;
 
       if (d.lines && d.lines.length) {
-        State.setRiders(Lineup.layout(d.lines, d.dir, d.iconRatio));
+        Undo.push();
+        State.setRiders(Lineup.grid(d.cars));
         render();
-        setHint('並び ' + d.lines.map(function (l) { return l.join('-'); }).join(' / ') +
-                ' の初期配置に戻しました。');
+        setHint('スタート（車番順）に戻しました。赤板で並び ' + d.lines.map(function (l) { return l.join('-'); }).join(' / ') +
+                ' の一列になります。（取り消しで元に戻せます）');
         return;
       }
-
-      /* 並びがまだ無いレース（＝出走選手を横一列に置いた状態）は、その横一列に戻す */
       if (d.raceCars && d.raceCars.length) {
+        Undo.push();
         showAllRaceCars(d.raceCars);
-        setHint('出走選手を横一列に戻しました。');
+        setHint('出走選手を1列に戻しました。');
         return;
       }
-
-      /* レース未選択・並びも無い。ここだけは従来どおり丸ごと初期化 */
+      Undo.push();
       State.reset();
       inputEl.value = '';
       render();
       setHint('初期配置に戻しました。');
     });
-
-    window.addEventListener('resize', applyIconSize);
   }
 
   /**
    * URLパラメータで初期状態を指定できるようにする。
-   * 例）index.html?narabi=1-3-5/2-7/4-6-9&cars=9&dir=right&bg=green&panel=0
-   * OBSのブラウザソースやstagekit統合のときに効いてくる。
+   * 例）index.html?narabi=1-3-5/2-7/4-6-9&bg=green&panel=0&phase=back
    */
   function applyUrlParams() {
     var q;
     try { q = new URLSearchParams(location.search); } catch (e) { return; }
 
-    /* 背景だけは残してある。OBSでクロマキー合成したいときの逃げ道 */
     var bg = q.get('bg');
     if (bg === 'green' || bg === 'normal') State.set({ bg: bg });
 
@@ -586,21 +828,21 @@
     if (narabi) {
       var d = State.data;
       var pool = (d.raceCars && d.raceCars.length) ? d.raceCars : null;
-      var result = Lineup.apply(narabi, pool, d.dir, d.iconRatio);
+      var result = Lineup.apply(narabi, pool);
       State.set({
         lineupText: narabi,
         lines: result.lines,
         cars: carsFromLines(result.lines)
       });
-      State.setRiders(result.positions);
+      State.setRiders(Lineup.grid(carsFromLines(result.lines)));
     }
 
-    /* 場コード＋レース番号でレースを直接指定する（OBSのブラウザソース用） */
     var jo = q.get('jo');
     var rno = parseInt(q.get('race'), 10);
     if (jo && rno) pendingRace = { jo: String(jo), race: rno };
 
     if (q.get('panel') === '0') panelEl.style.display = 'none';
+    return q;
   }
 
   function init() {
@@ -608,17 +850,11 @@
       if (new URLSearchParams(location.search).get('view') === 'output') VIEW = 'output';
     } catch (e) {}
     document.body.classList.add('view-' + VIEW);
-    /* テスト用バックエンド接続中の目印。ヒント欄は配信画面から見えないので盤面にも出す。
-       ③の出走表とボードで別のバックエンドを掴むと「出走表8R・展開図6R」のズレが起きるため、
-       どちらがテストかを画面上で見分けられるようにしておく（8/12に実際に踏んだ） */
+    /* テスト用バックエンド接続中の目印（盤面にも出す） */
     if (CONFIG.IS_TEST_BACKEND) document.body.classList.add('is-test');
-    /* 常時追従のときは場・レース選択と追従チェックを隠す＝ボードでレースを選ぶ操作は無い。
-       DOMには残す（コードから値を書き込むため）。?follow=0 のときだけ現れる */
     if (FOLLOW_MODE) document.body.classList.add('follow-auto');
 
     stageEl   = document.getElementById('stage');
-    ridersEl  = document.getElementById('riders');
-    barsEl    = document.getElementById('line-bars');
     panelEl   = document.getElementById('panel');
     hintEl    = document.getElementById('hint');
     inputEl   = document.getElementById('lineup-input');
@@ -626,37 +862,39 @@
     resetBtn  = document.getElementById('reset-btn');
     sizeRange = document.getElementById('size-range');
     sizeVal   = document.getElementById('size-val');
+    undoBtn   = document.getElementById('undo-btn');
+    redoBtn   = document.getElementById('redo-btn');
     venueSel  = document.getElementById('venue-select');
     raceSel   = document.getElementById('race-select');
     reloadBtn = document.getElementById('reload-btn');
     followChk = document.getElementById('follow-chk');
+    /* ?follow=0（手動モード）はチェックも外して始める。
+       🐞9/27 チェックボックスが最初からオン（HTMLの checked）のままだったので、?follow=0 でも追従し続けていた
+       （朝の配信が始まった途端、検査のドックが配信中の青森1Rへ切り替わって発覚）。OBSのドックは付けないので本番は常に追従 */
+    if (!FOLLOW_MODE && followChk) followChk.checked = false;
     followDiffEl = document.getElementById('follow-diff');
     nowRaceEl = document.getElementById('now-race');
-    titleEl     = document.getElementById('stage-title');
-    titleMainEl = document.getElementById('stage-title-main');
-    titleSubEl  = document.getElementById('stage-title-sub');
-    dirEl       = document.getElementById('stage-dir');
-    liveDot     = document.getElementById('live-dot');
+    liveDot   = document.getElementById('live-dot');
+    phaseBtns = Array.prototype.slice.call(document.querySelectorAll('[data-phase]'));
+    verbBtns = Array.prototype.slice.call(document.querySelectorAll('[data-verb]'));
+    selLabelEl = document.getElementById('sel-label');
 
     sizeRange.min = String(Math.round(CONFIG.ICON_RATIO_MIN * 1000));
     sizeRange.max = String(Math.round(CONFIG.ICON_RATIO_MAX * 1000));
 
-    /* 連結バーをドラッグしたとき、動いた分の丸の位置を反映して返すための橋渡し */
-    Bars.init(stageEl, barsEl, function (nos) {
-      nos.forEach(function (no) {
-        applyPosition(no, State.data.riders[no].x, State.data.riders[no].y);
-      });
-      publishLive();
-    });
+    Board.init(stageEl);
 
     /* 出力ビューは書き込まない。OBSではドックとブラウザソースが
        同じlocalStorageを共有するため、出力側が書き戻すと操作側の保存を壊す */
-    if (VIEW === 'output') State.setPersist(false);
+    if (VIEW === 'output') {
+      State.setPersist(false);
+      smoother = new Anim.Smoother(function (view) { Board.positions(State.data, view); });
+    }
 
     Live.init(VIEW, {
-      onState: applyRemote,                        // 出力側：届いた状態を描く
-      onHello: function () { publishLive(true); }, // 操作側：出力が起動したら即座に追いつかせる
-      onWant:  function () { publishLive(true); }  // 操作側：聞き専の購読者（③オーバーレイ）の求めに応じる
+      onState: applyRemote,
+      onHello: function () { publishLive(true); },
+      onWant:  function () { publishLive(true); }
     });
 
     State.load();
@@ -664,44 +902,38 @@
     /* 別の日に組んだ盤面は、開いた瞬間に捨てる（9/21の事故の本丸）。
        ⚠️時刻表の到着を待ってから判断してはいけない。すぐ下の render() が出力ビューへ
           publish するので、待っているあいだに**前日の絵が配信に出る**。
-          正しい盤面は、時刻表が届いた直後の followTick が組み直す（数秒）。
-       ⚠️出力ビューでも実行する＝ドックを開かずに③へ切り替えたとき、出力は自分の
-          localStorage（＝前回ドックを使った日の盤面）を描くため。ここが最後の砦になる。
-          出力ビューは setPersist(false) 済みなので、捨てても保存は書き換わらない。
-       ・ミッドナイトの日跨ぎ運用中にドックを開き直すと盤面が一度空になる（追従が
-         前日開催の場を今日の時刻表で引けないため）。**空より前日の嘘のほうが害が大きい**
-         ＝この取り違えは承知のうえ。開いたままのドックは時刻表を引き直しても
-         追従が空振りするだけなので、この経路では消えない */
+       ⚠️出力ビューでも実行する＝ドックを開かずに③へ切り替えたときの最後の砦。 */
     if (State.data.sel.date && State.data.sel.date !== localDateStr()) State.clearRace();
 
-    buildRiders();
+    if (VIEW === 'control') bindDrag();
     bindControls();
-    applyUrlParams();
+    var q = applyUrlParams();
+    if (VIEW === 'output') smoother.jump(State.copyRiders(State.data.riders));
     render();
+
+    /* 撮影・検証用：?phase=back 等で起動直後にその局面へ（アニメなし） */
+    var startPhase = q && q.get('phase');
+    if (startPhase && VIEW === 'control') {
+      var ph = null;
+      CONFIG.PHASES.forEach(function (p) { if (p.key === startPhase) ph = p; });
+      var lead = State.leaderD();
+      if (ph && lead !== null) {
+        var dd = clampAdvance(lead - ph.d);
+        State.data.cars.forEach(function (no) {
+          var r = State.data.riders[no];
+          if (r) State.moveRider(no, r.d - dd, r.lane);
+        });
+        render();
+      }
+    }
 
     if (VIEW === 'control') {
       updateLiveDot();
       setInterval(updateLiveDot, 1000);
-    }
-
-    /* レイアウト確定後にもう一度だけアイコン径を合わせる */
-    requestAnimationFrame(applyIconSize);
-
-    /* 出走表は非同期で追いかける。取得できるまでは手入力で普通に使える。
-       起動時は選択を復元するだけで、盤面には自動適用しない（同じ日の続きなら前回の配置を消さない。
-       日が変わっていれば上の clearRace で既に捨ててあり、追従が届き次第ここから組み直される）。
-       出力ビューは操作側から状態が流れてくるので、自分では取りにいかない（GASへの無駄打ち防止） */
-    if (VIEW === 'control') {
       loadTimetable(false);
-      /* 配信への追従（8/12）。初回は時刻表の取得完了時に loadTimetable から1回走る
-         （場コードを引くのに時刻表が要るため）。以降は一定間隔＝通知が届かなくても必ず追いつく土台。
-         出力ビューは操作側から状態が流れてくるので追従しない＝GASを二重に叩かない */
       setInterval(followTick, CONFIG.FOLLOW_MS);
-      initConsoleChannel();   // 保存の瞬間に届く高速経路＝出走表と同時に切り替わる
-      /* OBSのドックは開きっぱなしで使うので、1回しか取らないと確実に古くなる。
-         実際、深夜に開いたドックが「並びが1本も無い」時点のリストを持ち続けて
-         全レースが「並び未」に見える事故が起きた（8/12）。stagekitのオーバーレイに
-         合わせて10分ごとに取り直す。選択とヒント欄は壊さない（silent） */
+      initConsoleChannel();
+      /* OBSのドックは開きっぱなしで使うので、10分ごとに時刻表を取り直す */
       setInterval(function () { loadTimetable(false, true); }, 10 * 60 * 1000);
     }
   }

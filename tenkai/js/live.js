@@ -33,6 +33,7 @@ var Live = (function () {
   var lastPong = 0;
   var lastSend = 0;
   var available = false;
+  var pendingTimer = null, pendingData = null;
 
   function now() { return Date.now(); }
 
@@ -100,11 +101,23 @@ var Live = (function () {
       return available && (now() - lastPong) < DEAD_MS;
     },
 
-    /** 状態を出力側へ流す。ドラッグ中に毎フレーム呼ばれるので間引く */
+    /** 状態を出力側へ流す。ドラッグ中に毎フレーム呼ばれるので間引く。
+        v2：data.v = 2 が入っている。出力は v の無いもの（開き直していない旧ドック）を互換描画する。
+        間引いた最後の1通が落ちないよう、間引いたときは少し後に最新を送り直す（動きの終点を必ず届ける） */
     publish: function (data, force) {
       if (!chan || mode !== 'control') return;
       var t = now();
-      if (!force && t - lastSend < SEND_MS) return;
+      if (!force && t - lastSend < SEND_MS) {
+        if (!pendingTimer) {
+          pendingTimer = setTimeout(function () {
+            pendingTimer = null;
+            lastSend = now();
+            post({ type: 'state', data: pendingData });
+          }, SEND_MS);
+        }
+        pendingData = data;
+        return;
+      }
       lastSend = t;
       post({ type: 'state', data: data });
     }
