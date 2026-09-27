@@ -359,6 +359,43 @@
     return nowSec >= sw ? next : last;
   }
 
+  /** 🧪§61（9/28 Naoto）本日の場を時刻表から自動で決める（純関数＝コンソールだけが使う・単体テスト autovenuetest.js）。
+      ・足す＝その場の1R発走の leadSec 前（既定60分）から。最大 max 場（既定4＝今の運用「ナイターは昼の場が終わってから足す」）・
+        あふれた場は空きが出た時点で1Rの早い順に入る
+      ・消す＝最終レースの結果を最初に確定した時刻＋afterSec（既定10分）。確定が無ければ最終レース発走＋fallbackSec（既定30分）。
+        確定と発走＋30分の早い方（発走より前の確定は数えない＝broadcastRace と同じ）
+      ・人が外した場（offNames）は自動では足さない。人が足した場は時間の前でも残す（終わったら消す）。時刻表に無い場は触らない
+      tt＝[{name, races:[{no, startSec}]}]・current＝今の本日の場（名前の配列）・settleSecOf(key)＝最初に確定した時刻（0時からの秒・無ければnull）。
+      戻り値＝新しい本日の場（名前の配列・並びは current の順→足した場。開催順の並べ替えは呼び出し側の sortVenuesHeld） */
+  function autoVenues(tt, current, offNames, settleSecOf, nowSec, opt) {
+    opt = opt || {};
+    var lead = opt.leadSec != null ? opt.leadSec : 3600, after = opt.afterSec != null ? opt.afterSec : 600;
+    var fb = opt.fallbackSec != null ? opt.fallbackSec : 1800, max = opt.max || 4;
+    var info = {};
+    (tt || []).forEach(function (v) {
+      var first = null, last = null;
+      (v.races || []).forEach(function (r) {
+        if (typeof r.startSec !== "number") return;
+        if (!first || r.startSec < first.startSec) first = r;
+        if (!last || r.startSec > last.startSec) last = r;
+      });
+      if (!first) return;
+      var end = last.startSec + fb;
+      var st = settleSecOf ? settleSecOf(raceKey(v.name, last.no)) : null;
+      if (typeof st === "number" && st >= last.startSec && st + after < end) end = st + after;
+      info[v.name] = { from: first.startSec - lead, first: first.startSec, end: end };
+    });
+    var off = offNames || [];
+    var out = (current || []).filter(function (n) { var i = info[n]; return !i || nowSec < i.end; });
+    Object.keys(info).filter(function (n) {
+      var i = info[n];
+      return out.indexOf(n) < 0 && off.indexOf(n) < 0 && nowSec >= i.from && nowSec < i.end;
+    }).sort(function (a, b) { return info[a].first - info[b].first; }).forEach(function (n) {
+      if (out.length < max) out.push(n);
+    });
+    return out;
+  }
+
   /* ②サブ（NEXT）の値の意味（9/7・§10項99／9/9・項100）。raceSubBy[配信者id] は
        ・undefined（キー無し）＝未設定 → ensureSub が既定＝ON（自動）で埋める（新しい日・シフト交代の直後）
        ・場名＝ON（その場の currentRace を出す）
@@ -514,6 +551,7 @@
     justStartedRace: justStartedRace,
     videoRaceAt: videoRaceAt,
     broadcastRace: broadcastRace,
+    autoVenues: autoVenues,
     alignToRace: alignToRace,
     alignSub: alignSub,
     nextSubRace: nextSubRace,

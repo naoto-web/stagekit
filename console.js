@@ -154,6 +154,26 @@
     var h2 = document.getElementById("race-date") && document.getElementById("race-date").parentElement;
     if (h2 && h2.firstChild && h2.firstChild.nodeType === 3) h2.firstChild.nodeValue = "配信 ";
   })();
+  /* 🧪§62（9/28 Naoto）配信中に触るものを上へ。テスト（?gas=）だけ既定ON（&con2=1／0）
+     ・note勝負レース＝本日設定から出して、予想入力のすぐ下の独立カードへ（Naoto「朝来た時点ではまだ決まってない人多い・配信中に今日はここにしよう！」）。
+       発走済みのRと、全レース発走済みの場は出さない（押す必要がない＝縦に短く）
+     ・本日設定の「⇄ 席替え」は出さない（上の配信カードに同じボタン。配信者の欄は昼夜のシフト交代でしか触らない＝下のままでよい） */
+  var CON2 = params.get("con2") ? params.get("con2") !== "0" : !!params.get("gas");
+  if (CON2) (function () {
+    var np = document.getElementById("note-pick");
+    var predCard = document.getElementById("pred-forms") && document.getElementById("pred-forms").closest("details");
+    if (np && predCard) {
+      var lbl = np.previousElementSibling;
+      if (lbl && lbl.classList.contains("lbl")) lbl.remove();
+      var card = document.createElement("details");
+      card.className = "card"; card.id = "note-card"; card.open = true;
+      card.innerHTML = '<summary><h2>note勝負レース</h2> <span class="h-sub">押すと選択・もう一度押すと解除</span></summary>';
+      card.appendChild(np);
+      predCard.after(card);
+    }
+    var sw = document.getElementById("btn-seat-swap");
+    if (sw && sw.parentElement) sw.parentElement.classList.add("hidden"); // ⚠️消さない＝クリックの配線（addEventListener）がidで引く
+  })();
   function settleSecOf(key) {
     var r = state && state.results ? state.results[key] : null;
     var t = r && (r.firstAt || r.settledAt);
@@ -1532,6 +1552,16 @@
     }
     var parsed = noteParse();
     var now = nowSec();
+    /* §62 ほかの行のうち、全レース発走済みの場の行は出さない（本日の場の自動で外れた場の行がここへ落ちてくるため）。データ（state.noteRaces）は消さない */
+    var doneVenue = function (name) {
+      var rs = venueRaces(name);
+      return rs.length > 0 && rs.every(function (r) { var st = timeToSec(r.start); return st !== null && st + 120 <= now; });
+    };
+    var keepShown = [];
+    parsed.keep.forEach(function (l, i) {
+      if (CON2 && timetable && (timetable.venues || []).some(function (tv) { return l.indexOf(tv.name) >= 0 && doneVenue(tv.name); })) return;
+      keepShown.push(i);
+    });
     el.innerHTML = state.racers.map(function (rc) {
       var mc = window.Derive.colorOf(rc.color);
       var m = parsed.model[rc.name] || {};
@@ -1540,6 +1570,10 @@
         state.venues.map(function (v) {
           var set = m[v.name] || {};
           var races = venueRaces(v.name);
+          if (CON2) { // §62 発走済みのRは出さない・全部発走済みの場は行ごと出さない
+            races = races.filter(function (r) { var st = timeToSec(r.start); return st === null || st + 120 > now; });
+            if (!races.length && venueRaces(v.name).length) return "";
+          }
           return '<div class="np-venue"><span class="np-vname">' + esc(v.name) + kubunMarkHtml(v.name) + "</span>" +
             '<div class="np-races">' +
             (races.length ? races.map(function (r) {
@@ -1555,8 +1589,9 @@
         "</div>";
     }).join("") +
       // 残している行（今の席にいない人の行・読めない行）＝そのまま残す。✕で消せる（今は自由記述が無いので消す手段をここに置く）
-      (parsed.keep.length ? '<div class="np-keep"><div class="lbl">ほかの行（今の配信者以外・そのまま残しています）</div>' +
+      (keepShown.length ? '<div class="np-keep"><div class="lbl">ほかの行（今の配信者以外・そのまま残しています）</div>' +
         parsed.keep.map(function (l, i) {
+          if (keepShown.indexOf(i) < 0) return "";
           return '<span class="np-kline">' + esc(l) + '<button type="button" class="np-kdel" data-k="' + i + '" title="この行を消す">✕</button></span>';
         }).join("") + "</div>" : "");
     el.querySelectorAll(".np-rc").forEach(function (b) {
@@ -1606,6 +1641,55 @@
   }
 
   /* ---------- 本日設定 ---------- */
+  /** 本日の場を names に置き換える（手の操作と §61 の自動で共用）。保存は呼び出し側 */
+  function applyVenueNames(names) {
+    var curName = activeVenueName();
+    state.venues = names.map(function (x) { return { name: x }; });
+    // 操作中の場は場名で引き継ぐ（外した場が操作中なら先頭へ）→開催の早い順に並べ直す（9/26）
+    state.activeVenue = Math.max(0, names.indexOf(curName));
+    sortVenuesHeld();
+    state.venues.forEach(function (v) {
+      if (!state.currentRace[v.name]) {
+        var next = nextRaceOf(v.name);
+        if (next) state.currentRace[v.name] = next.no;
+      }
+      // グレードはタイムテーブルの自動取得値をプリセット（手で上書き可）
+      if (!state.grade[v.name]) {
+        var tv = (timetable && timetable.venues || []).filter(function (x) { return x.name === v.name; })[0];
+        if (tv && tv.grade) state.grade[v.name] = tv.grade;
+      }
+    });
+  }
+
+  /* 🧪§61（9/28 Naoto）本日の場を時刻表で自動に＝1R発走の60分前に足す・最終レースの確定＋10分（確定なしは発走＋30分）で外す・最大4場
+     （あふれた場は空きが出たら入る＝今の運用「ナイターは昼の場が終わってから足す」）。判定は derive.autoVenues。
+     人が外した場は state.venueOff = {date, names} に覚えて自動では戻さない（その日だけ・足し直せば解除）。
+     テスト（?gas=）だけ既定ON（&autovenue=1／0）。書込キーのあるコンソールが保存する（複数あっても同じ式＝同じ結果） */
+  var AUTOVENUE = params.get("autovenue") ? params.get("autovenue") !== "0" : !!params.get("gas");
+  function venueOffNames() {
+    var o = state && state.venueOff;
+    return o && o.date === state.date && Array.isArray(o.names) ? o.names.slice() : [];
+  }
+  function markVenueOff(name, off) {
+    var names = venueOffNames().filter(function (x) { return x !== name; });
+    if (off) names.push(name);
+    state.venueOff = { date: state.date, names: names };
+  }
+  function autoVenueTick() {
+    if (!AUTOVENUE || !stateLoaded || !state || !timetable) return;
+    if (state.date !== todayStr() || (timetable.date && timetable.date !== state.date)) return; // 前日のデータ・前日の時刻表では動かさない
+    var tt = (timetable.venues || []).map(function (v) {
+      return { name: v.name, races: (v.races || []).map(function (r) { return { no: +r.no, startSec: timeToSec(r.start) }; }) };
+    });
+    var cur = state.venues.map(function (v) { return v.name; });
+    var next = window.Derive.autoVenues(tt, cur, venueOffNames(), settleSecOf, nowSec());
+    if (next.join("|") === cur.join("|")) return;
+    applyVenueNames(next);
+    ensureTalkRaces();
+    save();
+    renderAll();
+  }
+
   function renderSettings() {
     var el = $("venue-pick");
     var names = timetable ? (timetable.venues || []).map(function (v) { return v.name; }) : [];
@@ -1621,22 +1705,8 @@
         var i = selected.indexOf(n);
         if (i >= 0) selected.splice(i, 1);
         else { if (selected.length >= 4) selected.shift(); selected.push(n); } // 最大4場（モーニング→昼の並走帯対応）
-        var curName = activeVenueName();
-        state.venues = selected.map(function (x) { return { name: x }; });
-        // 操作中の場は場名で引き継ぐ（外した場が操作中なら先頭へ）→開催の早い順に並べ直す（9/26）
-        state.activeVenue = Math.max(0, selected.indexOf(curName));
-        sortVenuesHeld();
-        state.venues.forEach(function (v) {
-          if (!state.currentRace[v.name]) {
-            var next = nextRaceOf(v.name);
-            if (next) state.currentRace[v.name] = next.no;
-          }
-          // グレードはタイムテーブルの自動取得値をプリセット（手で上書き可）
-          if (!state.grade[v.name]) {
-            var tv = (timetable && timetable.venues || []).filter(function (x) { return x.name === v.name; })[0];
-            if (tv && tv.grade) state.grade[v.name] = tv.grade;
-          }
-        });
+        if (AUTOVENUE) markVenueOff(n, i >= 0); // §61 人が外した場は自動で戻さない・足したら解除
+        applyVenueNames(selected);
         saveSettings(); // 押した瞬間に保存（9/26 Naoto・旧＝「設定を保存」かほかの操作の保存に便乗するまでOBSに出なかった）
       });
     });
@@ -2530,6 +2600,7 @@
       setSync("ok", "接続OK（rev " + (state.rev || 0) + "）");
       if (sortVenuesHeld()) save(); // 時刻表が先に着いていた場合（9/26・開催の早い順）
       renderAll();
+      autoVenueTick();
       cuRestore(); // 自動更新で読み直した直後なら、画面の状態を戻す（9/25）
       pollResults();
     }).catch(function (e) {
@@ -2549,6 +2620,7 @@
       // 押した順で保存済みの本日の場（9/26以前・旧版コンソールの操作）も開催順へ。stateが読めるまでは触らない
       if (stateLoaded && sortVenuesHeld()) save();
       renderAll();
+      autoVenueTick();
       pollResults();
     }).catch(function () {
       setTimeout(loadTimetable, 15000);
@@ -2558,4 +2630,6 @@
   setInterval(loadTimetable, window.APP_CONFIG.TT_POLL_MS || 600000);
 
   setInterval(function () { tickStatus(); autoAlignTick(); }, 1000); // 自動追従は毎秒エッジ検知（8/9 FB96）
+  if (AUTOVENUE) setInterval(autoVenueTick, 30000); // §61 本日の場の自動（分単位の判定なので30秒ごとで足りる）
+  if (CON2) setInterval(function () { if (state) renderNotePick(); }, 30000); // §62 発走したRを勝負レースのカードから消す
 })();
