@@ -3483,7 +3483,8 @@
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
     // §54（9/28 Naoto）的中の間は①の出走表の下の並びでも当たり目の車番を光らせる（買目チップと同じ拍子・光だけ）
-    var shn = nbId === SL_TALK.narabi ? slHitNow() : null;
+    // §78（9/28 Naoto）②レース観戦の並び（narabi-race）も同じく光らせる。②は並びのレースを切り替えない＝出しているレースが的中レースのときだけ
+    var shn = nbId === SL_TALK.narabi || nbId === "narabi-race" ? slHitNow() : null;
     var nbHit = shn && shn.key === key ? shn.cars : null;
     // 「ライン」の見出し文字＝8/10 FB115で削除（Naoto「いらないかも」・そのぶんチップを大きく）
     nb.innerHTML = ((lineType && !o.noType) ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
