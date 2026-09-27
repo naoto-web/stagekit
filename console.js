@@ -1278,12 +1278,17 @@
     syncPayoutPresets();
   });
 
+  /* §77（9/28 Naoto「2車複・2車単の例が適切じゃない」）買目欄の例を式別に合わせる（旧＝式別に関係なく「1-9-2」）。ハイフン無しの運用 */
+  function payoutAddHint() { $("payout-add-combo").placeholder = "買い目 " + ($("payout-add-type").value.charAt(0) === "3" ? "123" : "12"); }
+  $("payout-add-type").addEventListener("change", payoutAddHint);
+  payoutAddHint();
   $("btn-payout-add").addEventListener("click", function () {
     var type = $("payout-add-type").value;
     var comboRaw = window.Keirin.normalize($("payout-add-combo").value).replace(/[^0-9]/g, "");
     var combo = comboRaw.split("").map(Number).filter(function (n) { return n >= 1 && n <= 9; });
-    if (combo.length < 2) return;
-    payoutRows.push({ type: type, combo: combo.slice(0, 3), amount: 0 });
+    var need = type.charAt(0) === "3" ? 3 : 2; // §77 3連複＝3車／2車単・2車複・ワイド＝2車（多く打っても先頭から必要数だけ）
+    if (combo.length < need) return;
+    payoutRows.push({ type: type, combo: combo.slice(0, need), amount: 0 });
     $("payout-add-combo").value = "";
     renderPayoutRows();
   });
@@ -1403,9 +1408,9 @@
     var key = resultKey(); // フォームに出ているレースを確定する（固定中でも取り違えない・FB96）
     if (!key) return;
     var orders = parseOrdersInput(); // 同着なら2本（8/27 FB148）
-    if (!orders) { $("settle-preview").innerHTML = '<span class="manche">着順が読めません（例：1-9-2）</span>'; return; }
+    if (!orders) { $("settle-preview").innerHTML = '<span class="manche">着順が読めません（例：123）</span>'; return; }
     if (deadHeat && orders.length < 2) {
-      $("settle-preview").innerHTML = '<span class="manche">⚖ 同着モードですが、他の着順が読めません（例：5-3-2／複数あるときは1行に1つ）　→ 解除するなら「同着（解除）」を押してください</span>';
+      $("settle-preview").innerHTML = '<span class="manche">⚖ 同着モードですが、他の着順が読めません（例：132／複数あるときは1行に1つ）　→ 解除するなら「同着（解除）」を押してください</span>';
       return;
     }
     // 的中しているのに払戻が未入力なら確定させない（0倍の的中速報が画面に載る事故防止）

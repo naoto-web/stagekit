@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20260928-083414">
+<link rel="stylesheet" href="console.css?v=20260928-084440">
 </head>
 <body>
 
@@ -104,11 +104,11 @@
     <span class="hint dh-note">写真判定で同着になったレースはこれ（着順が2通りになります）</span>
   </div>
   <div class="hidden" id="deadheat-wrap">
-    <label class="lbl">同着の他の着順（1行に1つ）</label>
+    <label class="lbl">同着の他の着順（例：123）</label>
     <!-- ⚠️1行入力ではなく複数行にしてある（8/27）＝1着同着と3着同着が重なると当たりが4通りになる
          実例＝2026/5/25 静岡3R（4-7-1／4-7-6／7-4-1／7-4-6）。1行固定だと取りこぼす -->
     <!-- §76（9/28 Naoto）例はハイフン無し（決定着順と同じ運用）・欄の見た目は決定着順とそろえる（console.css・行数に合わせて自動で伸びる） -->
-    <textarea id="res-order2" class="inp big" rows="1" placeholder="132"></textarea>
+    <textarea id="res-order2" class="inp big" rows="1"></textarea>
     <div class="hint">例）1着5・2着が2と3の同着 → <b>523</b> と <b>532</b> の2通りが当たり。
       下の払戻欄に<b>公式の金額を全部</b>入れると、当たり全部が的中・回収に載ります
       （それぞれ別に「何枚買ったか」を入れられます）</div>
@@ -127,7 +127,7 @@
       <select id="payout-add-type" class="inp slim">
         <option>3連複</option><option>2車単</option><option>2車複</option><option>ワイド</option>
       </select>
-      <input type="text" id="payout-add-combo" class="inp slim" placeholder="買い目 1-9-2">
+      <input type="text" id="payout-add-combo" class="inp slim" placeholder="買い目 123">
       <button class="btn small" id="btn-payout-add">決定</button>
     </div>
   </details>
@@ -259,11 +259,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20260928-083414" data-au="banner"></script>
-<script src="config.js?v=20260928-083414"></script>
-<script src="keirin.js?v=20260928-083414"></script>
-<script src="derive.js?v=20260928-083414"></script>
-<script src="sync.js?v=20260928-083414"></script>
-<script src="console.js?v=20260928-083414"></script>
+<script src="autoupdate.js?v=20260928-084440" data-au="banner"></script>
+<script src="config.js?v=20260928-084440"></script>
+<script src="keirin.js?v=20260928-084440"></script>
+<script src="derive.js?v=20260928-084440"></script>
+<script src="sync.js?v=20260928-084440"></script>
+<script src="console.js?v=20260928-084440"></script>
 </body>
 </html>
