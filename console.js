@@ -165,6 +165,9 @@
   var BIGTEXT = params.get("bigtext") ? params.get("bigtext") !== "0" : !!params.get("gas");
   if (LIGHT) document.documentElement.classList.add("theme-light");
   if (BIGTEXT) document.documentElement.classList.add("bigtext");
+  /* 🧪フォントの見比べ（9/28 Naoto「メイリオとかどう？」）＝&font=meiryo／bizud。無指定は従来（Yu Gothic UI） */
+  var FONT = params.get("font");
+  if (FONT === "meiryo" || FONT === "bizud") document.documentElement.classList.add("font-" + FONT);
   /** メンバーカラーを「字」に使うとき（名前など）。白背景だと黄・緑が読めない＝白背景のときだけ黒を混ぜて暗くする（塗りはそのまま） */
   function mcText(mc) { return mc && LIGHT ? "color-mix(in srgb, " + mc + " 62%, #000)" : mc; }
   if (CON2) (function () {

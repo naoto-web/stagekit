@@ -634,3 +634,7 @@ html.theme-light .btn.primary, html.theme-light .btn.seat-swap, html.theme-light
 html.theme-light .rc.next { box-shadow: 0 0 0 1px #e5484d inset, 0 1px 3px rgba(0, 0, 0, .10); }
 html.theme-light .rc.done, html.theme-light .np-rc.done { box-shadow: none; }
 html.theme-light .switcher { box-shadow: 0 1px 0 rgba(0, 0, 0, .18), 0 2px 5px rgba(0, 0, 0, .18); }html.theme-light .card { margin-top: 14px; margin-bottom: 14px; }
+
+/* 🧪フォントの見比べ（&font=meiryo／bizud・console.js が html にクラス）。入力欄・ボタンは font: inherit なので body だけで効く */
+html.font-meiryo body { font-family: "Meiryo", "メイリオ", "Yu Gothic UI", sans-serif; }
+html.font-bizud body { font-family: "BIZ UDPGothic", "BIZ UDPゴシック", "Yu Gothic UI", sans-serif; }
