@@ -729,3 +729,16 @@ html.theme-light[class*="sel-"] #pred-venue-row .vbtn.live { border-color: var(-
 html.theme-light { --lt-sel: #2b2f36; --lt-sel-b: #0f1114; }
 html.theme-light .vbtn.active, html.theme-light .rc.cur,
 html.theme-light #pred-venue-row .vbtn.live { border-color: var(--lt-sel); border-bottom-color: var(--lt-sel-b); }
+/* §70（9/28 Naoto「青森1Rに違和感・もっとバッジっぽく・立体感・丸すぎ」「名前がにじんで見える」「note勝負のボタンが横長すぎ」）テスト接続＝con2
+   ・入力先の丸枠→角の小さい塗りのバッジ（黒系＝選択中の場・Rと同じ色）。押すボタンではないので下辺の厚みは付けず、光と影で浮かせる
+   ・にじみの原因＝太く見せるための -webkit-text-stroke（字の外側に線を足す＝輪郭がぼける）→ 全部やめてフォントの太字だけに
+   ・note勝負のRボタン＝幅43→36px・縦を少し高く */
+html.con2 .pf-race {
+  border-radius: 6px; padding: 3px 11px; -webkit-text-stroke: 0;
+  background: #2b2f36; border: 1px solid #0f1114; color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 2px 4px rgba(0, 0, 0, .28);
+}
+html.con2 .pf-race .pf-note-tag { color: #fff; }
+html.con2 .pred-form h3 > span:first-child, html.con2 .np-name, html.con2 .pf-body .pf-text { -webkit-text-stroke: 0; }
+html.con2 .pred-form h3 > span:first-child, html.con2 .np-name { font-weight: 700; }
+html.con2 .np-rc { width: 36px; padding: 8px 0 6px; }html.con2 .pred-form h3 > span:first-child, html.con2 .np-name { text-shadow: .6px 0 0 currentColor; } /* §70 擬似太字＝同じ色の字を横に0.6pxずらして重ねる（輪郭線と違ってにじまない） */
