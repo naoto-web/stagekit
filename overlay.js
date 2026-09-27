@@ -2374,7 +2374,8 @@
   }
 
   function renderPreds() {
-    oddsSeq++; // 買目オッズ（§13）＝この描画で oddsHtml を通ったレースが「今画面に出ている」レース    var key = currentKey();
+    oddsSeq++; // 買目オッズ（§13）＝この描画で oddsHtml を通ったレースが「今画面に出ている」レース
+    var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
     // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
     // コンソールの操作用の場切替に引きずられない。旧データ（talkRaces無し）はメイン＋人別サブで互換

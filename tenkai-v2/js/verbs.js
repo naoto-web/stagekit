@@ -485,6 +485,17 @@ var Verbs = (function () {
       return { finish: [L[1], L[2], L[0]], lanes: lanes,
                hint: 'ズブズブ：' + label(L[0]) + ' が ' + label(L[1]) + '・' + label(L[2]) + ' に抜かれて決着' };
     } },
+    /* ハコ3（9/27 Naoto）＝3車ラインで 1着 先頭・2着 3番手・3着 番手（3番手が番手を交わす）。
+       走るレーン＝先頭と番手は内・3番手は真ん中（最初からそのレーン）。3人いないラインは使えない */
+    hako3: { label: 'ハコ3', fn: function (sel) {
+      if (!atStraight()) return { error: 'ハコ3は最終周回（最終ホーム以降）で使ってください' };
+      var L = lineOf(sel.nos[0]);
+      if (L.length < 3) return { error: 'ハコ3は3車ラインで使います（ライン ' + L.join('') + ' は' + L.length + '人）' };
+      var lanes = {};
+      lanes[L[0]] = -1; lanes[L[1]] = -1; lanes[L[2]] = 0;
+      return { finish: [L[0], L[2], L[1]], lanes: lanes,
+               hint: 'ハコ3：' + label(L[0]) + ' が1着、' + label(L[2]) + ' が ' + label(L[1]) + ' を交わして2着' };
+    } },
     up: { label: '順番を前へ', fn: function (s) { return reorder(s, -1); } },
     down: { label: '順番を後ろへ', fn: function (s) { return reorder(s, 1); } }
   };
