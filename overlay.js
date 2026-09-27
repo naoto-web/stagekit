@@ -532,6 +532,24 @@
     });
   }
   var timerModes = {}; // 場→前回のモード（締切カードへ切り替わった瞬間だけスタンプを押すため）
+  /* 🧪本日終了の演出（9/27 Naoto「本日終了の演出どうする？」・&vdonefx=1|2|3）
+     1＝「本日終了」の赤いハンコがドン→約4秒後にふだんの本日終了（グレー）へ
+     2＝シャッターが上から下りて閉まる（閉まったままが本日終了の見た目）
+     3＝「おつかれさまでした！」を約4秒→「本日終了」へふわっと切替 */
+  var DONEFX = +(params.get("vdonefx") || 2); // 9/27 本番化＝案2シャッター（Naoto「シャッターいいね」）。&vdonefx=0 で演出なし
+  var DONEFX_MS = 4200;
+  function scheduleDoneFx(venue, fx) {
+    setTimeout(function () {
+      document.querySelectorAll('.vt-card.dfx[data-venue="' + venue.replace(/"/g, "") + '"]').forEach(function (card) {
+        if (fx === 3) {
+          var t = card.querySelector(".vt-done");
+          if (t) { t.textContent = "本日終了"; t.classList.add("dn-swap"); }
+        }
+        card.classList.remove("dfx", "dfx1", "dfx3"); // 2（シャッター）は閉まったまま＝dfx2 の動きだけ終わる
+      });
+      fitTimerHeads();
+    }, fx === 2 ? 1600 : DONEFX_MS);
+  }
 
   /* 警告音：Web Audio合成（素材ファイル不使用＝ライセンス管理外）。
      発音担当＝「いま表示されているソース」（8/7 FB60）。旧＝②固定は、①表示中に非表示の②が
@@ -786,7 +804,11 @@
     var body, cls = "vt-card";
     if (mode === "done") {
       cls += " vt-done-card"; // 本日終了のカード（9/27・CSSは :has を使わずこのクラスで）
-      body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
+      // 🧪本日終了の演出（&vdonefx=1|2|3・9/27 Naoto）＝画面を見ている間に「レース中」→「本日終了」へ変わった瞬間だけ
+      var dfx = DONEFX && liveIn && timetable ? DONEFX : 0;
+      if (dfx) { cls += " dfx dfx" + dfx; scheduleDoneFx(c.venue, dfx); }
+      if (DONEFX === 2 && timetable) cls += " dshut"; // 案2はシャッターが閉まったままが「本日終了」の見た目
+      body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? (dfx === 3 ? "おつかれ<br>さまでした！" : "本日終了") : "時刻取得中…") + "</div></div>";
     } else if (mode === "flash") {
       cls += " vt-flash-card";
       body = '<div class="vt-rows vt-flash"><div class="vt-flash-main">🚴 発走！</div></div>';
@@ -2842,7 +2864,7 @@
   // 🧪&vrun=1（9/27 Naoto「レース中の下の種別が小さい・レース中も大きく」）＝CSS html.vrun
   if (params.get("vrun") !== "0") document.documentElement.classList.add("vrun"); // 9/27 本番化（Naoto OK）＝既定ON。&vrun=0 で旧
   // 🧪&vdone=1（9/27 Naoto「本日終了はどうする？」）＝本日終了のカードを大きく・地を薄いグレーに（CSS html.vdone）
-  if (params.get("vdone") === "1") document.documentElement.classList.add("vdone");
+  if (params.get("vdone") !== "0") document.documentElement.classList.add("vdone"); // 9/27 本番化（シャッターと一緒に）＝既定ON
   // 🧪&slhd=1|2|3（9/27 Naoto「出走表の見出しのレース名・A級予選が見えづらい」）＝①出走表の金帯の見せ方の案（CSS html.slhd1〜3）
   (function (v) { // 🧪見出しの案＝クラスの組み合わせ（slfit＝レースごとに最大へ／slnolab＝「出走表」の文字なし／slink＝金の地に黒字）
     var map = { "1": "slhd1", "2": "slhd2", "3": "slhd3", "4": "slhd3 slfit slnolab", "5": "slink slfit", "6": "slink slfit slnolab", "7": "slink slmid", "8": "slink slmid slyel" };

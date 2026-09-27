@@ -530,6 +530,26 @@ html.vdone .vt-card.vt-done-card .vt-rows, html.vdone .vt-card.vt-done-card .vt-
 html.vdone .vt-card.vt-done-card .vt-rows { align-items: center; justify-content: center; }
 html.vdone .timer-cards.vt-n3 .vt-done { font-size: 30px; }
 html.vdone .timer-cards.vt-n4 .vt-done { font-size: 28px; }
+/* 🧪本日終了の演出（&vdonefx=1|2|3・9/27） */
+.vt-card.vt-done-card .vt-rows, .vt-card.vt-done-card .vt-head { transition: background-color .8s; }
+/* 1＝赤いハンコ（締切ハンコと同じ系統）。演出中は地を白のまま＝終わるとグレーへ */
+.vt-card.dfx1 .vt-rows, .vt-card.dfx1 .vt-head { background: var(--panel) !important; }
+.vt-card.dfx1 .vt-done { color: #d63b3b !important; border: 4px solid #d63b3b; border-radius: 9px; padding: .06em .3em .1em;
+  transform: rotate(-8deg); animation: dnStamp .5s cubic-bezier(.3, 1.4, .5, 1) both; }
+@keyframes dnStamp { 0% { transform: rotate(-8deg) scale(2.6); opacity: 0; } 60% { opacity: 1; } 100% { transform: rotate(-8deg) scale(1); opacity: 1; } }
+/* 2＝シャッター（横縞の金属板が上から下りる）。閉まったまま＝dshut */
+.vt-card.dshut .vt-rows { position: relative; overflow: hidden; }
+.vt-card.dshut .vt-rows::before { content: ""; position: absolute; inset: 0; z-index: 0;
+  background: repeating-linear-gradient(180deg, #c9ced6 0 9px, #b4bac4 9px 11px); box-shadow: inset 0 -6px 0 #8f96a1; }
+.vt-card.dshut .vt-done { position: relative; z-index: 1; color: #3d434c; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
+.vt-card.dfx2 .vt-rows::before { animation: dnShutter 1.1s cubic-bezier(.55, 0, .75, .3) both; }
+.vt-card.dfx2 .vt-done { animation: dnFadeIn .5s ease-out 1.05s both; }
+@keyframes dnShutter { 0% { transform: translateY(-100%); } 88% { transform: translateY(0); } 94% { transform: translateY(-4%); } 100% { transform: translateY(0); } }
+@keyframes dnFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* 3＝「おつかれさまでした！」→「本日終了」 */
+.vt-card.dfx3 .vt-rows, .vt-card.dfx3 .vt-head { background: var(--panel) !important; }
+.vt-card.dfx3 .vt-done { color: #14204a !important; animation: dnFadeIn .6s ease-out both; line-height: 1.15; } /* 2行（おつかれ／さまでした！）＝1行だと小さくなる */
+.vt-done.dn-swap { animation: dnFadeIn .6s ease-out both; }
 /* 公式締切後＝「締切ました」CTAカード（発走時刻を主役に・8/6 FB10）。
    行間を明示（FB40）：既定1.5倍だと4行がカード高168pxを超えて最終行が切れる */
 .vt-cta { align-items: center; text-align: center; }
