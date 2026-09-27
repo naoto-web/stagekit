@@ -774,3 +774,14 @@ html.con2 .pf-invfmt {
   padding: 0 10px; font-size: 16px; font-weight: 700; color: var(--lt-text, #e8e8ec); cursor: text; font-variant-numeric: tabular-nums;
 }
 html.con2 .venue-auto-hint { margin-top: 8px; }html.con2 .parse-total { line-height: 1.45; } /* §72 2行になったときに詰まって見えない */
+
+/* §74（9/28 Naoto「買目の右のオッズは倍なし・金色。合成〇倍も金色。右のオッズはもっと細く＝左の買目欄を狭くしない」）
+   ・金色＝白背景でも読める濃いめの金（§72の黒字を上書き）。俺たち目の右のオッズも同じ金にそろえる
+   ・細く＝Bahnschrift（Windows標準）の幅75%（字幅が狭い書体）。無い環境はBIZ UDPゴシックのまま＋字間を詰める */
+html.con2 .pf-body .pl-odds b {
+  font-family: "Bahnschrift", "BIZ UDPGothic", sans-serif; font-stretch: 75%; font-weight: 700; font-size: 18px;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+html.con2 .pf-body { gap: 6px; }
+html.con2 .parse-info .pl-ok b, html.con2 #pred-forms .pf-ore-odds, html.con2 .parse-total .pt-syn { color: #d9a441; }
+html.theme-light.con2 .parse-info .pl-ok b, html.theme-light.con2 #pred-forms .pf-ore-odds, html.theme-light.con2 .parse-total .pt-syn { color: #a87400; }

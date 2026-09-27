@@ -959,7 +959,8 @@
       var tip = l.type + " " + l.points + "点" + (l.dupCount ? "　かぶり/切り" + l.dupCount + "点除外" : "") + (showDisp ? "　画面 " + l.disp : "");
       var typeMark = l.type !== "3連単" ? '<span class="pl-memo">' + esc(l.type) + "</span> " : "";
       var ol = odds ? window.Keirin.oddsLabel(l, odds) : ""; // 9/25 Naoto「右側は点数じゃなくオッズ（整数）」
-      if (ol) return '<div class="pl-row pl-ok pl-odds" title="' + esc(tip) + '">' + "<b>" + ol + "倍</b>" + "</div>";
+      // §74（9/28 Naoto）「倍」は付けない・金色・細い字（右列を細くして買目欄を広く）。範囲の「〜」は半角の「~」に＝幅を取らない
+      if (ol) return '<div class="pl-row pl-ok pl-odds" title="' + esc(tip) + '">' + "<b>" + String(ol).replace("〜", "~") + "</b>" + "</div>";
       return '<div class="pl-row pl-ok" title="' + esc(tip) + '">' + typeMark + "<b>" + l.points + "点</b>" + (l.dupCount ? '<span class="pl-memo">*</span>' : "") + "</div>";
     }).join("");
     var investInput = +form.querySelector(".pf-invest").value || 0;
@@ -980,7 +981,7 @@
     // §72 CON2＝「合計〇点」「投資¥〇」「合成〇倍」をそれぞれひとまとまり（途中で折り返さない＝入り切らなければまとまりごと次の行へ）
     var html = CON2
       ? '<span class="pt-u">合計 ' + parsed.points + '点</span>　<span class="pt-u">投資 ' + fmtYen(investInput) + "</span>" +
-        (syn ? '　<span class="pt-u">合成 ' + window.Keirin.synthFmt(syn) + "倍</span>" : "") + cutWarn
+        (syn ? '　<span class="pt-u">合成 <span class="pt-syn">' + window.Keirin.synthFmt(syn) + "倍</span></span>" : "") + cutWarn
       : "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
         (syn ? "　合成 " + window.Keirin.synthFmt(syn) + "倍" : "") + cutWarn;
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
