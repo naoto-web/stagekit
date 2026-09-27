@@ -998,11 +998,11 @@
           var glow = !!hls && hls.some(function (c) {
             return strict ? c[pos] === tk.v : c.indexOf(tk.v) >= 0;
           });
-          return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + (glow ? " hit-glow" : "") + '">' + tk.v + "</i>";
+          return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + (glow ? " hit-glow" : "") + '"' + (glow ? hitPhaseStyle() : "") + ">" + tk.v + "</i>";
         }
         case "sep": pos++; return noSep ? "" : '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
         case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
-        case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hls ? " hit-glow" : "") + '">全</span>';
+        case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hls ? " hit-glow" : "") + '"' + (hls ? hitPhaseStyle() : "") + ">全</span>";
         case "box": return '<span class="pl-box' + (small ? " sm" : "") + '">BOX</span>';
         case "gap": return '<span class="pl-gap"></span>';
         default: return '<span class="pl-txt">' + esc(tk.v) + "</span>";
@@ -2071,7 +2071,79 @@
       var fx = closed && rcFxAt[id] && ms - rcFxAt[id] < RCFX_MS;
       el.classList.toggle("rc-fx", !!fx);
       if (fx) el.style.setProperty("--rcd", -(ms - rcFxAt[id]) + "ms");
+      // §54 的中したら「締切」ハンコを「的中」に押し替え。新しい的中は的中バッジが出る瞬間に（rcHitAt）・それ以前からの的中は最初から「的中」
+      var hk = k + "|" + (el.getAttribute("data-rid") || "");
+      var isHit = RCHIT && closed && derived.hits.some(function (h) { return String(h.id).indexOf(hk + "|") === 0; });
+      var hitAt = rcHitAt[hk] || 0;
+      var hit = isHit && ms >= hitAt;
+      el.classList.toggle("rc-hit", hit);
+      el.classList.toggle("rc-hitlive", hit && ms < (rcHitUntil[hk] || 0)); // ハンコの金の光はバッジと一緒に消える（「的中」の字は残る）
+      var hfx = hit && hitAt && ms - hitAt < RCFX_MS;
+      el.classList.toggle("rc-hitfx", !!hfx);
+      if (hfx) el.style.setProperty("--rchd", -(ms - hitAt) + "ms");
     });
+  }
+  /* §54（9/27 Naoto）的中したら①の出走表も光らせる＋締切ハンコ→的中ハンコ。
+     ・出走表＝的中ハンコの後（バッジ＋0.6秒）からバッジが消えるまで、①の出走表を的中レースに一時的に切り替えて、当たり目の車番の行（車番バッジ＋名前）を金色に光らせる→終われば元のレースへ。
+       2人同時の的中は同じ行を光らせるだけ（車番を合わせて光らせる）。着順の札は付けない（Naoto）。名前の色は変えない（地元の濃い金と区別）
+     ・発火は演出と同じ条件（checkNewHits の新規＝手動確定のみ）。&slhit=0／&rchit=0 で止める */
+  /* 🧪9/28 まずNaotoのテスト用OBSで見る＝テストGAS接続時（?gas=）だけ既定ON・本番OBSは従来のまま（&hit54=1／0 で明示）。
+     HIT54 が切るもの＝出走表の光・的中ハンコ・買目チップの光のタイミング（バッジ基準）の3つ */
+  var HIT54 = params.get("hit54") ? params.get("hit54") !== "0" : !!params.get("gas");
+  if (HIT54) document.documentElement.classList.add("hit54"); // CSS側の切替（俺たち目の控えめな光）
+  var SLHIT = HIT54 && params.get("slhit") !== "0", RCHIT = HIT54 && params.get("rchit") !== "0";
+  var rcHitAt = {};   // 場|R|配信者 → 的中ハンコを押す時刻（新しい的中だけ＝バッジが出る時刻）
+  var rcHitUntil = {}; // 場|R|配信者 → ハンコの金の光が消える時刻（バッジと一緒）
+  var slHit = null;   // {key, cars:{車番:1}, from, until}＝from/until は買目チップの光と同じ（§54 9/28）
+  function slHitNow() {
+    var ms = Date.now();
+    return slHit && ms >= slHit.from && ms < slHit.until ? slHit : null;
+  }
+  function noteFreshHits(list, at, until, glows) {
+    if (!list.length) return;
+    var byKey = {}, hks = [];
+    list.forEach(function (h) {
+      var p = String(h.id).split("|");
+      if (p.length < 5) return;
+      var key = p[0] + "|" + p[1];
+      var hk = key + "|" + p[2];
+      rcHitAt[hk] = Infinity; // 押すまでは「締切」のまま
+      rcHitUntil[hk] = until;
+      hks.push(hk);
+      var cars = byKey[key] || (byKey[key] = {});
+      String(h.comboLabel || "").split("-").forEach(function (t) { var n = parseInt(t, 10); if (n >= 1 && n <= 9) cars[n] = 1; });
+    });
+    if (RCHIT) setTimeout(applyRaceClosed, Math.max(0, until - Date.now()) + 20);
+    var sl = null;
+    if (SLHIT) {
+      // 複数レースが同時に当たったら最後のレース（まれ・出走表は1枚しかない）
+      var keys = Object.keys(byKey);
+      var key = keys[keys.length - 1];
+      if (key && Object.keys(byKey[key]).length) {
+        sl = slHit = { key: key, cars: byKey[key], from: Infinity, until: until };
+        var kp = key.split("|");
+        ensureNarabi(kp[0], +kp[1], key); // 得点・期・年齢を前奏の間に先読み（直前まで出していたレースなら取得済み＝何もしない）
+        setTimeout(renderStartList, Math.max(0, until - Date.now()) + 50);
+      }
+    }
+    setTimeout(function () { beginHitEmphasis(hks, glows || [], sl, 0); }, Math.max(0, at - Date.now()));
+  }
+  /* バッジの時刻＝ハンコを押す→HIT_GLOW_LEAD 後に買目チップと出走表が光り始める。
+     🐞9/28 Naoto「的中ハンコの押す演出が見えない」＝万車は前奏が全画面（#fx-proto-host）で、バッジの時刻はその退場の始まり＝
+     ハンコがコインの下で押されていた→全画面の前奏が消えきるまで待つ（最大4秒）。ワイプだけの前奏はそのまま */
+  function beginHitEmphasis(hks, glows, sl, tries) {
+    var host = document.getElementById("fx-proto-host");
+    if (host && host.children.length && tries < 40) {
+      setTimeout(function () { beginHitEmphasis(hks, glows, sl, tries + 1); }, 100);
+      return;
+    }
+    var t = Date.now();
+    hks.forEach(function (hk) { rcHitAt[hk] = t; });
+    glows.forEach(function (g) { g.from = t + HIT_GLOW_LEAD; });
+    if (sl && slHit === sl) sl.from = t + HIT_GLOW_LEAD;
+    hitPhase0 = t + HIT_GLOW_LEAD;
+    applyRaceClosed();
+    setTimeout(function () { renderPreds(); renderStartList(); }, HIT_GLOW_LEAD + 20);
   }
   function raceColHead(rc, k, split) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
@@ -2661,8 +2733,8 @@
           band.classList.toggle("note-fire", fireCols.length === 0 && noteFireOn(rc, talkKeys[0]));
           Array.prototype.forEach.call(fireCols, function (col, ci) { col.classList.toggle("note-fire", noteFireOn(rc, fireKeys[ci])); });
           if (RCCLOSE) { // §53 締切の区画をグレーに＝区画（1場は帯）にレースのキーを付けておき、applyRaceClosed が毎秒判定
-            Array.prototype.forEach.call(fireCols, function (col, ci) { col.setAttribute("data-rck", fireKeys[ci] || ""); col.setAttribute("data-slot", slot); });
-            if (!fireCols.length && talkKeys[0]) { band.setAttribute("data-rck", talkKeys[0]); band.setAttribute("data-slot", slot); }
+            Array.prototype.forEach.call(fireCols, function (col, ci) { col.setAttribute("data-rck", fireKeys[ci] || ""); col.setAttribute("data-slot", slot); col.setAttribute("data-rid", rc ? rc.id : ""); });
+            if (!fireCols.length && talkKeys[0]) { band.setAttribute("data-rck", talkKeys[0]); band.setAttribute("data-slot", slot); band.setAttribute("data-rid", rc ? rc.id : ""); }
             else { band.removeAttribute("data-rck"); band.classList.remove("rc-closed", "rc-fx"); }
           }
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
@@ -2808,7 +2880,9 @@
     var v = state.venues[state.activeVenue];
     var vName = v ? v.name : "";
     var rNo = v ? state.currentRace[v.name] : null;
-    renderStartListInto(SL_TALK, vName, rNo);
+    var sh = SCENE === "talk" ? slHitNow() : null; // §54 的中の間だけ①の出走表を的中レースへ（ほかの描画は今のレースのまま）
+    var hp = sh ? sh.key.split("|") : null;
+    renderStartListInto(SL_TALK, hp ? hp[0] : vName, hp ? +hp[1] : rNo);
     if (SEATCARD && STC_BOX[SCENE]) renderSeatCard(vName, rNo); // ①＝10列つき／②③＝得点まで
     // ③は①とまったく同じレースを描く（8/12設計変更）。中央の展開図はボード側が
     // 同じコンソールに追従するので揃う＝ここに専用の分岐は要らない
@@ -2967,8 +3041,12 @@
         return '<span class="sl2-n' + (col.i === 7 ? " sl2-wr" : "") + (!v || v === "0" ? " z" : "") +
           topCls(v, colRank[j]) + '">' + esc(v === "" ? "-" : v) + "</span>";
       }).join("");
-      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + '"><i class="car c' + p.no + '">' + p.no + "</i>" +
-        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
+      var shl = slHitNow(); // §54 的中の車番の行を光らせる
+      var hitRow = !!(shl && shl.key === key && shl.cars[+p.no]);
+      // 的中の行＝車番バッジは買目チップと同じ hit-glow（同じ拍子）・名前も同じ拍子で大小（下段は隠して行の高さを名前に）
+      var ph = hitRow ? hitPhaseStyle() : "";
+      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + '"><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
+        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '"' + ph + ">" + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
         (!SL3 && c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
         '<span class="sl2-sub">' + (isJimoto(vName, p.pref) && sub.indexOf(p.pref) === 0 // 地元は下段の県名も同じ色（§52）
           ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span></span>" +
@@ -3675,18 +3753,29 @@
      予想帯（①トーク・②メイン/サブ共通＝raceBuyHtml）の該当行で、当たり組合せの車番チップに
      hit-glow（金リング＋パルス）を付ける。発火条件は演出と同一（手動確定のみ）・
      持続もワイプ的中演出と同じHIT_FX_MS＝期限切れは0.25秒ループが掃除して再描画 */
-  var hitGlows = []; // {key, racerId, type, comboLabel, combo:[..], until}
-  function addHitGlow(h) {
+  /* 🔄9/28 Naoto「強調はワイプの的中バッジと同じタイミングで出して同じタイミングで消す・的中ハンコが押されたあとに光り始める」（§54）＝
+     旧＝結果を確定した瞬間から35秒（前奏の間に光り始め、バッジより数秒早く消えていた）→
+     from＝バッジが出る時刻＋ハンコが押し終わるまで（HIT_GLOW_LEAD）／until＝バッジが消える時刻（バッジ＋HIT_FX_MS）。
+     出走表の光（slHit）も同じ from/until。脈打ちの位相は hitPhase0 を起点に時計で合わせる（再描画で頭から始まらない・チップと出走表がそろう） */
+  var HIT_GLOW_LEAD = 600; // ハンコ（0.45秒）が押し終わってから光る
+  var HIT_PULSE_MS = 1800; // hitGlowPulse（.9s alternate）の1往復＝CSSとそろえる
+  var hitPhase0 = 0;
+  function hitPhaseStyle() {
+    var d = ((Date.now() - hitPhase0) % HIT_PULSE_MS + HIT_PULSE_MS) % HIT_PULSE_MS;
+    return ' style="animation-delay:-' + d + 'ms"';
+  }
+  var hitGlows = []; // {key, racerId, type, comboLabel, combo:[..], from, until}
+  function addHitGlow(h, from, until) {
     var p = String(h.id).split("|"); // id＝場|R|配信者|式別|組合せ（hitId）
     if (p.length < 5) return;
     var combo = String(h.comboLabel).split("-").map(Number).filter(Boolean);
     if (!combo.length) return;
     hitGlows.push({ key: p[0] + "|" + p[1], racerId: p[2], type: h.type,
-      comboLabel: h.comboLabel, combo: combo, until: Date.now() + HIT_FX_MS });
+      comboLabel: h.comboLabel, combo: combo, from: from || Date.now(), until: until || Date.now() + HIT_FX_MS });
   }
   function glowsFor(key, racerId) {
     var now = Date.now();
-    return hitGlows.filter(function (g) { return g.until > now && g.key === key && g.racerId === racerId; });
+    return hitGlows.filter(function (g) { return g.from <= now && g.until > now && g.key === key && g.racerId === racerId; });
   }
   function sweepHitGlows() { // 期限切れ＝配列から外して帯を通常表示へ戻す
     if (!hitGlows.length) return;
@@ -3773,8 +3862,7 @@
       if (firedFx[id]) return; // 同じ的中で二度は鳴らさない（8/26根治・firedFxのコメント参照）
       firedFx[id] = true;
       saveFired();
-      addHitGlow(h); // 予想帯の的中買目チップ強調（8/10 FB119・演出と同条件・同尺）
-      glowAdded = true;
+      glowAdded = true; // 予想帯の的中買目チップ強調（8/10 FB119）＝時刻がバッジ基準になったので下の発火の後で足す（§54）
       fresh.push(h);
       var gk = h.place + "|" + h.racerName;
       if (!groups[gk]) { groups[gk] = []; groupOrder.push(gk); }
@@ -3789,6 +3877,20 @@
         if (seats[slot] && seats[slot].name === h.racerName) fireHitFx(slot, h, seats[slot], pairFx);
       });
     });
+    if (fresh.length) { // §54 バッジが出る→ハンコ→光る→バッジと一緒に消える（fireHitFx が置いたバッジの時刻に合わせる）
+      var nowMs = Date.now();
+      var badgeAt = Math.max(nowMs, window.__fxBadgeAt || 0);
+      if (!HIT54) { // 従来＝結果を確定した瞬間から35秒
+        fresh.forEach(function (h) { addHitGlow(h, nowMs, nowMs + HIT_FX_MS); });
+        hitPhase0 = nowMs;
+      } else {
+        // 光り始めは「ハンコを押した後」＝押す時刻は beginHitEmphasis が決める（万車の全画面前奏が消えるのを待つことがある）。それまでは保留（Infinity）
+        var gUntil = badgeAt + HIT_FX_MS;
+        var gl = [];
+        fresh.forEach(function (h) { addHitGlow(h, Infinity, gUntil); gl.push(hitGlows[hitGlows.length - 1]); });
+        noteFreshHits(fresh, badgeAt, gUntil, gl);
+      }
+    }
     seenHits = ids;
     // 帯はcheckNewHitsより先（renderAll内）に描画済みのため、強調が追加された時だけ描き直す（FB119）
     if (glowAdded) renderPreds();
@@ -6407,6 +6509,7 @@
     // 予想帯の買目強調も一緒に落とす。強調が無いときは描き直さない
     // （＝stateが来る前に叩かれても renderPreds に入らないようにする保険）
     if (hitGlows.length) { hitGlows = []; renderPreds(); }
+    if (slHit) { slHit = null; renderStartList(); } // §54 出走表の光と一時切替も一緒に落とす
   }
   window.__clearHitFx = clearHitFx;   // 検証ハーネス（fxlab）から叩く
 

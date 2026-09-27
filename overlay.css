@@ -281,6 +281,15 @@ body[data-theme="w"] .pred-line.cut-line { background: rgba(0,0,0,.10); }
   from { box-shadow: 0 0 0 4px #ffd54f, 0 0 12px 4px rgba(255,179,0,.7); transform: scale(1); }
   to   { box-shadow: 0 0 0 5px #ffc400, 0 0 34px 14px rgba(255,179,0,1); transform: scale(1.45); }
 }
+/* 9/28 Naoto（§54）＝俺たち目はチップ同士が近く、出走表は隣が名前＝上の強い版だと光と拡大が隣にかぶる。
+   ここだけ「膨らみ1.22倍・外の光を締める」版に（拍子は同じ .9s alternate＝位相は JS の hitPhaseStyle でそろう）。
+   俺たち目は光っている間だけチップの間を広げる（1.22倍でも隣と重ならない） */
+html.hit54 .ore-row .car.hit-glow, .sl2-row .car.hit-glow { animation-name: hitGlowTight; } /* 俺たち目は §54 と一緒にテスト接続（html.hit54）から */
+html.hit54 .ore-row .car.hit-glow { margin: 0 5px; }
+@keyframes hitGlowTight {
+  from { box-shadow: 0 0 0 3px #ffd54f, 0 0 5px 1px rgba(255,179,0,.6); transform: scale(1); }
+  to   { box-shadow: 0 0 0 4px #ffc400, 0 0 9px 3px rgba(255,179,0,.95); transform: scale(1.22); }
+}
 
 /* グレードバッジ（8/6 FB36）：GP=金・GⅠ=赤・GⅡ=青・GⅢ=緑（F級は非表示・場タブとレースラベル共通） */
 .grade-badge { display: inline-block; margin-left: 8px; padding: 2px 10px; border-radius: 6px;
@@ -1036,8 +1045,22 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
 .rc-closed:not(.race-col) { --rcty: 24px; } /* 1場は傾けたハンコの右上の角が見出しの帯に隠れた（9/27本番）＝下げる */
 .rc-closed:not(.race-col)::after { font-size: 38px; border-width: 4px; border-radius: 9px; padding: 4px 12px 6px; }
 .race-t-side > .rc-closed::after { font-size: 22px; border-width: 2.5px; padding: 2px 7px 3px; }
+/* §54 的中したら「締切」→「的中」ハンコ（金）。押し替えの瞬間は同じハンコの動き */
+.rc-closed.rc-hit::after { content: "的中"; color: #9a6b00; border-color: #d4a017; background: rgba(255, 244, 200, .92); }
+.rc-closed.rc-hitlive::after { box-shadow: 0 0 12px rgba(255, 196, 0, .75); } /* 金の光はバッジが出ている間だけ（9/28） */
 .rc-closed.rc-fx::before { animation: rcShade .7s ease-out both; animation-delay: var(--rcd, 0ms); }
 .rc-closed.rc-fx::after { animation: rcStamp .45s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--rcd, 0ms) + 500ms); }
+.rc-closed.rc-hitfx::after { animation: rcStamp .45s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: var(--rchd, 0ms); }
+/* §54 的中の間の①出走表＝当たり目の車番の行を金色に（行の地＋金の枠）。
+   9/28 Naoto＝車番バッジは買目チップと同じ光り方・同じ拍子（.car.hit-glow＝hitGlowPulse・位相はJSが時計で合わせる）／
+   名前も同じ拍子で大小（下段の府県・期・年齢はこの間だけ隠して、行の高さを名前に使う）。名前の色は変えない */
+/* 枠は付けない（9/28 Naoto「金の太枠で囲むとラインのどこだったか分かりづらい」＝ラインの切れ目の3px線を隠さない）。地の金だけ */
+.sl2-row.sl2-hit { background: linear-gradient(90deg, rgba(255, 214, 90, .55), rgba(255, 236, 170, .35)); position: relative; z-index: 1; }
+.sl2-row.sl2-hit .sl2-sub { display: none; }
+.sl2-row.sl2-hit .sl2-nm { padding-left: 12px; } /* 車番バッジが膨らんでも名前の頭にかぶらない */
+.slist .sl2-row.sl2-hit .sl2-name { font-size: min(calc(var(--sl2-rh) * .66), 40px); line-height: 1.05;
+  transform-origin: left center; animation: slHitName .9s ease-in-out infinite alternate; }
+@keyframes slHitName { from { transform: scale(.82); } to { transform: scale(1); } }
 @keyframes rcShade { 0% { clip-path: inset(0 0 100% 0); } 100% { clip-path: inset(0 0 0 0); } }
 @keyframes rcStamp {
   0% { opacity: 0; transform: scale(calc(var(--rcinv) * 2.4)) translate(calc(-100% - 10px), var(--rcty, 14px)) rotate(-8deg); }
