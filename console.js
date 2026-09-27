@@ -2196,11 +2196,16 @@
     var changed = false;
     Object.keys(state.results || {}).forEach(function (key) {
       var r = state.results[key];
-      if (!r || !r.auto) return;
+      if (!r) return;
       var parts = key.split("|");
       var races = venueRaces(parts[0]).filter(function (x) { return x.no === +parts[1]; });
       var s = races.length ? timeToSec(races[0].start) : null;
-      if (s !== null && nowSec() < s + 120) { delete state.results[key]; changed = true; }
+      if (s === null) return;
+      if (r.auto) { if (nowSec() < s + 120) { delete state.results[key]; changed = true; } return; }
+      /* 🧪9/28（Naoto「勝手に入ってる結果が消えない」）手入力でも「今日、そのレースの発走より前に確定した結果」は消す
+         ＝走る前の確定は実運用ではありえない（テストの入力の残り・§58 broadcastRace も同じ理由で数えない）。テスト（CON2）だけ */
+      var st = settleSecOf(key);
+      if (CON2 && st !== null && st < s) { delete state.results[key]; changed = true; }
     });
     if (changed) { save(); renderAll(); }
   }
