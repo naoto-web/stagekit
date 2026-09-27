@@ -825,6 +825,9 @@ body[data-theme="w"] .slist.sl2 { --sl2-ink: #000; }
 .sl2-nm { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-left: 4px; }
 .sl2-name { font-size: min(calc(var(--sl2-rh) * .42), 25px); font-weight: 900; line-height: 1.12; white-space: nowrap;
   overflow: hidden; text-overflow: clip; }
+/* 9/27 濃い金 #8f6a00 に確定（6色の見比べ・Naoto）。①2段版・旧1段版・空席ワイプ（.nm）・②の並びの苗字（.nb-nm）で共通 */
+.jm { color: var(--jmc, #8f6a00) !important; }
+body:not([data-theme="w"]) .jm { color: var(--jmc, #e0b84a) !important; }
 .sl2-hj { font-size: .7em; color: var(--sub); margin-left: 2px; }
 .sl2-sub { font-size: min(calc(var(--sl2-rh) * .28), 14.5px); font-weight: 700; color: var(--sub); line-height: 1.2;
   white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }

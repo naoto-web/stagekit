@@ -2838,10 +2838,11 @@
       var scls = "sl-score" + (sv === top1 ? " top1" : sv === top2 ? " top2" : "");
       // 年齢＝選手名の右に半角の(36)（8/15）。名前と同じspanの中＝行のgapを挟まずぴったり続ける
       var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
+      var jm = isJimoto(vName, p.pref); // 地元＝名前と府県を濃い金（§52）
       return '<li class="slist-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
-        '<span class="sl-name">' + esc(p.name) +
+        '<span class="sl-name">' + (jm ? '<span class="jm">' + esc(p.name) + "</span>" : esc(p.name)) +
         (age ? '<span class="sl-age">(' + age + ")</span>" : "") +
-        '</span><span class="sl-sub">' + esc(sub) + "</span>" +
+        '</span><span class="sl-sub">' + (jm && sub.indexOf(p.pref) === 0 ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span>" +
         (sc ? '<span class="' + scls + '">' + esc(sc) + "</span>" : "") + "</li>";
     }).join("");
     renderNarabi(vName, rNo, ids.narabi);
@@ -2886,8 +2887,28 @@
     v = parseFloat(v);
     return !(v > 0) ? "" : v === rk[0] ? " top1" : (rk.length > 1 && v === rk[1]) ? " top2" : "";
   }
+  /* 地元の色付け（9/27 Naoto・要件定義§52）＝開催場と同じ県の選手（地元）は名前と府県を濃い金に。
+     地元＝同じ県だけ（競輪の慣用＝隣県・同地区は「準地元」で別物）。印の文字は足さない（枠が狭い） */
+  var JIMOTO = params.get("jimoto") !== "0"; // 9/27 Naoto「濃い金で・他の出走表と②の並びも」＝既定ON。&jimoto=0 で色なし
+  (function (x) { // 🧪色の見比べ用＝&jmc=<16進6桁>（名前と下段の県名の色）
+    if (x && /^[0-9a-f]{6}$/i.test(x)) document.documentElement.style.setProperty("--jmc", "#" + x);
+  })(params.get("jmc"));
+  var VENUE_PREF = {
+    "函館": "北海道", "青森": "青森", "いわき平": "福島", "弥彦": "新潟", "前橋": "群馬", "取手": "茨城", "宇都宮": "栃木",
+    "大宮": "埼玉", "西武園": "埼玉", "京王閣": "東京", "立川": "東京", "松戸": "千葉", "千葉": "千葉",
+    "川崎": "神奈川", "平塚": "神奈川", "小田原": "神奈川", "伊東": "静岡", "静岡": "静岡",
+    "名古屋": "愛知", "豊橋": "愛知", "岐阜": "岐阜", "大垣": "岐阜", "富山": "富山", "松阪": "三重", "四日市": "三重",
+    "福井": "福井", "奈良": "奈良", "向日町": "京都", "和歌山": "和歌山", "岸和田": "大阪",
+    "玉野": "岡山", "広島": "広島", "防府": "山口", "高松": "香川", "小松島": "徳島", "高知": "高知", "松山": "愛媛",
+    "小倉": "福岡", "久留米": "福岡", "武雄": "佐賀", "佐世保": "長崎", "別府": "大分", "熊本": "熊本"
+  };
+  function isJimoto(vName, pref) {
+    var vp = VENUE_PREF[String(vName || "").replace(/\s/g, "")];
+    return !!(JIMOTO && vp && String(pref || "").replace(/\s/g, "") === vp);
+  }
   function renderSl2(el, race, key) {
     var na = narabiAuto[key] || {};
+    var vName = String(key || "").split("|")[0];
     var scores = na.scores || {}, ages = na.ages || {}, cards = na.cards || {};
     var stOf = function (p) { return (cards[String(p.no)] || {}).st || []; };
     var scRank = rankOf(race.racers.map(function (p) { return scores[String(p.no)]; }));
@@ -2909,9 +2930,10 @@
           topCls(v, colRank[j]) + '">' + esc(v === "" ? "-" : v) + "</span>";
       }).join("");
       return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + '"><i class="car c' + p.no + '">' + p.no + "</i>" +
-        '<span class="sl2-nm"><span class="sl2-name">' + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
+        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
         (!SL3 && c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
-        '<span class="sl2-sub">' + esc(sub) + "</span></span>" +
+        '<span class="sl2-sub">' + (isJimoto(vName, p.pref) && sub.indexOf(p.pref) === 0 // 地元は下段の県名も同じ色（§52）
+          ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span></span>" +
         '<span class="sl2-ky">' + esc(c.k || p.kyaku || "") + "</span>" +
         '<span class="sl2-sc' + topCls(sc, scRank) + '">' + esc(sc || "-") + "</span>" + nums + "</li>";
     }).join("");
@@ -3086,6 +3108,7 @@
         var scls = sv === vals[0] ? " top1" : (vals.length > 1 && sv === vals[1]) ? " top2" : "";
         var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
         var sub = one ? (p.pref || "") : [p.pref, c.t ? c.t + "期" : "", age].filter(Boolean).join(" ");
+        var jm = isJimoto(vName, p.pref); // 地元＝名前と府県を濃い金（§52）
         var nums = "";
         for (var i = (cmp ? 4 : 0); i < (cmp ? 7 : 10); i++) { // ②③＝B H S（st[4..6]）だけ
           var v = String(st[i] == null ? "" : st[i]).trim();
@@ -3097,8 +3120,9 @@
         return (o.gap ? gapRow : "") +
           '<div class="stc-row stc-tr"><span><i class="car c' + p.no + '">' + p.no + "</i></span>" +
           // 補充・追加の選手は名前の後ろに「(補)」「(追)」（9/25 Naoto・当初「(補充)」→頭1文字に短縮。GAS cards.h＝「補充」「追加」のまま）
-          '<span class="nm">' + (c.h ? '<span class="nm1">' + esc(p.name) + '<span class="hj">(' + esc(String(c.h).charAt(0)) + ")</span></span>" : esc(p.name)) +
-          "<small>" + esc(sub) + "</small></span>" +
+          '<span class="nm">' + (c.h ? '<span class="nm1' + (jm ? " jm" : "") + '">' + esc(p.name) + '<span class="hj">(' + esc(String(c.h).charAt(0)) + ")</span></span>"
+            : (jm ? '<span class="jm">' + esc(p.name) + "</span>" : esc(p.name))) +
+          "<small>" + (jm && sub.indexOf(p.pref) === 0 ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</small></span>" +
           "<span>" + esc(c.c || "") + "</span><span>" + esc(c.k || p.kyaku || "") + "</span>" +
           '<span class="sc' + scls + '">' + esc(sc) + "</span>" + nums +
           (cmp ? "" : '<span class="role sep">' + esc(STC_ROLE[roles[p.no]] || "") + "</span>") + "</div>";
@@ -3180,6 +3204,19 @@
     });
     return out;
   }
+  /** 車番→府県（地元の色付け・§52） */
+  function prefOf(vName, rNo, no) {
+    var out = "";
+    if (!timetable || !vName || !rNo) return out;
+    (timetable.venues || []).forEach(function (tv) {
+      if (tv.name !== vName) return;
+      (tv.races || []).forEach(function (r) {
+        if (r.no !== +rNo) return;
+        (r.racers || []).forEach(function (p) { if (+p.no === +no) out = String(p.pref || ""); });
+      });
+    });
+    return out;
+  }
   /** 車番→苗字（②中央ライン用）＝フルネームの最初の空白まで */
   function surnameOf(vName, rNo, no) {
     return fullNameOf(vName, rNo, no).split(/[\s　]+/)[0];
@@ -3224,7 +3261,7 @@
           if (!o.names) return chip;
           // 苗字が取れない選手（時刻表が旧経路等）はチップだけ＝高さが揃うよう空要素は残す
           return '<span class="nb-cell">' + chip +
-            '<b class="nb-nm">' + esc(surnameOf(vName, rNo, n)) + "</b></span>";
+            '<b class="nb-nm' + (isJimoto(vName, prefOf(vName, rNo, n)) ? " jm" : "") + '">' + esc(surnameOf(vName, rNo, n)) + "</b></span>";
         }).join("") + "</span>";
       }).join('<span class="nb-dot">・</span>');
     fitNarabi(nbId); // 収まらない時は行ごと縮小（8/6 FB44）
