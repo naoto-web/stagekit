@@ -183,6 +183,29 @@
     box.onclick = function (e) { if (e.target === box) close(); }; // 外側を押したら「やめる」
   }
 
+  /* ①の出走表は「人が上の場・レースで選んだレース」（9/28 Naoto・要件定義§57）。
+     事故＝①でA2Rを押してA2Rの話→②でさっきのオッズを見せる→②の自動追従でメインが次の発走B1Rへ→①に戻るとB1Rの出走表。
+     ⇒ 手で選んだレースを state.talkSl に覚える（自動追従は触らない）。①の出走表はこれを**そのレースの発走まで**出す→発走後はメインに戻る。
+     手で別のレースを選び直せばそれが新しい覚えたレース。date＝「新しい日を開始」で前日の分を無効に */
+  // 🧪まずテスト（?gas=）だけ既定ON＝表示だけの切替（覚えること自体は常に行う・無害）。オーバーレイ側は overlay.js TALK_SL
+  var TALK_SL = params.get("talksl") ? params.get("talksl") !== "0" : !!params.get("gas");
+  function rememberTalkSl(venue, no) {
+    if (!venue || !no) return;
+    state.talkSl = { key: window.Derive.raceKey(venue, +no), date: state.date || "" };
+  }
+  /** いま①の出走表に出るレース（オーバーレイ overlay.js talkSlKey と同じ判定）＝コンソールの表示用 */
+  function talkSlShown() {
+    var t = state.talkSl;
+    if (t && t.key && (!t.date || !state.date || t.date === state.date)) {
+      var p = String(t.key).split("|");
+      var r = venueRaces(p[0]).filter(function (x) { return x.no === +p[1]; })[0];
+      var s = r ? timeToSec(r.start) : null;
+      if (s !== null && nowSec() < s) return { key: t.key, held: true };
+    }
+    var name = activeVenueName();
+    return name && state.currentRace[name] ? { key: window.Derive.raceKey(name, state.currentRace[name]), held: false } : null;
+  }
+
   function nextRaceOf(name) {
     var now = nowSec();
     var rs = venueRaces(name).filter(function (r) {
@@ -322,6 +345,7 @@
         guardMainSwitch(state.venues[i].name, null, function () { // §56 レース中は確認を挟む
           state.activeVenue = i;
           manualNav(true); // 手動の場切替＝結果フォームの固定解除＋自動追従に手動優先を通知（FB96）
+          rememberTalkSl(state.venues[i].name, state.currentRace[state.venues[i].name]); // §57 ①の出走表はこのレース（発走まで）
           save();
           renderAll();
         });
@@ -453,6 +477,7 @@
         guardMainSwitch(name, no, function () { // §56 レース中は確認を挟む
           state.currentRace[name] = no;
           manualNav(true); // 手動のレース切替＝結果フォームの固定解除＋手動優先を通知（FB96）
+          rememberTalkSl(name, no); // §57 ①の出走表はこのレース（発走まで）
           save();
           renderAll();
         });
@@ -1866,8 +1891,22 @@
   });
 
   /* ---------- ステータスバー・警告 ---------- */
+  /* §57 「①の出走表：岐阜 2R」＝上の場・レースのすぐ下。手で選んだレースを発走まで出している間は「手で選んだレース・発走まで」、
+     それ以外は「放送と同じ」。毎秒（tickStatus）＝発走で表示が戻る */
+  function renderTalkSlNote() {
+    if (!TALK_SL) return;
+    var chips = $("race-chips");
+    if (!chips) return;
+    var el = $("talk-sl-note");
+    if (!el) { el = document.createElement("div"); el.id = "talk-sl-note"; chips.parentNode.insertBefore(el, chips.nextSibling); }
+    var t = talkSlShown();
+    var html = t ? "①の出走表：<b>" + esc(t.key.replace("|", " ")) + "R</b>" +
+      (t.held ? '<span class="tsn-held">手で選んだレース・発走まで</span>' : '<span class="tsn-live">放送と同じ</span>') : "";
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
   function tickStatus() {
     if (!state) return;
+    renderTalkSlNote();
     var now = nowSec();
     // 追跡中の場から次レース（未選択なら全場から）
     var pool = state.venues.length ? state.venues.map(function (v) { return v.name; })

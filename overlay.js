@@ -947,6 +947,7 @@
     });
     if (TFX) tfxTick();
     applyRaceClosed(); // §53 ①の買目区画を締切でグレーに（既定ON・&rcclose=0で旧）
+    if (SCENE === "talk" && TALK_SL && (talkSlKey() || "") !== talkSlLast) renderStartList(); // §57 覚えたレースが発走した瞬間にメインへ戻す
   }
 
   /* ---------- 予想・投資（①トーク／②バンド） ---------- */
@@ -2877,10 +2878,25 @@
   var SL_TALK = { list: "slist-talk", sub: "slist-sub", narabi: "narabi-talk" };
   var SL_TK = { list: "slist-tk", sub: "slist-sub-tk", narabi: "narabi-tk" };
 
+  /* §57（9/28 Naoto）①の出走表は state.talkSl（コンソールの上の場・レースで人が選んだレース）を**そのレースの発走まで**出す。
+     発走後・前日の分・無いときは従来どおりメイン。🧪テスト（?gas=）だけ既定ON（&talksl=1/0） */
+  var TALK_SL = params.get("talksl") ? params.get("talksl") !== "0" : !!params.get("gas");
+  var talkSlLast = "";
+  function talkSlKey() {
+    if (!TALK_SL || !state) return null;
+    var t = state.talkSl;
+    if (!t || !t.key || (t.date && state.date && t.date !== state.date)) return null;
+    var s = raceStartSecOf(t.key);
+    return s !== null && nowSec() < s ? t.key : null;
+  }
   function renderStartList() {
     var v = state.venues[state.activeVenue];
     var vName = v ? v.name : "";
     var rNo = v ? state.currentRace[v.name] : null;
+    // §57 ①の出走表＝人がコンソールで選んだレース（発走まで）。②の自動追従でメインが動いても①は動かない
+    var tk = SCENE === "talk" ? talkSlKey() : null;
+    if (tk) { vName = tk.split("|")[0]; rNo = +tk.split("|")[1]; }
+    talkSlLast = tk || "";
     var sh = SCENE === "talk" ? slHitNow() : null; // §54 的中の間だけ①の出走表を的中レースへ（ほかの描画は今のレースのまま）
     var hp = sh ? sh.key.split("|") : null;
     renderStartListInto(SL_TALK, hp ? hp[0] : vName, hp ? +hp[1] : rNo);

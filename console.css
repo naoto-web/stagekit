@@ -471,3 +471,9 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 #live-guard .btn { width: 100%; }
 #live-guard .lg-input { font-size: 16px; padding: 12px; }
 #live-guard .lg-cancel { align-self: center; width: auto; }
+
+/* §57 ①の出走表に出ているレース（上の場・レースの下） */
+#talk-sl-note { margin: 6px 2px 0; font-size: 13px; font-weight: 700; color: #c9cdd6; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#talk-sl-note b { color: #ffd98a; font-size: 15px; }
+#talk-sl-note .tsn-held { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #3d3320; border: 1px solid #d9a441; color: #f5d99a; }
+#talk-sl-note .tsn-live { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #2c3038; border: 1px solid #4a4f59; color: #9aa0ab; }
