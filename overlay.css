@@ -285,7 +285,8 @@ body[data-theme="w"] .pred-line.cut-line { background: rgba(0,0,0,.10); }
    俺たち目（チップ同士が近い）と出走表の車番（隣が名前）はさらに外の光を締めた hitGlowTight。拍子は同じ .9s alternate（位相は JS の hitPhaseStyle）。
    テスト接続（html.hit54）だけ＝本番OBSは上の hitGlowPulse（大小あり）のまま */
 html.hit54 .car.hit-glow, html.hit54 .pl-all.hit-glow { animation-name: hitGlowOnly; }
-html.hit54 .ore-row .car.hit-glow, html.hit54 .sl2-row .car.hit-glow { animation-name: hitGlowTight; }
+html.hit54 .ore-row .car.hit-glow, html.hit54 .sl2-row .car.hit-glow, html.hit54 #narabi-talk .car.hit-glow { animation-name: hitGlowTight; }
+html.hit54 #narabi-talk .car.hit-glow { margin: 0 2px; } /* 並びのチップも間が狭い＝光っている間だけ少し広げる（9/28） */
 html.hit54 .ore-row .car.hit-glow { margin: 0 3px; }
 @keyframes hitGlowOnly {
   from { box-shadow: 0 0 0 4px #ffd54f, 0 0 10px 3px rgba(255,179,0,.65); }

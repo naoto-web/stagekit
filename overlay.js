@@ -3364,6 +3364,9 @@
     var groups = window.Keirin.normalize(manual || ttNarabi || auto).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
+    // §54（9/28 Naoto）的中の間は①の出走表の下の並びでも当たり目の車番を光らせる（買目チップと同じ拍子・光だけ）
+    var shn = nbId === SL_TALK.narabi ? slHitNow() : null;
+    var nbHit = shn && shn.key === key ? shn.cars : null;
     // 「ライン」の見出し文字＝8/10 FB115で削除（Naoto「いらないかも」・そのぶんチップを大きく）
     nb.innerHTML = ((lineType && !o.noType) ? '<span class="nb-type">' + esc(lineType) + "</span>" : "") +
       // 場名＋R＝②は場名バーを置いていない（7/29 FB4）ので、ラインの左に添えて「どのレースの並びか」を示す
@@ -3374,7 +3377,8 @@
       '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {
-          var chip = '<i class="car c' + n + '">' + n + "</i>";
+          var glowN = !!(nbHit && nbHit[+n]);
+          var chip = '<i class="car c' + n + (glowN ? " hit-glow" : "") + '"' + (glowN ? hitPhaseStyle() : "") + ">" + n + "</i>";
           if (!o.names) return chip;
           // 苗字が取れない選手（時刻表が旧経路等）はチップだけ＝高さが揃うよう空要素は残す
           return '<span class="nb-cell">' + chip +
