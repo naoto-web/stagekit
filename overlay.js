@@ -956,6 +956,9 @@
      broadcastKey()＝放送のレース（derive.broadcastRace＝最後に発走したレース→結果の最初の確定＋2分か次の締切で次へ）＝②の下・NEXT枠の基準。
      放送のレースは保存しない＝コンソールと同じ式で毎秒決める（変わったら描き直す＝timer の tick） */
   var SPLIT = params.get("split") ? params.get("split") !== "0" : !!params.get("gas");
+  /* §59（9/28 Naoto）①トークに出す場＝その人が予想を入れている場だけ（コンソールの手選び「①トーク（画面に出す場）」は撤去）。
+     入力が1つも無い人は買目エリアを空に。&talkauto=0 で従来（state.talkRaces の手選び） */
+  var TALKAUTO = params.get("talkauto") !== "0";
   function settleSecOf(key) {
     var r = state && state.results ? state.results[key] : null;
     var t = r && (r.firstAt || r.settledAt);
@@ -2571,6 +2574,23 @@
     }
     function talkKeysOf(rc) {
       if (!rc) return key ? [key] : [];
+      if (TALKAUTO) {
+        /* §59 各場の今のトークのレース（場・レースのR）に、その人の買目・俺たち目・投資・note予想のどれかがあれば出す。
+           4場以上に入力があれば締切が近い3場（発走前を発走の早い順→発走済みは新しい順）。画面の並びは従来どおり開催の早い順 */
+        var now = nowSec(), cand = [];
+        state.venues.forEach(function (v) {
+          var r = state.currentRace[v.name];
+          if (!r) return;
+          var k = window.Derive.raceKey(v.name, r);
+          if (hasContentKey(rc, k)) cand.push({ name: v.name, k: k, sec: raceStartSecOf(k) });
+        });
+        if (cand.length > 3) {
+          var rank = function (c) { return c.sec === null ? 3e5 : (c.sec > now ? c.sec : 2e5 - c.sec); };
+          cand.sort(function (a, b) { return rank(a) - rank(b); });
+          cand = cand.slice(0, 3);
+        }
+        return cand.sort(function (a, b) { return byHeldOrder(a.name, b.name); }).map(function (c) { return c.k; });
+      }
       var names = (state.talkRaces || {})[rc.id];
       if (names && names.length) {
         return names.filter(function (n) {
@@ -2785,6 +2805,8 @@
               '<div class="race-col">' + raceColHead(rc, talkKeys[0], true) + raceBuyHtml(rc, talkKeys[0], true, false, true) + "</div>" +
               '<div class="race-col">' + raceColHead(rc, talkKeys[1], true) + raceBuyHtml(rc, talkKeys[1], true, false, true) + "</div>" +
               "</div>";
+          } else if (TALKAUTO && !talkKeys.length) {
+            band.innerHTML = ""; // §59 入力が1つも無い人＝空（「青森1R」だけの空の区画は出さない。見出しの名前・投資・回収は残る）
           } else {
             // TMETA（9/25）＝1場は合計欄をパネル右下の固定枠へ（noMeta）。本番（TMETA無効）は従来のインライン
             band.innerHTML = raceColHead(rc, talkKeys[0] || null) + raceBuyHtml(rc, talkKeys[0] || null, false, TMETA, true);

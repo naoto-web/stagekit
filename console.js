@@ -138,6 +138,9 @@
      放送のレース＝保存せず derive.broadcastRace で毎秒決める（オーバーレイと同じ式）＝②の下・結果入力の既定。
      撤去したもの（9/28）＝§56 放送中の切替確認・§57 ①だけ覚える（talkSl）。SPLIT中は予想入力の場ボタン・②サブ予想・俺たち目の警告も出さない */
   var SPLIT = params.get("split") ? params.get("split") !== "0" : !!params.get("gas");
+  /* §59（9/28 Naoto）①トークに出す場はオーバーレイが自動で決める（その人が予想を入れている場だけ）＝「①トーク（画面に出す場）」の行は出さない。
+     &talkauto=0 で従来の手選び（overlay も同じ引数で戻す）。state.talkRaces は残す（戻したときに使う） */
+  var TALKAUTO = params.get("talkauto") !== "0";
   function settleSecOf(key) {
     var r = state && state.results ? state.results[key] : null;
     var t = r && (r.firstAt || r.settledAt);
@@ -304,7 +307,7 @@
     var sr = $("sub-row");
     if (sr) {
       ensureTalkRaces();
-      if (!state.venues.length || !state.racers.length) {
+      if (TALKAUTO || !state.venues.length || !state.racers.length) {
         sr.innerHTML = "";
       } else {
         var heldVenues = state.venues.slice().sort(function (a, b) {
