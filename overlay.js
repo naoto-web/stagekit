@@ -2839,7 +2839,7 @@
   // 🧪&vtshort=1（9/27）＝②の3〜4場だけラベルを「民間」「公式」に（「締切」＝.vt-lx を隠す）＝空いた幅で数字を大きく
   if (params.get("vtshort") !== "0") document.documentElement.classList.add("vtshort"); // 9/27 本番化（B案）＝既定ON。&vtshort=0 で「民間締切」表記
   // 🧪&vrun=1（9/27 Naoto「レース中の下の種別が小さい・レース中も大きく」）＝CSS html.vrun
-  if (params.get("vrun") === "1") document.documentElement.classList.add("vrun");
+  if (params.get("vrun") !== "0") document.documentElement.classList.add("vrun"); // 9/27 本番化（Naoto OK）＝既定ON。&vrun=0 で旧
   // 🧪&slhd=1|2|3（9/27 Naoto「出走表の見出しのレース名・A級予選が見えづらい」）＝①出走表の金帯の見せ方の案（CSS html.slhd1〜3）
   (function (v) { // 🧪見出しの案＝クラスの組み合わせ（slfit＝レースごとに最大へ／slnolab＝「出走表」の文字なし／slink＝金の地に黒字）
     var map = { "1": "slhd1", "2": "slhd2", "3": "slhd3", "4": "slhd3 slfit slnolab", "5": "slink slfit", "6": "slink slfit slnolab", "7": "slink slmid", "8": "slink slmid slyel" };

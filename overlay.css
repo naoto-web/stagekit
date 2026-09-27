@@ -610,6 +610,9 @@ html.vrun .timer-cards.vt-n3 .vt-racing-main { font-size: 38px; }
 html.vrun .timer-cards.vt-n3 .vt-racing-sub { font-size: 23px; }
 html.vrun .timer-cards.vt-n4 .vt-racing-main { font-size: 30px; }
 html.vrun .timer-cards.vt-n4 .vt-racing-sub { font-size: 19px; }
+/* ①の1場（カード1枚で縦に余裕）はさらに大きく */
+html.vrun #scene-talk .timer-cards .vt-card:only-child .vt-racing-main { font-size: 64px; }
+html.vrun #scene-talk .timer-cards .vt-card:only-child .vt-racing-sub { font-size: 38px; }
 /* 締切カード＝薄いグレーの地（白＝平常・信号機色＝締切前と区別） */
 .vt-card.vt-closed-card .vt-head, .vt-card.vt-closed-card .vt-rows { background: #d5d8dd; }
 .vt-card.vt-closed-card .vt-rows .vt-row:first-child { border-color: rgba(0,0,0,.2); }
