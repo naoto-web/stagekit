@@ -1552,14 +1552,12 @@
     }
     var parsed = noteParse();
     var now = nowSec();
-    /* §62 ほかの行のうち、全レース発走済みの場の行は出さない（本日の場の自動で外れた場の行がここへ落ちてくるため）。データ（state.noteRaces）は消さない */
-    var doneVenue = function (name) {
-      var rs = venueRaces(name);
-      return rs.length > 0 && rs.every(function (r) { var st = timeToSec(r.start); return st !== null && st + 120 <= now; });
-    };
+    /* §62 ほかの行のうち、本日の場に無い場（時刻表の場）の行は出さない（9/28 Naoto「表示されてる場ベースでまとめて消していい」＝
+       本日の場の自動で外れた場の行がここへ落ちてくるため）。データ（state.noteRaces）は消さない */
+    var inToday = function (name) { return state.venues.some(function (v) { return v.name === name; }); };
     var keepShown = [];
     parsed.keep.forEach(function (l, i) {
-      if (CON2 && timetable && (timetable.venues || []).some(function (tv) { return l.indexOf(tv.name) >= 0 && doneVenue(tv.name); })) return;
+      if (CON2 && timetable && (timetable.venues || []).some(function (tv) { return l.indexOf(tv.name) >= 0 && !inToday(tv.name); })) return;
       keepShown.push(i);
     });
     el.innerHTML = state.racers.map(function (rc) {
@@ -1569,11 +1567,7 @@
         '<div class="np-name"' + (mc ? ' style="color:' + mc + '"' : "") + ">" + esc(rc.name) + "</div>" +
         state.venues.map(function (v) {
           var set = m[v.name] || {};
-          var races = venueRaces(v.name);
-          if (CON2) { // §62 発走済みのRは出さない・全部発走済みの場は行ごと出さない
-            races = races.filter(function (r) { var st = timeToSec(r.start); return st === null || st + 120 > now; });
-            if (!races.length && venueRaces(v.name).length) return "";
-          }
+          var races = venueRaces(v.name); // 発走済みのRも残して薄く（9/28 Naoto「終わったレースも今まで通り残していい」）
           return '<div class="np-venue"><span class="np-vname">' + esc(v.name) + kubunMarkHtml(v.name) + "</span>" +
             '<div class="np-races">' +
             (races.length ? races.map(function (r) {
@@ -2631,5 +2625,5 @@
 
   setInterval(function () { tickStatus(); autoAlignTick(); }, 1000); // 自動追従は毎秒エッジ検知（8/9 FB96）
   if (AUTOVENUE) setInterval(autoVenueTick, 30000); // §61 本日の場の自動（分単位の判定なので30秒ごとで足りる）
-  if (CON2) setInterval(function () { if (state) renderNotePick(); }, 30000); // §62 発走したRを勝負レースのカードから消す
+  if (CON2) setInterval(function () { if (state) renderNotePick(); }, 30000); // §62 発走したRを薄くする（描き直さないと薄くならない）
 })();
