@@ -1230,7 +1230,11 @@
     // 時刻表（場名→場コード）がまだ無い＝起動直後。空振りで30秒待たせない（9/25 Naoto「OBSだけ出るのが遅い」の原因）。
     // 時刻表が届いた時点でも loadTimetable から呼ぶ
     if (!timetable) return;
-    if (timetable.date && timetable.date !== oddsDate) { oddsData = {}; oddsWant = {}; oddsDate = timetable.date; }
+    // 🐞9/27「②に切り替えても倍率が出ない」の真因＝ここで oddsWant まで消していた。読み込み直後は oddsDate が "" なので、
+    //   時刻表が届いた最初の取得で「日付が変わった」扱いになり、先に描画で登録した「取りたいレース」を全部捨てていた
+    //   →以後は誰かが入力して描き直すまで一度も取りに行かない（公開の自動読み直しのたびに起きうる）。
+    //   消すのは前日のオッズだけ。取りたいレースは描画の通し番号（oddsSeq）で自然に入れ替わる
+    if (timetable.date && timetable.date !== oddsDate) { if (oddsDate) oddsData = {}; oddsDate = timetable.date; }
     var now = Date.now(), byJo = {};
     Object.keys(oddsWant).forEach(function (k) {
       if (oddsWant[k] < oddsSeq) { delete oddsWant[k]; return; } // 最新の描画に出ていない＝画面から消えた
@@ -1267,6 +1271,10 @@
     var o = {};
     Object.keys(d.o).forEach(function (c) { o[c] = Math.round(d.o[c] * factor * 10) / 10; });
     oddsData[k] = Object.assign({}, d, { o: o }); renderPreds(); return "ok";
+  };
+  // 検証用（&debug=1）＝オッズ取得の内部状態（9/27「②で倍率が出ない」の調査用）
+  if (DEBUG) window.__odState = function () {
+    return { want: oddsWant, seq: oddsSeq, pending: oddsPending, data: Object.keys(oddsData), tt: !!timetable, ttDate: timetable && timetable.date, oddsDate: oddsDate, kick: !!oddsKick };
   };
   if (DEBUG) window.__odFin = function (k) {
     if (!oddsData[k]) return "no odds for " + k;
@@ -2366,8 +2374,7 @@
   }
 
   function renderPreds() {
-    oddsSeq++; // 買目オッズ（§13）＝この描画で oddsHtml を通ったレースが「今画面に出ている」レース
-    var key = currentKey();
+    oddsSeq++; // 買目オッズ（§13）＝この描画で oddsHtml を通ったレースが「今画面に出ている」レース    var key = currentKey();
     var mainName = state.venues[state.activeVenue] ? state.venues[state.activeVenue].name : "";
     // トークの表示レース＝配信者ごとの固定リスト（8/6 FB3・state.talkRaces・最大3場）。
     // コンソールの操作用の場切替に引きずられない。旧データ（talkRaces無し）はメイン＋人別サブで互換
