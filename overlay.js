@@ -6832,8 +6832,9 @@
     // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
     // 連続的中（§22）＝「的中！」の部分を「3連続的中！」に（万車・note・同着の頭の言葉はそのまま前に付く）
     var hitWord = streak >= 2 ? streak + "連続的中！" : "的中！";
+    // §83（9/28 Naoto）連続中の万車も「🌈 万車 3連続的中！」→「3連続的中！ 🌈 万車」（万車が3連続と読まれない）。連続でない万車は「🌈 万車的中！」のまま
     badge.textContent = hit.manche
-      ? "🌈 万車" + (streak >= 2 ? " " : "") + hitWord + (hit.note ? " note" : "") + multLabel
+      ? (streak >= 2 ? hitWord + " 🌈 万車" : "🌈 万車" + hitWord) + (hit.note ? " note" : "") + multLabel
       /* §82（9/28 Naoto）連続中のnote的中は「🔥 note 3連続的中！」だと「noteが3連続」と読める＝「🔥 3連続的中！ note」（万車と同じ後ろ付け）。
          連続でない note 的中は従来どおり「🔥 note的中！」 */
       : (hit.note ? (streak >= 2 ? "🔥 " + hitWord + " note" : "🔥 note" + hitWord) : hit.deadHeat ? "🎯 同着ダブル" + (streak >= 2 ? " " : "") + hitWord : "🎯 " + hitWord) + typeLabel + multLabel;
