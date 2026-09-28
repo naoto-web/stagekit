@@ -370,6 +370,11 @@
       dateEl.style.color = isToday ? "" : (LIGHT ? "#c62828" : "#ffb3b3");
     }
     var el = $("venue-row");
+    /* §91追補（9/29 Naoto）入力枠をクリックしたときの輪の色も今の場（上の場・レース＝予想を書く場）の開催区分の色に。
+       html の data-kc を console.css が読む（無いときは従来の紫） */
+    var curV = state.venues[state.activeVenue];
+    if (curV) document.documentElement.setAttribute("data-kc", kubunColorCls(curV.name).replace(" kc-", ""));
+    else document.documentElement.removeAttribute("data-kc");
     if (!state.venues.length) {
       el.innerHTML = '<div class="hint">「本日設定」で場を選んでください</div>';
       return;
