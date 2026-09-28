@@ -1151,7 +1151,22 @@
       return l.ok && !l.cut && !l.allDup && l.combos ? l.combos.map(function (c) { return c.join(""); }).join(",") : "";
     }).join(";");
     return '合成 <span class="od-v' + (oddsData[k].fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '">' +
-      '<span class="odn" data-ok="' + esc(sig) + '">' + window.Keirin.synthFmt(s) + "</span>倍</span>";
+      '<span class="odn" data-ok="' + esc(sig) + '">' + window.Keirin.synthFmt(s) + "</span>倍</span>" + synInText(rp, s);
+  }
+  /* §85（9/28 Naoto「OBSにも出そう・合成〇倍（〇）・枠の問題で倍は出さない」）入力時の合成（コンソール§84が記録した entry.synIn）を
+     合成の右に「(15.1)」。出すのは今の買目が記録時と同じ（synInSig）で、四捨五入後に今の合成と違うときだけ（コンソールと同じ条件）。
+     金色・キラーンの対象（.od-v）の外に置く＝最終の演出は今の合成だけ */
+  function synInText(rp, s) {
+    var e = rp && rp.entry;
+    if (!e || !e.synIn || !e.synInSig) return "";
+    var a = [];
+    rp.parsed.lines.forEach(function (l) {
+      if (!l.ok || l.cut || l.allDup || !l.combos) return;
+      l.combos.forEach(function (c) { a.push(l.type + ":" + c.join("")); }); // console.js buySig と同じ指紋
+    });
+    if (a.sort().join(",") !== e.synInSig) return "";
+    var f = window.Keirin.synthFmt(e.synIn);
+    return f === window.Keirin.synthFmt(s) ? "" : '<span class="od-synin">(' + f + ")</span>";
   }
   /* オッズの上下と最終の演出（9/26 Naoto・要件定義§35・OBSだけ＝コンソールは演出なし）
      ・上下＝表示の数字が変わった瞬間だけ、その数字を赤▲（上がった）／青▼（下がった）で0.9秒。全行・絞りなし。
