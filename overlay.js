@@ -300,7 +300,10 @@
       return;
     }
     var lines = (state && state.noteRaces ? String(state.noteRaces) : "")
-      .split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8);
+      .split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    /* 🐞§88（9/28 Naoto「ピーターの玉野7・9がバナーに乗ってない」）＝旧 .slice(0, 8)＝先頭8行しか読んでいなかった。
+       ボタン式（9/25）で「1人×1場＝1行」になり、朝の席にいない人・終わった場の行が前に溜まる＝9行目以降の今夜の分が切り捨てられていた。
+       上限は間引いた後の表示件数（nh-n の Math.min(visCount, 8)）で効いている＝ここでは切らない */
     el.className = "venue-tabs note-head"; // 件数クラスは終了レースの間引き後に確定（8/10 FB113）
     nhBoundary = null;
     if (!lines.length) { el.innerHTML = ""; return; }
