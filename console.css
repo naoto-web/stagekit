@@ -800,3 +800,7 @@ html.theme-light.con2 .parse-info .pl-ok b, html.theme-light.con2 #pred-forms .p
 html.con2 .pf-note-tag.pf-nbadge { font-size: 20px; padding: 3px 11px; }
 .pf-note-tag.pf-nbadge.off { display: none; }
 .pf-nbadge .pf-fire { margin-right: 2px; }
+/* §80（9/28 Naoto「デフォルトで〇〇の予想（改行）青森〇R 🔥note」）＝名前の行とバッジの行を常に2段に（幅に関係なく）。
+   2人とも同じ2段になる＝俺たち目の位置はふだんから揃う（バッジの行がさらに折り返したときは alignPredHeads が揃える） */
+#pred-forms .pred-form > h3 > span:first-child { flex-basis: 100%; }
+#pred-forms .pred-form > h3 { row-gap: 6px; column-gap: 8px; }
