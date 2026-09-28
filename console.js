@@ -179,7 +179,16 @@
   var KCOL = params.get("kcol") === "1" || (params.get("kcol") !== "0" && !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
   if (KCOL) document.documentElement.classList.add("kcol");
   /** メンバーカラーを「字」に使うとき（名前など）。白背景だと黄・緑が読めない＝白背景のときだけ黒を混ぜて暗くする（塗りはそのまま） */
-  function mcText(mc) { return mc && LIGHT ? "color-mix(in srgb, " + mc + " 62%, #000)" : mc; }
+  /* §93（9/29 Naoto「カズとえーすの色似てる」）一律に黒を混ぜると赤（#942a2a）とオレンジ（#9a470e）がどちらも赤茶になる
+     ＝赤とオレンジだけ個別の濃い色（赤＝深い赤・オレンジ＝オレンジらしさを残す）。ほかの色は従来どおり */
+  var MC_TEXT_LIGHT = { "#ef4444": "#b91c1c", "#f97316": "#c2410c" };
+  function mcText(mc) {
+    if (!mc || !LIGHT) return mc;
+    return MC_TEXT_LIGHT[String(mc).toLowerCase()] || "color-mix(in srgb, " + mc + " 62%, #000)";
+  }
+  /* 🧪§93 予想カードの中を薄くメンバーカラーで塗る見比べ（&pftint=6 等＝混ぜる%・無指定は塗らない） */
+  var PFTINT = +params.get("pftint") || 0;
+  if (PFTINT > 0) { document.documentElement.classList.add("pftint"); document.documentElement.style.setProperty("--pf-tint", PFTINT + "%"); }
   if (CON2) (function () {
     document.documentElement.classList.add("con2"); // §66 予想入力の並び・見出し右のレース名を隠す（console.css）
     var np = document.getElementById("note-pick");
