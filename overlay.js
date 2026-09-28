@@ -533,7 +533,7 @@
       if (TFX && last) {
         var el = now - last.startSec;
         if (el < TFX_FLASH) { c.race = last; c.flash = true; }                  // 発走の瞬間＝「🚴 発走！」
-        else if (el < TFX_FLASH + TFX_RACE) { c.race = last; c.run = true; }   // その後3分＝同じレースのまま「レース中」
+        else if (el < TFX_RACE) { c.race = last; c.run = true; }   // §89 発走からちょうど3分まで「レース中」（発走！の長さに関係なく終わりを固定・9/28 Naoto）
       }
       return c;
     });
@@ -544,7 +544,7 @@
      B＝残り10秒は数字が変わる瞬間に1回ずつ脈打つ／締切の瞬間に「締切」をハンコ（水平）
      D＝note予想のレースは見出しのR番号の右に🔥（ゆらゆら） */
   var TFX = params.get("tfx") !== "0";
-  var TFX_FLASH = 20, TFX_RACE = +params.get("trace") || 180; // 発走！は20秒（§87追補 9/28 Naoto「20秒にすると映像で発走するタイミングになる」・16秒←8秒←4秒）。レース中3分は据え置き（Naoto「3分でいい感じ」）
+  var TFX_FLASH = 20, TFX_RACE = +params.get("trace") || 180; // 発走！は20秒（§87追補 9/28 Naoto「20秒にすると映像で発走するタイミングになる」・16秒←8秒←4秒）。レース中は**発走からちょうど3分で終わる**（§89 9/28 Naoto＝旧「発走！のあと3分」だと発走！を伸ばすたび終わりが後ろへずれた。TFX_RACE＝発走からの秒）
   if (TFX && document.body) document.body.classList.add("tfx");
   /** そのレースを席にいる誰かが note予想にしているか（D） */
   function timerNoteOn(venue, no) {
