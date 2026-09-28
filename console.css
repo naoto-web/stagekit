@@ -768,6 +768,7 @@ html.theme-light.con2 .parse-info .pl-ok b, html.theme-light.con2 #pred-forms .p
 html.con2 .parse-total .pt-u { white-space: nowrap; }
 html.con2 .pf-invlbl { position: relative; }
 html.con2 .pf-invest { text-align: right; }
+html.con2 .pf-invest:focus { text-align: left; } /* §92（9/29 Naoto）入力中はカーソル左寄せ・確定（欄から離れる）とカンマ付き右寄せ（.pf-invfmt） */
 html.con2 .pf-invest.pf-inv-covered { color: transparent; }
 html.con2 .pf-invfmt {
   position: absolute; display: flex; align-items: center; justify-content: flex-end; box-sizing: border-box;

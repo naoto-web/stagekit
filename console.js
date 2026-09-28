@@ -875,6 +875,8 @@
         fmt.addEventListener("mousedown", function (e) { e.preventDefault(); inp.focus(); });
         inp.addEventListener("focus", sync);
         inp.addEventListener("blur", sync);
+        // §92（9/29 Naoto）Enter でも確定＝欄から抜けてカンマ付き右寄せに（入力中は左寄せ＝console.css）
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
         inp.addEventListener("input", function () { if (document.activeElement !== inp) sync(); });
         requestAnimationFrame(sync);
       })();
