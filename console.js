@@ -260,10 +260,32 @@
   /* withLabel＝🔥の右に「note勝負レース」も丸枠の中に（9/25 Naoto・予想入力のカード見出しと結果入力の見出し） */
   function raceTagHtml(key, isNote, withLabel) {
     var parts = String(key || "").split("|");
+    /* §79（9/28 Naoto「noteのバッジは青森のバッジとは分けて・『🔥note』でOK」）＝withLabel のときは
+       場・Rの黒バッジと、note のバッジ（🔥note）を別々に並べる。.pf-fire／.pf-note-tag のクラスは残す＝出し入れの処理はそのまま */
+    if (withLabel) {
+      return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R</span>" +
+        '<span class="pf-note-tag pf-nbadge' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">' +
+        '<span class="kb pf-fire' + (isNote ? "" : " off") + '">🔥</span>note</span>';
+    }
     return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
       '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span>' +
       (withLabel ? '<span class="pf-note-tag' + (isNote ? "" : " off") + '">note予想</span>' : "") + "</span>"; // 9/25「note勝負レース」→「note予想」
   }
+  /** §79（9/28 Naoto「改行する場合は隣と俺たち目の位置を合わせて」）予想カードの見出し（h3）の高さを横に並ぶカード同士でそろえる。
+      片方だけ見出しが2行に折り返すと、その人の俺たち目・買目欄だけ下にずれていた。上端が同じカード同士だけそろえる（縦積みの狭い画面では何もしない） */
+  function alignPredHeads() {
+    var hs = Array.prototype.slice.call(document.querySelectorAll("#pred-forms .pred-form > h3"));
+    hs.forEach(function (h) { h.style.minHeight = ""; });
+    var rows = {};
+    hs.forEach(function (h) { var t = Math.round(h.closest(".pred-form").getBoundingClientRect().top); (rows[t] = rows[t] || []).push(h); });
+    Object.keys(rows).forEach(function (t) {
+      var g = rows[t];
+      if (g.length < 2) return;
+      var mx = Math.max.apply(null, g.map(function (h) { return h.getBoundingClientRect().height; }));
+      g.forEach(function (h) { h.style.minHeight = mx + "px"; });
+    });
+  }
+  window.addEventListener("resize", function () { alignPredHeads(); });
   /** そのレースで誰か1人でも note予想（勝負レース）にチェックが入っているか（結果入力の🔥用）。
       9/24 Naoto「予想入力のチェックと同じタイミングで」＝未保存の下書きのチェックも見る（下書き＞保存値。
       予想入力カードの🔥と同じ優先順位）。保存値だけだと、チェックしてから保存するまで結果入力の🔥が遅れていた */
@@ -771,6 +793,7 @@
         // 「この予想を保存」ボタンは9/25に撤去（打ったそばから保存＝リアルタイムで配信画面に出す）
         "</div>";
     }).join("");
+    alignPredHeads();
 
     wrap.querySelectorAll(".pred-form").forEach(function (form) {
       var racerId = form.getAttribute("data-racer");
@@ -832,6 +855,7 @@
       form.querySelector(".pf-note").addEventListener("change", function () {
         form.querySelector(".pf-fire").classList.toggle("off", !this.checked);
         form.querySelector(".pf-note-tag").classList.toggle("off", !this.checked);
+        alignPredHeads(); // §79 バッジが増減して見出しの行数が変わる＝隣と俺たち目の位置を合わせ直す
         refreshResultFire(); // 結果入力の見出しの🔥も同時に（update→stash で下書きに入った後に呼ぶ）
       });
       // 保存本体（8/10 FB118で分離）：extraLine＝【追加して保存】で俺たち目を買目に足す1行
