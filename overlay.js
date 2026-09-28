@@ -145,6 +145,10 @@
       document.body.appendChild(b);
     });
   }
+  /* 🧪§97（9/29 Naoto「4桁以上はカンマ」）オッズ・合成・的中倍率に3桁区切りのカンマ。テスト接続だけ既定ON（&comma=1／0）＝Naoto確認後に本番ON */
+  var COMMA = params.get("comma") === "1" || (params.get("comma") !== "0" && !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
+  if (window.Keirin && window.Keirin.setComma) window.Keirin.setComma(COMMA);
+  function multTxt(m) { return window.Keirin && window.Keirin.multFmt ? window.Keirin.multFmt(m) : String(m); }
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -1276,7 +1280,7 @@
       // 切り替え待ち（odHoldStep が元の値を書き戻している）＝その字を「変化」と取り違えない
       if (ODHOLD && hold && hold.fromText != null && !hold.done && t === hold.fromText) t = hold.toText;
       if (prev && prev.t !== t && now - prev.at < OD_STALE_MS) { // 長く画面に無かった数字の変化は演出しない
-        var a = parseFloat(prev.t), b = parseFloat(t);
+        var a = parseFloat(String(prev.t).replace(/,/g, "")), b = parseFloat(String(t).replace(/,/g, "")); // §97 カンマ付き（1,234）でも数として読む
         if (!isNaN(a) && !isNaN(b) && a !== b) {
           /* 大きい変動（9/26 Naoto）＝前の表示から±20%以上なら、動いた幅を「+4」「−60」で矢印と一緒に出し、1.5秒に延ばす。
              判定は割合・見せるのは差（倍）＝案A。差の書式は倍率と同じ（10未満は小数第1位・以上は整数） */
@@ -3776,7 +3780,7 @@
         badge.classList.remove("hidden");
         $("hit-main").textContent = "🎯 予想的中！";
         $("hit-sub").textContent = best.racerName +
-          (best.type && best.type !== "3連単" ? " " + best.type : "") + " " + best.mult + "倍（無料公開）";
+          (best.type && best.type !== "3連単" ? " " + best.type : "") + " " + multTxt(best.mult) + "倍（無料公開）";
       } else {
         badge.classList.add("hidden");
       }
@@ -3802,9 +3806,9 @@
     var typeLabel = h.type && h.type !== "3連単" ? " " + esc(h.type) : "";
     var noteLabel = h.note ? " note" : ""; // note予想レースの的中は場Rの後ろにnote表記（8/6 FB53）
     if (h.manche && h.amount) {
-      return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + h.mult + "倍</span>";
+      return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍</span>";
     }
-    return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + h.mult + "倍 的中</span>";
+    return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍 的中</span>";
   }
   /** 演出が一段落する時刻＝バッジ＋ピコーン（0.5s後に出て4s後からカウント3s）／プラ転・節目・最高額（popUntil）／ピコーンの実行中 */
   function fxQuietAt() {
@@ -6903,7 +6907,7 @@
     // 同時に複数当たったら倍率を全部並べる（同着で両方の並びを持っていた時など・8/27 FB148）。
     // 高い方が先＝見出しになる
     var mults = (hit.mults && hit.mults.length ? hit.mults : [hit.mult]).filter(Boolean);
-    var multLabel = mults.length ? " " + mults.map(function (m) { return m + "倍"; }).join("＋") : "";
+    var multLabel = mults.length ? " " + mults.map(function (m) { return multTxt(m) + "倍"; }).join("＋") : "";
     // 万車＝レインボー・note＝黄金（8/7 FB59）。万車×noteは虹背景＋noteラベルで両立
     // 連続的中（§22）＝「的中！」の部分を「3連続的中！」に（万車・note・同着の頭の言葉はそのまま前に付く）
     var hitWord = streak >= 2 ? streak + "連続的中！" : "的中！";

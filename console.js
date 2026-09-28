@@ -166,6 +166,7 @@
   var LIGHT = params.get("theme") !== "dark"; // ✅9/28 本番既定ON
   var BIGTEXT = params.get("bigtext") !== "0"; // ✅9/28 本番既定ON
   if (LIGHT) document.documentElement.classList.add("theme-light");
+  if (window.Keirin && window.Keirin.setComma) window.Keirin.setComma(true); // §97（9/29 Naoto）4桁以上はカンマ＝コンソールは常に
   if (BIGTEXT) document.documentElement.classList.add("bigtext");
   /* 🧪フォント（9/28 Naoto「BIZ UDPゴシックいいね！これにして」）＝テスト（?gas=）は BIZ UDPゴシックが既定。
      &font=yugo で従来（Yu Gothic UI）・&font=meiryo でメイリオ。本番（gas無し）は従来のまま */
@@ -1455,7 +1456,7 @@
       }).join("　");
       return '<div class="sp-racer">' + nm + s.hits.map(function (h) {
         if (!h.amount) return '<span class="manche">🎯 ' + h.type + " " + h.comboLabel + " 払戻未入力</span>";
-        return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + h.mult + "倍</span>";
+        return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + window.Keirin.multFmt(h.mult) + "倍</span>";
       }).join(" ") + oreHtml + "　" + unitHtml + '<b class="sp-total"></b></div>';
     }).join("");
     el.querySelectorAll(".sp-refund").forEach(function (inp) {
@@ -1598,7 +1599,7 @@
       return '<li class="' + (h.manche ? "manche" : "") + '">' +
         '<span class="ha-name">' + esc(h.racerName) + "</span>" +
         "<span>" + esc(h.place) + " " + esc(h.type) + "</span>" +
-        '<span class="ha-mult">' + h.mult + "倍</span>" +
+        '<span class="ha-mult">' + window.Keirin.multFmt(h.mult) + "倍</span>" +
         '<button class="ha-del" data-id="' + esc(h.id) + '" data-auto="' + (h.auto ? 1 : 0) + '">非表示</button></li>';
     }).join("") || '<li><span class="hint">本日の的中はまだありません</span></li>';
     $("hit-admin").querySelectorAll(".ha-del").forEach(function (b) {

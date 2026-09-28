@@ -516,11 +516,23 @@
      o＝GAS action=odds の {'123': 65.1, …}（3連単のみ）。
      表示＝10倍以上は整数（四捨五入）・10倍未満は小数第1位まで（9/25 Naoto）。合成オッズは常に小数第1位（synthFmt）。
      OBS（overlay.js）とコンソール（console.js）の両方がここを使う＝表示の数字を食い違わせない */
+  /* §97（9/29 Naoto「4桁以上はカンマ・共通認識に」）3桁区切りのカンマ（1,234／1,234.5）。
+     既定は付けない＝呼び出し側が setComma(true) で付ける（コンソールは常に付ける／OBSはテスト接続か &comma=1 のときだけ）。
+     ⚠️表示した文字を数字に読み直すときはカンマを外してから（overlay.js のオッズ上下▲▼） */
+  var COMMA = false;
+  function setComma(on) { COMMA = !!on; }
+  function fmtN(n, d) { return COMMA ? n.toLocaleString("ja-JP", { minimumFractionDigits: d, maximumFractionDigits: d }) : (d ? n.toFixed(d) : String(n)); }
   // 「.0」になるものは整数で出す（9/25 Naoto「一桁でも二桁でも .0 は整数でOK」）＝5.0→5・14.0→14
-  function trimZero(r1) { return r1 % 1 === 0 ? String(r1) : r1.toFixed(1); }
+  function trimZero(r1) { return r1 % 1 === 0 ? fmtN(r1, 0) : fmtN(r1, 1); }
   function oddsInt(v) {
     var r1 = Math.round(v * 10) / 10;
-    return r1 < 10 ? trimZero(r1) : String(Math.round(v)); // 9.96→10（「10.0」にしない）
+    return r1 < 10 ? trimZero(r1) : fmtN(Math.round(v), 0); // 9.96→10（「10.0」にしない）
+  }
+  /** 的中の倍率（h.mult＝数値）の表示。桁数はそのまま（12→12・12.3→12.3）でカンマだけ付ける */
+  function multFmt(m) {
+    var n = +m;
+    if (!isFinite(n)) return String(m);
+    return COMMA ? n.toLocaleString("ja-JP", { maximumFractionDigits: 2 }) : String(m);
   }
   function synthFmt(v) { return trimZero(Math.round(v * 10) / 10); }
   /** 1行の倍率表示：1点「509」／複数点「78〜116」（四捨五入後に同じなら1つ）。3連単以外・倍率なしは "" */
@@ -550,6 +562,8 @@
     normalize: normalize,
     oddsInt: oddsInt,         // 9/25 §13（10倍未満は小数第1位）
     synthFmt: synthFmt,       // 9/25 §13（合成オッズ＝常に小数第1位）
+    multFmt: multFmt,         // 9/29 §97（的中倍率＋カンマ）
+    setComma: setComma,       // 9/29 §97（3桁区切りのカンマを付けるか）
     oddsLabel: oddsLabel,     // 9/25 §13
     synthOdds: synthOdds,     // 9/25 §13
     oreNormalize: oreNormalize,
