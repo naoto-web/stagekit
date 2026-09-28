@@ -809,3 +809,10 @@ html.con2 .pf-note-tag.pf-nbadge { font-size: 20px; padding: 3px 11px; }
 /* §84（9/28 Naoto）入力時の合成＝今の合成の右に小さめの灰色「（入力時 15.1倍）」 */
 .pt-synin { margin-left: 4px; font-size: .8em; font-weight: 400; color: #8a8f99; }
 html.theme-light .pt-synin { color: #7a7466; }
+/* 🧪§91（9/29 Naoto・案C）選択中の黒を場の開催区分の色に＝☀️朝焼け／デイ青空／🌙紺／⭐黒（今の黒）。
+   html.kcol（テスト既定ON・&kcol=0/1）＋白背景だけ。ボタン・バッジ自身の --lt-sel を差し替える＝.active/.cur/.live/.sel の既存指定がそのまま効く */
+html.theme-light.kcol .kc-morning { --lt-sel: #c0582a; --lt-sel-b: #86391a; }
+html.theme-light.kcol .kc-day     { --lt-sel: #1f7fd1; --lt-sel-b: #155a96; }
+html.theme-light.kcol .kc-night   { --lt-sel: #1f3a68; --lt-sel-b: #10223f; }
+html.theme-light.kcol .kc-mid     { --lt-sel: #2b2f36; --lt-sel-b: #0f1114; }
+html.theme-light.kcol.con2 .pf-race[class*="kc-"] { background: var(--lt-sel); border-color: var(--lt-sel-b); }

@@ -174,6 +174,10 @@
   /* 🧪選択中の色の見比べ（9/28 Naoto「紫以外の案を」）＝&sel=navy／black／brown／teal。無指定は紫（白背景のとき） */
   var SEL = params.get("sel");
   if (/^(navy|black|brown|teal)$/.test(SEL || "")) document.documentElement.classList.add("sel-" + SEL);
+  /* 🧪§91（9/29 Naoto）選択中の黒を場の開催区分の色に（案C＝☀️朝焼け／デイ青空／🌙紺／⭐黒）。テスト（?gas=）だけ既定ON（&kcol=1／0）。
+     付けるのは kubunColorCls（場ボタン・Rボタン・入力先バッジ・本日の場）。色は console.css 末尾 */
+  var KCOL = params.get("kcol") === "1" || (params.get("kcol") !== "0" && !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
+  if (KCOL) document.documentElement.classList.add("kcol");
   /** メンバーカラーを「字」に使うとき（名前など）。白背景だと黄・緑が読めない＝白背景のときだけ黒を混ぜて暗くする（塗りはそのまま） */
   function mcText(mc) { return mc && LIGHT ? "color-mix(in srgb, " + mc + " 62%, #000)" : mc; }
   if (CON2) (function () {
@@ -249,6 +253,12 @@
     var kb = kubunOf(name);
     return kb ? '<span class="kb" title="' + kb[2] + '">' + kb[1] + "</span>" : "";
   }
+  /** §91 開催区分の色のクラス（" kc-morning" 等・先頭に空白）。html.kcol のときだけ console.css が効く＝クラスは常に付けてよい */
+  var KUBUN_CLS = { "モーニング": "morning", "ナイター": "night", "ミッドナイト": "mid" };
+  function kubunColorCls(name) {
+    var kb = kubunOf(name);
+    return " kc-" + (kb ? KUBUN_CLS[kb[2]] : "day");
+  }
   /** ボタンの小さい字からは時間帯の語を外す（印と二重になるため）。⚠️表示だけ＝state.grade は触らない
       （オーバーレイのグレード表示と乾杯/ハイタッチの判定 pairBandOf がこの語を読んでいる） */
   function gradeNoKubun(g) {
@@ -263,11 +273,11 @@
     /* §79（9/28 Naoto「noteのバッジは青森のバッジとは分けて・『🔥note』でOK」）＝withLabel のときは
        場・Rの黒バッジと、note のバッジ（🔥note）を別々に並べる。.pf-fire／.pf-note-tag のクラスは残す＝出し入れの処理はそのまま */
     if (withLabel) {
-      return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R</span>" +
+      return '<span class="pf-race' + kubunColorCls(parts[0]) + '">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R</span>" +
         '<span class="pf-note-tag pf-nbadge' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">' +
         '<span class="kb pf-fire' + (isNote ? "" : " off") + '">🔥</span>note</span>';
     }
-    return '<span class="pf-race">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
+    return '<span class="pf-race' + kubunColorCls(parts[0]) + '">' + esc(parts[0]) + kubunMarkHtml(parts[0]) + " " + esc(parts[1]) + "R" +
       '<span class="kb pf-fire' + (isNote ? "" : " off") + '" title="note予想（勝負レース）">🔥</span>' +
       (withLabel ? '<span class="pf-note-tag' + (isNote ? "" : " off") + '">note予想</span>' : "") + "</span>"; // 9/25「note勝負レース」→「note予想」
   }
@@ -366,7 +376,7 @@
     }
     el.innerHTML = state.venues.map(function (v, i) {
       var rNo = state.currentRace[v.name];
-      return '<button class="vbtn' + (i === state.activeVenue ? " active" : "") + '" data-i="' + i + '">' +
+      return '<button class="vbtn' + kubunColorCls(v.name) + (i === state.activeVenue ? " active" : "") + '" data-i="' + i + '">' +
         esc(v.name) + kubunMarkHtml(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "　" + esc(gradeNoKubun(state.grade[v.name])) + "</small></button>";
     }).join("");
     el.querySelectorAll(".vbtn").forEach(function (b) {
@@ -493,7 +503,7 @@
     var now = nowSec();
     el.innerHTML = races.map(function (r) {
       var s = timeToSec(r.start);
-      var cls = "rc";
+      var cls = "rc" + kubunColorCls(name);
       if (state.currentRace[name] === r.no) cls += " cur";
       else if (next && next.no === r.no) cls += " next";
       if (s !== null && s + RC_DONE_SEC <= now) cls += " done";
@@ -558,7 +568,7 @@
       state.venues.map(function (v) {
         var rNo = (editVenue === v.name && editRace) ? editRace : state.currentRace[v.name];
         var isLive = !editVenue && v.name === liveVenue;
-        return '<button class="vbtn' + (editVenue === v.name ? " active" : (isLive ? " live" : "")) + '" data-v="' + esc(v.name) + '"' +
+        return '<button class="vbtn' + kubunColorCls(v.name) + (editVenue === v.name ? " active" : (isLive ? " live" : "")) + '" data-v="' + esc(v.name) + '"' +
           (isLive ? ' title="いま放送中の場＝追従中はここに書かれます"' : ' title="この場に入力先を固定する（放送の表示は変わりません）"') + '>' +
           esc(v.name) + kubunMarkHtml(v.name) + "<small>" + (rNo ? rNo + "R" : "-") + "</small></button>";
       }).join("");
@@ -573,7 +583,7 @@
     if (!editVenue) { rg.innerHTML = ""; return; }
     var curNo = editRace || state.currentRace[editVenue];
     rg.innerHTML = venueRaces(editVenue).map(function (r) {
-      return '<button class="rc' + (curNo === r.no ? " cur" : "") + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small></button>";
+      return '<button class="rc' + kubunColorCls(editVenue) + (curNo === r.no ? " cur" : "") + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small></button>";
     }).join("");
     rg.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -1827,7 +1837,7 @@
     var selected = state.venues.map(function (v) { return v.name; });
     el.innerHTML = names.length
       ? names.map(function (n) {
-          return '<button class="vp' + (selected.indexOf(n) >= 0 ? " sel" : "") + '" data-n="' + esc(n) + '">' + esc(n) + kubunMarkHtml(n) + "</button>";
+          return '<button class="vp' + kubunColorCls(n) + (selected.indexOf(n) >= 0 ? " sel" : "") + '" data-n="' + esc(n) + '">' + esc(n) + kubunMarkHtml(n) + "</button>";
         }).join("")
       : '<div class="hint">タイムテーブル読込中（または本日の開催なし）</div>';
     el.querySelectorAll(".vp").forEach(function (b) {
