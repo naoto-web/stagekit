@@ -6834,7 +6834,9 @@
     var hitWord = streak >= 2 ? streak + "連続的中！" : "的中！";
     badge.textContent = hit.manche
       ? "🌈 万車" + (streak >= 2 ? " " : "") + hitWord + (hit.note ? " note" : "") + multLabel
-      : (hit.note ? "🔥 note" + (streak >= 2 ? " " : "") + hitWord : hit.deadHeat ? "🎯 同着ダブル" + (streak >= 2 ? " " : "") + hitWord : "🎯 " + hitWord) + typeLabel + multLabel;
+      /* §82（9/28 Naoto）連続中のnote的中は「🔥 note 3連続的中！」だと「noteが3連続」と読める＝「🔥 3連続的中！ note」（万車と同じ後ろ付け）。
+         連続でない note 的中は従来どおり「🔥 note的中！」 */
+      : (hit.note ? (streak >= 2 ? "🔥 " + hitWord + " note" : "🔥 note" + hitWord) : hit.deadHeat ? "🎯 同着ダブル" + (streak >= 2 ? " " : "") + hitWord : "🎯 " + hitWord) + typeLabel + multLabel;
     cam.appendChild(badge);
     fitHitBadge(badge, cam); // ワイプ幅いっぱいの最大サイズ（はみ出す時だけ段階縮小・8/7 FB59）
     setTimeout(function () {
