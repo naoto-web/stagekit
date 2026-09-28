@@ -2317,6 +2317,45 @@
     if (changed) { save(); renderAll(); }
   }
 
+  /* 🧪§96（9/29 Naoto「テスト用OBSだけにはリセットボタンほしい」）テスト接続（IS_TEST_BACKEND）のときだけ「配信」カードの見出しに出す。
+     押す→「本当にリセット？（もう一度押す）」→3秒以内にもう一度で実行（OBSのドックは confirm() が出ないことがあるため2度押し式）。
+     消すもの（Naoto指定）＝今日の結果・的中（手動追加・非表示）・予想（買目・俺たち目・投資・note予想）＋コンソール手元の下書き。
+     state.testResetAt を新しくして保存＝テスト接続のOBS（overlay.js）が見て「演出の記憶」（出した演出・回収カウントアップ・プラ転/最高額）を捨てる */
+  if (window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) (function () {
+    var head = document.getElementById("race-date") && document.getElementById("race-date").closest(".card-head");
+    if (!head) return;
+    var b = document.createElement("button");
+    b.className = "btn small danger test-reset";
+    b.textContent = "🧪テストをリセット";
+    b.title = "テスト接続だけ：今日の結果・的中・予想を消し、テスト用OBSの演出の記憶もリセット";
+    head.appendChild(b);
+    var armedUntil = 0, timer = null;
+    b.addEventListener("click", function () {
+      if (Date.now() > armedUntil) {
+        armedUntil = Date.now() + 3000;
+        b.textContent = "本当にリセット？（もう一度押す）";
+        clearTimeout(timer);
+        timer = setTimeout(function () { b.textContent = "🧪テストをリセット"; }, 3000);
+        return;
+      }
+      armedUntil = 0; clearTimeout(timer);
+      state.results = {};
+      state.hitsManual = [];
+      state.hitsHidden = [];
+      state.preds = {};
+      state.testResetAt = new Date().toISOString();
+      predDrafts = {}; buyEditAt = {}; unitInputs = {}; payoutRows = [];
+      resDirty = false; resPin = null;
+      if ($("res-order")) $("res-order").value = "";
+      if ($("res-order2")) $("res-order2").value = "";
+      if (deadHeat) setDeadHeatUI(false);
+      save();
+      renderAll();
+      b.textContent = "✅リセットしました";
+      timer = setTimeout(function () { b.textContent = "🧪テストをリセット"; }, 2500);
+    });
+  })();
+
   function pollResults(force) {
     if (!state || !timetable || !state.venues.length) return Promise.resolve();
     purgeGhostResults();

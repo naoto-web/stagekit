@@ -6981,6 +6981,25 @@
      ・巻き戻り2000以上だけはバックエンド初期化とみなして受け入れる
        （revの進みは1日600前後＝遅延応答がそこまで古いことはあり得ない） */
   var maxSeenRev = 0;
+  /* 🧪§96（9/29 Naoto「テスト用OBSだけにはリセットボタンほしい」）コンソールの「🧪テストをリセット」が state.testResetAt を新しくする
+     → テスト接続（IS_TEST_BACKEND）のOBSだけ「演出の記憶」を捨てる＝同じ結果を入れ直しても演出が最初から出る。本番のOBSは何もしない。
+     捨てるもの＝出した演出（firedFx・sessionStorage 分も）／既知の的中（seenHits）／回収カウントアップ（refAnim）／
+     プラ転・節目（platenSt）／最高額（recSeen）／的中ロール（tick*）／買目の強調（hitGlows）／的中時の自動シーン切替（hitSwitched） */
+  var TEST_BE = !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND);
+  var lastTestReset; // undefined＝まだ一度も見ていない（読み込み直後の値は「見た」扱いにするだけ）
+  function testResetCheck(s) {
+    if (!TEST_BE) return;
+    var tr = (s && s.testResetAt) || "";
+    if (lastTestReset === undefined) { lastTestReset = tr; return; }
+    if (tr === lastTestReset) return;
+    lastTestReset = tr;
+    firedFx = {}; saveFired();
+    seenHits = {};
+    refAnim = {}; platenSt = {}; recSeen = null;
+    tickSeen = null; tickHold = {}; tickGlow = {};
+    hitGlows = []; hitPhase0 = 0;
+    hitSwitched = {};
+  }
   function applyState(s, path) {
     if (!s) return;
     if (s.rev) {
@@ -6994,6 +7013,7 @@
     merged.ad = Object.assign({}, base.ad, s.ad || {});
     state = window.Derive.normalizeState(merged);
     derived = window.Derive.day(state);
+    testResetCheck(state); // §96 テスト接続だけ＝リセットの合図なら演出の記憶を捨ててから描く
     syncPath = path;
     lastSyncAt = new Date();
     renderAll();
