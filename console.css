@@ -804,3 +804,5 @@ html.con2 .pf-note-tag.pf-nbadge { font-size: 20px; padding: 3px 11px; }
    2人とも同じ2段になる＝俺たち目の位置はふだんから揃う（バッジの行がさらに折り返したときは alignPredHeads が揃える） */
 #pred-forms .pred-form > h3 > span:first-child { flex-basis: 100%; }
 #pred-forms .pred-form > h3 { row-gap: 6px; column-gap: 8px; }
+/* §81（9/28 Naoto）結果入力の見出しも「青森〇R」と「🔥note」の間を空ける（予想カードは flex の gap で空いている） */
+#result-target .pf-note-tag.pf-nbadge { margin-left: 8px; }
