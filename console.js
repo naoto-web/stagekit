@@ -186,8 +186,8 @@
     if (!mc || !LIGHT) return mc;
     return MC_TEXT_LIGHT[String(mc).toLowerCase()] || "color-mix(in srgb, " + mc + " 62%, #000)";
   }
-  /* 🧪§93 予想カードの中を薄くメンバーカラーで塗る見比べ（&pftint=6 等＝混ぜる%・無指定は塗らない） */
-  var PFTINT = +params.get("pftint") || 0;
+  /* §93 予想カードの中を薄くメンバーカラーで塗る（✅9/29 Naoto「15%いいね・本番反映」＝既定15%。&pftint=N で N%・&pftint=0 で塗らない） */
+  var PFTINT = params.get("pftint") === null ? 15 : (+params.get("pftint") || 0);
   if (PFTINT > 0) { document.documentElement.classList.add("pftint"); document.documentElement.style.setProperty("--pf-tint", PFTINT + "%"); }
   if (CON2) (function () {
     document.documentElement.classList.add("con2"); // §66 予想入力の並び・見出し右のレース名を隠す（console.css）
