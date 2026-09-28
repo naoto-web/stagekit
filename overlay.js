@@ -544,7 +544,7 @@
      B＝残り10秒は数字が変わる瞬間に1回ずつ脈打つ／締切の瞬間に「締切」をハンコ（水平）
      D＝note予想のレースは見出しのR番号の右に🔥（ゆらゆら） */
   var TFX = params.get("tfx") !== "0";
-  var TFX_FLASH = 16, TFX_RACE = +params.get("trace") || 180; // 発走！は16秒（§87 9/28 Naoto「今の倍に」・旧8秒←9/27に4秒から倍）。レース中3分は据え置き（Naoto「3分でいい感じ」）
+  var TFX_FLASH = 20, TFX_RACE = +params.get("trace") || 180; // 発走！は20秒（§87追補 9/28 Naoto「20秒にすると映像で発走するタイミングになる」・16秒←8秒←4秒）。レース中3分は据え置き（Naoto「3分でいい感じ」）
   if (TFX && document.body) document.body.classList.add("tfx");
   /** そのレースを席にいる誰かが note予想にしているか（D） */
   function timerNoteOn(venue, no) {

@@ -617,7 +617,7 @@ html.vdone .timer-cards.vt-n4 .vt-done { font-size: 28px; }
   animation: vtPop .55s cubic-bezier(.2, 1.7, .4, 1) both; }
 .vt-card.vt-flash-card::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -50%;
   background: linear-gradient(100deg, transparent, rgba(255,255,255,.75), transparent);
-  animation: vtSweep2 2s ease-in-out .15s 8; } /* §87（9/28 Naoto「発走！を今の倍に」）16秒＝2秒×8回。以下旧：9/27 Naoto「発走！を8秒にしたらキラーンも伸ばして」＝2秒ごとに1回通る×4回＝8秒（旧 1.1秒×2回＝最初の約2.4秒だけ） */
+  animation: vtSweep2 2s ease-in-out .15s 10; } /* §87追補（9/28 Naoto「20秒に」）20秒＝2秒×10回（←16秒×8回）。以下旧：9/27 Naoto「発走！を8秒にしたらキラーンも伸ばして」＝2秒ごとに1回通る×4回＝8秒（旧 1.1秒×2回＝最初の約2.4秒だけ） */
 @keyframes vtPop { from { transform: scale(.25); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes vtSweep { from { left: -50%; } to { left: 110%; } }
 @keyframes vtSweep2 { 0% { left: -50%; } 55% { left: 110%; } 100% { left: 110%; } } /* 1.1秒で横切り、残り0.9秒は休み */
