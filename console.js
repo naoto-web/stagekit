@@ -866,29 +866,7 @@
       });
       /* §72（9/28 Naoto「投資額は入力完了したらカンマ付けて右寄りに」）CON2＝欄から離れたら「2,000」を欄の上に重ねて表示（右寄せ）。
          欄の値は数字のまま＝保存・計算・未保存判定は従来どおり。クリック（フォーカス）で重ねた表示を消して元の数字を編集 */
-      if (CON2) (function () {
-        var inp = form.querySelector(".pf-invest");
-        var lbl = inp.parentElement;
-        var fmt = document.createElement("span");
-        fmt.className = "pf-invfmt";
-        lbl.classList.add("pf-invlbl");
-        lbl.insertBefore(fmt, inp.nextSibling);
-        var sync = function () {
-          var v = +inp.value;
-          var show = document.activeElement !== inp && v > 0;
-          fmt.textContent = show ? v.toLocaleString("ja-JP") : "";
-          fmt.style.display = show ? "" : "none";
-          inp.classList.toggle("pf-inv-covered", show);
-          if (show) { fmt.style.left = inp.offsetLeft + "px"; fmt.style.top = inp.offsetTop + "px"; fmt.style.width = inp.offsetWidth + "px"; fmt.style.height = inp.offsetHeight + "px"; }
-        };
-        fmt.addEventListener("mousedown", function (e) { e.preventDefault(); inp.focus(); });
-        inp.addEventListener("focus", sync);
-        inp.addEventListener("blur", sync);
-        // §92（9/29 Naoto）Enter でも確定＝欄から抜けてカンマ付き右寄せに（入力中は左寄せ＝console.css）
-        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
-        inp.addEventListener("input", function () { if (document.activeElement !== inp) sync(); });
-        requestAnimationFrame(sync);
-      })();
+      if (CON2) attachYenFmt(form.querySelector(".pf-invest"));
       // 投資額の −／＋（9/25）：1000円ずつ。0以下は空欄（＝未入力。保存値の「投資なし」と同じ扱い＝未保存にならない）。
       // 値を入れたら input を発火＝手打ちと同じ経路（下書き退避・合計・未保存表示）に乗せる
       [[".pf-invdown", -1000], [".pf-invup", 1000]].forEach(function (pair) {
@@ -1313,6 +1291,32 @@
     return src === "odds" ? "最終オッズから自動" : src === "official" ? "公式の払戻" : "";
   }
 
+  /** §72/§92/§94 金額の欄＝欄から離れたら（Enterでも）「2,000」を欄の上に重ねて右寄せ表示／入力中は左寄せ（console.css）。
+      欄の値は数字のまま＝保存・計算・未保存判定は従来どおり。クリック（フォーカス）で重ねた表示を消して元の数字を編集。
+      予想の投資額（.pf-invest）と結果入力の払戻（.pr-amount・9/29 Naoto「払戻も投資と同じに」）で共用 */
+  function attachYenFmt(inp) {
+    if (!inp) return;
+    var lbl = inp.parentElement;
+    var fmt = document.createElement("span");
+    fmt.className = "pf-invfmt";
+    lbl.classList.add("pf-invlbl");
+    lbl.insertBefore(fmt, inp.nextSibling);
+    var sync = function () {
+      var v = +inp.value;
+      var show = document.activeElement !== inp && v > 0;
+      fmt.textContent = show ? v.toLocaleString("ja-JP") : "";
+      fmt.style.display = show ? "" : "none";
+      inp.classList.toggle("pf-inv-covered", show);
+      if (show) { fmt.style.left = inp.offsetLeft + "px"; fmt.style.top = inp.offsetTop + "px"; fmt.style.width = inp.offsetWidth + "px"; fmt.style.height = inp.offsetHeight + "px"; }
+    };
+    fmt.addEventListener("mousedown", function (e) { e.preventDefault(); inp.focus(); });
+    inp.addEventListener("focus", sync);
+    inp.addEventListener("blur", sync);
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    inp.addEventListener("input", function () { if (document.activeElement !== inp) sync(); });
+    requestAnimationFrame(sync);
+  }
+
   function renderPayoutRows() {
     var el = $("payout-rows");
     el.innerHTML = payoutRows.map(function (p, i) {
@@ -1340,6 +1344,7 @@
         markResDirty();
         renderSettlePreview();
       });
+      if (CON2) attachYenFmt(inp); // §94 入力中は左寄せ・確定でカンマ付き右寄せ（投資額と同じ）
     });
   }
 
