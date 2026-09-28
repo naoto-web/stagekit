@@ -544,6 +544,11 @@
      B＝残り10秒は数字が変わる瞬間に1回ずつ脈打つ／締切の瞬間に「締切」をハンコ（水平）
      D＝note予想のレースは見出しのR番号の右に🔥（ゆらゆら） */
   var TFX = params.get("tfx") !== "0";
+  /* 🧪§90（9/28 Naoto「最後のレースが終わって本日の場を全部消したら、タイマー枠にお礼のメッセージ・予想枠にも何か」）モック＝&byemsg=1|2 のときだけ。
+     本日の場が0場（時刻表は取得済み）で、タイマー枠＝お礼カード1枚／予想枠＝1「本日のまとめ」（的中・最高倍率・回収率）・2 お礼の一言 */
+  var BYEMSG = +params.get("byemsg") || 0;
+  // ✅§90 タイマー枠のお礼カードは本番（9/28 Naoto「タイマーのところはいい感じ・先に本番」）。&byetimer=0 で止める。予想枠はまだモック（BYEMSG）
+  var BYETIMER = params.get("byetimer") !== "0";
   var TFX_FLASH = 20, TFX_RACE = +params.get("trace") || 180; // 発走！は20秒（§87追補 9/28 Naoto「20秒にすると映像で発走するタイミングになる」・16秒←8秒←4秒）。レース中は**発走からちょうど3分で終わる**（§89 9/28 Naoto＝旧「発走！のあと3分」だと発走！を伸ばすたび終わりが後ろへずれた。TFX_RACE＝発走からの秒）
   if (TFX && document.body) document.body.classList.add("tfx");
   /** そのレースを席にいる誰かが note予想にしているか（D） */
@@ -763,9 +768,11 @@
       return c.venue + "|" + (c.race ? c.race.no : "-") + (closed ? "C" : "") + "|" + gradeOfVenue(c.venue) +
         (TFX ? "|" + (c.flash ? "F" : "") + (c.run ? "R" : "") + (c.race && timerNoteOn(c.venue, c.race.no) ? "N" : "") : "");
     }).join(",");
+    var bye = byeTimerOn(); // §90 お礼カード（本番）
+    if (bye) keys = "BYE" + BYEMSG;
     if (keys !== timerRowKeys) {
       timerRowKeys = keys;
-      var html = cards.map(function (c) {
+      var html = bye ? byeTimerHtml() : cards.map(function (c) {
         var closed = c.race && now >= c.race.startSec - offSec;
         if (TFX) {
           var mode = !c.race ? "done" : c.flash ? "flash" : c.run ? "run" : closed ? "closed" : "open";
@@ -813,6 +820,41 @@
       if (TFX) { fitTimerHeads(); setTimeout(fitTimerHeads, 800); setTimeout(fitTimerHeads, 2500); }
     }
     tickTimerCounts();
+  }
+  /** §90 モック：本日の場が0場（時刻表は取得済み）＝配信の終わり */
+  function byeOn() { return !!(BYEMSG && timetable && state && !(state.venues || []).length); }
+  /** §90 タイマー枠のお礼カード（本番）＝本日の場が0場 かつ 時刻表のその日の最後のレースの発走を過ぎた。
+      ⚠️朝いちばんの場が入る前（1R発走の40分前まで）も0場＝「最後のレースの後」で絞らないと朝にお礼が出る。
+      &byemsg（モック）のときは時刻の条件なしで出す（いつでも見た目を確かめられるように） */
+  function byeTimerOn() {
+    if (byeOn()) return true;
+    if (!BYETIMER || !timetable || !state || (state.venues || []).length) return false;
+    var last = null;
+    allRaces().forEach(function (r) { if (typeof r.startSec === "number" && (last === null || r.startSec > last)) last = r.startSec; });
+    return last !== null && nowSec() >= last;
+  }
+  function byeTimerHtml() {
+    return '<li class="vt-card vt-bye-card"><div class="vt-rows vt-bye">' +
+      '<div class="vt-bye-main">本日も最後までご視聴いただき<br>ありがとうございました！</div>' +
+      '<div class="vt-bye-sub">チャンネル登録・グッドボタン<br>よろしくお願いします!!</div>' +
+      "</div></li>";
+  }
+  /** §90 モック：予想枠の中身（1＝本日のまとめ／2＝お礼の一言） */
+  function byeBandHtml(rc) {
+    if (BYEMSG === 2) {
+      return '<div class="bye-band"><div class="bye-main">' + esc(rc.name) + "の予想は以上です</div>" +
+        '<div class="bye-sub">本日もありがとうございました！</div></div>';
+    }
+    var hs = (derived.hits || []).filter(function (h) { return h.racerName === rc.name; });
+    var best = 0;
+    hs.forEach(function (h) { var m = parseFloat(h.mult); if (m > best) best = m; });
+    var t = derived.totals[rc.id] || { invest: 0, refund: 0 };
+    var rate = t.invest > 0 ? Math.round(t.refund / t.invest * 100) : null;
+    return '<div class="bye-band"><div class="bye-title">本日のまとめ</div><div class="bye-stats">' +
+      '<span>的中 <b>' + hs.length + "本</b></span>" +
+      (best ? "<span>最高 <b>" + best + "倍</b></span>" : "") +
+      (rate !== null ? "<span>回収率 <b>" + rate + "%</b></span>" : "") +
+      '</div><div class="bye-sub">本日もありがとうございました！</div></div>';
   }
   /** 🧪TFXのカード1枚（A・B・D）。従来カードと同じ部品（vt-head／vt-rows）を使い、足すだけ */
   function tfxCardHtml(c, closed, mode, liveIn) {
@@ -2954,6 +2996,21 @@
         }
       }
     });
+    if (byeOn()) { // §90 モック：場が0場＝予想枠にまとめ／お礼
+      ["a", "b"].forEach(function (slot) {
+        var rc = seats[slot];
+        if (!rc) return;
+        ["band-", "tband-", "kband-"].forEach(function (bp) {
+          var band = $(bp + "pred-" + slot);
+          if (!band) return;
+          band.innerHTML = byeBandHtml(rc);
+          band.classList.remove("note-fire");
+          band.style.transform = "";
+          var m = $(bp + "meta-" + slot);
+          if (m) { m.classList.add("hidden"); m.textContent = ""; }
+        });
+      });
+    }
     // 描画直後の測定は不確実なことがある→次フレーム＋300ms後に再フィット（8/6 FB32）
     requestAnimationFrame(fitTalkBands);
     setTimeout(fitTalkBands, 300);

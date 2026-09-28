@@ -3819,3 +3819,16 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 /* §85（9/28 Naoto）入力時の合成＝今の合成の右に「(15.1)」。倍は付けない（枠の幅）。今の合成より控えめ（小さめ・少し薄く） */
 .od-synin { margin-left: .2em; font-size: .9em; opacity: .8; font-weight: inherit; white-space: nowrap; }
 /* §85追補（9/28 Naoto「(〇〇)の字が小さい」）.78em→.9em・薄さ.75→.8 */
+
+/* 🧪§90 モック（&byemsg=1|2）本日の場が0場＝配信の終わり。タイマー枠＝お礼カード1枚（枠いっぱい）／予想枠＝まとめ or お礼 */
+.vt-card.vt-bye-card .vt-rows.vt-bye { background: #14204a; color: #fff; align-items: center; justify-content: center; text-align: center; gap: 10px; height: 100%; padding: 8px 10px; }
+.vt-bye-main { font-size: 26px; font-weight: 900; line-height: 1.35; }
+.vt-bye-sub { font-size: 17px; font-weight: 700; line-height: 1.35; color: #f2c230; }
+#scene-talk .vt-bye-main { font-size: 30px; }
+#scene-talk .vt-bye-sub { font-size: 20px; }
+.bye-band { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; color: #16181c; }
+.bye-title { font-size: 26px; font-weight: 900; padding: 2px 16px; border-radius: 999px; background: #14204a; color: #fff; }
+.bye-stats { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; font-size: 26px; font-weight: 700; }
+.bye-stats b { font-size: 1.3em; color: #b8860b; }
+.bye-main { font-size: 34px; font-weight: 900; }
+.bye-sub { font-size: 24px; font-weight: 700; color: #3d434c; }
