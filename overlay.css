@@ -3817,4 +3817,5 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 @keyframes odSpark { 0% { opacity: 0; transform: scale(.2) rotate(0deg); } 35% { opacity: 1; transform: scale(1.2) rotate(45deg); }
   100% { opacity: 0; transform: scale(.6) rotate(90deg); } }
 /* §85（9/28 Naoto）入力時の合成＝今の合成の右に「(15.1)」。倍は付けない（枠の幅）。今の合成より控えめ（小さめ・少し薄く） */
-.od-synin { margin-left: .2em; font-size: .78em; opacity: .75; font-weight: inherit; white-space: nowrap; }
+.od-synin { margin-left: .2em; font-size: .9em; opacity: .8; font-weight: inherit; white-space: nowrap; }
+/* §85追補（9/28 Naoto「(〇〇)の字が小さい」）.78em→.9em・薄さ.75→.8 */
