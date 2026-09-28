@@ -1434,9 +1434,10 @@
          名前はメンバーカラーの字（9/25）＝予想入力の見出しと同じ色 */
       var oreHtml = "";
       var mcN = window.Derive.colorOf(rc.color);
-      var nm = '<b class="sp-name"' + (mcN ? ' style="color:' + mcText(mcN) + '"' : "") + ">" + esc(rc.name) + "</b>";
-      if (!rp.points) return "<div>" + nm + "：予想なし</div>";
-      if (!s.hits.length) return "<div>" + nm + '：<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）</div>";
+      // §95追補（9/29 Naoto「縦がずれてる」＝2人の行で入力欄の列がそろっていない）＝名前を固定幅の欄にして「：」も中に入れる（console.css .sp-name）
+      var nm = '<b class="sp-name"' + (mcN ? ' style="color:' + mcText(mcN) + '"' : "") + ">" + esc(rc.name) + "：</b>";
+      if (!rp.points) return "<div>" + nm + "予想なし</div>";
+      if (!s.hits.length) return "<div>" + nm + '<span class="miss">不的中</span>（投資 ' + fmtYen(rp.invest) + "）</div>";
       seedUnitsFromSaved(key, rc.id, s.hits);
       var moneyHits = s.hits.filter(function (h) { return h.amount > 0; });
       // 的中買目ごとに「何枚買ったか」を入れてもらう（複数式別が当たった時も取り違えない）。
@@ -1452,7 +1453,7 @@
           '<button type="button" class="btn pf-invstep sp-unitstep" data-d="1" data-tip="1枚増やす">＋</button>' +
           '<b class="sp-yen"></b></span>';
       }).join("　");
-      return '<div class="sp-racer">' + nm + "：" + s.hits.map(function (h) {
+      return '<div class="sp-racer">' + nm + s.hits.map(function (h) {
         if (!h.amount) return '<span class="manche">🎯 ' + h.type + " " + h.comboLabel + " 払戻未入力</span>";
         return '<span class="' + (h.manche ? "manche" : "hit") + '">🎯 ' + h.type + " " + h.comboLabel + " " + h.mult + "倍</span>";
       }).join(" ") + oreHtml + "　" + unitHtml + '<b class="sp-total"></b></div>';

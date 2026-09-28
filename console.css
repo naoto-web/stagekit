@@ -774,6 +774,8 @@ html.con2 .pf-invest { text-align: right; }
 .settle-preview .sp-unit { display: inline-flex; align-items: center; gap: 4px; }
 .settle-preview .sp-unit .sp-unitstep { margin-left: 0; }
 .settle-preview .sp-racer + div { margin-top: 6px; } /* 2人の行の入力欄同士がくっつかないように */
+/* §95追補 名前＋「：」を固定幅（一番長い「ピーター：」「しょーた：」が入る幅）＝その後ろの的中・入力欄の列が2人でそろう */
+.settle-preview .sp-name { display: inline-block; min-width: 5.2em; flex: 0 0 auto; }
 html.con2 .pr-amount.pf-inv-covered { color: transparent; } /* §94（9/29 Naoto）結果入力の払戻も投資額と同じ＝確定でカンマ付き右寄せ・入力中は左寄せ */
 html.con2 .payout-row .pr-amount:focus { text-align: left; }
 html.con2 .pf-invest:focus { text-align: left; } /* §92（9/29 Naoto）入力中はカーソル左寄せ・確定（欄から離れる）とカンマ付き右寄せ（.pf-invfmt） */
