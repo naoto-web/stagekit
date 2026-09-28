@@ -771,6 +771,8 @@ html.con2 .pf-invest { text-align: right; }
 html.con2 .pf-invest:focus { text-align: left; } /* §92（9/29 Naoto）入力中はカーソル左寄せ・確定（欄から離れる）とカンマ付き右寄せ（.pf-invfmt） */
 /* §93 予想カードの中をメンバーカラーで薄く塗る（既定15%・&pftint=N＝N%混ぜる・0で塗らない）。入力欄は白のまま＝打つ場所は目立つ */
 html.theme-light.pftint .pred-form.mc { background: color-mix(in srgb, var(--mc) var(--pf-tint, 6%), #fff); }
+/* §93追補（9/29 Naoto「note勝負レースも」）人ごとの囲みも同じ濃さで塗る */
+html.theme-light.pftint .np-person[style*="--mc"] { background: color-mix(in srgb, var(--mc) var(--pf-tint, 6%), #fff); }
 html.con2 .pf-invest.pf-inv-covered { color: transparent; }
 html.con2 .pf-invfmt {
   position: absolute; display: flex; align-items: center; justify-content: flex-end; box-sizing: border-box;
