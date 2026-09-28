@@ -601,6 +601,18 @@
   var predDrafts = {}; // key + " " + racerId → { text, invest, ore, note }
   function draftKey(key, racerId) { return key + " " + racerId; }
 
+  /* §84 入力時の合成：このPCで最後に買目を打った時刻（draftKey → ms）と、打ち終わりとみなす間（3秒） */
+  var buyEditAt = {}, SYNIN_SETTLE_MS = 3000;
+  /** 買目の中身の指紋（式別＋組の並び・切り目/かぶりは除外）＝「入力時の合成」がどの買目のときの値か */
+  function buySig(parsed) {
+    var a = [];
+    (parsed && parsed.lines || []).forEach(function (l) {
+      if (!l.ok || l.cut || l.allDup || !l.combos) return;
+      l.combos.forEach(function (c) { a.push(l.type + ":" + c.join("")); });
+    });
+    return a.sort().join(",");
+  }
+
   /* note勝負レースに書いたレース＝note予想チェックの既定ON（8/10 FB117・Naoto依頼「デフォルトで
      入ってた方が配信者もありがたい」）。⚠️適用は「保存済みも下書きもない新規フォームの初期値」だけ：
      一度保存/操作した値は再評価しない。勝負レース一覧の終了自動間引き（FB114）は表示側だけで
@@ -819,6 +831,15 @@
         form.querySelector("." + cls).addEventListener("input", live);
       });
       form.querySelector(".pf-note").addEventListener("change", live);
+      // §84 買目を打った時刻を覚え、打ち終わり（3秒）の直後に合成を測り直す＝そこで「入力時の合成」を記録
+      form.querySelector(".pf-text").addEventListener("input", function () {
+        buyEditAt[draftKey(key, racerId)] = Date.now();
+        setTimeout(function () {
+          if (predKey() !== key) return;
+          var f = document.querySelector('#pred-forms .pred-form[data-racer="' + racerId + '"]');
+          if (f) updatePredInfo(f, key);
+        }, SYNIN_SETTLE_MS + 100);
+      });
       /* §72（9/28 Naoto「投資額は入力完了したらカンマ付けて右寄りに」）CON2＝欄から離れたら「2,000」を欄の上に重ねて表示（右寄せ）。
          欄の値は数字のまま＝保存・計算・未保存判定は従来どおり。クリック（フォーカス）で重ねた表示を消して元の数字を編集 */
       if (CON2) (function () {
@@ -997,6 +1018,23 @@
     markMissing(form.querySelector(".pf-ore"), needFill && !form.querySelector(".pf-ore").value.trim());
     markMissing(form.querySelector(".pf-invest"), needFill && !investInput);
     var syn = odds ? window.Keirin.synthOdds(parsed, odds) : null; // 合成オッズ＝投資の右（9/25 Naoto）
+    /* §84（9/28 Naoto）入力時の合成＝「最後に買目を変えたとき」の合成を覚えて「合成 8.2倍（入力時 15.1倍）」。コンソールだけ（OBSには出さない）。
+       ・記録＝このPCで買目を打ち、SYNIN_SETTLE_MS 打たなかったら、そのときの合成を予想に保存（entry.synIn／どの買目のときの値かを synInSig）。
+         打った時点でオッズが無ければ、最初にオッズが届いた時点の値。買目を変えたら取り直し。
+       ・記録するのは打ったPCのコンソールだけ（buyEditAt はこのページのメモリ）＝別PCが打ちかけの買目で記録しない
+       ・表示＝今の買目が記録時と同じで、今の合成と四捨五入後に違うときだけ */
+    var racerIdI = form.getAttribute("data-racer"), dkI = draftKey(key, racerIdI);
+    var entI = state.preds[key] && state.preds[key].byRacer && state.preds[key].byRacer[racerIdI];
+    var sigI = buySig(parsed);
+    if (syn && sigI && entI && entI.synInSig !== sigI && buyEditAt[dkI] && !predDrafts[dkI] &&
+        Date.now() - buyEditAt[dkI] >= SYNIN_SETTLE_MS) {
+      entI.synIn = Math.round(syn * 10) / 10;
+      entI.synInSig = sigI;
+      save();
+    }
+    var synInHtml = syn && entI && entI.synIn && entI.synInSig === sigI &&
+      window.Keirin.synthFmt(entI.synIn) !== window.Keirin.synthFmt(syn)
+      ? '<span class="pt-synin">（入力時 ' + window.Keirin.synthFmt(entI.synIn) + "倍）</span>" : "";
     // 俺たち目の右にもオッズ（9/25 Naoto）＝「126」は1-2-6（oreNormalize）で組を出す。OBSと同じ関数
     var oreBox = form.querySelector(".pf-ore-odds");
     if (oreBox) {
@@ -1007,7 +1045,7 @@
     // §72 CON2＝「合計〇点」「投資¥〇」「合成〇倍」をそれぞれひとまとまり（途中で折り返さない＝入り切らなければまとまりごと次の行へ）
     var html = CON2
       ? '<span class="pt-u">合計 ' + parsed.points + '点</span>　<span class="pt-u">投資 ' + fmtYen(investInput) + "</span>" +
-        (syn ? '　<span class="pt-u">合成 <span class="pt-syn">' + window.Keirin.synthFmt(syn) + "倍</span></span>" : "") + cutWarn
+        (syn ? '　<span class="pt-u">合成 <span class="pt-syn">' + window.Keirin.synthFmt(syn) + "倍</span>" + synInHtml + "</span>" : "") + cutWarn
       : "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
         (syn ? "　合成 " + window.Keirin.synthFmt(syn) + "倍" : "") + cutWarn;
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
