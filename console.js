@@ -1794,7 +1794,7 @@
     if (!vp) return;
     var h = document.createElement("div");
     h.className = "hint venue-auto-hint";
-    h.textContent = "※本日の場は時刻表に合わせて自動で追加・削除されます（1R発走の30分前に追加／最終レースの結果確定から10分後に削除・同時に最大4場）。手で外した場は、その日は自動では戻りません。";
+    h.textContent = "※本日の場は時刻表に合わせて自動で追加・削除されます（1R発走の40分前に追加／最終レースの結果確定から10分後に削除・同時に最大4場）。手で外した場は、その日は自動では戻りません。";
     vp.after(h);
   })();
   function venueOffNames() {
