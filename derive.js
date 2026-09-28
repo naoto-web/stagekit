@@ -360,7 +360,7 @@
   }
 
   /** 🧪§61（9/28 Naoto）本日の場を時刻表から自動で決める（純関数＝コンソールだけが使う・単体テスト autovenuetest.js）。
-      ・足す＝その場の1R発走の leadSec 前（既定60分）から。最大 max 場（既定4＝今の運用「ナイターは昼の場が終わってから足す」）・
+      ・足す＝その場の1R発走の leadSec 前（既定30分・§86で60→30）から。最大 max 場（既定4＝今の運用「ナイターは昼の場が終わってから足す」）・
         あふれた場は空きが出た時点で1Rの早い順に入る
       ・消す＝最終レースの結果を最初に確定した時刻＋afterSec（既定10分）。確定が無ければ最終レース発走＋fallbackSec（既定30分）。
         確定と発走＋30分の早い方（発走より前の確定は数えない＝broadcastRace と同じ）
@@ -369,7 +369,7 @@
       戻り値＝新しい本日の場（名前の配列・並びは current の順→足した場。開催順の並べ替えは呼び出し側の sortVenuesHeld） */
   function autoVenues(tt, current, offNames, settleSecOf, nowSec, opt) {
     opt = opt || {};
-    var lead = opt.leadSec != null ? opt.leadSec : 3600, after = opt.afterSec != null ? opt.afterSec : 600;
+    var lead = opt.leadSec != null ? opt.leadSec : 1800, /* §86（9/28 Naoto「タイマーごちゃごちゃする」）60→30分 */ after = opt.afterSec != null ? opt.afterSec : 600;
     var fb = opt.fallbackSec != null ? opt.fallbackSec : 1800, max = opt.max || 4;
     var info = {};
     (tt || []).forEach(function (v) {
