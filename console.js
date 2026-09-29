@@ -2526,12 +2526,6 @@
       $("btn-auto-fill").addEventListener("click", function () { applyAutoToForm(key); });
       return;
     }
-    var mk = key && state.results && state.results[key];
-    if (mk && mk.missAuto && !r) { // 仮の不的中（9/30）＝公式の結果が取れていない
-      el.classList.remove("hidden");
-      el.innerHTML = '<span class="miss">⏱ 結果が取れなかったため自動で不的中扱いにしています（的中していたら着順と回収を入れて「確定」＝上書きされます）</span>';
-      return;
-    }
     if (!r || done) {
       el.classList.add("hidden");
       el.innerHTML = "";
