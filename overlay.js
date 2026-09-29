@@ -1262,15 +1262,19 @@
   function fitRankOdds(band) {
     var t = band && band.querySelector(".rk-odds");
     if (!t) return;
-    t.style.transform = "";
+    /* 🐞9/29 Naoto「オッズがたまにポンって大きくなる」＝描き直すたびに表が1.0倍で出て、次のフレームで1.05倍に合わせていた。
+       前回の縮尺（data-rks）を先にかけて出す＝描き直しでも大きさが変わらない。transform は配置に影響しない＝測り方は同じ */
+    var prev = band.getAttribute("data-rks");
+    t.style.transformOrigin = "center center";
+    if (prev) t.style.transform = "scale(" + prev + ")";
     var cs = getComputedStyle(band);
     var aw = band.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
     var ah = band.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
     var w = t.scrollWidth, h = t.scrollHeight;
     if (!(aw > 0 && ah > 0 && w > 0 && h > 0)) return;
-    var s = Math.min(1.6, aw / w, ah / h);
-    t.style.transformOrigin = "center center"; // 置き場所は CSS（.rk-on＝flex で真ん中）・ここは縮尺だけ
-    t.style.transform = "scale(" + s + ")";
+    var s = Math.min(1.6, aw / w, ah / h).toFixed(3);
+    band.setAttribute("data-rks", s);
+    t.style.transform = "scale(" + s + ")"; // 置き場所は CSS（.rk-on＝flex で真ん中）・ここは縮尺だけ
   }
   /* オッズの上下と最終の演出（9/26 Naoto・要件定義§35・OBSだけ＝コンソールは演出なし）
      ・上下＝表示の数字が変わった瞬間だけ、その数字を赤▲（上がった）／青▼（下がった）で0.9秒。全行・絞りなし。
@@ -1812,6 +1816,8 @@
     ["band-pred-a", "band-pred-b", "kband-pred-a", "kband-pred-b"].forEach(function (id) {
       var band = $(id);
       if (!band || band.clientWidth <= 0) return;
+      // §99 人気順の表は買目のパッキングに通さない（通すと表の縮尺が消え、次の描画で戻る＝「ポン」と大きさが変わっていた・9/29）
+      if (band.classList.contains("rk-on")) { fitRankOdds(band); return; }
       // 非表示中にrenderPredsされた帯はパック未実施のまま残る（旧48px予約も廃止済み）→表示復帰を検知して自己修復
       if (band.firstChild && !band.querySelector(".rb-flow")) { packRaceBand(band); return; }
       fitRbScale(band);
@@ -2016,6 +2022,8 @@
     });
     flow.removeChild(mcol);
     var k2 = Math.max(0.35, best.k * 0.97); // 3%マージン（丸め・フォント描画ゆらぎの吸収）
+    // オッズ更新のたびの伸び縮みを止める（keepScale）＝同じ並べ方なら6%未満の拡大は据え置き
+    k2 = keepScale(band.id, k2, best.cols.map(function (c) { return c.join(","); }).join("/") + "|" + rows.length);
     if (k2 < 0.995 || k2 > 1.02) {
       flow.style.transform = "scale(" + k2.toFixed(3) + ")";
       flow.style.transformOrigin = "left top";
@@ -2031,6 +2039,18 @@
       });
     }
     fitRbScale(band); // 実描画ベースの最終検証（はみ出し・合計/投資への重なりが残れば縮める）
+  }
+  /* 🐞9/29 Naoto「入力していなくても買目欄がぴくぴくする」＝リアルタイムオッズの文字数が変わる（「31」→「8.2」）たびに
+     「枠いっぱいの倍率」を計算し直し、区画全体が 1.529⇄1.55倍 のように伸び縮みしていた（20〜30秒ごと）。
+     ⇒ 余裕を持たせる：同じ中身（行の数・並べ方が同じ）で、今の倍率のまま入る（新しい倍率 ≧ 今）＋差が6%未満なら据え置き。
+       入り切らなくなったとき（新しい倍率 < 今）はすぐ縮める・行を足した／消した等の大きな変化は今までどおり。戻す＝&fitkeep=0 */
+  var FITKEEP = params.get("fitkeep") !== "0", FITKEEP_RATIO = 1.06, fitKeep = {};
+  function keepScale(id, k, sig) {
+    if (!FITKEEP || !id) return k;
+    var p = fitKeep[id];
+    if (p && p.sig === sig && k >= p.k && k < p.k * FITKEEP_RATIO) k = p.k;
+    fitKeep[id] = { k: k, sig: sig };
+    return k;
   }
   var LABEL_CAP = 1.6;
   var TK_META_RATIO = +(params.get("tkmr") || 0.8); // ③の合計欄の上限＝買目のチップの高さ×0.8（&tkmr= で調整）
@@ -2165,6 +2185,11 @@
         needW = wOld; needH = hOld;
       }
     }
+    // オッズ更新のたびの伸び縮みを止める（keepScale）＝区画の場所（帯・何番目）が同じで、行の数・段組が同じなら6%未満の拡大は据え置き
+    var band0 = col.closest(".buy-line") || col;
+    var colIdx = Array.prototype.indexOf.call(band0.querySelectorAll(".race-col"), col);
+    var hd = col.querySelector(":scope > .race-col-head");
+    k = keepScale(band0.id + ":" + colIdx, k, col.children.length + "|" + col.querySelectorAll(".pred-line.stack").length + "|" + (hd ? hd.textContent : ""));
     if (k < 1) {
       col.style.transform = "scale(" + Math.max(0.35, k).toFixed(3) + ")";
     } else if (k > 1.02 && col.children.length > 1 && !emptyCol) { // 買目が無い区画は札の大きさを固定したので区画は拡大しない（9/26）
