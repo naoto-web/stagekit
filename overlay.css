@@ -3945,3 +3945,11 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 
 /* §100 明日の出走表を出している間は、出走表の下の並び・note勝負を隠す（9/30 Naoto・JS が body.tmrw-on を付け外し） */
 body.tmrw-on #narabi-talk, body.tmrw-on #note-races-talk { display: none !important; }
+
+/* §99追補（9/30 Naoto）人気順の表を列ごとのグリッドに＝オッズ欄はその列で一番長い値の幅（右寄せ・小数点そろえは維持）＝3着の車番とオッズの間を詰める。
+   3つの灰色の箱の間は40px（詰めて余った横幅を箱の間へ）。止める＝&rktight=0（旧＝「999.9」幅固定・間18px）。
+   ⚠️列の一番長い値の桁が変わる（9.9→10.0 等）とその列が数字1つぶん広がる＝fitRankOdds が縮尺を合わせ直す */
+.race-band .buy-line .rk-odds.rk-tight .rk-col { display: grid; grid-template-columns: auto auto auto; column-gap: 5px; row-gap: 3px; align-content: space-around; align-items: center; }
+.race-band .buy-line .rk-odds.rk-tight .rk-cell { display: contents; }
+.race-band .buy-line .rk-odds.rk-tight .rk-cell .pl-odds { min-width: 0; margin-left: 4px; }
+.race-band .buy-line .rk-odds.rk-tight { gap: 40px; }

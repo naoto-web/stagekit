@@ -1394,6 +1394,8 @@
      倍率は2桁以上も小数第1位まで（9/29 Naoto）・4桁以上はカンマ。.odn で上下▲▼・締切後の金色も同じ演出に乗る。
      見出しは「3連単オッズ」＋灰色（帯の描き分け側）＝枠の中の札は出さない。発売前（票0）・未取得は ""＝帯は今までどおり空 */
   var RK_GRAY = "#6b7280";
+  /* §99追補（9/30 Naoto「3着の車番とオッズをもうちょっと近づけて」「3つのグレーの枠は離して」）既定ON・&rktight=0 で旧 */
+  var RKTIGHT = params.get("rktight") !== "0";
   function rkFmt(v) {
     var s = (Math.round(v * 10) / 10).toFixed(1).split(".");
     return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + s[1];
@@ -1426,7 +1428,7 @@
     });
     var cols = "";
     for (var ci = 0; ci < cells.length; ci += 3) cols += '<div class="rk-col">' + cells.slice(ci, ci + 3).join("") + "</div>";
-    return '<div class="rk-odds">' + cols + "</div>";
+    return '<div class="rk-odds' + (RKTIGHT ? " rk-tight" : "") + '">' + cols + "</div>";
   }
   /** 人気順の表を帯いっぱいに（縮小も拡大も・上限1.6倍＝②の買目の拡大と同じ） */
   function fitRankOdds(band) {
