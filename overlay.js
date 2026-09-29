@@ -3400,7 +3400,7 @@
     }
     var key = window.Derive.raceKey(vName, rNo);
     if (ids === SL_TALK || ids === SL_TK) fitSlHead(subEl); // ③の出走表も同じ見出し（9/27）
-    if (SL2 && ids === SL_TALK) { // 🧪2段版（§47・&sl2=1のときだけ）
+    if (SL2 && (ids === SL_TALK || (TKSL2 && ids === SL_TK))) { // 2段版（§47）＝①と③（9/30）
       if (!narabiAuto[key]) ensureNarabi(vName, rNo, key);
       renderSl2(el, race, key);
       renderNarabi(vName, rNo, ids.narabi);
@@ -3442,6 +3442,7 @@
      上段＝車番・選手名／下段＝府県 期 年齢。右に2段ぶちぬきで 脚｜得点｜B・H・S｜勝率（9/27 Naoto＝級は不要・脚は表の列に）。
      得点・B・H・S・勝率はレース内の1位赤・2位青（空席ワイプと同じ）。行の高さは fitSl2 が実寸から割る */
   var SL2 = params.get("sl2") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&sl2=0 で旧1段版
+  var TKSL2 = params.get("tksl2") !== "0"; // 9/30 本番化（Naoto「③の出走表も①と同じ内容に」）＝③レース展開の左の出走表も2段版。&tksl2=0 で③だけ旧1段版
   var SL2_LINE = params.get("slline") !== "0"; // 9/27 本番化（Naoto OK）＝既定ON。&slline=0 で車番順
   var SL2_COLS = [{ i: 4, h: "B" }, { i: 5, h: "H" }, { i: 6, h: "S" }, { i: 7, h: "勝率" }];
   // 🧪&sl3=1（9/27 Naoto「名前をもっと大きく」）＝勝率の列を消して名前の欄を広げる／補充・追加は名前全体を（ ）で囲む
