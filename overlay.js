@@ -1270,7 +1270,8 @@
     var cs = getComputedStyle(band);
     var aw = band.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
     var ah = band.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
-    var w = t.scrollWidth, h = t.scrollHeight;
+    // offsetWidth/Height＝表そのものの大きさ（scrollWidth は確定の「キラン」の✦＝はみ出す飾りまで含み、キラン中の1秒だけ縮んでいた・9/29 Naoto「確定のあとピクッ」）
+    var w = t.offsetWidth, h = t.offsetHeight;
     if (!(aw > 0 && ah > 0 && w > 0 && h > 0)) return;
     var s = Math.min(1.6, aw / w, ah / h).toFixed(3);
     band.setAttribute("data-rks", s);
