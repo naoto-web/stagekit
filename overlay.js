@@ -836,6 +836,8 @@
   function byeTimerOn() {
     if (byeOn()) return true;
     if (!BYETIMER || !timetable || !state || (state.venues || []).length) return false;
+    // 0〜5時は前の日の配信の続き（9/30）＝本日の場0場ならもう終わっている。時刻表は0時に翌日へ切り替わる＝下の「最後のレースの後」が外れてお礼が消えていた
+    if (nowSec() < 5 * 3600) return true;
     var last = null;
     allRaces().forEach(function (r) { if (typeof r.startSec === "number" && (last === null || r.startSec > last)) last = r.startSec; });
     return last !== null && nowSec() >= last;
@@ -847,6 +849,172 @@
       "</div></li>";
   }
   /** §90 モック：予想枠の中身（1＝本日のまとめ／2＝お礼の一言） */
+  /* §100 配信の終わり＝①右の出走表枠に「明日の出走表」（9/29〜30 Naoto・✅9/30 本番）。
+     出す時＝タイマー枠のお礼カードと同じ（byeTimerOn＝本日の場0場＋その日の最後のレースの後／0〜5時は前の日の配信の続き）。止める＝&tmrw=0
+     中身＝明日の昼の部・夜の部ごとに配信者（シフト表＝GAS action=shift）＋場（区分・グレード・開催何日目・1R〜最終R発走）。
+     「明日」＝配信を始めた日の翌日（0〜5時は今日の時刻表がすでに「明日」）。
+     検証用：&tmrwforce=1＝本日の場0場なら時刻に関係なく出す／&tmrwshift=えーす,ムネオ(モNG)|カズ,しょーた(ミッドのみ)＝配信者を手で渡す（昼|夜） */
+  var TMRW = params.get("tmrw") !== "0";
+  var TMRWFORCE = params.get("tmrwforce") === "1";
+  var TMLIGHT = params.get("tmlight") !== "0"; // 夜の部の見出しを薄い紺＝濃い字（9/30 Naoto）。&tmlight=0 で紺地
+  var tmrwTT = null, tmrwBusy = false, tmrwDay = null, tmrwSig = "";
+  var tmrwSh = {}, tmrwShBusy = {}, tmrwShAt = {}, TMRW_SHIFT_MS = 600000;
+  /** 「えーす,ムネオ(モNG)」→[{name,note}]。括弧＝半休の書き方（シフト表の「半（モNG）」「メモの〇〇ミッドのみ」と同じ） */
+  function tmrwParse(s) {
+    return String(s || "").split(",").map(function (x) {
+      var m = /^\s*([^()（）]+?)\s*(?:[(（]([^)）]*)[)）])?\s*$/.exec(x);
+      return m ? { name: m[1], note: m[2] || "" } : null;
+    }).filter(function (x) { return x && x.name; });
+  }
+  /** 明日の配信者＝GAS action=shift（10分ごとに取り直す・失敗は1分後に再試行）。取れるまでは null */
+  function tmrwShiftOf(date) {
+    if (params.get("tmrwshift") !== null) { var p = String(params.get("tmrwshift")).split("|"); return { day: tmrwParse(p[0]), night: tmrwParse(p[1]) }; }
+    var now = Date.now(), url = window.APP_CONFIG && window.APP_CONFIG.GAS_URL;
+    if (url && date && !tmrwShBusy[date] && (!tmrwSh[date] || now - (tmrwShAt[date] || 0) > TMRW_SHIFT_MS) && now - (tmrwShAt[date] || 0) > 60000) {
+      tmrwShBusy[date] = true;
+      fetch(url + "?action=shift&date=" + date, { redirect: "follow" }).then(function (r) { return r.json(); }).then(function (j) {
+        tmrwShBusy[date] = false; tmrwShAt[date] = Date.now();
+        if (j && j.ok && j.shift) { tmrwSh[date] = j.shift; applyTomorrow(); }
+      }).catch(function () { tmrwShBusy[date] = false; tmrwShAt[date] = Date.now(); });
+    }
+    return tmrwSh[date] || null;
+  }
+  /** 半休の添え書き＝その部（昼＝モ・デ／夜＝ナ・ミ）のうち出られる区分から「〇〇から」「〇〇のみ」。部の全部に出られる・書き方が読めないときは "" */
+  var TM_KB = { "モ": "モーニング", "デ": "デイ", "ナ": "ナイター", "ミ": "ミッド" };
+  function tmrwHalf(note, part) {
+    var kb = part === "day" ? ["モ", "デ"] : ["ナ", "ミ"];
+    var ok;
+    note = String(note || "");
+    if (/ミッドのみ/.test(note)) ok = ["ミ"];
+    else if (/NG/i.test(note)) { var ng = note.replace(/NG.*/i, ""); ok = kb.filter(function (k) { return ng.indexOf(k) < 0; }); }
+    else return "";
+    ok = kb.filter(function (k) { return ok.indexOf(k) >= 0; });
+    if (!ok.length || ok.length === kb.length) return "";
+    return TM_KB[ok[0]] + (ok[0] === kb[kb.length - 1] ? "から" : "のみ");
+  }
+  // 検証用（&debug=1）＝明日の時刻表を書き換えて描き直す（いわき平など長い場名の撮影用）
+  if (DEBUG) window.__tmrwEdit = function (fn) { if (!tmrwTT) return "no tt"; tmrwTT = JSON.parse(JSON.stringify(tmrwTT)); fn(tmrwTT); tmrwDay = tmrwOffset() === 0 ? -1 : 1; tmrwSig = ""; applyTomorrow(); return "ok"; };
+  /** 「明日」＝配信を始めた日の翌日（9/29 Naoto）。0〜5時は前の日の配信の続き＝今日の時刻表がすでに「明日」 */
+  function tmrwOffset() { return nowSec() < 5 * 3600 ? 0 : 1; }
+  /** 昼の部・夜の部の見出しを1行に（9/30）＝入り切らないときだけ縮める。順＝①名前を22pxまで ②（〇〇から）を15pxまで ③名前を18pxまで */
+  function fitTmHeads() {
+    document.querySelectorAll("#slist-talk .tm-head").forEach(function (h) {
+      var nms = h.querySelectorAll(".tm-nme"), hos = h.querySelectorAll(".tm-hout");
+      [].slice.call(nms).concat([].slice.call(hos)).forEach(function (e) { e.style.fontSize = ""; });
+      var fs = function (e) { return parseFloat(getComputedStyle(e).fontSize); };
+      var step = function (list, min) {
+        var did = false;
+        [].forEach.call(list, function (e) { if (fs(e) > min) { e.style.fontSize = (fs(e) - 1) + "px"; did = true; } });
+        return did;
+      };
+      for (var guard = 0; guard < 20 && h.scrollWidth > h.clientWidth + 1; guard++) {
+        if (!step(nms, 22) && !step(hos, 15) && !step(nms, 18)) break;
+      }
+    });
+  }
+  /* 日本の祝日（9/30 Naoto「土曜は青・日曜祝日は赤」）＝スマホアプリ util.js holidays の写し（祝日法どおり：固定日・ハッピーマンデー・
+     春分/秋分（1980〜2099の近似式）・国民の休日・振替休日）。法改正があればアプリと両方直す。返り＝{ "YYYY-MM-DD": 名前 } */
+  var jpHolCache = {};
+  function jpHolidays(y) {
+    if (jpHolCache[y]) return jpHolCache[y];
+    var p2 = function (n) { return (n < 10 ? "0" : "") + n; };
+    var ymd = function (d) { return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()); };
+    var parse = function (s) { var a = s.split("-"); return new Date(+a[0], +a[1] - 1, +a[2]); };
+    var nthMon = function (m, n) { var d = new Date(y, m - 1, 1); return 1 + (8 - d.getDay()) % 7 + (n - 1) * 7; };
+    var h = {}, k = y - 1980;
+    var put = function (m, d, name) { h[y + "-" + p2(m) + "-" + p2(d)] = name; };
+    put(1, 1, "元日"); put(1, nthMon(1, 2), "成人の日"); put(2, 11, "建国記念の日"); put(2, 23, "天皇誕生日");
+    put(3, Math.floor(20.8431 + 0.242194 * k - Math.floor(k / 4)), "春分の日"); put(4, 29, "昭和の日");
+    put(5, 3, "憲法記念日"); put(5, 4, "みどりの日"); put(5, 5, "こどもの日"); put(7, nthMon(7, 3), "海の日"); put(8, 11, "山の日");
+    put(9, nthMon(9, 3), "敬老の日"); put(9, Math.floor(23.2488 + 0.242194 * k - Math.floor(k / 4)), "秋分の日");
+    put(10, nthMon(10, 2), "スポーツの日"); put(11, 3, "文化の日"); put(11, 23, "勤労感謝の日");
+    Object.keys(h).forEach(function (s) { // 国民の休日：前日と翌日が祝日の平日
+      var d = parse(s); d.setDate(d.getDate() + 2);
+      var mid = new Date(d); mid.setDate(mid.getDate() - 1);
+      if (h[ymd(d)] && !h[ymd(mid)] && mid.getDay() !== 0) h[ymd(mid)] = "国民の休日";
+    });
+    Object.keys(h).sort().forEach(function (s) { // 振替休日：日曜の祝日のあと、最初の祝日でない日
+      var d = parse(s);
+      if (d.getDay() !== 0 || h[s] === "振替休日") return;
+      do { d.setDate(d.getDate() + 1); } while (h[ymd(d)]);
+      h[ymd(d)] = "振替休日";
+    });
+    return (jpHolCache[y] = h);
+  }
+  /** 時刻「8:30」「10:45」を桁そろえで描く（9/30 Naoto「〜や：の位置が縦でずれてる」）＝数字1文字ずつ同じ幅の箱（.tm-d）・
+      時が1桁なら頭に空の箱＝どの行も「〜」「:」が同じ位置に並ぶ */
+  function tmTimeHtml(s) {
+    var p = String(s || "").split(":");
+    if (p.length !== 2) return esc(s);
+    var h = String(+p[0]), m = p[1];
+    var d = function (c) { return '<span class="tm-d">' + c + "</span>"; };
+    return (h.length < 2 ? d("") : "") + h.split("").map(d).join("") + '<span class="tm-col">:</span>' + m.split("").map(d).join("");
+  }
+  function tmrwKubun(g) { g = String(g || ""); return /ミッドナイト/.test(g) ? "mid" : /ナイター/.test(g) ? "night" : /モーニング/.test(g) ? "morning" : "day"; }
+  function applyTomorrow() {
+    if (!TMRW || !timetable || !state || (state.venues || []).length) return;
+    if (!(TMRWFORCE || byeTimerOn())) return;
+    var list = $("slist-talk");
+    if (!list) return;
+    var off = tmrwOffset();
+    if (off === 0) { if (tmrwDay !== -1) { tmrwTT = timetable; tmrwDay = 0; } } // 0時を過ぎた＝今日の時刻表が「配信を始めた日の翌日」（-1＝検証で書き換え中）
+    else if (!tmrwTT || (tmrwDay !== 1 && tmrwDay !== -1)) {
+      if (!tmrwBusy) { tmrwBusy = true; window.Sync.fetchTimetable(1).then(function (t) { tmrwTT = t; tmrwDay = 1; tmrwBusy = false; applyTomorrow(); }).catch(function () { tmrwBusy = false; }); }
+      return;
+    }
+    var d = String(tmrwTT.date || "");
+    var dt = d.length === 8 ? new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8)) : null;
+    // 日付は大きく・平日は黒／土曜は青／日曜・祝日は赤（9/30 Naoto）
+    var dcls = "";
+    if (dt) dcls = dt.getDay() === 0 || jpHolidays(dt.getFullYear())[d.slice(0, 4) + "-" + d.slice(4, 6) + "-" + d.slice(6, 8)] ? " tm-sun" : dt.getDay() === 6 ? " tm-sat" : "";
+    var subHtml = '<b class="sl-vr">明日の出走表</b>' + (dt ? '<span class="tm-date' + dcls + '">' + (dt.getMonth() + 1) + "/" + dt.getDate() + "（" + "日月火水木金土"[dt.getDay()] + "）</span>" : "");
+    var roster = state.roster || [];
+    var colorOfP = function (p) { var r = roster.filter(function (x) { return x.name === p; })[0]; return r ? window.Derive.colorOf(r.color) : "#888"; };
+    var sh = tmrwShiftOf(d) || { day: [], night: [] }; // 取れるまでは名前なし（取れたら描き直す）
+    var ICON = { morning: "☀️", day: "", night: "🌙", mid: "⭐" };
+    var rows = (tmrwTT.venues || []).map(function (v) {
+      var rs = (v.races || []).filter(function (r) { return r && r.start; });
+      var g = String(v.grade || ""), k = tmrwKubun(g);
+      var gm = /G\s*P|GP/.test(g) ? "GP" : (/G\s*([1-3Ⅰ-Ⅲ])/.exec(g) || [])[0] || (/F\s*[12]/.exec(g) || [])[0] || "";
+      gm = gm.replace(/\s/g, "").replace("G1", "GⅠ").replace("G2", "GⅡ").replace("G3", "GⅢ");
+      return { name: v.name, k: k, grade: gm, first: rs.length ? rs[0].start : "", last: rs.length ? rs[rs.length - 1].start : "",
+        nichiji: String(v.nichiji || "") }; // 開催何日目（GAS §100）
+    }).sort(function (a, b) { return a.first < b.first ? -1 : 1; });
+    var block = function (label, cls, names, vs, part) {
+      // 半休の人は右（後ろ）へ＝（〇〇から）が行の途中に挟まらない（9/30 Naoto）。それ以外はシフト表の順のまま
+      names = (names || []).map(function (p, i) { return { p: p, i: i, h: tmrwHalf(p.note, part) ? 1 : 0 }; })
+        .sort(function (a, b) { return a.h - b.h || a.i - b.i; }).map(function (x) { return x.p; });
+      return '<div class="tm-blk ' + cls + '"><div class="tm-head"><span class="tm-lbl">' + label + "</span>" +
+        names.map(function (p) {
+          // 名前＝●メンバーカラー＋濃い字・枠なし（9/30 Naoto E案）。半休は（）付きで名前のすぐ後ろ
+          var half = tmrwHalf(p.note, part);
+          return '<span class="tm-person"><span class="tm-nme"><i class="tm-dot" style="background:' + colorOfP(p.name) + '"></i>' + esc(p.name) + "</span>" +
+            (half ? '<span class="tm-hout">（' + half + "）</span>" : "") + "</span>";
+        }).join("") +
+        "</div>" + vs.map(function (v) {
+          // G戦はOBSのほかの場所と同じグレードバッジ（GP金・GⅠ赤・GⅡ青・GⅢ緑）／F1・F2は灰色の小札
+          var gcls = { "GP": "gp", "GⅠ": "g1", "GⅡ": "g2", "GⅢ": "g3" }[v.grade];
+          var gb = gcls ? '<span class="grade-badge ' + gcls + ' tm-gb">' + v.grade + "</span>" : v.grade ? '<span class="tm-g">' + v.grade + "</span>" : "";
+          return '<div class="tm-row"><span class="tm-ic">' + ICON[v.k] + '</span><b class="tm-vn">' + esc(v.name) + "</b>" + gb +
+            (v.nichiji ? '<span class="tm-nj' + (v.nichiji === "最終日" ? " tm-last" : v.nichiji === "初日" ? " tm-first" : "") + '">' + esc(v.nichiji) + "</span>" : "") +
+            '<span class="tm-tm">' + tmTimeHtml(v.first) + '<span class="tm-sep">〜</span>' + tmTimeHtml(v.last) + "</span></div>";
+        }).join("") + "</div>";
+    };
+    var dayV = rows.filter(function (v) { return v.k === "morning" || v.k === "day"; });
+    var nightV = rows.filter(function (v) { return v.k === "night" || v.k === "mid"; });
+    var html = '<li class="tm-wrap' + (TMLIGHT ? " tm-light" : "") + '"><div class="tm-msg">明日はこのメンバーでお届けします！</div>' +
+      block("昼の部", "tm-day", sh.day, dayV, "day") + block("夜の部", "tm-night", sh.night, nightV, "night") + "</li>";
+    // 5秒ごとの見直しでも呼ばれる＝中身が同じなら描き直さない（出走表の描画で消された後は描き直す）
+    if (html === tmrwSig && list.querySelector(".tm-wrap")) return;
+    tmrwSig = html;
+    var sub = $("slist-sub");
+    if (sub) sub.innerHTML = subHtml;
+    ["narabi-talk", "note-races-talk"].forEach(function (id) { var e = $(id); if (e) e.classList.add("hidden"); });
+    list.innerHTML = html;
+    requestAnimationFrame(fitTmHeads);
+  }
+  // 最後のレースの発走を過ぎた瞬間は state が変わらない＝出走表の描き直しが起きない→5秒ごとに見直す（条件外なら何もしない）
+  if (TMRW && SCENE === "talk") setInterval(applyTomorrow, 5000);
   function byeBandHtml(rc) {
     if (BYEMSG === 2) {
       return '<div class="bye-band"><div class="bye-main">' + esc(rc.name) + "の予想は以上です</div>" +
@@ -3195,6 +3363,7 @@
       renderNarabi(vName, rNo, "narabi-race", { names: LINE_NAMES, noType: true, race: true });
       fitRaceLine();
     }
+    applyTomorrow(); // §100 配信の終わり＝①右の出走表枠を明日の出走表に（お礼カードと同じ時）
   }
 
   function renderStartListInto(ids, vName, rNo) {

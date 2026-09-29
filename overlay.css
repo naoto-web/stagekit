@@ -3848,3 +3848,97 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 .race-band .buy-line .rk-cell .pl-odds { margin-left: 5px; font-size: 26px; min-width: 2.75em; /* 「999.9」まで入る幅を先に取る＝3桁になっても表の幅が変わらない（9/29 Naoto「オッズ変動で全体がぴくっ」） */ text-align: right; font-weight: 600; } /* 9/29 Naoto：太字（900）はNG→普通（400）→「もうちょっとだけ太く」＝600（Yu Gothic UI Semibold）・字体は買目の右の倍率と同じ */
 /* 小数点の縦位置をそろえる（9/29 Naoto）＝数字1文字ずつ決まった幅の箱（JS rkNumHtml）。右寄せなので「.」も各桁も同じ列に並ぶ */
 .rk-num .rk-d { display: inline-block; width: .6em; text-align: center; }
+/* 🧪§100 モック（&tmrw=1）配信の終わり＝①右の出走表枠に「明日の出走表」（昼の部・夜の部ごとに配信者＋場） */
+#slist-talk .tm-wrap { list-style: none; display: flex; flex-direction: column; gap: 10px; padding: 8px 10px; }
+.tm-blk { border: 2px solid; border-radius: 8px; overflow: hidden; background: #fff; }
+.tm-day { border-color: #e0a100; }
+.tm-night { border-color: #1f3a68; }
+.tm-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 6px 8px; }
+.tm-day .tm-head { background: #fff1c2; }
+.tm-night .tm-head { background: #1f3a68; }
+.tm-lbl { font-size: 21px; font-weight: 800; margin-right: 4px; color: #6b4a00; }
+.tm-night .tm-lbl { color: #fff; }
+.tm-nm { color: #fff; font-size: 20px; font-weight: 800; padding: 1px 10px; border-radius: 6px;
+  text-shadow: -1px -1px 0 #0006, 1px -1px 0 #0006, -1px 1px 0 #0006, 1px 1px 0 #0006; }
+.tm-none { font-size: 16px; color: #9ca3af; }
+.tm-night .tm-none { color: #cbd5e1; }
+.tm-row { display: flex; align-items: center; gap: 5px; padding: 8px 8px; font-size: 19px; white-space: nowrap; color: #16181c; border-top: 1px solid #0000000f; }
+.tm-ic { width: 1.3em; text-align: center; font-family: "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.tm-vn { font-size: 23px; font-weight: 800; min-width: 3em; }
+.tm-g { font-size: 13px; font-weight: 800; padding: 1px 6px; border-radius: 4px; background: #e5e7eb; color: #374151; }
+.tm-g.tm-gg { background: #16a34a; color: #fff; }
+.tm-gl { font-size: 12px; font-weight: 700; color: #db2777; border: 1px solid #db2777; border-radius: 4px; padding: 0 4px; }
+.tm-tm { margin-left: auto; font-size: 18px; font-weight: 600; color: #374151; }
+.tm-n { min-width: 2.3em; text-align: right; font-size: 15px; color: #6b7280; }
+.tm-row > * { flex-shrink: 0; }
+.tm-nj { font-size: 13px; font-weight: 800; padding: 1px 6px; border-radius: 4px; border: 1px solid #9ca3af; color: #4b5563; background: #fff; }
+.tm-nj.tm-first { border-color: #2563eb; color: #1d4ed8; }
+.tm-nj.tm-last { border-color: #dc2626; color: #fff; background: #dc2626; }
+.tm-half { margin-left: 5px; font-size: 13px; font-weight: 800; padding: 0 5px; border-radius: 4px; background: #fff; color: #16181c; text-shadow: none; vertical-align: 2px; }/* §100 v3：タイトル下のひとこと／バッジ・時刻・R数の縦位置をそろえる（9/30 Naoto）＝行の中身をすべて line-height:1 の箱にして行の中央に */
+.tm-msg { text-align: center; font-size: 19px; font-weight: 800; color: #1f3a68; padding: 2px 0 0; }
+.tm-row > * { line-height: 1; display: inline-flex; align-items: center; }
+.tm-g, .tm-nj { height: 20px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.tm-vn { min-width: 4em; } /* いわき平（4文字）に合わせる＝全部の行でバッジの横位置がそろう */
+
+.tm-row { gap: 4px; padding-left: 6px; padding-right: 6px; }
+.tm-vn { font-size: 22px; }
+.tm-n { width: 2.5em; min-width: 0; justify-content: flex-end; } /* 7R と 12R で時刻の右端が動かないよう幅を固定 */
+/* §100 v4（9/30 Naoto「R数は消して、その分広く」）＝場名・時刻・札を一回り大きく */
+.tm-row { gap: 6px; padding-left: 8px; padding-right: 10px; }
+.tm-vn { font-size: 24px; }
+.tm-tm { font-size: 21px; }
+.tm-g, .tm-nj { height: 22px; font-size: 14px; }
+.tm-ic { font-size: 20px; }
+.tm-tm { font-size: 20px; }
+
+.tm-row .grade-badge.tm-gb { margin-left: 0; height: 22px; box-sizing: border-box; padding: 0 7px; font-size: 14px; border-radius: 4px; } /* G戦＝共通のグレードバッジ（色）を行の札の大きさで */
+.tm-row .tm-g, .tm-row .grade-badge.tm-gb { width: 34px; padding: 0; justify-content: center; } /* F2でもGⅢでも同じ幅＝何日目の札の位置がそろう */
+
+.tm-row { gap: 4px; } /* いわき平＋GⅠ＋最終日の行でも右の余白に食い込まない */
+
+/* 時刻の桁そろえ（9/30 Naoto）＝数字1文字ずつ同じ幅・時が1桁なら空の箱（JS tmTimeHtml） */
+.tm-tm .tm-d { display: inline-block; width: .58em; text-align: center; }
+.tm-tm .tm-col { padding: 0 1px; }
+.tm-tm .tm-sep { padding: 0 2px; }
+.tm-row .tm-nj { width: 50px; padding: 0; justify-content: center; font-size: 13px; } /* 初日・2日目・最終日で同じ幅＝時刻の位置が行ごとに動かない */
+.tm-tm { font-size: 19px; }
+
+/* 明日の出走表の日付（9/30 Naoto）＝大きく・平日黒／土曜青／日曜祝日赤 */
+#slist-sub .tm-date { font-size: 26px; font-weight: 800; color: #16181c; margin-left: 10px; white-space: nowrap; }
+#slist-sub .tm-date.tm-sat { color: #1d4ed8; }
+#slist-sub .tm-date.tm-sun { color: #dc2626; }
+/* 名前の札（9/30 Naoto）＝半休は「しょーた（ミッドから）」を同じ札の中に・字のフチを太く（予想帯見出しの .txt-edge より少し太い2px） */
+.tm-nm { text-shadow: -2px -2px 0 #000b, 2px -2px 0 #000b, -2px 2px 0 #000b, 2px 2px 0 #000b, 0 -2px 0 #000b, 0 2px 0 #000b, -2px 0 0 #000b, 2px 0 0 #000b; }
+.tm-nm .tm-half2 { font-size: 15px; }
+.tm-nm .tm-half2 { font-size: 17px; text-shadow: -1.5px -1.5px 0 #000b, 1.5px -1.5px 0 #000b, -1.5px 1.5px 0 #000b, 1.5px 1.5px 0 #000b, 0 -1.5px 0 #000b, 0 1.5px 0 #000b, -1.5px 0 0 #000b, 1.5px 0 0 #000b; } /* 括弧は字が小さい＝フチは少し細く（太いと潰れる） */
+
+/* 🧪名前札の見比べ（&tmnm=a|b|c・9/30） */
+.tm-nmv { font-size: 20px; font-weight: 800; padding: 1px 10px; border-radius: 6px; line-height: 1.35; white-space: nowrap; }
+.tm-nmv .tm-hin { font-size: 16px; }
+.tm-nmv-c { background: #fff; border: 3px solid; padding: 0 9px; }
+.tm-hout { font-size: 16px; font-weight: 800; margin-left: -2px; margin-right: 4px; color: #6b4a00; }
+.tm-night .tm-hout { color: #fff; }
+/* 🧪名前の見比べ d／e（枠なし・9/30） */
+.tm-nmd, .tm-nme { font-size: 22px; font-weight: 800; white-space: nowrap; margin-right: 6px; }
+.tm-nme { color: #3b2a00; display: inline-flex; align-items: center; }
+.tm-night .tm-nme { color: #fff; }
+.tm-dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 5px; box-shadow: 0 0 0 2px #fff; }
+/* 🧪夜の部の見出しを薄い紺に（&tmlight=1・9/30）＝昼の部と同じく濃い字。枠線は紺のまま */
+.tm-light .tm-night .tm-head { background: #dce5f4; }
+.tm-light .tm-night .tm-lbl { color: #1f3a68; }
+.tm-light .tm-night .tm-nme { color: #16223a; }
+.tm-light .tm-night .tm-hout { color: #1f3a68; }
+.tm-light .tm-night .tm-none { color: #6b7280; }
+/* 名前を大きく（9/30 Naoto「もう少し大きく」）＝E（●＋濃い字） */
+.tm-nme { font-size: 26px; margin-right: 8px; }
+.tm-dot { width: 17px; height: 17px; margin-right: 6px; }
+.tm-head { flex-wrap: nowrap; overflow: hidden; } /* 1行に固定（入らないときはJS fitTmHeads が名前を縮める） */
+
+.tm-head > * { flex-shrink: 0; white-space: nowrap; }
+
+/* 半休の（）は名前にくっつける・人と人の間は広めに（9/30 Naoto） */
+.tm-person { display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0; margin-right: 14px; }
+.tm-person:last-child { margin-right: 0; }
+.tm-person .tm-nme { margin-right: 0; }
+.tm-person .tm-hout { margin: 0; letter-spacing: -.02em; }
+.tm-person .tm-hout { font-size: 17px; }
