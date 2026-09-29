@@ -1526,7 +1526,9 @@
         // 切り目行（8/10 FB122・C案）＝グレー帯＋「切り目」バッジ（幅不足の行はfitCutLabelsが「切」へ短縮）。
         // チップは通常色のまま・的中強調の対象外（そもそも的中しない）
         if (l.cut) {
-          return '<div class="pred-line chips cut-line"><span class="pl-cut' + (small ? " sm" : "") + '">切り目</span>' +
+          // ②レース観戦（RB2）は常に「切」（9/29 Naoto「枠が狭いから切だけに」・俺たち目→「俺」と同じ扱い）＝.cut-short は fitCutLabels が「切り目」に戻さない
+          var cutShort = RB2 && SCENE === "race";
+          return '<div class="pred-line chips cut-line"><span class="pl-cut' + (small ? " sm" : "") + (cutShort ? " cut-short" : "") + '">' + (cutShort ? "切" : "切り目") + "</span>" +
             lineChips(/全/.test(l.rawRest || "") ? l.rawRest : (l.disp || l.rawRest || l.raw), small) + "</div>";
         }
         if (!l.ok) return '<div class="pred-line chips">' + lineChips(String(l.raw).trim(), small) + "</div>"; // 書きかけ
@@ -1581,6 +1583,7 @@
   function fitCutLabels(scope) {
     if (!scope) return;
     scope.querySelectorAll(".pred-line.cut-line .pl-cut").forEach(function (b) {
+      if (b.classList.contains("cut-short")) return; // ②は常に「切」（raceBuyHtml）
       if (b.textContent !== "切り目") b.textContent = "切り目";
       var line = b.closest(".pred-line");
       var parent = line && line.parentElement;
