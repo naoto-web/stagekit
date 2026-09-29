@@ -3845,6 +3845,6 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 .rk-col:first-child .rk-n { color: #b8860b; }
 .race-band .buy-line .rk-chips { display: inline-flex; align-items: center; gap: 2px; }
 .race-band .buy-line .rk-chips .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
-.race-band .buy-line .rk-cell .pl-odds { margin-left: 5px; font-size: 26px; min-width: 2.75em; /* 「999.9」まで入る幅を先に取る＝3桁になっても表の幅が変わらない（9/29 Naoto「オッズ変動で全体がぴくっ」） */ text-align: right; font-weight: 600; } /* 9/29 Naoto：太字（900）はNG→普通（400）→「もうちょっとだけ太く」＝600（Yu Gothic UI Semibold）・字体は買目の右の倍率と同じ */ text-align: right; font-weight: 600; } /* 9/29 Naoto：太字（900）はNG→普通（400）→「もうちょっとだけ太く」＝600（Yu Gothic UI Semibold）・字体は買目の右の倍率と同じ */
+.race-band .buy-line .rk-cell .pl-odds { margin-left: 5px; font-size: 26px; min-width: 2.75em; /* 「999.9」まで入る幅を先に取る＝3桁になっても表の幅が変わらない（9/29 Naoto「オッズ変動で全体がぴくっ」） */ text-align: right; font-weight: 600; } /* 9/29 Naoto：太字（900）はNG→普通（400）→「もうちょっとだけ太く」＝600（Yu Gothic UI Semibold）・字体は買目の右の倍率と同じ */
 /* 小数点の縦位置をそろえる（9/29 Naoto）＝数字1文字ずつ決まった幅の箱（JS rkNumHtml）。右寄せなので「.」も各桁も同じ列に並ぶ */
 .rk-num .rk-d { display: inline-block; width: .6em; text-align: center; }
