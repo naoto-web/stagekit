@@ -3942,3 +3942,6 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 .tm-person .tm-nme { margin-right: 0; }
 .tm-person .tm-hout { margin: 0; letter-spacing: -.02em; }
 .tm-person .tm-hout { font-size: 17px; }
+
+/* §100 明日の出走表を出している間は、出走表の下の並び・note勝負を隠す（9/30 Naoto・JS が body.tmrw-on を付け外し） */
+body.tmrw-on #narabi-talk, body.tmrw-on #note-races-talk { display: none !important; }

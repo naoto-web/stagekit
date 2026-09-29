@@ -952,8 +952,9 @@
   }
   function tmrwKubun(g) { g = String(g || ""); return /ミッドナイト/.test(g) ? "mid" : /ナイター/.test(g) ? "night" : /モーニング/.test(g) ? "morning" : "day"; }
   function applyTomorrow() {
-    if (!TMRW || !timetable || !state || (state.venues || []).length) return;
-    if (!(TMRWFORCE || byeTimerOn())) return;
+    // 出している間は body.tmrw-on＝出走表の下の並び・note勝負を必ず隠す（9/30 Naoto「一番下の並びが消えていない」＝あとから届いた並びを renderNarabi が表示に戻していた）
+    var on = TMRW && timetable && state && !(state.venues || []).length && (TMRWFORCE || byeTimerOn());
+    if (!on) { document.body.classList.remove("tmrw-on"); return; }
     var list = $("slist-talk");
     if (!list) return;
     var off = tmrwOffset();
@@ -1005,12 +1006,13 @@
     var html = '<li class="tm-wrap' + (TMLIGHT ? " tm-light" : "") + '"><div class="tm-msg">明日はこのメンバーでお届けします！</div>' +
       block("昼の部", "tm-day", sh.day, dayV, "day") + block("夜の部", "tm-night", sh.night, nightV, "night") + "</li>";
     // 5秒ごとの見直しでも呼ばれる＝中身が同じなら描き直さない（出走表の描画で消された後は描き直す）
-    if (html === tmrwSig && list.querySelector(".tm-wrap")) return;
+    if (html === tmrwSig && list.querySelector(".tm-wrap")) { document.body.classList.add("tmrw-on"); return; }
     tmrwSig = html;
     var sub = $("slist-sub");
     if (sub) sub.innerHTML = subHtml;
     ["narabi-talk", "note-races-talk"].forEach(function (id) { var e = $(id); if (e) e.classList.add("hidden"); });
     list.innerHTML = html;
+    document.body.classList.add("tmrw-on");
     requestAnimationFrame(fitTmHeads);
   }
   // 最後のレースの発走を過ぎた瞬間は state が変わらない＝出走表の描き直しが起きない→5秒ごとに見直す（条件外なら何もしない）
