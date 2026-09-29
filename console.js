@@ -177,7 +177,7 @@
   if (/^(navy|black|brown|teal)$/.test(SEL || "")) document.documentElement.classList.add("sel-" + SEL);
   /* 🧪§91（9/29 Naoto）選択中の黒を場の開催区分の色に（案C＝☀️朝焼け／デイ青空／🌙紺／⭐黒）。テスト（?gas=）だけ既定ON（&kcol=1／0）。
      付けるのは kubunColorCls（場ボタン・Rボタン・入力先バッジ・本日の場）。色は console.css 末尾 */
-  var KCOL = params.get("kcol") === "1" || (params.get("kcol") !== "0" && !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
+  var KCOL = params.get("kcol") !== "0";
   if (KCOL) document.documentElement.classList.add("kcol");
   /** メンバーカラーを「字」に使うとき（名前など）。白背景だと黄・緑が読めない＝白背景のときだけ黒を混ぜて暗くする（塗りはそのまま） */
   /* §93（9/29 Naoto「カズとえーすの色似てる」）一律に黒を混ぜると赤（#942a2a）とオレンジ（#9a470e）がどちらも赤茶になる

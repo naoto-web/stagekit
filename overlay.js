@@ -146,7 +146,7 @@
     });
   }
   /* 🧪§97（9/29 Naoto「4桁以上はカンマ」）オッズ・合成・的中倍率に3桁区切りのカンマ。テスト接続だけ既定ON（&comma=1／0）＝Naoto確認後に本番ON */
-  var COMMA = params.get("comma") === "1" || (params.get("comma") !== "0" && !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
+  var COMMA = params.get("comma") !== "0";
   if (window.Keirin && window.Keirin.setComma) window.Keirin.setComma(COMMA);
   function multTxt(m) { return window.Keirin && window.Keirin.multFmt ? window.Keirin.multFmt(m) : String(m); }
   /* §99（9/29 Naoto）②の予想帯で、放送のレースに予想を入れていない人の側（空いた半分）に3連単の人気順1〜9位。
