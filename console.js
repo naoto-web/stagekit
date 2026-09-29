@@ -2357,10 +2357,30 @@
     });
   })();
 
+  /* 🐞9/30（Naoto）結果を取りに行く場＝本日の場＋「本日の場から消したが、予想が入っていて結果がまだのレースがある場」。
+     最終レースの発走後・結果が出る前に場を消すと自動取得が止まり、ハズレ（いつもの運用＝入力しない）が未精算のまま残っていた
+     （9/29 防府7R・広島12R・武雄12R・平塚11R・いわき平9R＝投資は画面に入るのに精算に入らず、しょーたのプラ転が出なかった）。
+     消した場は state.date が今日のときだけ＝日跨ぎで「今日の結果」を前日のキーに入れない */
+  function resultVenueNames() {
+    var names = state.venues.map(function (v) { return v.name; });
+    if (state.date !== todayStr()) return names;
+    Object.keys(state.preds || {}).forEach(function (key) {
+      var name = key.split("|")[0];
+      if (names.indexOf(name) >= 0 || (state.results && state.results[key])) return;
+      var br = (state.preds[key] || {}).byRacer || {};
+      var has = Object.keys(br).some(function (n) { var e = br[n] || {}; return String(e.text || "").trim() || +e.investInput > 0; });
+      if (has) names.push(name);
+    });
+    return names;
+  }
+
   function pollResults(force) {
-    if (!state || !timetable || !state.venues.length) return Promise.resolve();
+    if (!state || !timetable) return Promise.resolve();
+    var names = resultVenueNames();
+    if (!names.length) return Promise.resolve();
     purgeGhostResults();
-    return Promise.all(state.venues.map(function (v) {
+    return Promise.all(names.map(function (name) {
+      var v = { name: name };
       var jo = joCodeOfName(v.name);
       if (!jo) return null;
       return window.Sync.fetchResults(jo, force).then(function (list) {
