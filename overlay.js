@@ -2492,10 +2492,13 @@
       var rid = top.split("|").slice(2).join("|");
       var ps = platenSt[rid];
       if (!ps) return;
-      ps.recArmed = { amt: amt, tie: amt === prev };
+      ps.recArmed = { amt: amt, tie: amt === prev, band: b };
       if (!REFPOP) recFire(rid);
     });
   }
+  /* §98（9/29 Naoto「最高額更新って何の？ってなる」）＝昼は「本日の最高回収額！」・夜は「今夜の最高回収額！」（記録は昼夜で別に数える＝言葉を合わせる）。
+     同額は「…タイ！」 */
+  function recLabel(r) { return (r && r.band === "night" ? "今夜" : "本日") + "の最高回収額" + (r && r.tie ? "タイ！" : "！"); }
   function recFire(rid) {
     var p = platenSt[rid];
     if (!p || !p.recArmed) return;
@@ -2504,7 +2507,7 @@
     var wait = Math.max(0, p.popUntil - Date.now());
     p.popUntil = Date.now() + wait + 3000;
     setTimeout(function () {
-      bigPop(rid, "platen-pop rec", '<span class="ms-l">' + (r.tie ? "最高額タイ！" : "最高額更新！") + '</span><span class="ms-b">' + fmtYen(r.amt) + "</span>", 4000);
+      bigPop(rid, "platen-pop rec", '<span class="ms-l">' + recLabel(r) + '</span><span class="ms-b">' + fmtYen(r.amt) + "</span>", 4000);
     }, wait);
   }
   /** 見出しの投資/回収を2秒ごとに取り直す（9/26）＝発走時刻で投資が増えるのは state の変化を伴わないため。
@@ -2592,7 +2595,7 @@
       if (!r.width || !r.height) return; // 非表示のシーン
       var pop = document.createElement("div");
       pop.className = "refpop" + (rec ? " rec" : "");
-      if (rec) pop.innerHTML = '<span class="ms-l">' + (rec.tie ? "最高額タイ！" : "最高額更新！") + '</span><span class="ms-b">' +
+      if (rec) pop.innerHTML = '<span class="ms-l">' + recLabel(rec) + '</span><span class="ms-b">' +
         (rec.amt === delta ? "＋" : "") + fmtYen(rec.amt) + "</span>";
       else pop.textContent = "＋" + fmtYen(delta);
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
