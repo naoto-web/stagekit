@@ -2367,12 +2367,45 @@
     Object.keys(state.preds || {}).forEach(function (key) {
       var name = key.split("|")[0];
       if (names.indexOf(name) >= 0 || (state.results && state.results[key])) return;
-      var br = (state.preds[key] || {}).byRacer || {};
-      var has = Object.keys(br).some(function (n) { var e = br[n] || {}; return String(e.text || "").trim() || +e.investInput > 0; });
-      if (has) names.push(name);
+      if (predHasEntry(key)) names.push(name);
     });
     return names;
   }
+  /** そのレースに誰かが買目か投資を入れているか */
+  function predHasEntry(key) {
+    var br = ((state.preds || {})[key] || {}).byRacer || {};
+    return Object.keys(br).some(function (n) { var e = br[n] || {}; return !!(String(e.text || "").trim() || +e.investInput > 0); });
+  }
+
+  /* 🆕9/30（Naoto）結果が取れないレースは不的中として精算する（仮の不的中＝missAuto）。
+     的中なら人が着順を入れる運用＝結果が来ないのはほぼハズレ。未精算のままだと精算済みの収支がずれてプラ転・節目が出ない。
+     ・今日の分＝予想（買目か投資）が入っていて、発走から MISS_AFTER_MIN 分たっても結果が無いレース（時刻表に無いレースは今日は触らない）
+     ・前日の積み残し（state.date が前日以前）＝コンソールを開いたときにまとめて。前日の最終レースも0:30には30分たっている＝0:30以降だけ
+     ・中身＝着順なし（order を持たない＝derive は精算しない＝回収0・結果チップにも出ない／空配列だとチップに出る）・払戻なし。公式の結果が取れたら applyAutoResults が上書き・手入力の確定でも上書き
+     ・&automiss=0 で止める */
+  var AUTO_MISS = params.get("automiss") !== "0";
+  var MISS_AFTER_MIN = 30;
+  function autoMissTick() {
+    if (!AUTO_MISS || !stateLoaded || !state || !state.date) return;
+    var today = state.date === todayStr();
+    if (!today && !(state.date < todayStr() && nowSec() >= MISS_AFTER_MIN * 60)) return;
+    if (today && !timetable) return;
+    var iso = new Date().toISOString(), added = 0;
+    state.results = state.results || {};
+    Object.keys(state.preds || {}).forEach(function (key) {
+      if (state.results[key] || !predHasEntry(key)) return;
+      if (today) {
+        var parts = key.split("|");
+        var races = venueRaces(parts[0]).filter(function (x) { return x.no === +parts[1]; });
+        var s = races.length ? timeToSec(races[0].start) : null;
+        if (s === null || nowSec() < s + MISS_AFTER_MIN * 60) return;
+      }
+      state.results[key] = { payouts: [], refunds: {}, missAuto: true, settledAt: iso, firstAt: iso };
+      added++;
+    });
+    if (added) { save(); renderAll(); }
+  }
+  setInterval(autoMissTick, 60000);
 
   function pollResults(force) {
     if (!state || !timetable) return Promise.resolve();
@@ -2415,7 +2448,7 @@
     if (!state || !state.cfg || !state.cfg.autoResults) return;
     var addedKey = null;
     Object.keys(autoResults).forEach(function (key) {
-      if (state.results[key]) return; // 手入力済み・確定済みは触らない
+      if (state.results[key] && !state.results[key].missAuto) return; // 手入力済み・確定済みは触らない（仮の不的中＝上書きする・9/30）
       var r = autoResults[key];
       if (!r.order || r.order.length < 2 || !r.payouts || !r.payouts.length) return;
       var pays = keepPayouts(r.payouts);
@@ -2491,6 +2524,12 @@
         '　<button class="btn small" id="btn-auto-fill">公式の払戻をフォームに入れる</button>' +
         '<span class="miss">（入れたら「確定」を押し直してください）</span>';
       $("btn-auto-fill").addEventListener("click", function () { applyAutoToForm(key); });
+      return;
+    }
+    var mk = key && state.results && state.results[key];
+    if (mk && mk.missAuto && !r) { // 仮の不的中（9/30）＝公式の結果が取れていない
+      el.classList.remove("hidden");
+      el.innerHTML = '<span class="miss">⏱ 結果が取れなかったため自動で不的中扱いにしています（的中していたら着順と回収を入れて「確定」＝上書きされます）</span>';
       return;
     }
     if (!r || done) {
@@ -2834,6 +2873,7 @@
       autoVenueTick();
       cuRestore(); // 自動更新で読み直した直後なら、画面の状態を戻す（9/25）
       pollResults();
+      autoMissTick(); // 前日の積み残し・閉じていた間の分（9/30）
     }).catch(function (e) {
       setSync("err", "GAS接続失敗: " + e.message + "　再試行中…（つながるまで保存しません）");
       // 画面が真っ白にならないよう仮の器だけ用意する。stateLoadedは立てない＝保存は止まったまま
