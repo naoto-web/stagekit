@@ -3832,3 +3832,19 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 .bye-stats b { font-size: 1.3em; color: #b8860b; }
 .bye-main { font-size: 34px; font-weight: 900; }
 .bye-sub { font-size: 24px; font-weight: 700; color: #3d434c; }
+
+/* 🧪§99 ②の空いた予想帯＝3連単の人気順1〜9位（縦に1〜3位｜4〜6位｜7〜9位＝列ごとに薄い灰色の区画）。JSの fitRankOdds が帯いっぱいに拡大縮小。
+   見出しは「3連単オッズ」＋灰色（JS）・投資/回収は隠す */
+.band-head.rk-head .band-inv { display: none; }
+.race-band .buy-line.rk-on { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: center; padding: 6px 10px; overflow: hidden; }
+.rk-odds { display: flex; flex: none; margin: auto; align-items: stretch; gap: 18px; white-space: nowrap; }
+.rk-col { display: flex; flex-direction: column; justify-content: space-around; gap: 3px;
+  padding: 4px 9px; background: #eef0f3; border: 1px solid #d5d9df; border-radius: 8px; }
+.rk-cell { display: flex; align-items: center; gap: 5px; }
+.rk-n { min-width: 14px; font-size: 22px; font-weight: 800; color: #6b7280; text-align: right; }
+.rk-col:first-child .rk-n { color: #b8860b; }
+.race-band .buy-line .rk-chips { display: inline-flex; align-items: center; gap: 2px; }
+.race-band .buy-line .rk-chips .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
+.race-band .buy-line .rk-cell .pl-odds { margin-left: 5px; font-size: 26px; min-width: 2.3em; text-align: right; font-weight: 600; } /* 9/29 Naoto：太字（900）はNG→普通（400）→「もうちょっとだけ太く」＝600（Yu Gothic UI Semibold）・字体は買目の右の倍率と同じ */
+/* 小数点の縦位置をそろえる（9/29 Naoto）＝数字1文字ずつ決まった幅の箱（JS rkNumHtml）。右寄せなので「.」も各桁も同じ列に並ぶ */
+.rk-num .rk-d { display: inline-block; width: .6em; text-align: center; }

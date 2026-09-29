@@ -149,6 +149,9 @@
   var COMMA = params.get("comma") === "1" || (params.get("comma") !== "0" && !!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND));
   if (window.Keirin && window.Keirin.setComma) window.Keirin.setComma(COMMA);
   function multTxt(m) { return window.Keirin && window.Keirin.multFmt ? window.Keirin.multFmt(m) : String(m); }
+  /* §99（9/29 Naoto）②の予想帯で、放送のレースに予想を入れていない人の側（空いた半分）に3連単の人気順1〜9位。
+     ✅9/29 本番既定ON（Naoto「いい感じ・本番反映」）。止める＝&rkodds=0 */
+  var RKODDS = params.get("rkodds") !== "0";
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -1217,6 +1220,58 @@
     var f = window.Keirin.synthFmt(e.synIn);
     return f === window.Keirin.synthFmt(s) ? "" : '<span class="od-synin">(' + f + ")</span>";
   }
+  /* 🧪§99 3連単の人気順1〜9位（②の空いた予想帯）。縦に1〜3位・4〜6位・7〜9位の3列（列ごとに薄い灰色の区画）。
+     倍率は2桁以上も小数第1位まで（9/29 Naoto）・4桁以上はカンマ。.odn で上下▲▼・締切後の金色も同じ演出に乗る。
+     見出しは「3連単オッズ」＋灰色（帯の描き分け側）＝枠の中の札は出さない。発売前（票0）・未取得は ""＝帯は今までどおり空 */
+  var RK_GRAY = "#6b7280";
+  function rkFmt(v) {
+    var s = (Math.round(v * 10) / 10).toFixed(1).split(".");
+    return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + s[1];
+  }
+  /* 小数点の縦位置をそろえる（9/29 Naoto「買目の右のオッズと同じ字体で」）＝Yu Gothic UI は「1」だけ細く、等幅の指定も効かない。
+     数字1文字ずつを決まった幅の箱（.rk-d）に入れる＝「.」だけでなく十の位・一の位も縦にそろう（9/29 Naoto「31.6と38.6の3がずれる」）。
+     文字としては「11.1」のまま（textContent）＝上下▲▼の比較・数値化はそのまま。数字の書き換え（odHoldStep）もこの形で書く */
+  function rkNumHtml(txt) {
+    return String(txt).replace(/[0-9]|[^0-9]+/g, function (ch) {
+      return /^[0-9]$/.test(ch) ? '<span class="rk-d">' + ch + "</span>" : esc(ch);
+    });
+  }
+  function setOdnText(el, txt) {
+    if (el.textContent === txt) return;
+    if (el.classList.contains("rk-num")) el.innerHTML = rkNumHtml(txt); else el.textContent = txt;
+  }
+  function rankOddsHtml(k) {
+    if (!ODDS || !k) return "";
+    if (!oddsData[k] && !oddsBusy(k, Date.now()) && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
+    oddsWant[k] = oddsSeq;
+    var d = oddsData[k];
+    if (!d || !d.o || !(d.cnt > 0)) return "";
+    var top = Object.keys(d.o).sort(function (a, b) { return d.o[a] - d.o[b] || (a < b ? -1 : 1); }).slice(0, 9);
+    if (!top.length) return "";
+    var cells = top.map(function (c, i) {
+      var raw = c.split("").join("-");
+      // 区切りの「−」は省く（俺たち目と同じ）＝その分車番を大きく
+      return '<div class="rk-cell"><span class="rk-n">' + (i + 1) + '</span><span class="rk-chips chips">' + lineChips(raw, false, null, true) + "</span>" +
+        '<span class="pl-odds rk-v' + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '"><span class="odn rk-num" data-ok="' + esc(k + "|rk|" + c) + '">' + rkNumHtml(rkFmt(d.o[c])) + "</span></span></div>";
+    });
+    var cols = "";
+    for (var ci = 0; ci < cells.length; ci += 3) cols += '<div class="rk-col">' + cells.slice(ci, ci + 3).join("") + "</div>";
+    return '<div class="rk-odds">' + cols + "</div>";
+  }
+  /** 人気順の表を帯いっぱいに（縮小も拡大も・上限1.6倍＝②の買目の拡大と同じ） */
+  function fitRankOdds(band) {
+    var t = band && band.querySelector(".rk-odds");
+    if (!t) return;
+    t.style.transform = "";
+    var cs = getComputedStyle(band);
+    var aw = band.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    var ah = band.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+    var w = t.scrollWidth, h = t.scrollHeight;
+    if (!(aw > 0 && ah > 0 && w > 0 && h > 0)) return;
+    var s = Math.min(1.6, aw / w, ah / h);
+    t.style.transformOrigin = "center center"; // 置き場所は CSS（.rk-on＝flex で真ん中）・ここは縮尺だけ
+    t.style.transform = "scale(" + s + ")";
+  }
   /* オッズの上下と最終の演出（9/26 Naoto・要件定義§35・OBSだけ＝コンソールは演出なし）
      ・上下＝表示の数字が変わった瞬間だけ、その数字を赤▲（上がった）／青▼（下がった）で0.9秒。全行・絞りなし。
        表示が変わらない小さな動き（10倍以上の小数など）は出さない
@@ -1260,7 +1315,7 @@
         active = true; txt = mv.toText; op = (now - mv.switchAt) / OD_FADE_IN;
       } else { mv.done = true; txt = mv.toText; }
       document.querySelectorAll('.odn[data-ok="' + id.replace(/"/g, '\\"') + '"]').forEach(function (el) {
-        if (el.textContent !== txt) el.textContent = txt;
+        setOdnText(el, txt); // §99 人気順の表は小数第1位を箱に入れた形で書く
         // 数字の文字だけ薄くする（opacity だと▲▼の矢印まで一緒に薄れる）＝CSS の --odop（color-mix）
         if (op === null) el.style.removeProperty("--odop");
         else el.style.setProperty("--odop", Math.max(0, Math.min(1, op)).toFixed(3));
@@ -2940,6 +2995,24 @@
           // metaを先に確定させてから買い目を組む（FB58・順序に意味あり）
           fillBandMeta($(bp + "meta-" + slot), rc, k);
           band.classList.remove("buy-xl", "buy-lg");
+          // 🧪§99 ②で放送のレースに何も入れていない人の側＝3連単の人気順（オッズが無ければ従来どおり空）
+          var rkHtml = RKODDS && bp === "band-" && rc && k && !hasContentKey(rc, k) ? rankOddsHtml(k) : "";
+          band.classList.toggle("rk-on", !!rkHtml);
+          // 見出しも「〇〇 予想」→「3連単オッズ」・メンバーカラー→灰色（9/29 Naoto）。投資/回収は隠す（.rk-head）。
+          // 名前・色は上の見出し処理が毎回描き直す＝予想を入れ始めたら次の描画で元に戻る
+          bandHead.classList.toggle("rk-head", !!rkHtml);
+          if (rkHtml) {
+            if (bandName) bandName.textContent = "3連単オッズ";
+            bandHead.style.background = RK_GRAY;
+            if (bandHead.parentElement) bandHead.parentElement.style.borderColor = RK_GRAY;
+            fitBandHead(bandHead);
+            band.innerHTML = rkHtml;
+            band.classList.remove("note-fire");
+            band.style.transform = "";
+            fitRankOdds(band);
+            requestAnimationFrame(function () { fitRankOdds(band); }); // 描画直後は帯の大きさが未確定のことがある＝次のフレームで測り直す
+            return;
+          }
           // 第5引数keepAll=true＝②メイン帯も「全」を展開せず元記法で描く（8/8 FB74）。
           // 空席は中身ごと空にする＝③は席を畳まないので、誰もいない枠にレースラベルだけ
           // 残ると「予想を出し忘れている」ように見える（8/12）
