@@ -833,8 +833,22 @@
   /** §90 タイマー枠のお礼カード（本番）＝本日の場が0場 かつ 時刻表のその日の最後のレースの発走を過ぎた。
       ⚠️朝いちばんの場が入る前（1R発走の40分前まで）も0場＝「最後のレースの後」で絞らないと朝にお礼が出る。
       &byemsg（モック）のときは時刻の条件なしで出す（いつでも見た目を確かめられるように） */
+  /* 10/1 Naoto「場を手で消さないと明日の出走表が出ない・23:36に配信を切った」＝本日の場が残っていても、
+     残っている場が全部「本日終了」（最終レースの発走＋レース中 TFX_RACE 秒）になってから BYE_DONE_WAIT 秒たてば出す（お礼カード・明日の出走表）。
+     旧＝0場になるまで出ない（コンソールが場を外すのは最終レースの結果から10分後＝9/30は23:51。前橋7Rの結果は23:41）。&byedone=0 で旧 */
+  var BYEDONE = params.get("byedone") !== "0", BYE_DONE_WAIT = 60;
+  function allVenuesDone() {
+    var vs = (state && state.venues) || [];
+    if (!vs.length || !timetable) return false;
+    var names = {}, last = {};
+    vs.forEach(function (v) { names[v.name] = 1; });
+    allRaces().forEach(function (r) { if (names[r.venue] && (!(r.venue in last) || r.startSec > last[r.venue])) last[r.venue] = r.startSec; });
+    var now = nowSec();
+    return vs.every(function (v) { return (v.name in last) && now >= last[v.name] + TFX_RACE + BYE_DONE_WAIT; });
+  }
   function byeTimerOn() {
     if (byeOn()) return true;
+    if (BYETIMER && BYEDONE && timetable && state && allVenuesDone()) return true;
     if (!BYETIMER || !timetable || !state || (state.venues || []).length) return false;
     // 0〜5時は前の日の配信の続き（9/30）＝本日の場0場ならもう終わっている。時刻表は0時に翌日へ切り替わる＝下の「最後のレースの後」が外れてお礼が消えていた
     if (nowSec() < 5 * 3600) return true;
@@ -953,7 +967,7 @@
   function tmrwKubun(g) { g = String(g || ""); return /ミッドナイト/.test(g) ? "mid" : /ナイター/.test(g) ? "night" : /モーニング/.test(g) ? "morning" : "day"; }
   function applyTomorrow() {
     // 出している間は body.tmrw-on＝出走表の下の並び・note勝負を必ず隠す（9/30 Naoto「一番下の並びが消えていない」＝あとから届いた並びを renderNarabi が表示に戻していた）
-    var on = TMRW && timetable && state && !(state.venues || []).length && (TMRWFORCE || byeTimerOn());
+    var on = TMRW && timetable && state && (!(state.venues || []).length || (BYEDONE && allVenuesDone())) && (TMRWFORCE || byeTimerOn()); // 場が残っていても全部「本日終了」＋1分なら（10/1）
     if (!on) { document.body.classList.remove("tmrw-on"); return; }
     var list = $("slist-talk");
     if (!list) return;
