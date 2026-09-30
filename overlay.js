@@ -4509,7 +4509,7 @@
        1. その場の開催区分ラベル（gradeOfVenue＝「F1 ナイター」等。GASの kjGrade_ が keirin.jp の
           night/midnight タグ、または初レースの発走時刻から付けている）。ナイター／ミッドナイト＝夜が決定、
           モーニング＝昼が決定。ラベルに時間帯の語が無い（「F1」だけ・空）なら次へ
-       2. そのレースの発走時刻（raceStartSecOf）＝15:00以降なら夜（GASの kjGrade_ と同じ境界）
+       2. その場の1Rの発走時刻（10/1〜・旧＝そのレースの発走時刻）＝15:00以降なら夜（GASの kjGrade_ と同じ境界）
        3. いまの時計（nowSec）＝15:00以降なら夜（時刻表が未着のときの最後の保険）
      spawnPairFx 側は素材表（PAIR_FX）を引くだけなので無改造。 */
   var NIGHT_FROM_SEC = 15 * 3600;   // 0時起点秒。GASの kjGrade_ と同じ「15時以降＝ナイター」
@@ -4518,7 +4518,12 @@
     var g = venue ? gradeOfVenue(venue) : "";
     if (/ナイター|ミッドナイト/.test(g)) return "night";
     if (/モーニング/.test(g)) return "day";
-    var sec = raceKey ? raceStartSecOf(raceKey) : null;
+    /* 10/1 Naoto＝時間帯の語が無い場（デイ＝「F1」「G3」だけ）は**その場の1Rの発走時刻**で決める。
+       旧＝そのレースの発走時刻＝デイの場でも15時以降のレース（9/30 広島10R 15:08）が夜扱いになり、ダブル的中が乾杯・最高額が夜の区分になっていた。
+       GASの kjGrade_ が区分を付けるときも初レースの発走時刻で見ている。1Rが時刻表に無い（0時を過ぎて翌日の時刻表になった等）ときだけ従来どおり */
+    var sec = null;
+    if (venue) allRaces().forEach(function (r) { if (r.venue === venue && (sec === null || r.startSec < sec)) sec = r.startSec; });
+    if (typeof sec !== "number") sec = raceKey ? raceStartSecOf(raceKey) : null;
     if (typeof sec !== "number") sec = nowSec();
     return sec >= NIGHT_FROM_SEC ? "night" : "day";
   }
