@@ -871,6 +871,8 @@
   var TMRW = params.get("tmrw") !== "0";
   var TMRWFORCE = params.get("tmrwforce") === "1";
   var TMLIGHT = params.get("tmlight") !== "0"; // 夜の部の見出しを薄い紺＝濃い字（9/30 Naoto）。&tmlight=0 で紺地
+  var TMFIT = params.get("tmfit") !== "0"; // 場が多い日は行の余白を詰めて枠に収める（10/1）
+  var TMBYE = params.get("tmbye") !== "0"; // 明日の出走表の一番下に「明日も絶対見てくれよな✋」（10/1 Naoto・A案＝紺字）。&tmbye=0 で出さない
   var tmrwTT = null, tmrwBusy = false, tmrwDay = null, tmrwSig = "";
   var tmrwSh = {}, tmrwShBusy = {}, tmrwShAt = {}, TMRW_SHIFT_MS = 600000;
   /** 「えーす,ムネオ(モNG)」→[{name,note}]。括弧＝半休の書き方（シフト表の「半（モNG）」「メモの〇〇ミッドのみ」と同じ） */
@@ -925,6 +927,18 @@
         if (!step(nms, 22) && !step(hos, 15) && !step(nms, 18)) break;
       }
     });
+    if (TMFIT) fitTmHeight();
+  }
+  /** 場が多い日（9場など）に枠の下からはみ出さないように（10/1 Naoto）＝入り切らないときだけ ①行の上下の余白 8→2px ②部と部の間 10→4px の順に詰める。&tmfit=0 で旧 */
+  function fitTmHeight() {
+    var list = $("slist-talk"), wrap = list && list.querySelector(".tm-wrap");
+    if (!wrap) return;
+    var rows = wrap.querySelectorAll(".tm-row");
+    var setPad = function (p) { [].forEach.call(rows, function (r) { r.style.paddingTop = r.style.paddingBottom = p === null ? "" : p + "px"; }); };
+    setPad(null); wrap.style.gap = "";
+    var over = function () { return list.scrollHeight > list.clientHeight + 1; };
+    for (var p = 7; p >= 2 && over(); p--) setPad(p);
+    for (var g = 9; g >= 4 && over(); g--) wrap.style.gap = g + "px";
   }
   /* 日本の祝日（9/30 Naoto「土曜は青・日曜祝日は赤」）＝スマホアプリ util.js holidays の写し（祝日法どおり：固定日・ハッピーマンデー・
      春分/秋分（1980〜2099の近似式）・国民の休日・振替休日）。法改正があればアプリと両方直す。返り＝{ "YYYY-MM-DD": 名前 } */
@@ -1018,7 +1032,8 @@
     var dayV = rows.filter(function (v) { return v.k === "morning" || v.k === "day"; });
     var nightV = rows.filter(function (v) { return v.k === "night" || v.k === "mid"; });
     var html = '<li class="tm-wrap' + (TMLIGHT ? " tm-light" : "") + '"><div class="tm-msg">明日はこのメンバーでお届けします！</div>' +
-      block("昼の部", "tm-day", sh.day, dayV, "day") + block("夜の部", "tm-night", sh.night, nightV, "night") + "</li>";
+      block("昼の部", "tm-day", sh.day, dayV, "day") + block("夜の部", "tm-night", sh.night, nightV, "night") +
+      (TMBYE ? '<div class="tm-bye">明日も絶対見てくれよな<span class="tm-bye-hand">✋</span></div>' : "") + "</li>";
     // 5秒ごとの見直しでも呼ばれる＝中身が同じなら描き直さない（出走表の描画で消された後は描き直す）
     if (html === tmrwSig && list.querySelector(".tm-wrap")) { document.body.classList.add("tmrw-on"); return; }
     tmrwSig = html;

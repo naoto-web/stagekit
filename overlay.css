@@ -3925,6 +3925,9 @@ body.odfx2 .od-fin .odn.od-kira::before { content: "✦"; position: absolute; ri
 .tm-dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 5px; box-shadow: 0 0 0 2px #fff; }
 /* 🧪夜の部の見出しを薄い紺に（&tmlight=1・9/30）＝昼の部と同じく濃い字。枠線は紺のまま */
 .tm-light .tm-night .tm-head { background: #dce5f4; }
+/* 一番下のひとこと「明日も絶対見てくれよな✋」（10/1 Naoto・A案）＝上の「明日はこのメンバーで〜」と同じ紺字・一回り大きく */
+.tm-bye { text-align: center; font-size: 22px; font-weight: 900; color: #1f3a68; white-space: nowrap; line-height: 1.2; padding: 2px 0 0; }
+.tm-bye-hand { font-family: "Segoe UI Emoji", "Noto Color Emoji", sans-serif; margin-left: 4px; display: inline-block; }
 .tm-light .tm-night .tm-lbl { color: #1f3a68; }
 .tm-light .tm-night .tm-nme { color: #16223a; }
 .tm-light .tm-night .tm-hout { color: #1f3a68; }
