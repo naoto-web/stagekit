@@ -1408,6 +1408,11 @@
      倍率は2桁以上も小数第1位まで（9/29 Naoto）・4桁以上はカンマ。.odn で上下▲▼・締切後の金色も同じ演出に乗る。
      見出しは「3連単オッズ」＋灰色（帯の描き分け側）＝枠の中の札は出さない。発売前（票0）・未取得は ""＝帯は今までどおり空 */
   var RK_GRAY = "#6b7280";
+  /* 10/1 Naoto「回収枚数を15枚→17枚に直して確定し直したとき」（9/30 広島10R）＝確定し直しで回収額が変わったら、
+     的中演出（前奏）は出さずに的中バッジだけ出し直し、差額を「＋¥」カウントアップ／「−¥」カウントダウン。
+     旧＝増えた分はピコーンのみ（バッジなし）・減った分は数字がいきなり変わる。&refix=0 で旧 */
+  var REFIX = params.get("refix") !== "0";
+  var refPrev = {}, refixAt = {}; // 配信者id → { "場|R": 回収額 } ／ 確定し直しを見つけた時刻
   /* 9/30 Naoto「3場予想の右上の文字めっちゃ小さい」＝①3場の右の上下の区画だけ縦を詰める（枠の大きさはそのまま）。&sidecmp=0 で旧 */
   var SIDECMP = params.get("sidecmp") !== "0";
   if (SIDECMP) document.documentElement.classList.add("sidecmp");
@@ -2821,16 +2826,22 @@
   }
   setInterval(refreshBandInvs, 2000);
   function refundHeaderText(rc, bt) {
-    if (rc) { bt = headTotals(rc.id); platenCheck(rc.id, bt); recCheck(); }
+    if (rc) { bt = headTotals(rc.id); platenCheck(rc.id, bt); recCheck(); refixDetect(rc); }
     var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
     if (!REFPOP || !rc) return normal;
     var a = refAnim[rc.id];
     if (!a) { a = refAnim[rc.id] = { shown: bt.pending ? null : bt.refund, text: normal, target: null, waiting: false, running: false }; return normal; }
     if (a.waiting || a.running) { // 演出待ち・カウント中＝目標だけ最新にして表示は保持
       if (!bt.pending && a.target !== null && bt.refund > a.target) a.target = bt.refund;
+      else if (REFIX && !bt.pending && refixAt[rc.id] && (a.waiting ? a.target !== bt.refund : a.runTo !== bt.refund)) a.target = bt.refund; // 確定し直し＝減る方向も
       return a.text;
     }
     if (bt.pending) { a.text = normal; return normal; } // 集計中＝数字は出さない（shown は最後の数値のまま）
+    if (REFIX && a.shown !== null && bt.refund < a.shown && refixAt[rc.id] && Date.now() - refixAt[rc.id] < 15000) {
+      a.target = bt.refund; a.waiting = true; a.invest = bt.invest; // 確定し直しで減った＝バッジの後に「−¥」でカウントダウン
+      setTimeout(function () { refpopWait(rc.id); }, 300);
+      return a.text;
+    }
     if (a.shown === null || bt.refund <= a.shown) { // 初回・減額・同額＝即差し替え
       a.shown = bt.refund; a.text = normal;
       if (platenSt[rc.id] && (platenSt[rc.id].armed || platenSt[rc.id].msArmed || platenSt[rc.id].recArmed)) setTimeout(function () { platenFire(rc.id); msFire(rc.id); recFire(rc.id); }, 0); // カウントアップが無い増え方＝その場で（プラ転→節目→最高額の順）
@@ -2842,6 +2853,45 @@
     //   直ちに判定すると古い __fxBadgeAt を見て「演出なし」と誤って即ピコーンになる（9/25 ハーネスで実測）→ 300ms 置いてから見る
     setTimeout(function () { refpopWait(rc.id); }, 300);
     return a.text;
+  }
+  /** 確定し直しの検出（REFIX）＝すでに回収が入っていたレースの額が変わった。1回目のピコーン待ちの間なら行き先の差し替えだけ */
+  function refixDetect(rc) {
+    if (!REFIX || !rc) return;
+    var cur = {};
+    Object.keys(state.results || {}).forEach(function (k) {
+      var v = (((state.results[k] || {}).refunds) || {})[rc.id];
+      if (v > 0) cur[k] = v;
+    });
+    var prev = refPrev[rc.id];
+    refPrev[rc.id] = cur;
+    if (!prev) return; // 読み込み直後＝覚えるだけ
+    var ch = null;
+    Object.keys(cur).forEach(function (k) { if (prev[k] > 0 && prev[k] !== cur[k]) ch = k; });
+    if (!ch) return;
+    var a = refAnim[rc.id];
+    if (a && a.waiting) return;
+    refixAt[rc.id] = Date.now();
+    refixBadge(rc, ch);
+  }
+  /** 確定し直しのとき的中バッジだけ出し直す（前奏・演出なし）。回収のピコーンはこのバッジの0.5秒後（__fxBadgeAt） */
+  function refixBadge(rc, k) {
+    var seats = seatMap();
+    var slot = seats.a && seats.a.id === rc.id ? "a" : seats.b && seats.b.id === rc.id ? "b" : null;
+    if (!slot) return;
+    var hs = (derived.hits || []).filter(function (h) {
+      var p = String(h.id).split("|");
+      return p.length >= 5 && p[0] + "|" + p[1] === k && p[2] === rc.id;
+    });
+    if (!hs.length) return;
+    var h = mergeHits(hs), key = memberKey(rc);
+    window.__fxBadgeAt = Math.max(window.__fxBadgeAt || 0, Date.now());
+    fxWipes(slot).forEach(function (cam) {
+      cam.classList.add("hit-fx");
+      if (key) cam.classList.add("m-" + key);
+      if (h.note) cam.classList.add("hit-fx-note");
+      if (h.manche) cam.classList.add("hit-fx-manche");
+      showHitBadge(cam, h, key);
+    });
   }
   function refpopWait(rid) {
     var a = refAnim[rid];
@@ -2867,7 +2917,7 @@
     if (!a || a.running || a.target === null) return;
     var bt = headTotals(rid); // 投資＝発走したレースまで（プラ転・9/26）
     var from = a.shown || 0, to = a.target, delta = to - from;
-    a.running = true; a.target = null;
+    a.running = true; a.target = null; a.runTo = to;
     var invs = refpopBandInvs(rid);
     var textOf = function (v) { return "投資 " + fmtYen(bt.invest) + "　回収 " + fmtYen(Math.round(v)); };
     // 最終値で先に幅合わせ（fitBandHead は見出し要素を取る）
@@ -2886,10 +2936,10 @@
       var r = el.getBoundingClientRect();
       if (!r.width || !r.height) return; // 非表示のシーン
       var pop = document.createElement("div");
-      pop.className = "refpop" + (rec ? " rec" : "");
+      pop.className = "refpop" + (rec ? " rec" : "") + (delta < 0 ? " minus" : "");
       if (rec) pop.innerHTML = '<span class="ms-l">' + recLabel(rec) + '</span><span class="ms-b">' +
         (rec.amt === delta ? "＋" : "") + fmtYen(rec.amt) + "</span>";
-      else pop.textContent = "＋" + fmtYen(delta);
+      else pop.textContent = delta < 0 ? "−" + fmtYen(-delta) : "＋" + fmtYen(delta);
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
       setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 5400); // CSS 5s＋余裕
@@ -2910,7 +2960,7 @@
       //   「消える1秒前に開始」が8秒後にずれた（ハーネス実測）。OBSのブラウザソースでも同じ間引きが起こりうる
       if (p < 1) { setTimeout(step, 33); return; }
       a.shown = to; a.running = false;
-      if (a.target !== null && a.target > a.shown) { a.waiting = true; refpopWait(rid); } // カウント中にさらに増えた
+      if (a.target !== null && (REFIX ? a.target !== a.shown : a.target > a.shown)) { a.waiting = true; refpopWait(rid); } // カウント中にさらに増えた（REFIX＝確定し直しで減った時も）
     })();
   }
   if (DEBUG) window.__refpop = { anim: refAnim, run: refpopRun };

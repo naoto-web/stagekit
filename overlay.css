@@ -3964,3 +3964,5 @@ html.sidecmp .talk-band .race-t-side > .race-col > * { grid-column: 1 / -1; just
 html.sidecmp .talk-band .race-t-side > .race-col > .race-col-head { grid-column: 1; align-self: center; font-size: 20px; padding-top: 1px; padding-bottom: 1px; }
 html.sidecmp .talk-band .race-t-side > .race-col > .ore-row { grid-column: 2; align-self: center; }
 html.sidecmp .talk-band .race-t-side > .race-col > .race-col-head, html.sidecmp .talk-band .race-t-side > .race-col > .ore-row, html.sidecmp .talk-band .race-t-side > .race-col > .ore-row * { white-space: nowrap; }
+/* 10/1 Naoto＝確定し直しで減った差額のピコーン「−¥」＝薄い青（REFIX） */
+.refpop.minus { color: #cfe3ff; }
