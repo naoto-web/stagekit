@@ -1394,6 +1394,7 @@
      倍率は2桁以上も小数第1位まで（9/29 Naoto）・4桁以上はカンマ。.odn で上下▲▼・締切後の金色も同じ演出に乗る。
      見出しは「3連単オッズ」＋灰色（帯の描き分け側）＝枠の中の札は出さない。発売前（票0）・未取得は ""＝帯は今までどおり空 */
   var RK_GRAY = "#6b7280";
+  var RKSOLO = params.get("rksolo") !== "0"; // 9/30 本番化＝1人配信で予想なし＝1〜18番人気
   var RK2ND = params.get("rk2") !== "0"; // 9/30 本番化＝左右とも予想なしなら右は10〜18番人気
   var NXLAB = params.get("nxlab") !== "0"; // 9/30 本番化＝②NEXT枠の見出しを「名前 (NEXT)」に（&nxlab=0 で旧「予想(NEXT)」）
   /* §99追補（9/30 Naoto「3着の車番とオッズをもうちょっと近づけて」「3つのグレーの枠は離して」）既定ON・&rktight=0 で旧 */
@@ -1414,14 +1415,15 @@
     if (el.textContent === txt) return;
     if (el.classList.contains("rk-num")) el.innerHTML = rkNumHtml(txt); else el.textContent = txt;
   }
-  function rankOddsHtml(k, from) {
+  function rankOddsHtml(k, from, count) {
     from = from || 0; // 9/30 左右とも予想なし＝右は10〜18番人気（from=9）
+    count = count || 9; // 9/30 1人配信で予想なし＝1枠に1〜18番人気（count=18）
     if (!ODDS || !k) return "";
     if (!oddsData[k] && !oddsBusy(k, Date.now()) && !oddsKick) oddsKick = setTimeout(function () { oddsKick = null; pollOdds(); }, 300);
     oddsWant[k] = oddsSeq;
     var d = oddsData[k];
     if (!d || !d.o || !(d.cnt > 0)) return "";
-    var top = Object.keys(d.o).sort(function (a, b) { return d.o[a] - d.o[b] || (a < b ? -1 : 1); }).slice(from, from + 9);
+    var top = Object.keys(d.o).sort(function (a, b) { return d.o[a] - d.o[b] || (a < b ? -1 : 1); }).slice(from, from + count);
     if (!top.length) return "";
     var cells = top.map(function (c, i) {
       var raw = c.split("").join("-");
@@ -1431,7 +1433,7 @@
     });
     var cols = "";
     for (var ci = 0; ci < cells.length; ci += 3) cols += '<div class="rk-col">' + cells.slice(ci, ci + 3).join("") + "</div>";
-    return '<div class="rk-odds' + (RKTIGHT ? " rk-tight" : "") + (from ? " rk-2nd" : "") + '">' + cols + "</div>";
+    return '<div class="rk-odds' + (RKTIGHT ? " rk-tight" : "") + (from ? " rk-2nd" : "") + (count > 9 ? " rk-solo" : "") + '">' + cols + "</div>";
   }
   /** 人気順の表を帯いっぱいに（縮小も拡大も・上限1.6倍＝②の買目の拡大と同じ） */
   function fitRankOdds(band) {
@@ -3202,7 +3204,9 @@
           // 🧪§99 ②で放送のレースに何も入れていない人の側＝3連単の人気順（オッズが無ければ従来どおり空）
           // 9/30 Naoto「誰も予想していないと左右同じ」＝左の席の人もこのレースに入力なし→右は10〜18番人気（&rk2=0 で左右とも1〜9）
           var rkFrom = RK2ND && slot === "b" && seats.a && !hasContentKey(seats.a, k) ? 9 : 0;
-          var rkHtml = RKODDS && bp === "band-" && rc && k && !hasContentKey(rc, k) ? rankOddsHtml(k, rkFrom) : "";
+          // 9/30 Naoto＝1人配信（席が1つだけ）＝下の枠は1つ＝1〜18番人気をまとめて（&rksolo=0 で1〜9）
+          var rkCount = RKSOLO && !(seats.a && seats.b) ? 18 : 9;
+          var rkHtml = RKODDS && bp === "band-" && rc && k && !hasContentKey(rc, k) ? rankOddsHtml(k, rkFrom, rkCount) : "";
           band.classList.toggle("rk-on", !!rkHtml);
           // 見出しも「〇〇 予想」→「3連単オッズ」・メンバーカラー→灰色（9/29 Naoto）。投資/回収は隠す（.rk-head）。
           // 名前・色は上の見出し処理が毎回描き直す＝予想を入れ始めたら次の描画で元に戻る
