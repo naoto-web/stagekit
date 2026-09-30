@@ -398,6 +398,13 @@
       b.addEventListener("click", function () {
         var i = +b.getAttribute("data-i");
         state.activeVenue = i;
+        if (TALKADV && state.venues[i]) { // §109 覚えていたRがもう発走済みなら次の未発走Rを開く（昼に選んだまま止まっている場）
+          var vn = state.venues[i].name, cr = state.currentRace[vn];
+          var crs = cr ? venueRaces(vn).filter(function (r) { return r.no === cr; }) : [];
+          var cs = crs.length ? timeToSec(crs[0].start) : null;
+          var nx = firstUnstartedRace(vn);
+          if (nx && (cs === null || cs <= nowSec())) state.currentRace[vn] = nx.no;
+        }
         manualNav(!SPLIT); // 手動の場切替＝自動追従に手動優先を通知（FB96）。§58＝トークの操作では結果入力の入力途中を解除しない
         save();
         renderAll();
@@ -2267,6 +2274,34 @@
       renderAll();
     }
   }
+  /* 🧪§109（10/1 Naoto）トークのレースは「発走したら次のR」へ自動で送る。配信の流れ＝A1R予想→B1R予想→A1R発走→A2R予想…
+     ＝発走した瞬間にその場の話題は次のRへ移る（押し忘れで①の出走表・予想入力が終わったレースのまま残っていた）。
+     ・発走の瞬間に1回だけ（発走エッジ・ALIGN_WIN 内）：その場のトークのレースが発走したR以前なら、その場の次の未発走Rへ。全部の場が対象
+     ・エッジ方式＝コンソールが何台開いていても同じ結果（冪等）。手で発走済みのRを選び直したら、その場の次の発走までは戻さない
+     ・②（放送のレース）・結果入力の既定は変わらない。的中演出の間は①が的中レースを出す（overlay §109）
+     ✅10/1 Naoto「本番反映」＝本番も既定ON・&talkadv=0 で従来（押すまで動かない） */
+  var TALKADV = SPLIT && params.get("talkadv") !== "0";
+  var talkAdvDone = {}; // 日付|場|R → 送り済み
+  function firstUnstartedRace(name) {
+    var now = nowSec();
+    var rs = venueRaces(name).filter(function (r) { var s = timeToSec(r.start); return s !== null && s > now; });
+    return rs.length ? rs[0] : null;
+  }
+  function talkAdvTick() {
+    if (!TALKADV || !state || !timetable || !state.venues.length || state.date !== todayStr()) return;
+    var now = nowSec(), changed = false;
+    selectedRaces().forEach(function (r) {
+      if (r.startSec > now || now - r.startSec > ALIGN_WIN) return;
+      var k = todayStr() + "|" + r.venue + "|" + r.no;
+      if (talkAdvDone[k]) return;
+      talkAdvDone[k] = true;
+      var cur = state.currentRace[r.venue];
+      if (cur && cur > r.no) return; // もう先のRを開いている
+      var nx = firstUnstartedRace(r.venue);
+      if (nx && nx.no !== cur) { state.currentRace[r.venue] = nx.no; changed = true; }
+    });
+    if (changed) { save(); renderAll(); }
+  }
   function autoAlignTick() {
     if (SPLIT) return; // §58 トークのレースは人だけが選ぶ＝発走時の自動追従はしない（放送のレースは毎回計算・NEXTも自動計算）
     if (!state || !timetable || !state.venues.length) return;
@@ -2894,7 +2929,7 @@
   loadTimetable();
   setInterval(loadTimetable, window.APP_CONFIG.TT_POLL_MS || 600000);
 
-  setInterval(function () { tickStatus(); autoAlignTick(); }, 1000); // 自動追従は毎秒エッジ検知（8/9 FB96）
+  setInterval(function () { tickStatus(); autoAlignTick(); talkAdvTick(); }, 1000); // 自動追従は毎秒エッジ検知（8/9 FB96）
   if (AUTOVENUE) setInterval(autoVenueTick, 30000); // §61 本日の場の自動（分単位の判定なので30秒ごとで足りる）
   if (CON2) setInterval(function () { if (state) renderNotePick(); }, 30000); // §62 発走したRを薄くする（描き直さないと薄くならない）
 })();

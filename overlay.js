@@ -2521,6 +2521,8 @@
   var HIT54 = params.get("hit54") !== "0";
   if (HIT54) document.documentElement.classList.add("hit54"); // CSS側の切替（俺たち目の控えめな光）
   var SLHIT = HIT54 && params.get("slhit") !== "0", RCHIT = HIT54 && params.get("rchit") !== "0";
+  // §109（10/1 Naoto）的中演出の間は①の予想枠も的中レースに（出走表と同じ時間）。✅10/1 本番既定ON・&tkhit=0 で従来
+  var TKHIT = SLHIT && params.get("tkhit") !== "0";
   var rcHitAt = {};   // 場|R|配信者 → 的中ハンコを押す時刻（新しい的中だけ＝バッジが出る時刻）
   var rcHitUntil = {}; // 場|R|配信者 → ハンコの金の光が消える時刻（バッジと一緒）
   var slHit = null;   // {key, cars:{車番:1}, from, until}＝from/until は買目チップの光と同じ（§54 9/28）
@@ -2552,7 +2554,7 @@
         sl = slHit = { key: key, cars: byKey[key], from: Infinity, until: until };
         var kp = key.split("|");
         ensureNarabi(kp[0], +kp[1], key); // 得点・期・年齢を前奏の間に先読み（直前まで出していたレースなら取得済み＝何もしない）
-        setTimeout(renderStartList, Math.max(0, until - Date.now()) + 50);
+        setTimeout(function () { renderStartList(); if (TKHIT) renderPreds(); }, Math.max(0, until - Date.now()) + 50); // §109 予想枠も元のレースへ戻す
       }
     }
     setTimeout(function () { beginHitEmphasis(hks, glows || [], sl, 0); }, Math.max(0, at - Date.now()));
@@ -3024,8 +3026,12 @@
         /* §59 各場の今のトークのレース（場・レースのR）に、その人の買目・俺たち目・投資・note予想のどれかがあれば出す。
            4場以上に入力があれば締切が近い3場（発走前を発走の早い順→発走済みは新しい順）。画面の並びは従来どおり開催の早い順 */
         var now = nowSec(), cand = [];
+        // 🧪§109（10/1 Naoto）的中演出の間（①の出走表が的中レースへ一時切替している間）は、その場の予想枠も的中レースに
+        //（トークのレースはもう次のRへ進んでいる）。その人に的中レースの入力が無ければ今のレースのまま
+        var slh = TKHIT && SCENE === "talk" ? slHitNow() : null, slp = slh ? slh.key.split("|") : null;
         state.venues.forEach(function (v) {
           var r = state.currentRace[v.name];
+          if (slp && slp[0] === v.name && hasContentKey(rc, slh.key)) r = +slp[1];
           if (!r) return;
           var k = window.Derive.raceKey(v.name, r);
           if (hasContentKey(rc, k)) cand.push({ name: v.name, k: k, sec: raceStartSecOf(k) });
