@@ -1394,6 +1394,9 @@
      倍率は2桁以上も小数第1位まで（9/29 Naoto）・4桁以上はカンマ。.odn で上下▲▼・締切後の金色も同じ演出に乗る。
      見出しは「3連単オッズ」＋灰色（帯の描き分け側）＝枠の中の札は出さない。発売前（票0）・未取得は ""＝帯は今までどおり空 */
   var RK_GRAY = "#6b7280";
+  /* 9/30 Naoto「3場予想の右上の文字めっちゃ小さい」＝①3場の右の上下の区画だけ縦を詰める（枠の大きさはそのまま）。&sidecmp=0 で旧 */
+  var SIDECMP = params.get("sidecmp") !== "0";
+  if (SIDECMP) document.documentElement.classList.add("sidecmp");
   var RKSOLO = params.get("rksolo") !== "0"; // 9/30 本番化＝1人配信で予想なし＝1〜18番人気
   var RK2ND = params.get("rk2") !== "0"; // 9/30 本番化＝左右とも予想なしなら右は10〜18番人気
   var NXLAB = params.get("nxlab") !== "0"; // 9/30 本番化＝②NEXT枠の見出しを「名前 (NEXT)」に（&nxlab=0 で旧「予想(NEXT)」）
@@ -2364,6 +2367,20 @@
       else {
         flat.forEach(function (el, j) { el.classList.remove("stack"); el.style.transform = saved[j]; });
         needW = wOld; needH = hOld;
+      }
+    }
+    /* 9/30 Naoto「右上の買目の右が空いている」（SIDECMP・①3場の右の区画だけ）＝逆向きも試す：等倍の幅で下の段へ回した行
+       （fitPredLines の .stack）を右に並べ直した方が区画全体を大きくできるなら並べ直す（区画ごと縮める＝縮めた後なら右に入る） */
+    var stacked = SIDECMP && col.parentElement && col.parentElement.classList.contains("race-t-side") && col.closest(".talk-band")
+      ? col.querySelectorAll(".pred-line.pl-2row.stack") : [];
+    if (stacked.length) {
+      var saved2 = [];
+      stacked.forEach(function (el) { saved2.push(el.style.transform); el.style.transform = ""; el.classList.remove("stack"); });
+      var wOld2 = needW, hOld2 = needH, kFlat = measureK();
+      if (kFlat > k * 1.02) { k = kFlat; }
+      else {
+        stacked.forEach(function (el, j) { el.classList.add("stack"); el.style.transform = saved2[j]; });
+        needW = wOld2; needH = hOld2; measureK();
       }
     }
     // オッズ更新のたびの伸び縮みを止める（keepScale）＝区画の場所（帯・何番目）が同じで、行の数・段組が同じなら6%未満の拡大は据え置き

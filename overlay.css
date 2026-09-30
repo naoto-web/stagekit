@@ -3957,3 +3957,10 @@ body.tmrw-on #narabi-talk, body.tmrw-on #note-races-talk { display: none !import
 .sub-head .sub-sfx.nx2 { font-size: .8em; }
 /* 9/30 Naoto＝左右とも予想なしのとき右は10〜18番人気（&rk2=0 で止める）。右の表は1列目も灰色の番号（金は1〜3位だけ） */
 .rk-odds.rk-2nd .rk-col:first-child .rk-n { color: #6b7280; }
+/* 9/30 Naoto（SIDECMP・&sidecmp=0 で旧）＝①3場の右の上下の区画だけ縦を詰める（高さで頭打ち・横は余っていた）：
+   行の間6→2px・札20px・札と俺たち目を同じ行に（札の右が空いていた）。合成と合計・投資は2段のまま（1行にすると区画の横幅より長くなり逆に縮んだ） */
+html.sidecmp .talk-band .race-t-side > .race-col { display: grid; grid-template-columns: auto 1fr; align-content: start; column-gap: 8px; row-gap: 2px; }
+html.sidecmp .talk-band .race-t-side > .race-col > * { grid-column: 1 / -1; justify-self: start; }
+html.sidecmp .talk-band .race-t-side > .race-col > .race-col-head { grid-column: 1; align-self: center; font-size: 20px; padding-top: 1px; padding-bottom: 1px; }
+html.sidecmp .talk-band .race-t-side > .race-col > .ore-row { grid-column: 2; align-self: center; }
+html.sidecmp .talk-band .race-t-side > .race-col > .race-col-head, html.sidecmp .talk-band .race-t-side > .race-col > .ore-row, html.sidecmp .talk-band .race-t-side > .race-col > .ore-row * { white-space: nowrap; }
