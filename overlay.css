@@ -3953,3 +3953,5 @@ body.tmrw-on #narabi-talk, body.tmrw-on #note-races-talk { display: none !import
 .race-band .buy-line .rk-odds.rk-tight .rk-cell { display: contents; }
 .race-band .buy-line .rk-odds.rk-tight .rk-cell .pl-odds { min-width: 0; margin-left: 4px; }
 .race-band .buy-line .rk-odds.rk-tight { gap: 40px; }
+/* 9/30 Naoto＝②NEXT枠の見出しは「名前 (NEXT)」＝(NEXT)を名前の0.8倍（旧「予想(NEXT)」は0.62）。&nxlab=0 で旧 */
+.sub-head .sub-sfx.nx2 { font-size: .8em; }

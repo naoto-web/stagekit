@@ -1394,6 +1394,7 @@
      倍率は2桁以上も小数第1位まで（9/29 Naoto）・4桁以上はカンマ。.odn で上下▲▼・締切後の金色も同じ演出に乗る。
      見出しは「3連単オッズ」＋灰色（帯の描き分け側）＝枠の中の札は出さない。発売前（票0）・未取得は ""＝帯は今までどおり空 */
   var RK_GRAY = "#6b7280";
+  var NXLAB = params.get("nxlab") !== "0"; // 9/30 本番化＝②NEXT枠の見出しを「名前 (NEXT)」に（&nxlab=0 で旧「予想(NEXT)」）
   /* §99追補（9/30 Naoto「3着の車番とオッズをもうちょっと近づけて」「3つのグレーの枠は離して」）既定ON・&rktight=0 で旧 */
   var RKTIGHT = params.get("rktight") !== "0";
   function rkFmt(v) {
@@ -3242,7 +3243,8 @@
           // 名前が9文字分に引きずられて頭打ちになるため（8/13 FB「文字が小さい」）
           // 括弧は半角＝全角（）は1文字ぶんの幅を取るため、半角にするだけで全体が約1割詰まり、
           // 自動フィットのぶん名前が大きくなる（8/13 FB）
-          sName.innerHTML = name ? esc(name) + '<span class="sub-sfx">予想(NEXT)</span>' : "";
+          // 9/30 Naoto「予想（NEXT）が小さい」＝「予想」を消して(NEXT)だけ・名前の0.8倍（旧0.62）。&nxlab=0 で旧「予想(NEXT)」
+          sName.innerHTML = name ? esc(name) + (NXLAB ? '<span class="sub-sfx nx2">(NEXT)</span>' : '<span class="sub-sfx">予想(NEXT)</span>') : "";
           // 幅にぴったり収まるフォントサイズを自動計算（8/6 FB34：縮小だけでなく拡大もして枠パンパンに・改行なし）
           sName.style.transform = "";
           sName.style.fontSize = "";
