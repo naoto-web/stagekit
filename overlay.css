@@ -3971,3 +3971,23 @@ html.sidecmp .talk-band .race-t-side > .race-col > .race-col-head, html.sidecmp 
 .refpop.minus { color: #cfe3ff; }
 /* 10/1 Naoto＝②で2人とも予想なしのときは右のパネルを隠す＝左のパネルが横いっぱい（1人配信で予想なしと同じ見た目・1〜18番人気）。&rkmerge=0 で旧 */
 body.rk-merge #scene-race .panel.slot-b { display: none; }
+/* §110（10/1 Naoto・&tkrk=0 で出さない）①の予想枠に3連単人気順＝②（.race-band）と同じ見た目を①（.talk-band）にも */
+.talk-band .buy-line.tk-rk { display: flex !important; flex-direction: column; align-items: stretch; padding: 8px 10px; overflow: hidden; }
+.talk-band .buy-line.tk-rk .rk-box { flex: 1 1 0; min-height: 0; width: 100%; align-self: stretch; display: flex; align-items: center; justify-content: center; }
+.talk-band .buy-line.tk-rk .tk-rk-lab { align-self: flex-start; }
+.talk-band .buy-line .tk-rk-sub { color: #6b7280; font-size: .8em; }
+.talk-band .buy-line .rk-chips { display: inline-flex; align-items: center; gap: 2px; }
+.talk-band .buy-line .rk-chips .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
+.talk-band .buy-line .rk-cell .pl-odds { margin-left: 5px; font-size: 26px; min-width: 2.75em; text-align: right; font-weight: 600; }
+.talk-band .buy-line .rk-odds.rk-tight .rk-col { display: grid; grid-template-columns: auto auto auto; column-gap: 5px; row-gap: 3px; align-content: space-around; align-items: center; }
+.talk-band .buy-line .rk-odds.rk-tight .rk-cell { display: contents; }
+.talk-band .buy-line .rk-odds.rk-tight .rk-cell .pl-odds { min-width: 0; margin-left: 4px; }
+.talk-band .buy-line .rk-odds.rk-tight { gap: 40px; }
+/* §110 ①の区画を左右に割ったときのオッズ側（買目の区画 .race-col と同じ幅・仕切り線） */
+.talk-band .buy-line .tk-rk-col { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: stretch; padding: 0 10px; overflow: hidden; }
+.talk-band .buy-line .race-split > * + .tk-rk-col { border-left: 2px solid var(--panel-line); }
+.talk-band .buy-line .tk-rk-col .tk-rk-lab { align-self: flex-start; }
+.talk-band .buy-line .tk-rk-col .rk-box { flex: 1 1 0; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+.talk-band .buy-line.tk-rk > .race-split { flex: 1 1 0; min-height: 0; }
+/* §110 全面（1〜18）の札は大きく（10/1 Naoto）＝隣の人の1場の札（26px×枠の拡大≒40px）とそろえる */
+.talk-band .buy-line.tk-rk > .tk-rk-lab { font-size: 38px; padding: 4px 18px; }
