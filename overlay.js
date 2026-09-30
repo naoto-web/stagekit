@@ -1418,6 +1418,7 @@
   if (SIDECMP) document.documentElement.classList.add("sidecmp");
   var RKSOLO = params.get("rksolo") !== "0"; // 9/30 本番化＝1人配信で予想なし＝1〜18番人気
   var RK2ND = params.get("rk2") !== "0";
+  var NXSKIP = params.get("nxskip") !== "0"; // 10/1 本番化＝NEXTの第一候補がnoteで買目なしなら、後ろの買目入りレースを先に
   var RKMERGE = params.get("rkmerge") !== "0"; // 10/1 本番化＝②で2人とも予想なし＝右のパネルを隠して左を横いっぱい・1〜18番人気（1人配信と同じ見た目） // 9/30 本番化＝左右とも予想なしなら右は10〜18番人気
   var NXLAB = params.get("nxlab") !== "0"; // 9/30 本番化＝②NEXT枠の見出しを「名前 (NEXT)」に（&nxlab=0 で旧「予想(NEXT)」）
   /* §99追補（9/30 Naoto「3着の車番とオッズをもうちょっと近づけて」「3つのグレーの枠は離して」）既定ON・&rktight=0 で旧 */
@@ -3100,6 +3101,30 @@
     }
     var nextKeyOf = function (rc) {
       if (!rc) return null;
+      /* 10/1 Naoto「3場予想の3場目が②に出ない」＝NEXTの第一候補が note予想で**買目が無い**レース
+         （投資額だけ・「切り目あります」等のメモだけ・切り目の行だけ＝points 0）で、その後ろに買目を入れた通常のレースがあれば、そちらをNEXTに（&nxskip=0 で旧）
+         （noteはバナーで分かる。Naoto「noteでも買目が入っていたらそのレースが優先」＝noteで買目ありは飛ばさない）。
+         候補の順は従来と同じ（放送の次に発走する別場のレース→ほかの場の今のレースを発走の早い順）。無ければ従来どおり */
+      if (NXSKIP) {
+        var cands = [];
+        if (splitAutoNext && hasContentKey(rc, splitAutoNext)) cands.push(splitAutoNext);
+        var others = [];
+        state.venues.forEach(function (v) {
+          var vn = v.name, r = state.currentRace[vn];
+          if (vn === mainName || !r) return;
+          var k = window.Derive.raceKey(vn, r);
+          if (k === splitAutoNext || !hasContentKey(rc, k)) return;
+          var sec = raceStartSecOf(k);
+          if (sec !== null && sec <= nowSec()) return;
+          others.push({ k: k, sec: sec === null ? Infinity : sec });
+        });
+        others.sort(function (a, b) { return a.sec - b.sec; });
+        others.forEach(function (o) { cands.push(o.k); });
+        var entryOf = function (k) { var p = window.Derive.resolvePred(state, k, rc.id); return { note: !!(p && p.entry && p.entry.isNote), buys: !!(p && p.points > 0) }; };
+        if (cands.length && entryOf(cands[0]).note && !entryOf(cands[0]).buys) {
+          for (var ci = 1; ci < cands.length; ci++) { var e = entryOf(cands[ci]); if (!e.note && e.buys) return cands[ci]; }
+        }
+      }
       if (splitAutoNext && hasContentKey(rc, splitAutoNext)) return splitAutoNext;
       var best = null, bestSec = Infinity;
       state.venues.forEach(function (v) {
