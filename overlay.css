@@ -3955,3 +3955,5 @@ body.tmrw-on #narabi-talk, body.tmrw-on #note-races-talk { display: none !import
 .race-band .buy-line .rk-odds.rk-tight { gap: 40px; }
 /* 9/30 Naoto＝②NEXT枠の見出しは「名前 (NEXT)」＝(NEXT)を名前の0.8倍（旧「予想(NEXT)」は0.62）。&nxlab=0 で旧 */
 .sub-head .sub-sfx.nx2 { font-size: .8em; }
+/* 9/30 Naoto＝左右とも予想なしのとき右は10〜18番人気（&rk2=0 で止める）。右の表は1列目も灰色の番号（金は1〜3位だけ） */
+.rk-odds.rk-2nd .rk-col:first-child .rk-n { color: #6b7280; }
