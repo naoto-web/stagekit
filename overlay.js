@@ -1440,6 +1440,7 @@
   var RKTIGHT = params.get("rktight") !== "0";
   var NBBOX = params.get("nbbox") !== "0", NBW = +params.get("nbw") || 6; // ②並びの窓の場名Rを太枠で（10/1 Naoto「見つけづらい」・線は札の外側6px）。&nbbox=0 で旧
   if (NBBOX) { document.documentElement.classList.add("nbbox"); document.documentElement.style.setProperty("--nbw", NBW + "px"); }
+  var TKNOYOSO = params.get("tknoyoso") !== "0"; // ①枠全体がオッズのとき見出しは「名前」だけ（10/1）。&tknoyoso=0 で「名前 予想」
   var TKRK = params.get("tkrk") !== "0"; // §110（10/1 Naoto「本番反映」）①2人配信の人気順オッズ（tkOddsPlan）。&tkrk=0 で出さない
   function rkFmt(v) {
     var s = (Math.round(v * 10) / 10).toFixed(1).split(".");
@@ -3315,6 +3316,8 @@
             if (c1 && c2) tkRk = '<div class="race-split tk-rk-split"><div class="tk-rk-col">' + c1 + '</div><div class="tk-rk-col">' + c2 + "</div></div>";
           }
           if (tkRk) {
+            // 枠全体がオッズ＝見出しの「予想」を外す（10/1 Naoto「ピーターの買目かと思った」と視聴者から）。投資・回収は残す
+            if (TKNOYOSO && bandName && name) { bandName.innerHTML = esc(name); fitBandHead(bandHead); }
             band.innerHTML = tkRk;
             band.classList.add("rk-on", "tk-rk");
             band.classList.remove("note-fire", "rc-closed", "rc-fx");
