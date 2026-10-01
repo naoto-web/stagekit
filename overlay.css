@@ -3970,7 +3970,7 @@ html.sidecmp .talk-band .race-t-side > .race-col > .race-col-head, html.sidecmp 
 /* 10/1 Naoto＝確定し直しで減った差額のピコーン「−¥」＝薄い青（REFIX） */
 .refpop.minus { color: #cfe3ff; }
 /* 10/1 Naoto＝②で2人とも予想なしのときは右のパネルを隠す＝左のパネルが横いっぱい（1人配信で予想なしと同じ見た目・1〜18番人気）。&rkmerge=0 で旧 */
-body.rk-merge #scene-race .panel.slot-b { display: none; }
+body.rk-merge #scene-race .race-band > .panel.slot-b { display: none; } /* 🐞10/1 16:07 下の予想帯のパネルだけ＝旧 .panel.slot-b は右のNEXT枠（.sub-panel.slot-b）まで消していた */
 /* §110（10/1 Naoto・&tkrk=0 で出さない）①の予想枠に3連単人気順＝②（.race-band）と同じ見た目を①（.talk-band）にも */
 .talk-band .buy-line.tk-rk { display: flex !important; flex-direction: column; align-items: stretch; padding: 8px 10px; overflow: hidden; }
 .talk-band .buy-line.tk-rk .rk-box { flex: 1 1 0; min-height: 0; width: 100%; align-self: stretch; display: flex; align-items: center; justify-content: center; }
