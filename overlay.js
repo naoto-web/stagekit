@@ -1478,6 +1478,21 @@
   var RKMINE = params.get("rkmine") !== "0" ? "b" : "";
   if (RKMINE) document.documentElement.classList.add("rkmine-" + RKMINE);
   var RKMINE_CYCLE = 2400; // 2色の交互の1周（ms）＝CSS rkMineAlt と同じ
+  /* 🧪（10/2 Naoto「レース展開シーンのワイプでもNEXTの枠出せる？」）③の右レールを②と同じ形（.race-sub-wrap＝NEXTパネル182px＋カメラ）に組み替える。
+     ✅10/2 本番既定ON（&tknext=0 で旧）。③のワイプは②と同寸・同位置（OBSのカメラ x1368・544×404）＝NEXTが出る席はカメラの左182pxがパネルの下に隠れるだけ（②と同じ）。
+     中身は②のNEXT枠と同じ（描画は sband-/ksband- を同じループで描く） */
+  var TKNEXT = params.get("tknext") !== "0"; // ✅10/2 本番既定ON（&tknext=0 で旧＝③にNEXT枠なし）。NEXTの中身＝③の盤面のレース基準（Naoto B案・nxCtxT）
+  if (TKNEXT) (function () {
+    var rail = document.querySelector("#scene-tenkai .race-rail"), wipes = rail && rail.querySelector(".race-wipes");
+    if (!wipes) return;
+    var wrap = document.createElement("div"); wrap.className = "race-sub-wrap";
+    var sub = document.createElement("div"); sub.className = "race-sub";
+    sub.innerHTML = ["a", "b"].map(function (s) {
+      return '<div class="panel sub-panel slot-' + s + '"><div class="panel-head sub-head" id="ksband-head-' + s + '"><span id="ksband-name-' + s + '"></span></div>' +
+        '<div class="buy-line sub-line" id="ksband-pred-' + s + '"></div></div>';
+    }).join("");
+    rail.insertBefore(wrap, wipes); wrap.appendChild(sub); wrap.appendChild(wipes);
+  })();
   function rkMineMap(k) {
     var out = {}, seats = seatMap();
     ["a", "b"].forEach(function (s) {
@@ -3240,8 +3255,20 @@
         bRace ? bRace.venue : null, bRace ? bRace.startSec : null, nowSec());
       splitAutoNext = nx ? window.Derive.raceKey(nx.venue, nx.no) : null;
     }
-    var nextKeyOf = function (rc) {
+    /* 🧪10/2 Naoto（③のNEXT枠＝B案）NEXTの基準レースを差し替えられるように＝ctx {name: 基準の場, auto: 基準の次に発走する別場のレース}。
+       ②＝放送のレース（従来どおり）／③＝③の盤面のレース（トークのレース key） */
+    var nxCtxB = { name: mainName, auto: splitAutoNext };
+    var nxCtxT = nxCtxB;
+    if (TKNEXT && SPLIT && key) {
+      var tkVn = key.split("|")[0], vnamesT = {};
+      state.venues.forEach(function (v) { vnamesT[v.name] = 1; });
+      var nxT = window.Derive.nextSubRace(allRaces().filter(function (r) { return vnamesT[r.venue]; }), tkVn, raceStartSecOf(key), nowSec());
+      nxCtxT = { name: tkVn, auto: nxT ? window.Derive.raceKey(nxT.venue, nxT.no) : null };
+    }
+    var nextKeyOf = function (rc, ctx) {
       if (!rc) return null;
+      ctx = ctx || nxCtxB;
+      var splitAutoNext = ctx.auto, mainName = ctx.name; // 以下は従来の式のまま（名前だけ基準に差し替え）
       /* 10/1 Naoto「3場予想の3場目が②に出ない」＝NEXTの第一候補が note予想で**買目が無い**レース
          （投資額だけ・「切り目あります」等のメモだけ・切り目の行だけ＝points 0）で、その後ろに買目を入れた通常のレースがあれば、そちらをNEXTに（&nxskip=0 で旧）
          （noteはバナーで分かる。Naoto「noteでも買目が入っていたらそのレースが優先」＝noteで買目ありは飛ばさない）。
@@ -3280,9 +3307,9 @@
       });
       return best || splitAutoNext;
     };
-    var subFrameOf = function (rc) {
+    var subFrameOf = function (rc, ctx) {
       if (!rc) return false;
-      if (SPLIT) { var nk = nextKeyOf(rc); return !!nk && (SUB_FIXED || !SUBAUTO || hasContentKey(rc, nk)); }
+      if (SPLIT) { var nk = nextKeyOf(rc, ctx); return !!nk && (SUB_FIXED || !SUBAUTO || hasContentKey(rc, nk)); }
       if (SUB_FIXED) return true;
       var svn0 = effSubOf(rc);
       if (svn0) return SUBAUTO ? subHasContent(rc, svn0) : true;
@@ -3523,17 +3550,19 @@
       });
 
       // ②サブ予想帯（8/6 FB13・FB17）：配信者ごとの場＝raceSubBy。サブ未選択の配信者の枠は畳む
-      var sHead = $("sband-head-" + slot);
+      // 🧪10/2 Naoto「③レース展開のワイプにもNEXT枠」＝③にも同じ枠（ksband-）を作って描く（中身は③の盤面のレース基準）
+      [["sband-", "#scene-race", nxCtxB], ["ksband-", "#scene-tenkai", nxCtxT]].forEach(function (sp) {
+      var sHead = $(sp[0] + "head-" + slot);
       if (sHead) {
         var svn = effSubOf(rc); // SUBFB＝サブの場が空なら入力のある別の場（無ければ従来どおり subVenueOf）
         var sPanel = sHead.parentElement;
         // 席ごとに枠を出し入れ（9/7・§10項98）：ON＝パネル表示＋カメラ穴362（.sub-on）／OFF＝パネル非表示＋カメラ穴544。
         // 丸かぶり・SUB_FIXEDでは svn が null でも枠は出る（ヘッダーだけ残る）
-        var sFrame = subFrameOf(rc);
+        var sFrame = subFrameOf(rc, sp[2]);
         if (sPanel) sPanel.classList.toggle("sub-on", sFrame);
-        var sCam = document.querySelector(".race-sub-wrap .race-wipes .cam.slot-" + slot);
+        var sCam = document.querySelector(sp[1] + " .race-sub-wrap .race-wipes .cam.slot-" + slot);
         if (sCam) sCam.classList.toggle("sub-on", sFrame);
-        var sName = $("sband-name-" + slot);
+        var sName = $(sp[0] + "name-" + slot);
         if (sName) {
           // 「予想（NEXT）」は添え字（.sub-sfx＝0.62em）に分離＝同サイズで並べると
           // 名前が9文字分に引きずられて頭打ちになるため（8/13 FB「文字が小さい」）
@@ -3557,9 +3586,9 @@
           sHead.classList.add("txt-edge");
           if (sPanel) sPanel.style.borderColor = color;
         }
-        var sBand = $("sband-pred-" + slot);
+        var sBand = $(sp[0] + "pred-" + slot);
         if (sBand) {
-          var sKey = SPLIT ? nextKeyOf(rc) // §58 NEXT枠はレース単位の自動
+          var sKey = SPLIT ? nextKeyOf(rc, sp[2]) // §58 NEXT枠はレース単位の自動（③は盤面のレース基準＝nxCtxT）
             : svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
           // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
           sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true, true) : ""; // NEXT枠はオッズなし
@@ -3574,6 +3603,7 @@
           fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
         }
       }
+      });
     });
     if (byeOn()) { // §90 モック：場が0場＝予想枠にまとめ／お礼
       ["a", "b"].forEach(function (slot) {
