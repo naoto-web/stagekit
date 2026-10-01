@@ -4000,3 +4000,6 @@ html.nbbox body.v2.rb2 .rb-line .nb-race { box-shadow: 0 0 0 var(--nbw, 6px) #16
    人気順の箱（.rk-col）の地と枠線を半透明に＝白の上では従来の #eef0f3／#d5d9df と同じ色、締切のグレー（::before のシャッター）が後ろを下りると箱の中も一緒に閉まる。
    🔴締切で箱の色を直接変える＋transition は不可＝描き直しのたびに白→グレーのフェードがやり直しになり、数秒ごとに白くチカついた */
 html.tkrkbox-a .talk-band .rk-col { background: rgba(30, 50, 80, .07); border-color: rgba(30, 50, 80, .18); }
+/* 🧪（10/1 Naoto）人気順の番号の金色は1〜3だけ（&rktop3=1）＝旧「最初の列」は①の全面で1〜6・半分で1〜9が金だった */
+html.rktop3 .rk-col:first-child .rk-n { color: #6b7280; }
+html.rktop3 .rk-col .rk-n.rk-top { color: #b8860b; } /* .rk-col を挟む＝上の行（:first-child 付き）より強くする */

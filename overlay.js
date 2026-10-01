@@ -1473,7 +1473,7 @@
     var cells = top.map(function (c, i) {
       var raw = c.split("").join("-");
       // 区切りの「−」は省く（俺たち目と同じ）＝その分車番を大きく
-      return '<div class="rk-cell"><span class="rk-n">' + (from + i + 1) + '</span><span class="rk-chips chips">' + lineChips(raw, false, null, true) + "</span>" +
+      return '<div class="rk-cell"><span class="rk-n' + (from + i < 3 ? " rk-top" : "") + '">' + (from + i + 1) + '</span><span class="rk-chips chips">' + lineChips(raw, false, null, true) + "</span>" +
         '<span class="pl-odds rk-v' + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '"><span class="odn rk-num" data-ok="' + esc(k + "|rk|" + c) + '">' + rkNumHtml(rkFmt(d.o[c])) + "</span></span></div>";
     });
     var cols = "";
@@ -1528,6 +1528,9 @@
   /* （10/1 Naoto）①の人気順の札の文言「3連単オッズ」→「3連単オッズ人気順」。✅10/1 B案（=2）を本番既定＝全面1〜18だけ長く・
      半分/左右の1〜9は「3連単人気順」（今と同じ文字数。長いと右上の締切ハンコと重なった）。&tksub=1 全部長く｜0 旧「3連単オッズ」 */
   var TKSUB = params.get("tksub") || "2";
+  /* 🧪（10/1 Naoto「金色は1〜3だけ・レース映像の方はそうなってる」）人気順の番号の金色＝旧「最初の列」（①の全面1〜6・半分1〜9が金）→番号1〜3だけ。
+     ✅10/1 本番既定ON（&rktop3=0 で旧）＝html.rktop3・.rk-n.rk-top */
+  if (params.get("rktop3") !== "0") document.documentElement.classList.add("rktop3");
   var RKSUB = params.get("rksub") || "2"; // ✅10/1 ②の空いた帯の見出し＝B案（=2）を本番既定＝1つの表（1〜18）は「3連単オッズ人気順」・半分は「3連単人気順」（&rksub=1 全部長く｜0 旧「3連単オッズ」）
   function tkSubText(count) {
     if (TKSUB === "1" || (TKSUB === "2" && count > 9)) return "3連単オッズ人気順";
