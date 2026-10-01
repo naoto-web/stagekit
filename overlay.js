@@ -1525,6 +1525,14 @@
   /* 🧪（10/1 Naoto「オッズの周りの枠の中までグレーアウト」）締切で区画はグレーになるが、人気順の箱（.rk-col #eef0f3）の中が白いまま残る。
      ✅10/1 本番既定ON（&tkrkbox=0 で旧）＝箱の地と枠線を半透明にして、締切のシャッターが箱の中も一緒に下りる。CSS＝overlay.css 末尾 */
   var TKRKBOX = params.get("tkrkbox") !== "0";
+  /* （10/1 Naoto）①の人気順の札の文言「3連単オッズ」→「3連単オッズ人気順」。✅10/1 B案（=2）を本番既定＝全面1〜18だけ長く・
+     半分/左右の1〜9は「3連単人気順」（今と同じ文字数。長いと右上の締切ハンコと重なった）。&tksub=1 全部長く｜0 旧「3連単オッズ」 */
+  var TKSUB = params.get("tksub") || "2";
+  function tkSubText(count) {
+    if (TKSUB === "1" || (TKSUB === "2" && count > 9)) return "3連単オッズ人気順";
+    if (TKSUB === "2") return "3連単人気順";
+    return "3連単オッズ";
+  }
   if (TKRKBOX) document.documentElement.classList.add("tkrkbox-a");
   function tkMarkClose(band, spec, slot) {
     if (!TKRKCLOSE || !RCCLOSE || !spec) return;
@@ -3322,7 +3330,7 @@
           var tkSpec = TKRK && rc && TALKAUTO && seats.a && seats.b ? tkOddsPlan(key, talkKeysOf(seats.a), talkKeysOf(seats.b))[slot] : null;
           var tkOddsCol = function (k, from, count, perCol) { // オッズの区画＝札（場R 3連単オッズ）＋表
             var h = rankOddsHtml(k, from, count, perCol);
-            return h ? '<div class="race-col-head tk-rk-lab">' + esc(keyLabel(k)) + gradeBadge(k.split("|")[0]) + ' <span class="tk-rk-sub">3連単オッズ</span></div><div class="rk-box">' + h + "</div>" : "";
+            return h ? '<div class="race-col-head tk-rk-lab">' + esc(keyLabel(k)) + gradeBadge(k.split("|")[0]) + ' <span class="tk-rk-sub">' + tkSubText(count) + '</span></div><div class="rk-box">' + h + "</div>" : "";
           };
           var tkHalf = ""; // 1場の人の右半分に出すオッズ（下の通常描画で左に買目を置く）
           if (tkSpec && tkSpec.t === "half") tkHalf = tkOddsCol(tkSpec.k, 0, 9, 9);
