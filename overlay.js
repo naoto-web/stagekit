@@ -873,7 +873,8 @@
   var TMLIGHT = params.get("tmlight") !== "0"; // 夜の部の見出しを薄い紺＝濃い字（9/30 Naoto）。&tmlight=0 で紺地
   var TMFIT = params.get("tmfit") !== "0"; // 場が多い日は行の余白を詰めて枠に収める（10/1）
   var TMBYE = params.get("tmbye") !== "0"; // 明日の出走表の一番下に「明日も絶対見てくれよな✋」（10/1 Naoto・A案＝紺字）。&tmbye=0 で出さない
-  var tmrwTT = null, tmrwBusy = false, tmrwDay = null, tmrwSig = "";
+  var tmrwTT = null, tmrwBusy = false, tmrwDay = null, tmrwSig = "", tmrwAt = 0;
+  var TMPEND = params.get("tmpend") !== "0"; // 🆕10/1 出走表がまだ出ていない場（明日のミッドナイト）も「時刻未発表」で並べる。&tmpend=0 で出さない
   var tmrwSh = {}, tmrwShBusy = {}, tmrwShAt = {}, TMRW_SHIFT_MS = 600000;
   /** 「えーす,ムネオ(モNG)」→[{name,note}]。括弧＝半休の書き方（シフト表の「半（モNG）」「メモの〇〇ミッドのみ」と同じ） */
   function tmrwParse(s) {
@@ -987,9 +988,11 @@
     if (!list) return;
     var off = tmrwOffset();
     if (off === 0) { if (tmrwDay !== -1) { tmrwTT = timetable; tmrwDay = 0; } } // 0時を過ぎた＝今日の時刻表が「配信を始めた日の翌日」（-1＝検証で書き換え中）
-    else if (!tmrwTT || (tmrwDay !== 1 && tmrwDay !== -1)) {
-      if (!tmrwBusy) { tmrwBusy = true; window.Sync.fetchTimetable(1).then(function (t) { tmrwTT = t; tmrwDay = 1; tmrwBusy = false; applyTomorrow(); }).catch(function () { tmrwBusy = false; }); }
-      return;
+    else if (!tmrwTT || (tmrwDay !== 1 && tmrwDay !== -1) ||
+      (tmrwDay === 1 && (tmrwTT.pending || []).some(function (v) { return !v.first; }) && Date.now() - tmrwAt > 10 * 60 * 1000)) { // 🆕10/1 時刻未発表の場がある間は10分ごとに取り直す（GASも20分キャッシュ）
+      if (tmrwTT && tmrwDay === 1) tmrwAt = Date.now(); // 取り直し中も今の表は出したまま（下で描く）＝連打しない
+      if (!tmrwBusy) { tmrwBusy = true; window.Sync.fetchTimetable(1).then(function (t) { tmrwTT = t; tmrwDay = 1; tmrwAt = Date.now(); tmrwBusy = false; applyTomorrow(); }).catch(function () { tmrwBusy = false; }); }
+      if (!(tmrwTT && tmrwDay === 1)) return;
     }
     var d = String(tmrwTT.date || "");
     var dt = d.length === 8 ? new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8)) : null;
@@ -1008,7 +1011,16 @@
       gm = gm.replace(/\s/g, "").replace("G1", "GⅠ").replace("G2", "GⅡ").replace("G3", "GⅢ");
       return { name: v.name, k: k, grade: gm, first: rs.length ? rs[0].start : "", last: rs.length ? rs[rs.length - 1].start : "",
         nichiji: String(v.nichiji || "") }; // 開催何日目（GAS §100）
-    }).sort(function (a, b) { return a.first < b.first ? -1 : 1; });
+    });
+    /* 🆕10/1（Naoto「明日の出走表にミッドナイトが出てない」）出走表がまだ出ていない場（GAS pending＝明日のミッドナイト）も並べる。
+       時刻はオッズパークで取れた場だけ・取れなければ「時刻未発表」。&tmpend=0 で出さない */
+    if (TMPEND) (tmrwTT.pending || []).forEach(function (v) {
+      if (rows.some(function (r) { return r.name === v.name; })) return;
+      var g = String(v.grade || ""), gm = (/G\s*([1-3])/.exec(g) || [])[0] || (/F\s*[12]/.exec(g) || [])[0] || "";
+      gm = gm.replace(/\s/g, "").replace("G1", "GⅠ").replace("G2", "GⅡ").replace("G3", "GⅢ");
+      rows.push({ name: v.name, k: tmrwKubun(g), grade: gm, first: v.first || "", last: v.last || "", nichiji: String(v.nichiji || "") });
+    });
+    rows.sort(function (a, b) { return (a.first || "99:99") < (b.first || "99:99") ? -1 : 1; }); // 時刻未発表はその部の最後
     var block = function (label, cls, names, vs, part) {
       // 半休の人は右（後ろ）へ＝（〇〇から）が行の途中に挟まらない（9/30 Naoto）。それ以外はシフト表の順のまま
       names = (names || []).map(function (p, i) { return { p: p, i: i, h: tmrwHalf(p.note, part) ? 1 : 0 }; })
@@ -1026,7 +1038,8 @@
           var gb = gcls ? '<span class="grade-badge ' + gcls + ' tm-gb">' + v.grade + "</span>" : v.grade ? '<span class="tm-g">' + v.grade + "</span>" : "";
           return '<div class="tm-row"><span class="tm-ic">' + ICON[v.k] + '</span><b class="tm-vn">' + esc(v.name) + "</b>" + gb +
             (v.nichiji ? '<span class="tm-nj' + (v.nichiji === "最終日" ? " tm-last" : v.nichiji === "初日" ? " tm-first" : "") + '">' + esc(v.nichiji) + "</span>" : "") +
-            '<span class="tm-tm">' + tmTimeHtml(v.first) + '<span class="tm-sep">〜</span>' + tmTimeHtml(v.last) + "</span></div>";
+            (v.first ? '<span class="tm-tm">' + tmTimeHtml(v.first) + '<span class="tm-sep">〜</span>' + tmTimeHtml(v.last) + "</span>"
+              : '<span class="tm-tm tm-tbd">時刻未発表</span>') + "</div>";
         }).join("") + "</div>";
     };
     var dayV = rows.filter(function (v) { return v.k === "morning" || v.k === "day"; });

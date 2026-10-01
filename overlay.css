@@ -4012,3 +4012,5 @@ html.rkmine-b .rk-chips.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinit
   50%, 88% { box-shadow: 0 0 0 2px var(--mc2), 0 0 9px 4px var(--mc2); }
   100% { box-shadow: 0 0 0 2px var(--mc1), 0 0 9px 4px var(--mc1); }
 }
+/* 🆕10/1 明日の出走表で時刻がまだ出ていない場（明日のミッドナイト）＝時刻の欄に「時刻未発表」を灰色で */
+.tm-tm.tm-tbd { font-size: 16px; font-weight: 700; color: #6b7280; }
