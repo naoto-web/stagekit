@@ -1033,7 +1033,7 @@
     var nightV = rows.filter(function (v) { return v.k === "night" || v.k === "mid"; });
     var html = '<li class="tm-wrap' + (TMLIGHT ? " tm-light" : "") + '"><div class="tm-msg">明日はこのメンバーでお届けします！</div>' +
       block("昼の部", "tm-day", sh.day, dayV, "day") + block("夜の部", "tm-night", sh.night, nightV, "night") +
-      (TMBYE ? '<div class="tm-bye">明日も絶対見てくれよな<span class="tm-bye-hand">✋</span></div>' : "") + "</li>";
+      (TMBYE ? '<div class="tm-bye">また明日も絶対見てくれよな<span class="tm-bye-hand">✋</span></div>' : "") + "</li>";
     // 5秒ごとの見直しでも呼ばれる＝中身が同じなら描き直さない（出走表の描画で消された後は描き直す）
     if (html === tmrwSig && list.querySelector(".tm-wrap")) { document.body.classList.add("tmrw-on"); return; }
     tmrwSig = html;
