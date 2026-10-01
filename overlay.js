@@ -4589,6 +4589,28 @@
       if (!groups[gk]) { groups[gk] = []; groupOrder.push(gk); }
       groups[gk].push(h);
     });
+    seenHits = ids;
+    if (!fresh.length) return;
+    /* 10/1（Naoto「ピーターの相撲が『ごっちゃんです』から・えーすのてくてくが真ん中で足踏み」）＝②を映している間に確定→①へ自動切替。
+       ①は確定の瞬間（まだ非表示）に演出を始めていた＝非表示のページは描画が止まりタイマーも遅れる→映った時には体の移動だけ終わって
+       「立ち止まれ」のタイマーが遅れていた。→演出は「このページが映っていて、1回描けたのを確かめてから」頭から始める。
+       非表示の間は待つ（FXWAIT_MS 以内に映れば頭から・過ぎたら出さない＝そのシーンは見られていない）。&fxwait=0 で旧（確定の瞬間に開始） */
+    var run = function () { fireFreshFx(groupOrder, groups, fresh); };
+    if (!FXWAIT) { run(); return; }
+    if (document.visibilityState === "visible") { whenPainted(run); return; }
+    fxPending.push({ run: run, at: Date.now() });
+  }
+  var FXWAIT = params.get("fxwait") !== "0", FXWAIT_MS = 20000;
+  var fxPending = [];
+  function whenPainted(fn) { requestAnimationFrame(function () { requestAnimationFrame(fn); }); }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible" || !fxPending.length) return;
+    var list = fxPending, now = Date.now();
+    fxPending = [];
+    list.forEach(function (p) { if (now - p.at < FXWAIT_MS) whenPainted(p.run); });
+  });
+  function fireFreshFx(groupOrder, groups, fresh) {
+    var glowAdded = true;
     var seats = seatMap();
     // ダブル成立なら2人とも共演演出に差し替える（個人演出・結果発表は出さない・8/28）
     var pairFx = pairFxFor(seats, fresh);
@@ -4612,7 +4634,6 @@
         noteFreshHits(fresh, badgeAt, gUntil, gl);
       }
     }
-    seenHits = ids;
     // 帯はcheckNewHitsより先（renderAll内）に描画済みのため、強調が追加された時だけ描き直す（FB119）
     if (glowAdded) renderPreds();
   }
