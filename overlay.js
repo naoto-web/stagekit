@@ -1528,6 +1528,7 @@
   /* （10/1 Naoto）①の人気順の札の文言「3連単オッズ」→「3連単オッズ人気順」。✅10/1 B案（=2）を本番既定＝全面1〜18だけ長く・
      半分/左右の1〜9は「3連単人気順」（今と同じ文字数。長いと右上の締切ハンコと重なった）。&tksub=1 全部長く｜0 旧「3連単オッズ」 */
   var TKSUB = params.get("tksub") || "2";
+  var RKSUB = params.get("rksub") || "2"; // ✅10/1 ②の空いた帯の見出し＝B案（=2）を本番既定＝1つの表（1〜18）は「3連単オッズ人気順」・半分は「3連単人気順」（&rksub=1 全部長く｜0 旧「3連単オッズ」）
   function tkSubText(count) {
     if (TKSUB === "1" || (TKSUB === "2" && count > 9)) return "3連単オッズ人気順";
     if (TKSUB === "2") return "3連単人気順";
@@ -3454,7 +3455,7 @@
           // 名前・色は上の見出し処理が毎回描き直す＝予想を入れ始めたら次の描画で元に戻る
           bandHead.classList.toggle("rk-head", !!rkHtml);
           if (rkHtml) {
-            if (bandName) bandName.textContent = "3連単オッズ";
+            if (bandName) bandName.textContent = RKSUB === "1" || (RKSUB === "2" && rkCount > 9) ? "3連単オッズ人気順" : RKSUB === "2" ? "3連単人気順" : "3連単オッズ"; // 🧪10/1 Naoto（①§113と同じ文言に）＝手元だけ &rksub=1（全部長く）｜2（1〜18の1つの表だけ長く・半分は「3連単人気順」）
             bandHead.style.background = RK_GRAY;
             if (bandHead.parentElement) bandHead.parentElement.style.borderColor = RK_GRAY;
             fitBandHead(bandHead);
