@@ -3993,3 +3993,6 @@ body.rk-merge #scene-race .panel.slot-b { display: none; }
 .talk-band .buy-line.tk-rk > .tk-rk-lab { font-size: 38px; padding: 4px 18px; }
 /* （10/1 Naoto「前橋5Rが見つけづらい」）②並びの窓の場名Rを太枠で囲む＝既定ON・&nbbox=0 で旧・&nbw=太さ */
 html.nbbox body.v2.rb2 .rb-line .nb-race { box-shadow: 0 0 0 var(--nbw, 6px) #16202e; } /* 線は札の外側（文字の大きさは今のまま・窓の外へ少しはみ出してよい＝10/1 Naoto） */
+/* （10/1・&tkrkclose=0 で旧）半分・左右のオッズ区画の締切ハンコは小さめにして札の行へ（大きいと1番人気の倍率に重なる） */
+.talk-band .buy-line .tk-rk-col.rc-closed { --rcty: 9px; overflow: visible; } /* 区画ははみ出しを切る設定＝傾けたハンコの上の角が切れた（10/1 Naoto）→締切中だけ切らない・少し下げる */
+.talk-band .buy-line .tk-rk-col.rc-closed::after { font-size: 20px; padding: 2px 7px 3px; }

@@ -1517,6 +1517,18 @@
     P[nL === 1 ? "a" : "b"] = half(T);
     return P;
   }
+  /* 🧪（10/1 Naoto「公式締切で買目がグレー＋締切ハンコになるのを、3連単オッズも同じタイミングで」）&tkrkclose=1
+     オッズの区画（全面なら帯・半分/左右なら .tk-rk-col）に §53 と同じ印（data-rck＝そのオッズのレース）を付ける＝applyRaceClosed が毎秒判定。
+     data-rid は空＝オッズは誰の買目でもない＝的中ハンコには押し替えない */
+  var TKRKCLOSE = params.get("tkrkclose") !== "0"; // ✅10/1 本番既定ON・&tkrkclose=0 で旧（オッズは締切でもそのまま）
+  function tkMarkClose(band, spec, slot) {
+    if (!TKRKCLOSE || !RCCLOSE || !spec) return;
+    var cols = band.querySelectorAll(".tk-rk-col");
+    var mark = function (el, k) { el.setAttribute("data-rck", k); el.setAttribute("data-slot", slot + "-rk"); el.setAttribute("data-rid", ""); };
+    if (spec.t === "full") mark(band, spec.k);
+    else if (spec.t === "split") Array.prototype.forEach.call(cols, function (c, i) { if (spec.ks[i]) mark(c, spec.ks[i]); });
+    else if (spec.t === "half" && cols[0]) mark(cols[0], spec.k);
+  }
   function fitTkOdds(band) {
     var cols = band.querySelectorAll(".tk-rk-col");
     if (cols.length) Array.prototype.forEach.call(cols, fitRankOdds); else fitRankOdds(band);
@@ -3322,6 +3334,7 @@
             band.classList.add("rk-on", "tk-rk");
             band.classList.remove("note-fire", "rc-closed", "rc-fx");
             band.removeAttribute("data-rck");
+            tkMarkClose(band, tkSpec, slot); // 締切でオッズもグレー＋ハンコ（&tkrkclose=0 で旧）
             band.style.transform = ""; band.style.paddingBottom = "";
             var tMeta0 = $(bp + "meta-" + slot);
             if (tMeta0) { tMeta0.classList.add("hidden"); tMeta0.textContent = ""; }
@@ -3390,6 +3403,7 @@
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
           if (tkHalf) { fitTkOdds(band); requestAnimationFrame(function () { fitTkOdds(band); }); } // §110 右半分のオッズ
+          if (tkHalf) { tkMarkClose(band, tkSpec, slot); applyRaceClosed(); }
           // 1場の右下の固定枠は帯の拡大率に合わせて大きく（9/26 Naoto「買目の大きさに対して点数と投資の字が小さい」）。
           // 帯は最大1.6倍に拡大されるが固定枠は帯の外＝27pxのまま取り残されていた。上限1.4倍（約38px）。
           // 枠が大きくなると買目に使える高さが減る＝大きさを決めてから下の余白を取り直し、もう一度だけ測り直す。戻す＝&tmetak=0
