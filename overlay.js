@@ -1459,6 +1459,30 @@
     if (el.textContent === txt) return;
     if (el.classList.contains("rk-num")) el.innerHTML = rkNumHtml(txt); else el.textContent = txt;
   }
+  /* 🧪（10/1 Naoto）人気順の表で、席にいる配信者がそのレースで買っている3連単の目は、車番バッジの周りをその人のメンバーカラーで光らせる（大きさは変えない）。
+     ✅10/1 本番既定ON（&rkmine=0 で出さない）＝B案（3つまとめた枠で光る）。2人とも買っている目は2色を交互（rkMineAlt）。
+     対象＝3連単の行（切り目・重複行は除く＝合成オッズと同じ数え方） */
+  var RKMINE = params.get("rkmine") !== "0" ? "b" : "";
+  if (RKMINE) document.documentElement.classList.add("rkmine-" + RKMINE);
+  var RKMINE_CYCLE = 2400; // 2色の交互の1周（ms）＝CSS rkMineAlt と同じ
+  function rkMineMap(k) {
+    var out = {}, seats = seatMap();
+    ["a", "b"].forEach(function (s) {
+      var rc = seats[s];
+      if (!rc || !state.preds || !state.preds[k]) return;
+      var rp = window.Derive.resolvePred(state, k, rc.id);
+      var col = window.Derive.colorOf(rc.color);
+      rp.parsed.lines.forEach(function (l) {
+        if (!l.ok || l.cut || l.allDup || l.type !== "3連単") return;
+        l.combos.forEach(function (c) {
+          var key = c.join("");
+          out[key] = out[key] || [];
+          if (out[key].indexOf(col) < 0) out[key].push(col);
+        });
+      });
+    });
+    return out;
+  }
   function rankOddsHtml(k, from, count, perCol) {
     perCol = perCol || 3; // 1列の段数（②は3段。①§110モックは18件を6段×3列にもできる）
     from = from || 0; // 9/30 左右とも予想なし＝右は10〜18番人気（from=9）
@@ -1470,10 +1494,15 @@
     if (!d || !d.o || !(d.cnt > 0)) return "";
     var top = Object.keys(d.o).sort(function (a, b) { return d.o[a] - d.o[b] || (a < b ? -1 : 1); }).slice(from, from + count);
     if (!top.length) return "";
+    var mine = RKMINE ? rkMineMap(k) : {};
     var cells = top.map(function (c, i) {
       var raw = c.split("").join("-");
+      var mc = mine[c] || [];
+      // 2人とも買っている目＝2色を交互に（10/1 Naoto）。描き直すたびに要素が作り直される＝時計で位相を合わせる（負の delay）＝頭からやり直さない
+      var mineAttr = mc.length ? ' rk-mine' + (mc.length > 1 ? " rk-mine2" : "") + '" style="--mc1:' + mc[0] + ";--mc2:" + (mc[1] || mc[0]) +
+        (mc.length > 1 ? ";animation-delay:-" + (Date.now() % RKMINE_CYCLE) + "ms" : "") : "";
       // 区切りの「−」は省く（俺たち目と同じ）＝その分車番を大きく
-      return '<div class="rk-cell"><span class="rk-n' + (from + i < 3 ? " rk-top" : "") + '">' + (from + i + 1) + '</span><span class="rk-chips chips">' + lineChips(raw, false, null, true) + "</span>" +
+      return '<div class="rk-cell"><span class="rk-n' + (from + i < 3 ? " rk-top" : "") + '">' + (from + i + 1) + '</span><span class="rk-chips chips' + mineAttr + '">' + lineChips(raw, false, null, true) + "</span>" +
         '<span class="pl-odds rk-v' + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '"><span class="odn rk-num" data-ok="' + esc(k + "|rk|" + c) + '">' + rkNumHtml(rkFmt(d.o[c])) + "</span></span></div>";
     });
     var cols = "";
