@@ -3996,3 +3996,7 @@ html.nbbox body.v2.rb2 .rb-line .nb-race { box-shadow: 0 0 0 var(--nbw, 6px) #16
 /* （10/1・&tkrkclose=0 で旧）半分・左右のオッズ区画の締切ハンコは小さめにして札の行へ（大きいと1番人気の倍率に重なる） */
 .talk-band .buy-line .tk-rk-col.rc-closed { --rcty: 9px; overflow: visible; } /* 区画ははみ出しを切る設定＝傾けたハンコの上の角が切れた（10/1 Naoto）→締切中だけ切らない・少し下げる */
 .talk-band .buy-line .tk-rk-col.rc-closed::after { font-size: 20px; padding: 2px 7px 3px; }
+/* 🧪（10/1 Naoto「オッズの周りの枠の中までグレーアウト」＋「シャッターが閉まる感じは残したい」）&tkrkbox=a
+   人気順の箱（.rk-col）の地と枠線を半透明に＝白の上では従来の #eef0f3／#d5d9df と同じ色、締切のグレー（::before のシャッター）が後ろを下りると箱の中も一緒に閉まる。
+   🔴締切で箱の色を直接変える＋transition は不可＝描き直しのたびに白→グレーのフェードがやり直しになり、数秒ごとに白くチカついた */
+html.tkrkbox-a .talk-band .rk-col { background: rgba(30, 50, 80, .07); border-color: rgba(30, 50, 80, .18); }

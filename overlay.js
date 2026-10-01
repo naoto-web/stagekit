@@ -1522,6 +1522,10 @@
      オッズの区画（全面なら帯・半分/左右なら .tk-rk-col）に §53 と同じ印（data-rck＝そのオッズのレース）を付ける＝applyRaceClosed が毎秒判定。
      data-rid は空＝オッズは誰の買目でもない＝的中ハンコには押し替えない */
   var TKRKCLOSE = params.get("tkrkclose") !== "0"; // ✅10/1 本番既定ON・&tkrkclose=0 で旧（オッズは締切でもそのまま）
+  /* 🧪（10/1 Naoto「オッズの周りの枠の中までグレーアウト」）締切で区画はグレーになるが、人気順の箱（.rk-col #eef0f3）の中が白いまま残る。
+     ✅10/1 本番既定ON（&tkrkbox=0 で旧）＝箱の地と枠線を半透明にして、締切のシャッターが箱の中も一緒に下りる。CSS＝overlay.css 末尾 */
+  var TKRKBOX = params.get("tkrkbox") !== "0";
+  if (TKRKBOX) document.documentElement.classList.add("tkrkbox-a");
   function tkMarkClose(band, spec, slot) {
     if (!TKRKCLOSE || !RCCLOSE || !spec) return;
     var cols = band.querySelectorAll(".tk-rk-col");
