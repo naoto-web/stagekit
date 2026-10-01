@@ -1243,8 +1243,9 @@
     var names = {};
     (state.venues || []).forEach(function (v) { names[v.name] = 1; });
     var races = allRaces().filter(function (r) { return names[r.venue]; });
-    return window.Derive.broadcastRace(races, settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60);
+    return window.Derive.broadcastRace(races, settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60, BCHOLD ? TFX_RACE : 0);
   }
+  var BCHOLD = params.get("bchold") !== "0"; // §111（10/1 Naoto）レース中（発走からTFX_RACE＝3分）は放送のレースを切り替えない（&bchold=0で旧）
   function broadcastKey() {
     if (!SPLIT) return currentKey();
     var b = broadcastRaceObj();

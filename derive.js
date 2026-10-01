@@ -343,8 +343,10 @@
         (a) 最後のレースの結果を最初に確定した時刻＋120秒（払戻を見せる時間）
         (b) 次のレースの公式締切（発走−closeSec）
       その日の最初のレースの前＝次のレース／最後のレースの後＝最後のレース。
-      races＝[{venue, no, startSec}]（本日の場だけ）・settleSecOf(key)＝最初に確定した時刻（0時からの秒・無ければnull） */
-  function broadcastRace(races, settleSecOf, nowSec, closeSec) {
+      races＝[{venue, no, startSec}]（本日の場だけ）・settleSecOf(key)＝最初に確定した時刻（0時からの秒・無ければnull）
+      §111（10/1 Naoto）raceSec＝最後のレースの発走からこの秒数（レース中）は (b) の締切でも次へ移らない（佐世保7R 10:40発走中に大宮1R 10:42締切で②が切り替わった）。
+      0・省略＝従来どおり */
+  function broadcastRace(races, settleSecOf, nowSec, closeSec, raceSec) {
     var last = null, next = null;
     (races || []).forEach(function (r) {
       if (r.startSec <= nowSec) { if (!last || r.startSec > last.startSec) last = r; }
@@ -356,6 +358,7 @@
     var st = settleSecOf ? settleSecOf(raceKey(last.venue, last.no)) : null;
     // 発走より前の確定は数えない（テスト入力や前日のデータで、走る前に次へ移ってしまうのを防ぐ・9/28 テストGASで実際に起きた）
     if (typeof st === "number" && st >= last.startSec && st + 120 < sw) sw = st + 120;
+    if (raceSec > 0 && sw < last.startSec + raceSec) sw = last.startSec + raceSec; // §111 レース中は切り替えない
     return nowSec >= sw ? next : last;
   }
 

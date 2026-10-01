@@ -218,8 +218,9 @@
   }
   function broadcastRaceObj() {
     if (!state || !timetable) return null;
-    return window.Derive.broadcastRace(selectedRaces(), settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60);
+    return window.Derive.broadcastRace(selectedRaces(), settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60, BCHOLD ? 180 : 0);
   }
+  var BCHOLD = params.get("bchold") !== "0"; // §111（10/1 Naoto）レース中（発走から3分）は放送のレースを切り替えない（&bchold=0で旧）＝overlay と同じ
   function broadcastKey() {
     if (!SPLIT) return currentKey();
     var b = broadcastRaceObj();
