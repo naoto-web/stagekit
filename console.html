@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20261003-072240">
+<link rel="stylesheet" href="console.css?v=20261003-075751">
 </head>
 <body>
 
@@ -252,20 +252,21 @@
     <button class="btn small" id="btn-tt-refresh">タイムテーブル再取得</button>
   </div>
   <div class="hint" id="diag-result"></div>
-  <div class="row gap">
+  <!-- 10/3 本番では隠す（テスト接続 or &dayreset=1 のときだけ出す）＝10/2 23:36 配信終わりに押されて当日の予想・結果が消えたため。console.js 参照 -->
+  <div class="row gap" id="day-reset-row">
     <button class="btn small danger" id="btn-day-reset">本日のデータをリセット</button>
   </div>
-  <div class="hint">予想・結果・的中速報を全部消します（場・配信者・設定は残る）。テストデータの掃除用</div>
+  <div class="hint" id="day-reset-hint">予想・結果・的中速報を全部消します（場・配信者・設定は残る）。テストデータの掃除用</div>
 </details>
 
 </div>
 </main>
 
-<script src="autoupdate.js?v=20261003-072240" data-au="banner"></script>
-<script src="config.js?v=20261003-072240"></script>
-<script src="keirin.js?v=20261003-072240"></script>
-<script src="derive.js?v=20261003-072240"></script>
-<script src="sync.js?v=20261003-072240"></script>
-<script src="console.js?v=20261003-072240"></script>
+<script src="autoupdate.js?v=20261003-075751" data-au="banner"></script>
+<script src="config.js?v=20261003-075751"></script>
+<script src="keirin.js?v=20261003-075751"></script>
+<script src="derive.js?v=20261003-075751"></script>
+<script src="sync.js?v=20261003-075751"></script>
+<script src="console.js?v=20261003-075751"></script>
 </body>
 </html>

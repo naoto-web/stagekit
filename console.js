@@ -2632,6 +2632,11 @@
     save();
     renderAll();
   });
+  /* 10/3（Naoto）本番のコンソールではこのボタンを出さない。10/2 23:36 に配信終わりの片付けのつもりで押され、
+     当日の予想・結果・回収が消えた（実績CSVは毎時スナップショットから手で復旧）。テスト接続（?gas=）か &dayreset=1 のときだけ出す */
+  if (!(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) && params.get("dayreset") !== "1") {
+    ["day-reset-row", "day-reset-hint"].forEach(function (id) { var el = $(id); if (el) el.remove(); });
+  }
 
   $("btn-tt-refresh").addEventListener("click", function () {
     $("diag-result").textContent = "タイムテーブル取得中…";
