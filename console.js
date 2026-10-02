@@ -2964,6 +2964,12 @@
      読めるまで5秒ごとに再試行し、それまでは保存を止める（stateLoaded）。 */
   function loadState() {
     window.Sync.fetchState().then(function (s) {
+      /* 10/3（要件定義§120）GASは書き込みの最中に読まれると「データなし（null）」を返すことがある。
+         本番はもう初期化済み＝null は空振り＝失敗と同じ扱いで読み直す（空の器から始めて保存すると当日分を空で上書きする）。
+         本当に空から始めたいとき（新しいGAS・テスト接続）だけ従来どおり＝テスト接続か &initstate=1 */
+      if (!s && !(window.APP_CONFIG && window.APP_CONFIG.IS_TEST_BACKEND) && params.get("initstate") !== "1") {
+        throw new Error("保存データが読めませんでした（空の応答）");
+      }
       if (s) {
         var base = window.Derive.defaultState(todayStr());
         state = Object.assign({}, base, s);
