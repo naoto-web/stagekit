@@ -2646,42 +2646,114 @@
 
   /* 回収未入力の的中を横断チェック（結果の自動確定は回収を知らないため）。
      警告バーのタップで該当レースへジャンプ→回収を入れて再確定してもらう */
-  function checkRefundGaps() {
-    var el = $("refund-warn");
-    if (!el || !state) return;
-    var gap = null;
+  /** 回収未入力の的中（＝オーバーレイの「集計中」）を全件集める。条件は derive.day の pending と同一
+      （買目の的中あり＋投資あり＋回収が空）。10/3＝先頭1件だけ返していたのを全件に（アラートで一覧にする） */
+  function refundGaps() {
+    var gaps = [];
+    if (!state) return gaps;
     Object.keys(state.results || {}).forEach(function (key) {
-      if (gap) return;
       var s = window.Derive.settleRace(state, key);
       if (!s) return;
       Object.keys(s.byRacer).forEach(function (pid) {
         var r = s.byRacer[pid];
-        if (!gap && r.hits.length && r.invest > 0 && !r.refund) gap = { key: key, pid: pid };
+        if (r.hits.length && r.invest > 0 && !r.refund) gaps.push({ id: key + "|" + pid, key: key, pid: pid, hits: r.hits, invest: r.invest });
       });
     });
-    if (!gap) { el.classList.add("hidden"); el.textContent = ""; el.onclick = null; return; }
-    var parts = gap.key.split("|");
-    el.textContent = "⚠ 回収額が未入力の的中：" + parts[0] + parts[1] + "R（" + gap.pid + "）→ タップでこのレースを開く";
-    el.classList.remove("hidden");
-    el.onclick = function () {
-      var idx = -1;
-      state.venues.forEach(function (v, i) { if (v.name === parts[0]) idx = i; });
-      if (idx < 0) return;
-      if (SPLIT) { // §58 トークのレースは動かさず、結果入力だけそのレースへ（放送のレースを手で選び直した扱い）
-        resPin = gap.key; resDirty = false;
-        var rcard = $("result-target") && $("result-target").closest("details");
-        if (rcard) rcard.open = true;
-        renderResultForm(); refreshResultFire();
-        if (rcard) rcard.scrollIntoView({ behavior: "smooth" });
-        return;
-      }
-      state.activeVenue = idx;
-      state.currentRace[parts[0]] = +parts[1];
-      manualNav(true); // 回収入力のための手動ジャンプ（FB96）
-      save();
-      renderAll();
-    };
+    return gaps;
   }
+  /** 集計待ちのレースを結果入力に開く（警告バーのタップとアラートの「このレースを開く」で共用） */
+  function openRefundGap(gap) {
+    var parts = gap.key.split("|");
+    var idx = -1;
+    state.venues.forEach(function (v, i) { if (v.name === parts[0]) idx = i; });
+    if (idx < 0) return;
+    if (SPLIT) { // §58 トークのレースは動かさず、結果入力だけそのレースへ（放送のレースを手で選び直した扱い）
+      resPin = gap.key; resDirty = false;
+      var rcard = $("result-target") && $("result-target").closest("details");
+      if (rcard) rcard.open = true;
+      renderResultForm(); refreshResultFire();
+      if (rcard) rcard.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    state.activeVenue = idx;
+    state.currentRace[parts[0]] = +parts[1];
+    manualNav(true); // 回収入力のための手動ジャンプ（FB96）
+    save();
+    renderAll();
+  }
+  function checkRefundGaps() {
+    var el = $("refund-warn");
+    if (!el || !state) return;
+    var gaps = refundGaps();
+    refundAlertUpdate(gaps); // 🔔 新しく集計待ちになった瞬間に目立つ通知（10/3）
+    if (!gaps.length) { el.classList.add("hidden"); el.textContent = ""; el.onclick = null; return; }
+    var gap = gaps[0], parts = gap.key.split("|");
+    el.textContent = "⚠ 回収額が未入力の的中：" + parts[0] + parts[1] + "R（" + gap.pid + "）" +
+      (gaps.length > 1 ? " ほか" + (gaps.length - 1) + "件" : "") + " → タップでこのレースを開く";
+    el.classList.remove("hidden");
+    el.onclick = function () { openRefundGap(gap); };
+  }
+
+  /* 🔔 回収未入力アラート（10/3 Naoto「集計中になったタイミングでコンソールにアラート」）
+     10/2夜＝前橋1R（21:09自動取込）・青森2R（21:17）の的中が回収枚数の入力まで2時間前後かかった。
+     上の警告バー（#refund-warn）はページ最上部にあり、スクロールしていると目に入らない。
+     こちらは画面に固定（CSS position:fixed）で、**新しく集計待ちになった瞬間**に出す（起動直後に残っていた分も）。
+     文言＝「〇〇さんの前橋1Rの回収枚数が入力されていません」＋的中買目・払戻・投資＋「このレースを開く」。
+     「あとで」で閉じても未入力のままなら REFUND_NAG 分ごとにもう一度出す（&refnag=分・既定10・0で再表示なし）。
+     &refalert=0 でアラートごと止める（警告バーは従来どおり） */
+  var REFUND_ALERT = params.get("refalert") !== "0";
+  var REFUND_NAG_MS = Math.max(0, parseFloat(params.get("refnag") || "10") || 0) * 60000;
+  var raSeen = {}, raGaps = [], raDismissedAt = 0, raSig = "";
+  function refundAlertUpdate(gaps) {
+    var el = $("refund-alert");
+    if (!el || !REFUND_ALERT) return;
+    raGaps = gaps;
+    var ids = {};
+    gaps.forEach(function (g) { ids[g.id] = true; });
+    Object.keys(raSeen).forEach(function (id) { if (!ids[id]) delete raSeen[id]; }); // 解消した件は忘れる＝同じ件がまた空いたら新規扱い
+    if (!gaps.length) { el.classList.add("hidden"); el.innerHTML = ""; raDismissedAt = 0; raSig = ""; return; }
+    var fresh = gaps.filter(function (g) { return !raSeen[g.id]; });
+    gaps.forEach(function (g) { raSeen[g.id] = true; });
+    if (fresh.length) { raDismissedAt = 0; refundAlertShow(true); return; }
+    if (!el.classList.contains("hidden")) refundAlertShow(false); // 出ている間は中身だけ追従
+  }
+  function refundAlertShow(fresh) {
+    var el = $("refund-alert");
+    if (!el || !raGaps.length) return;
+    var sig = raGaps.map(function (g) { return g.id; }).join(",");
+    if (!fresh && !el.classList.contains("hidden") && sig === raSig) return; // 同じ中身なら描き直さない（押そうとしたボタンを作り直さない）
+    raSig = sig;
+    var yen = function (n) { return "¥" + (+n || 0).toLocaleString("ja-JP"); };
+    el.innerHTML = '<div class="ra-title">🔔 回収枚数が入力されていません</div>' +
+      raGaps.map(function (g, i) {
+        var parts = g.key.split("|");
+        var hits = g.hits.map(function (h) { return esc(h.type + " " + h.comboLabel) + "（払戻 " + yen(h.amount) + "）"; }).join(" / ");
+        return '<div class="ra-item">' +
+          '<div class="ra-msg">' + esc(g.pid) + "さんの" + esc(parts[0] + parts[1]) + "Rの回収枚数が入力されていません</div>" +
+          '<div class="ra-sub">的中 ' + hits + "　投資 " + yen(g.invest) + "</div>" +
+          '<button type="button" class="btn small ra-open" data-i="' + i + '">このレースを開く</button></div>';
+      }).join("") +
+      '<div class="ra-foot"><button type="button" class="btn small ra-later">あとで' +
+      (REFUND_NAG_MS ? "（" + (REFUND_NAG_MS / 60000) + "分後にもう一度）" : "") + "</button></div>";
+    el.classList.remove("hidden");
+    el.classList.toggle("fresh", !!fresh);
+    el.querySelectorAll(".ra-open").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var g = raGaps[+b.getAttribute("data-i")];
+        raDismissedAt = Date.now(); el.classList.add("hidden");
+        if (g) openRefundGap(g);
+      });
+    });
+    var later = el.querySelector(".ra-later");
+    if (later) later.addEventListener("click", function () { raDismissedAt = Date.now(); el.classList.add("hidden"); });
+  }
+  function refundAlertTick() {
+    var el = $("refund-alert");
+    if (!el || !REFUND_ALERT || !REFUND_NAG_MS || !raGaps.length || !raDismissedAt) return;
+    if (!el.classList.contains("hidden")) return;
+    if (Date.now() - raDismissedAt >= REFUND_NAG_MS) refundAlertShow(true);
+  }
+  setInterval(refundAlertTick, 15000);
 
   /* サブ（NEXT）の既定＝ON（9/9・§10項100）：席に座っている配信者にサブの設定が無ければ、
      「別場の・未発走の・最も早いレース」の場を自動で入れる（①トークの ensureTalkRaces と同じ「未設定なら補完」）。

@@ -32,6 +32,28 @@ body {
 .warn code { background: rgba(0,0,0,.4); padding: 1px 6px; border-radius: 4px; }
 .hidden { display: none !important; }
 
+/* 🔔 回収未入力アラート（10/3 Naoto「集計中になったタイミングでアラート」）
+   上の #refund-warn はページ最上部＝スクロールすると見えない（10/2夜は2件とも入力まで2時間前後）。
+   こちらは画面に固定（fixed）＝どこを見ていても目に入る。文言は console.js refundAlertShow */
+.refund-alert {
+  position: fixed; top: 8px; left: 8px; right: 8px; z-index: 1000;
+  padding: 12px 14px; border-radius: 10px;
+  background: #7a1a1a; border: 2px solid #ff5d5d; color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+  font-size: 14px; font-weight: 900; line-height: 1.5;
+}
+.refund-alert .ra-title { font-size: 15px; color: #ffb3b3; margin-bottom: 4px; }
+.refund-alert .ra-item { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,.2); }
+.refund-alert .ra-msg { flex: 1 1 100%; font-size: 16px; }
+.refund-alert .ra-sub { flex: 1 1 auto; font-size: 12px; font-weight: 700; color: #ffd1d1; font-variant-numeric: tabular-nums; }
+.refund-alert .btn.ra-open { background: #ffd98a; border-color: #ffd98a; color: #3a2a00; font-weight: 900; }
+.refund-alert .btn.ra-open:hover { background: #ffe6ad; }
+.refund-alert .ra-foot { display: flex; justify-content: flex-end; margin-top: 6px; }
+.refund-alert .btn.ra-later { background: rgba(0,0,0,.25); border-color: rgba(255,255,255,.35); color: #fff; }
+.refund-alert .btn.ra-later:hover { background: rgba(0,0,0,.4); }
+@keyframes raPulse { 0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,.55), 0 0 0 0 rgba(255,93,93,.7); } 50% { box-shadow: 0 8px 24px rgba(0,0,0,.55), 0 0 0 14px rgba(255,93,93,0); } }
+.refund-alert.fresh { animation: raPulse 1.2s ease-out 3; }
+
 /* 俺たち目が買目にない保存の確認バー（8/10 FB118）＝予想フォーム内に出るインライン選択 */
 .ore-guard {
   margin-top: 8px; padding: 10px 12px; border-radius: 8px;
@@ -484,6 +506,11 @@ html.theme-light .warn.key-warn { background: #fbe1e1; border-color: #e5484d; co
 html.theme-light #stale-warn:hover, html.theme-light #refund-warn:hover { background: #f6e2b8; }
 html.theme-light .ore-guard { background: #fbefd5; color: #5e4200; }
 html.theme-light .ore-guard b { color: #3d2b00; }
+html.theme-light .refund-alert { background: #fbe1e1; border-color: #e5484d; color: #5a1010; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+html.theme-light .refund-alert .ra-title { color: #a32020; }
+html.theme-light .refund-alert .ra-sub { color: #8a1f1f; }
+html.theme-light .refund-alert .ra-item { border-top-color: rgba(0,0,0,.12); }
+html.theme-light .refund-alert .btn.ra-later { background: rgba(255,255,255,.6); border-color: #c99; color: #5a1010; }
 html.theme-light .card { background: var(--lt-card); border-color: var(--lt-line); }
 html.theme-light .card h2 { color: var(--lt-text); }
 html.theme-light .h-sub, html.theme-light .lbl, html.theme-light .hint, html.theme-light details.card summary::before,

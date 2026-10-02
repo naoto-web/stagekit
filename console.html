@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20261002-061137">
+<link rel="stylesheet" href="console.css?v=20261003-072240">
 </head>
 <body>
 
@@ -17,6 +17,8 @@
 <div class="warn hidden" id="stale-warn"></div>
 <div class="warn hidden" id="refund-warn"></div>
 <div class="warn hidden" id="ore-warn" title="タップで予想入力へ"></div>
+<!-- 🔔 回収未入力アラート（10/3）：的中が集計待ち（回収枚数が空）になった瞬間に画面に固定で出す。中身は console.js の refundAlertShow -->
+<div class="refund-alert hidden" id="refund-alert" role="alert" aria-live="assertive"></div>
 <div class="warn key-warn hidden" id="key-warn">⚠ 書込キー未設定（保存ができません）
   <input type="password" id="key-input" class="inp slim" placeholder="書込キーを貼り付け">
   <button class="btn small" id="btn-key-save">保存して再読込</button>
@@ -259,11 +261,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20261002-061137" data-au="banner"></script>
-<script src="config.js?v=20261002-061137"></script>
-<script src="keirin.js?v=20261002-061137"></script>
-<script src="derive.js?v=20261002-061137"></script>
-<script src="sync.js?v=20261002-061137"></script>
-<script src="console.js?v=20261002-061137"></script>
+<script src="autoupdate.js?v=20261003-072240" data-au="banner"></script>
+<script src="config.js?v=20261003-072240"></script>
+<script src="keirin.js?v=20261003-072240"></script>
+<script src="derive.js?v=20261003-072240"></script>
+<script src="sync.js?v=20261003-072240"></script>
+<script src="console.js?v=20261003-072240"></script>
 </body>
 </html>
