@@ -1154,6 +1154,44 @@
   var resPin = null;
   function resBaseKey() { return SPLIT ? (resPin || broadcastKey()) : currentKey(); }
   function resultKey() { return (resDirty && resKeyShown) ? resKeyShown : resBaseKey(); }
+  /** §121（10/3 Y「過去レース入れられない時間ってある？」＝結果・回収を後から直したい）選び直しの一覧に出すレース。
+      旧＝本日の場の発走済みレースの新しい16件だけ＝①場が自動で外れる（最終R確定＋10分）とその場のレースが消える
+      ②3〜4場並走だと1時間半〜2時間前のレースが一覧から落ちる → 後から結果・回収を直せなかった。
+      新＝①本日の場の発走済みレース ②場が外れていても「予想か結果が入っている今日のレース」を全部・件数の上限なし（新しい順）。
+      発走時刻は時刻表から（無ければ確定時刻）。&respickall=0 で旧 */
+  var RESPICK_ALL = params.get("respickall") !== "0";
+  function resPickRaces(now) {
+    if (!RESPICK_ALL) {
+      return selectedRaces().filter(function (r) { return r.startSec <= now; })
+        .sort(function (a, b) { return b.startSec - a.startSec; }).slice(0, 16)
+        .map(function (r) { return { key: window.Derive.raceKey(r.venue, r.no), venue: r.venue, no: r.no, startSec: r.startSec }; });
+    }
+    var seen = {}, out = [];
+    function add(venue, no, startSec) {
+      var k = window.Derive.raceKey(venue, no);
+      if (seen[k]) return;
+      seen[k] = true;
+      out.push({ key: k, venue: venue, no: +no, startSec: startSec });
+    }
+    selectedRaces().forEach(function (r) { if (r.startSec <= now) add(r.venue, r.no, r.startSec); });
+    var today = state.date === todayStr();
+    var keys = Object.keys(state.results || {});
+    Object.keys(state.preds || {}).forEach(function (k) { if (predHasEntryKey(k)) keys.push(k); });
+    keys.forEach(function (k) {
+      var parts = k.split("|");
+      if (parts.length < 2) return;
+      var rs = venueRaces(parts[0]).filter(function (x) { return x.no === +parts[1]; });
+      var s = rs.length ? timeToSec(rs[0].start) : null;
+      if (s === null) s = settleSecOf(k);
+      if (today && s !== null && s > now && !state.results[k]) return; // 今日のまだ走っていないレースは出さない
+      add(parts[0], parts[1], s === null ? -1 : s);
+    });
+    return out.sort(function (a, b) { return b.startSec - a.startSec; });
+  }
+  function predHasEntryKey(k) {
+    var br = (state.preds[k] || {}).byRacer || {};
+    return Object.keys(br).some(function (id) { var e = br[id] || {}; return !!(e.text || e.investInput > 0); });
+  }
   /** 結果入力の「レースを選び直す」（§58）＝カードの見出しの下。放送のレース（自動）＋今日の発走済みレース（新しい順） */
   function renderResPick() {
     var tgt = $("result-target");
@@ -1168,12 +1206,14 @@
     }
     if (!el) return;
     var bk = broadcastKey(), now = nowSec();
-    var opts = selectedRaces().filter(function (r) { return r.startSec <= now; })
-      .sort(function (a, b) { return b.startSec - a.startSec; }).slice(0, 16);
+    var opts = resPickRaces(now);
+    var gapKeys = {};
+    refundGaps().forEach(function (g) { gapKeys[g.key] = true; });
     var html = "結果を入れるレース：<select id=\"res-pick\"><option value=\"\">放送のレース（自動）" + (bk ? "＝" + esc(bk.replace("|", " ")) + "R" : "") + "</option>" +
       opts.map(function (r) {
-        var k = window.Derive.raceKey(r.venue, r.no);
-        return "<option value=\"" + esc(k) + "\"" + (resPin === k ? " selected" : "") + ">" + esc(r.venue + " " + r.no + "R") + "</option>";
+        var k = r.key;
+        var mark = gapKeys[k] ? "　⚠回収未入力" : (state.results[k] ? "　（確定済み）" : "");
+        return "<option value=\"" + esc(k) + "\"" + (resPin === k ? " selected" : "") + ">" + esc(r.venue + " " + r.no + "R" + mark) + "</option>";
       }).join("") + "</select>" + (resPin ? "<span class=\"rp-pin\">📌手で選んだレース（確定すると自動に戻ります）</span>" : "");
     if (el.getAttribute("data-h") !== html) {
       el.setAttribute("data-h", html);
@@ -1425,6 +1465,25 @@
     });
   }
 
+  /** §121（10/3）結果入力で回収を扱う人＝今の席の人＋そのレースに予想（買目か投資）を入れた人＋すでに回収が入っている人。
+      旧＝今の席の人だけ（state.racers）＝昼の人のレースを夜に直すと昼の人の回収欄が出ず、確定し直すとその人の回収が消えた。
+      席にいない人は名簿（roster）から名前・色を引く（id＝名前） */
+  function resRacers(key) {
+    var out = state.racers.slice(), ids = {};
+    out.forEach(function (rc) { ids[rc.id] = true; });
+    if (!RESPICK_ALL || !key) return out;
+    var br = (state.preds[key] || {}).byRacer || {};
+    var rf = (state.results[key] && state.results[key].refunds) || {};
+    Object.keys(br).filter(function (id) { var e = br[id] || {}; return !!(e.text || e.investInput > 0); })
+      .concat(Object.keys(rf)).forEach(function (id) {
+        if (ids[id]) return;
+        ids[id] = true;
+        var ro = (state.roster || []).filter(function (r) { return r.name === id; })[0];
+        out.push({ id: id, name: id, color: ro ? ro.color : "" });
+      });
+    return out;
+  }
+
   function renderSettlePreview() {
     var key = resultKey(); // 結果フォームと同じレースを見る（固定中はそのレース・FB96）
     var el = $("settle-preview");
@@ -1436,7 +1495,7 @@
       ? '<div class="dh-badge">⚖ 同着：' + orders.map(function (o) { return esc(o.join("-")); }).join(" ／ ") +
         " の" + orders.length + "通りで判定しています</div>"
       : "";
-    el.innerHTML = head + state.racers.map(function (rc) {
+    el.innerHTML = head + resRacers(key).map(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
       var s = window.Keirin.settle(rp.parsed, 0, orders, payouts);
       /* 9/25 Naoto「的中情報に俺たち目の記載は不要」＝俺たち目の🎯表示は撤去（買目側の🎯で足りる・同じ目が2回並んでいた）。
@@ -1520,7 +1579,8 @@
     var validPayouts = payoutRows.filter(function (p) { return p.amount > 0; });
     var missing = [];
     var missingRefund = [];
-    state.racers.forEach(function (rc) {
+    var settleRacers = resRacers(key); // §121 席にいない人の回収も扱う（確定し直しで消さない）
+    settleRacers.forEach(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
       var s = window.Keirin.settle(rp.parsed, 0, orders, validPayouts);
       s.hits.forEach(function (h) {
@@ -1553,7 +1613,7 @@
     // 回収額＝払戻×枚数の自動計算（8/27 FB146）。stateには従来どおり「額」を保存し、
     // 枚数は再編集用に refundUnits へ併記する（derive・オーバーレイは無改修のまま）
     var refunds = {}, refundUnits = {};
-    state.racers.forEach(function (rc) {
+    settleRacers.forEach(function (rc) {
       var rp = window.Derive.resolvePred(state, key, rc.id);
       var hits = window.Keirin.settle(rp.parsed, 0, orders, validPayouts).hits;
       var sum = refundOf(rc.id, hits);
@@ -2671,7 +2731,7 @@
     var parts = gap.key.split("|");
     var idx = -1;
     state.venues.forEach(function (v, i) { if (v.name === parts[0]) idx = i; });
-    if (idx < 0) return;
+    if (idx < 0 && !SPLIT) return; // §121 SPLIT（本番）は結果入力だけ開く＝場が本日の場から外れていても開ける
     if (SPLIT) { // §58 トークのレースは動かさず、結果入力だけそのレースへ（放送のレースを手で選び直した扱い）
       resPin = gap.key; resDirty = false;
       var rcard = $("result-target") && $("result-target").closest("details");
