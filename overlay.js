@@ -1455,6 +1455,8 @@
   var NBBOX = params.get("nbbox") !== "0", NBW = +params.get("nbw") || 6; // ②並びの窓の場名Rを太枠で（10/1 Naoto「見つけづらい」・線は札の外側6px）。&nbbox=0 で旧
   if (NBBOX) { document.documentElement.classList.add("nbbox"); document.documentElement.style.setProperty("--nbw", NBW + "px"); }
   var TKNOYOSO = params.get("tknoyoso") !== "0"; // ①枠全体がオッズのとき見出しは「名前」だけ（10/1）。&tknoyoso=0 で「名前 予想」
+  var TK1SOLO = params.get("tk1solo") !== "0"; // ✅10/4 本番既定ON（§124）①1人配信の予想枠にオッズ（renderPreds の tk1）・&tk1solo=0 で旧（①1人配信はオッズなし）
+  var tk1Shown = null; // ①1人配信で予想枠に出しているオッズのレース（null＝この仕組みを使っていない）
   var TKRK = params.get("tkrk") !== "0"; // §110（10/1 Naoto「本番反映」）①2人配信の人気順オッズ（tkOddsPlan）。&tkrk=0 で出さない
   function rkFmt(v) {
     var s = (Math.round(v * 10) / 10).toFixed(1).split(".");
@@ -3410,6 +3412,13 @@
           if (tkSpec && tkSpec.t === "half") tkHalf = tkOddsCol(tkSpec.k, 0, 9, 9);
           var tkRk = "";
           if (tkSpec && tkSpec.t === "full") tkRk = tkOddsCol(tkSpec.k, tkSpec.from, 18, 6);
+          /* （10/4 Naoto・§124・✅本番既定ON・&tk1solo=0 で旧）①の1人配信も予想枠にオッズ。予想枠が横いっぱいに広い＝場数ぶん出す：
+             0場＝枠全面に出走表のレースの1〜18／1場＝左に買目・右にそのレースの1〜18（9段×2列）／
+             2場＝縦4等分で［買目A｜A の1〜9｜買目B｜B の1〜9］／3場＝縦4等分（並びは下の3場の分岐）。
+             空きワイプ＝出走表のレースの人気順が予想枠に出ていないときだけ人気順（出ていれば出走表のまま＝被らない・soloOddsWipe） */
+          var tk1 = TK1SOLO && TKRK && TALKAUTO && rc && !seats.a !== !seats.b;
+          if (tk1 && !talkKeys.length && key) { tkRk = tkOddsCol(key, 0, 18, 6); tkSpec = { t: "full", k: key }; }
+          if (tk1) tk1Shown = !talkKeys.length && tkRk ? [key] : [];
           if (tkSpec && tkSpec.t === "split") {
             var c1 = tkOddsCol(tkSpec.ks[0], 0, 9, 9), c2 = tkOddsCol(tkSpec.ks[1], 0, 9, 9);
             if (c1 && c2) tkRk = '<div class="race-split tk-rk-split"><div class="tk-rk-col">' + c1 + '</div><div class="tk-rk-col">' + c2 + "</div></div>";
@@ -3438,7 +3447,33 @@
           var colHtml = function (k, wide) {
             return '<div class="race-col' + (wide ? " wide" : "") + '">' + raceColHead(rc, k, !wide) + raceBuyHtml(rc, k, !wide, false, true) + "</div>";
           };
-          if (tkHalf && talkKeys.length === 1) { // §110 左に買目｜右にオッズ1〜9（合計・投資は区画の中＝右下の固定枠は使わない）
+          var tk1Html = "", tk1Odds = []; // [{k}]＝予想枠に出したオッズの列（締切の印・ワイプとの被り判定）
+          if (tk1 && talkKeys.length) {
+            var oc = function (k, count, pair) { // pair＝すぐ左の買目と組（同じレース）＝間の線を消して組に見せる
+              var h = tkOddsCol(k, 0, count, 9);
+              if (!h) return "";
+              tk1Odds.push(k);
+              return '<div class="tk-rk-col' + (pair ? " tk1-pair" : "") + '">' + h + "</div>";
+            };
+            if (talkKeys.length === 1) {
+              tk1Html = '<div class="race-split">' + colHtml(talkKeys[0], true) + oc(talkKeys[0], 18, true) + "</div>";
+            } else if (talkKeys.length === 2) {
+              tk1Html = '<div class="race-split tk1-4">' + colHtml(talkKeys[0], false) + oc(talkKeys[0], 9, true) + colHtml(talkKeys[1], false) + oc(talkKeys[1], 9, true) + "</div>";
+            } else {
+              /* 10/4 Naoto「防府の買目→防府のオッズ→松阪の買目→松戸の買目の方がいい」＝オッズは組になる買目のすぐ右（どのレースのオッズか迷わない・2場と同じ読み方）。
+                 出走表のレースを予想している＝［そのレースの買目｜オッズ｜残り2場（発走の早い順）］／予想していない＝［3場の買目（発走の早い順）｜出走表のレースのオッズ］（右端の出走表に一番近い位置） */
+              var bySt = function (a, b) { return (raceStartSecOf(a) || 0) - (raceStartSecOf(b) || 0); };
+              var tIn = key && talkKeys.slice(0, 3).indexOf(key) >= 0;
+              var rest = talkKeys.slice(0, 3).filter(function (k) { return k !== key || !tIn; }).sort(bySt);
+              var tk = tIn ? [key].concat(rest) : rest; // .race-col の並び（締切・燃える枠の対応＝fireKeys）
+              tk1Html = '<div class="race-split tk1-4">' + (tIn
+                ? colHtml(key, false) + oc(key, 9, true) + colHtml(rest[0], false) + colHtml(rest[1], false)
+                : colHtml(rest[0], false) + colHtml(rest[1], false) + colHtml(rest[2], false) + (key ? oc(key, 9) : "")) + "</div>";
+            }
+          }
+          if (tk1Html) {
+            band.innerHTML = tk1Html;
+          } else if (tkHalf && talkKeys.length === 1) { // §110 左に買目｜右にオッズ1〜9（合計・投資は区画の中＝右下の固定枠は使わない）
             band.innerHTML = '<div class="race-split"><div class="race-col">' + raceColHead(rc, talkKeys[0], true) + raceBuyHtml(rc, talkKeys[0], true, false, true) +
               '</div><div class="tk-rk-col">' + tkHalf + "</div></div>";
           } else if (talkKeys.length >= 3 && solo) {
@@ -3472,7 +3507,7 @@
           // ①の固定枠：1場表示のときだけ使う。買目が枠の下に潜らないよう、枠の高さぶん買目エリアの下を空ける
           var tMeta = $(bp + "meta-" + slot);
           if (tMeta) {
-            if (TMETA && talkKeys.length <= 1 && !(tkHalf && talkKeys.length === 1)) fillBandMeta(tMeta, rc, talkKeys[0] || null);
+            if (TMETA && talkKeys.length <= 1 && !(tkHalf && talkKeys.length === 1) && !tk1Html) fillBandMeta(tMeta, rc, talkKeys[0] || null);
             else { tMeta.classList.add("hidden"); tMeta.textContent = ""; }
             band.style.paddingBottom = (TMETA && !tMeta.classList.contains("hidden")) ? (tMeta.offsetHeight + 12) + "px" : "";
           }
@@ -3489,8 +3524,13 @@
           }
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
-          if (tkHalf) { fitTkOdds(band); requestAnimationFrame(function () { fitTkOdds(band); }); } // §110 右半分のオッズ
-          if (tkHalf) { tkMarkClose(band, tkSpec, slot); applyRaceClosed(); }
+          if (tkHalf || tk1Odds.length) { fitTkOdds(band); requestAnimationFrame(function () { fitTkOdds(band); }); } // §110 右半分のオッズ／🧪1人配信の列
+          if (tkHalf && !tk1Html) { tkMarkClose(band, tkSpec, slot); applyRaceClosed(); }
+          if (tk1Odds.length && TKRKCLOSE && RCCLOSE) { // 🧪1人配信のオッズ列にも締切の印（そのオッズのレース・誰の買目でもない）
+            Array.prototype.forEach.call(band.querySelectorAll(".tk-rk-col"), function (c, i) { if (tk1Odds[i]) { c.setAttribute("data-rck", tk1Odds[i]); c.setAttribute("data-slot", slot + "-rk"); c.setAttribute("data-rid", ""); } });
+            applyRaceClosed();
+          }
+          if (tk1) tk1Shown = tk1Odds.slice(); // ワイプとの被り判定（soloOddsWipe）
           // 1場の右下の固定枠は帯の拡大率に合わせて大きく（9/26 Naoto「買目の大きさに対して点数と投資の字が小さい」）。
           // 帯は最大1.6倍に拡大されるが固定枠は帯の外＝27pxのまま取り残されていた。上限1.4倍（約38px）。
           // 枠が大きくなると買目に使える高さが減る＝大きさを決めてから下の余白を取り直し、もう一度だけ測り直す。戻す＝&tmetak=0
@@ -3979,7 +4019,9 @@
      レースは③の盤面のレース（トークのレース＝左の出走表と同じ）。③の予想帯はもともと人気順を出さない＝そのまま。✅10/4 本番既定ON・&tksolo=0 で旧（ワイプは出走表） */
   var TKSOLO = params.get("tksolo") !== "0";
   function soloOddsWipe(vName, rNo, boxes) {
-    if (!SOLOODDS || !(SCENE === "race" || (SCENE === "tenkai" && TKSOLO)) || !vName || !rNo) return false;
+    if (!SOLOODDS || !(SCENE === "race" || (SCENE === "tenkai" && TKSOLO) || (SCENE === "talk" && TK1SOLO)) || !vName || !rNo) return false;
+    // ①（§124）＝出走表のレースの人気順が予想枠にもう出ているならワイプは出走表のまま（被らない）
+    if (SCENE === "talk" && (!tk1Shown || tk1Shown.indexOf(window.Derive.raceKey(vName, rNo)) >= 0)) return false;
     var seats = seatMap(), rc = seats.a && !seats.b ? seats.a : (seats.b && !seats.a ? seats.b : null);
     if (!rc) return false;
     var k = window.Derive.raceKey(vName, rNo);

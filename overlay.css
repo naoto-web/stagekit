@@ -4028,3 +4028,9 @@ html.rkmine-b .rk-chips.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinit
 .seat-card.stc-rk .stc-rkhd .stc-rklab { font-size: 26px; font-weight: 900; }
 .seat-card.stc-rk .rk-odds.rk-tight .rk-col { display: grid; grid-template-columns: auto auto auto; column-gap: 5px; row-gap: 3px; align-content: space-around; align-items: center; }
 .seat-card.stc-rk .rk-odds.rk-tight .rk-cell { display: contents; }
+
+/* （10/4 Naoto・§124・✅本番既定ON・&tk1solo=0 で旧）①1人配信の予想枠を縦4等分（2場＝買目A｜Aの人気順｜買目B｜Bの人気順／3場＝買目A｜B｜C｜出走表のレースの人気順） */
+.talk-band .buy-line .race-split.tk1-4 > * { flex: 1 1 0; min-width: 0; }
+/* 組（買目＋そのレースのオッズ）の間は線なし・組と組の間は線（10/4）＝どの買目のオッズかを線で見せる */
+.talk-band .buy-line .race-split > .race-col + .tk-rk-col.tk1-pair { border-left-color: transparent; }
+.talk-band .buy-line .race-split.tk1-4 > .tk-rk-col + .race-col { border-left: 2px solid var(--panel-line); }
