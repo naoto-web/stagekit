@@ -1820,7 +1820,7 @@
           if (d && d.o) oddsData[k] = d;
         });
         if (changed) renderPreds();
-        if (changed && SOLOODDS && SCENE === "race") renderStartList(); // 🧪10/4 1人配信の空きワイプの人気順も新しいオッズで
+        if (changed && SOLOODDS && (SCENE === "race" || (SCENE === "tenkai" && TKSOLO))) renderStartList(); // 🧪10/4 1人配信の空きワイプの人気順も新しいオッズで（③は &tksolo=1）
       }).catch(function () {
         g.races.forEach(function (r) { var k = g.name + "|" + r; if (oddsPending[k] === sentAt) delete oddsPending[k]; });
       });
@@ -3975,8 +3975,11 @@
      手元だけのモック＝&soloodds=9（1〜9・3段×3列）｜18（1〜18・6段×3列）。席の人が放送のレースに入力なし＝予想枠がもう1〜18番人気＝ワイプは従来の出走表 */
   // ✅10/4 本番既定ON（18件）・&soloodds=0 で旧（ワイプは出走表・予想なしは予想枠に1〜18）／&soloodds=9 で1〜9
   var SOLOODDS = params.get("soloodds") === "0" ? 0 : (params.get("soloodds") === "9" ? 9 : 18);
+  /* 🧪（10/4 Naoto「③も②と同じような感じで」）③レース展開の1人配信も、空いた席のワイプに3連単オッズ人気順。
+     レースは③の盤面のレース（トークのレース＝左の出走表と同じ）。③の予想帯はもともと人気順を出さない＝そのまま。✅10/4 本番既定ON・&tksolo=0 で旧（ワイプは出走表） */
+  var TKSOLO = params.get("tksolo") !== "0";
   function soloOddsWipe(vName, rNo, boxes) {
-    if (!SOLOODDS || SCENE !== "race" || !vName || !rNo) return false;
+    if (!SOLOODDS || !(SCENE === "race" || (SCENE === "tenkai" && TKSOLO)) || !vName || !rNo) return false;
     var seats = seatMap(), rc = seats.a && !seats.b ? seats.a : (seats.b && !seats.a ? seats.b : null);
     if (!rc) return false;
     var k = window.Derive.raceKey(vName, rNo);
