@@ -4014,3 +4014,17 @@ html.rkmine-b .rk-chips.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinit
 }
 /* 🆕10/1 明日の出走表で時刻がまだ出ていない場（明日のミッドナイト）＝時刻の欄に「時刻未発表」を灰色で */
 .tm-tm.tm-tbd { font-size: 16px; font-weight: 700; color: #6b7280; }
+
+/* 🧪（10/4 Naoto・§122・✅本番既定ON・&soloodds=0 で旧）②の1人配信＝空いた席のワイプに放送のレースの3連単人気順（②の空いた帯と同じ見た目・JS fitRankOdds が枠いっぱいに拡大縮小） */
+.seat-card.stc-rk .stc-rkbody { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 10px 8px 16px; overflow: hidden; } /* 下は16px＝一番下の行が枠の下端に付かない（10/4） */
+.seat-card.stc-rk .rk-chips { display: inline-flex; align-items: center; gap: 2px; }
+.seat-card.stc-rk .rk-chips .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
+.seat-card.stc-rk .rk-cell .pl-odds { margin-left: 4px; font-size: 26px; text-align: right; font-weight: 600; }
+.seat-card.stc-rk .rk-odds { margin: 0; } /* margin:auto だと縮小前に枠からはみ出したとき上詰めになり、縮めた表が下に寄った（10/4）＝中央寄せは親の align-items に任せる */
+.seat-card.stc-rk .rk-odds.rk-tight { gap: 56px; } /* 10/4 Naoto「1列目と2列目をもうちょっと離して」24→56px */
+/* 10/4 Naoto＝タイトル帯は灰色の地に黒文字・大きく（出走表の帯＝金色とは別物と分かるように） */
+.seat-card.stc-rk .stc-hd.stc-rkhd { flex: 0 0 50px; height: 50px; background: #d9dce1; color: #111; gap: 16px; border-bottom: 2px solid #b8bdc5; }
+.seat-card.stc-rk .stc-rkhd .stc-vr { font-size: 32px; }
+.seat-card.stc-rk .stc-rkhd .stc-rklab { font-size: 26px; font-weight: 900; }
+.seat-card.stc-rk .rk-odds.rk-tight .rk-col { display: grid; grid-template-columns: auto auto auto; column-gap: 5px; row-gap: 3px; align-content: space-around; align-items: center; }
+.seat-card.stc-rk .rk-odds.rk-tight .rk-cell { display: contents; }

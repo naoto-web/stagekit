@@ -1820,6 +1820,7 @@
           if (d && d.o) oddsData[k] = d;
         });
         if (changed) renderPreds();
+        if (changed && SOLOODDS && SCENE === "race") renderStartList(); // 🧪10/4 1人配信の空きワイプの人気順も新しいオッズで
       }).catch(function () {
         g.races.forEach(function (r) { var k = g.name + "|" + r; if (oddsPending[k] === sentAt) delete oddsPending[k]; });
       });
@@ -3518,7 +3519,9 @@
           // 9/30 Naoto＝1人配信（席が1つだけ）＝下の枠は1つ＝1〜18番人気をまとめて（&rksolo=0 で1〜9）
           var rkMerge = RKMERGE && slot === "a" && seats.a && seats.b && k && !hasContentKey(seats.a, k) && !hasContentKey(seats.b, k); // 10/1 2人とも予想なし＝左のパネルを横いっぱいにして1〜18（1人配信と同じ見た目）
           var rkCount = (RKSOLO && !(seats.a && seats.b)) || rkMerge ? 18 : 9;
-          var rkHtml = RKODDS && bp === "band-" && rc && k && !hasContentKey(rc, k) ? rankOddsHtml(k, rkFrom, rkCount) : "";
+          // 🧪10/4 Naoto（SOLOODDS）1人配信の人気順は空きワイプに固定＝入力なしでも予想枠には出さない（空けておく）
+          var soloWipeRk = SOLOODDS && !(seats.a && seats.b);
+          var rkHtml = RKODDS && bp === "band-" && rc && k && !hasContentKey(rc, k) && !soloWipeRk ? rankOddsHtml(k, rkFrom, rkCount) : "";
           // 10/1 Naoto「2人とも予想なしで18番人気まで出すときは、間の線と右上の『3連単オッズ』はいらない」→「1人配信で予想なしと同じ見た目に」
           //   ＝右のパネルを隠し（CSS body.rk-merge）、左のパネルが横いっぱいになって1〜18番人気。&rkmerge=0 で旧（左1〜9・右10〜18）
           if (rkMerge && rkHtml) document.body.classList.add("rk-merge");
@@ -3968,10 +3971,37 @@
     });
     return out;
   }
+  /* 🧪（10/4 Naoto）②の1人配信＝下の予想枠はその人の買目で丸々使い、空いた席のワイプ（出走表）に放送のレースの3連単人気順。
+     手元だけのモック＝&soloodds=9（1〜9・3段×3列）｜18（1〜18・6段×3列）。席の人が放送のレースに入力なし＝予想枠がもう1〜18番人気＝ワイプは従来の出走表 */
+  // ✅10/4 本番既定ON（18件）・&soloodds=0 で旧（ワイプは出走表・予想なしは予想枠に1〜18）／&soloodds=9 で1〜9
+  var SOLOODDS = params.get("soloodds") === "0" ? 0 : (params.get("soloodds") === "9" ? 9 : 18);
+  function soloOddsWipe(vName, rNo, boxes) {
+    if (!SOLOODDS || SCENE !== "race" || !vName || !rNo) return false;
+    var seats = seatMap(), rc = seats.a && !seats.b ? seats.a : (seats.b && !seats.a ? seats.b : null);
+    if (!rc) return false;
+    var k = window.Derive.raceKey(vName, rNo);
+    // 10/4 Naoto「予想枠を空ける」＝入力の有無に関係なく人気順はワイプ（予想枠には出さない・renderPreds の soloWipeRk）
+    // ワイプは縦長に近い（532×354）＝3列だと横で頭打ち（0.84〜0.88倍）→2列（1〜9＝5段＋4段／1〜18＝9段×2列）で大きく
+    var rk = rankOddsHtml(k, 0, SOLOODDS, Math.ceil(SOLOODDS / 2));
+    if (!rk) return false; // オッズ取得待ち＝出走表のまま（届いたら renderPreds から描き直す）
+    // 10/4 Naoto＝タイトル帯は灰色の地に黒文字・大きく・文言は「3連単オッズ人気順」（枠に余裕がある）
+    var html = '<div class="stc-hd stc-rkhd"><b class="stc-vr">' + esc(vName + " " + rNo + "R") + '</b><span class="stc-rklab">3連単オッズ人気順</span></div>' +
+      '<div class="stc-rkbody">' + rk + "</div>";
+    boxes.forEach(function (b) {
+      if (b.getAttribute("data-rkh") !== html) { b.setAttribute("data-rkh", html); b.innerHTML = html; }
+      b.classList.add("stc-rk");
+      var body = b.querySelector(".stc-rkbody");
+      fitRankOdds(body);
+      requestAnimationFrame(function () { fitRankOdds(body); });
+    });
+    return true;
+  }
   function renderSeatCard(vName, rNo) {
     var cmp = SCENE !== "talk"; // ②③＝得点までの短い版
     var boxes = (STC_BOX[SCENE] || []).map(function (id) { return $(id); }).filter(Boolean);
     if (!boxes.length) return;
+    if (soloOddsWipe(vName, rNo, boxes)) return;
+    boxes.forEach(function (b) { b.classList.remove("stc-rk"); b.removeAttribute("data-rkh"); });
     var race = null;
     if (vName && rNo && timetable) {
       (timetable.venues || []).forEach(function (tv) {
