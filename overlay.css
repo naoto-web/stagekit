@@ -3417,6 +3417,24 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
 .tick-item.tick-m { display: inline-block; animation: tick-manche-pulse 1.6s ease-in-out infinite; transform-origin: center; }
 .tick-item.tick-m.tick-new { animation: tick-glow 2.4s ease-out 1, tick-manche-pulse 1.6s ease-in-out infinite; }
 @keyframes tick-manche-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+/* §126（10/6 Naoto・B案）note的中だけ金文字＋光の帯が4秒に1回すっと横切る＋前後の✨がゆっくり交互にまたたく（html.ticknote・&ticknote=0で旧）。
+   noteの万車は .tn-t が無い＝文字は赤のまま✨だけ。文字の大きさ・並びは変えない */
+html.ticknote .tick-note .tn-t {
+  background: linear-gradient(105deg, #ffc93c 0%, #ffd864 42%, #fffbe8 50%, #ffd864 58%, #ffc93c 100%);
+  background-size: 300% 100%; background-position: 100% 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: tnSweep 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 200, 60, .45));
+}
+/* 白地のティッカー（①トーク＝theme w）は明るい金だと読めない＝濃い金に・光の帯は明るい金 */
+html.ticknote body[data-theme="w"] .tick-note .tn-t {
+  background-image: linear-gradient(105deg, #a66a00 0%, #b97c00 42%, #ffcc33 50%, #b97c00 58%, #a66a00 100%);
+  filter: drop-shadow(0 0 3px rgba(255, 190, 40, .5)); }
+@keyframes tnSweep { 0%, 45% { background-position: 100% 0; } 85%, 100% { background-position: 0% 0; } }
+html.ticknote .tick-note::before, html.ticknote .tick-note::after {
+  content: "✨"; display: inline-block; font-size: .8em; margin: 0 4px; animation: tnTwinkle 2.2s ease-in-out infinite; }
+html.ticknote .tick-note::after { animation-delay: 1.1s; }
+@keyframes tnTwinkle { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
 
 /* ---------- デバッグバッジ（?debug=1のみ） ---------- */
 .dbg { display: none; position: absolute; left: 8px; bottom: 70px; z-index: 40;

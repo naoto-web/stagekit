@@ -4491,8 +4491,13 @@
     if (h.manche && h.amount) {
       return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍</span>";
     }
+    if (TICKNOTE && h.note) return '<span>🎯 <span class="tn-t">' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍 的中</span></span>"; // §126 文字だけ金にする（絵文字は色を変えない）
     return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍 的中</span>";
   }
+  /* §126（10/6 Naoto・配信者の声「下の的中レースってnoteレースだけもっとギラギラにさりげなく」）＝的中速報のnote的中だけ
+     金文字＋光の帯＋前後に✨がまたたく（B案）。noteの万車は文字は赤のまま✨だけ付く。&ticknote=0で旧 */
+  var TICKNOTE = params.get("ticknote") !== "0";
+  if (TICKNOTE) document.documentElement.classList.add("ticknote");
   /** 演出が一段落する時刻＝バッジ＋ピコーン（0.5s後に出て4s後からカウント3s）／プラ転・節目・最高額（popUntil）／ピコーンの実行中 */
   function fxQuietAt() {
     var t = (window.__fxBadgeAt || 0) + REFPOP_AFTER_BADGE_MS + REFPOP_POP_LEAD_MS + REFPOP_COUNT_MS + 500;
@@ -4524,7 +4529,7 @@
     // ⚠️ここは renderAll の途中＝的中演出（fireHitFx が __fxBadgeAt を置く）は**この後**に走る＝300ms 置いてから待ち時間を見る（ピコーンと同じ）
     if (added && !tickTimer) tickTimer = setTimeout(tickRelease, 300);
     var tHits = shownHits().filter(function (h) { return !tickHold[tickKey(h)]; }); // 今の席の人の的中だけ（9/25）・演出待ちは除く
-    var items = tHits.slice().reverse().map(function (h) { return { k: tickKey(h), s: tickItemHtml(h), m: !!(h.manche && h.amount) }; }); // 古い順
+    var items = tHits.slice().reverse().map(function (h) { return { k: tickKey(h), s: tickItemHtml(h), m: !!(h.manche && h.amount), n: !!(TICKNOTE && h.note) }; }); // 古い順（n＝§126 note的中・万車も✨だけ付く＝文字は赤のまま）
     var sig = items.map(function (it) { return it.s; }).join("");
     // ③結果と①トークの両方のティッカーに同じ内容を流す（的中ゼロでもバーは常時表示。②への追加は比率崩れのためFB31で撤回）
     [["ticker", "ticker-result"], ["ticker-talk-wrap", "ticker-talk"]].forEach(function (pair) {
@@ -4555,7 +4560,7 @@
       glow＝今回足された的中（tickKey→true）。バーの幅が測れない間（非表示）は1秒ごとに測り直す */
   function layoutTicker(wrap, el, items, sig, glow) {
     var html = items.map(function (it) {
-      return '<span class="tick-item' + (it.m ? " tick-m" : "") + (glow && glow[it.k] ? " tick-new" : "") + '">' + it.s + "</span>";
+      return '<span class="tick-item' + (it.m ? " tick-m" : "") + (it.n ? " tick-note" : "") + (glow && glow[it.k] ? " tick-new" : "") + '">' + it.s + "</span>";
     }).join("");
     el.classList.remove("scroll");
     el.style.animationDuration = "";
