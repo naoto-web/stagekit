@@ -345,8 +345,10 @@
       その日の最初のレースの前＝次のレース／最後のレースの後＝最後のレース。
       races＝[{venue, no, startSec}]（本日の場だけ）・settleSecOf(key)＝最初に確定した時刻（0時からの秒・無ければnull）
       §111（10/1 Naoto）raceSec＝最後のレースの発走からこの秒数（レース中）は (b) の締切でも次へ移らない（佐世保7R 10:40発走中に大宮1R 10:42締切で②が切り替わった）。
-      0・省略＝従来どおり */
-  function broadcastRace(races, settleSecOf, nowSec, closeSec, raceSec) {
+      0・省略＝従来どおり
+      §125（10/6 Naoto）leadSec＝ただし次のレースの発走 leadSec 秒前には切り替える（raceSec の延長の上限・締切より前には戻さない）。
+      松阪12R（16:25発走・G3決勝）がゴール16:29台なのに、いわき平2R（16:32発走）の締切16:29で切り替わった＝raceSec 360・leadSec 60 で16:31。0・省略＝上限なし */
+  function broadcastRace(races, settleSecOf, nowSec, closeSec, raceSec, leadSec) {
     var last = null, next = null;
     (races || []).forEach(function (r) {
       if (r.startSec <= nowSec) { if (!last || r.startSec > last.startSec) last = r; }
@@ -357,8 +359,14 @@
     var sw = next.startSec - (closeSec || 0);
     var st = settleSecOf ? settleSecOf(raceKey(last.venue, last.no)) : null;
     // 発走より前の確定は数えない（テスト入力や前日のデータで、走る前に次へ移ってしまうのを防ぐ・9/28 テストGASで実際に起きた）
-    if (typeof st === "number" && st >= last.startSec && st + 120 < sw) sw = st + 120;
-    if (raceSec > 0 && sw < last.startSec + raceSec) sw = last.startSec + raceSec; // §111 レース中は切り替えない
+    var settled = typeof st === "number" && st >= last.startSec;
+    if (settled && st + 120 < sw) sw = st + 120;
+    if (raceSec > 0) { // §111 レース中は切り替えない
+      // §125 確定したらレースは終わっている＝発走＋raceSec の代わりに確定＋2分まで（10/6 Naoto「確定＋2分は今までどおり」）
+      var hold = leadSec > 0 && settled ? st + 120 : last.startSec + raceSec;
+      if (leadSec > 0 && hold > next.startSec - leadSec) hold = next.startSec - leadSec; // §125 次の発走 leadSec 秒前には切り替える
+      if (sw < hold) sw = hold;
+    }
     return nowSec >= sw ? next : last;
   }
 

@@ -1256,9 +1256,10 @@
     var names = {};
     (state.venues || []).forEach(function (v) { names[v.name] = 1; });
     var races = allRaces().filter(function (r) { return names[r.venue]; });
-    return window.Derive.broadcastRace(races, settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60, BCHOLD ? TFX_RACE : 0);
+    return window.Derive.broadcastRace(races, settleSecOf, nowSec(), ((state.cfg && state.cfg.closeMin) || 3) * 60, BCHOLD ? (BCLONG ? 360 : TFX_RACE) : 0, BCHOLD && BCLONG ? 60 : 0);
   }
   var BCHOLD = params.get("bchold") !== "0"; // §111（10/1 Naoto）レース中（発走からTFX_RACE＝3分）は放送のレースを切り替えない（&bchold=0で旧）
+  var BCLONG = params.get("bclong") !== "0"; // §125（10/6 Naoto）止める時間を発走から6分に・ただし次の発走1分前には切り替える（タイマーのレース中 TFX_RACE とは別・&bclong=0で3分の旧）
   function broadcastKey() {
     if (!SPLIT) return currentKey();
     var b = broadcastRaceObj();
