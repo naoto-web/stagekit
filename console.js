@@ -2738,7 +2738,13 @@
       if (!s) return;
       Object.keys(s.byRacer).forEach(function (pid) {
         var r = s.byRacer[pid];
-        if (r.hits.length && !(r.invest > 0)) gaps.push({ id: "inv|" + key + "|" + pid, kind: "invest", key: key, pid: pid, hits: r.hits });
+        if (r.invest > 0) return;
+        if (r.hits.length) { gaps.push({ id: "inv|" + key + "|" + pid, kind: "invest", key: key, pid: pid, hits: r.hits }); return; }
+        // §127追補（10/6 Naoto）外れでも買目があるのに投資が空なら知らせる（投資合計・回収率から漏れる）。買目0点（俺たち目だけ等）は対象外
+        var pts = window.Derive.resolvePred(state, key, pid).points || 0;
+        var od = s.result.order || [];
+        if (pts > 0) gaps.push({ id: "inv|" + key + "|" + pid, kind: "invest", miss: true, key: key, pid: pid, hits: [], points: pts,
+          order: Array.isArray(od[0]) ? od[0].join("-") : od.join("-") });
       });
     });
     return gaps;
@@ -2782,7 +2788,7 @@
     refundAlertUpdate(gaps.concat(igaps)); // 🔔 新しく集計待ち／投資空の的中になった瞬間に目立つ通知（10/3・§127）
     if (!gaps.length && igaps.length) { // §127 投資空だけ＝バーにもどこの何Rかを出し、タップでアラートを開く
       var ig = igaps[0], ip = ig.key.split("|");
-      el.textContent = "⚠ 投資額が未入力の的中：" + ip[0] + ip[1] + "R（" + ig.pid + "）" +
+      el.textContent = "⚠ 投資額が未入力" + (ig.miss ? "（不的中）" : "の的中") + "：" + ip[0] + ip[1] + "R（" + ig.pid + "）" +
         (igaps.length > 1 ? " ほか" + (igaps.length - 1) + "件" : "") + " → タップで入力";
       el.classList.remove("hidden");
       el.onclick = function () { refundAlertShow(true); };
@@ -2834,8 +2840,8 @@
         var hits = g.hits.map(function (h) { return esc(h.type + " " + h.comboLabel) + "（払戻 " + yen(h.amount) + "）"; }).join(" / ");
         if (g.kind === "invest") { // §127 どこの何Rの誰の投資かを明示し、その場で入れられる（トークのレースは動かさない）
           return '<div class="ra-item ra-inv">' +
-            '<div class="ra-msg">' + esc(g.pid) + "さんの" + esc(parts[0] + parts[1]) + "Rの投資額が入力されていません</div>" +
-            '<div class="ra-sub">的中 ' + hits + "</div>" +
+            '<div class="ra-msg">' + esc(g.pid) + "さんの" + esc(parts[0] + parts[1]) + "Rの投資額が入力されていません" + (g.miss ? "（不的中）" : "") + "</div>" +
+            '<div class="ra-sub">' + (g.miss ? "買目 " + g.points + "点・結果 " + esc(g.order || "-") : "的中 " + hits) + "</div>" +
             '<div class="ra-invrow"><span class="ra-invlbl">' + esc(parts[0] + parts[1]) + 'Rの投資</span><input type="number" class="ra-invin" data-i="' + i + '" min="0" step="100" inputmode="numeric"><span>円</span>' +
             '<button type="button" class="btn small ra-invsave" data-i="' + i + '">保存</button></div></div>';
         }
