@@ -48,6 +48,14 @@ body {
 .refund-alert .ra-sub { flex: 1 1 auto; font-size: 12px; font-weight: 700; color: #ffd1d1; font-variant-numeric: tabular-nums; }
 .refund-alert .btn.ra-open { background: #ffd98a; border-color: #ffd98a; color: #3a2a00; font-weight: 900; }
 .refund-alert .btn.ra-open:hover { background: #ffe6ad; }
+/* §127 投資額が空の的中＝アラートの中で投資を入れて保存（どこの何Rの誰の投資かを行の頭に出す） */
+.refund-alert .ra-invrow { flex: 1 1 100%; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; }
+.refund-alert .ra-invrow > * { flex: 0 0 auto; white-space: nowrap; }
+.refund-alert .ra-invin { width: 110px; padding: 4px 8px; font-size: 16px; font-weight: 800; border-radius: 6px; border: 2px solid #ffd98a;
+  background: #fff; color: #222; font-variant-numeric: tabular-nums; }
+.refund-alert .ra-invin.pf-missing { border-color: #e5484d; box-shadow: 0 0 0 2px #e5484d; }
+.refund-alert .btn.ra-invsave { background: #ffd98a; border-color: #ffd98a; color: #3a2a00; font-weight: 900; }
+.refund-alert .btn.ra-invsave:hover { background: #ffe6ad; }
 .refund-alert .ra-foot { display: flex; justify-content: flex-end; margin-top: 6px; }
 .refund-alert .btn.ra-later { background: rgba(0,0,0,.25); border-color: rgba(255,255,255,.35); color: #fff; }
 .refund-alert .btn.ra-later:hover { background: rgba(0,0,0,.4); }

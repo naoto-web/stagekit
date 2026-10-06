@@ -2727,6 +2727,33 @@
     });
     return gaps;
   }
+  /** §127（10/6 Naoto）的中したのに投資額が空のレース＝投資0円扱いで「集計中」にならず、回収の入れ忘れにも気づけない。
+      条件＝買目（有料分）の的中あり＋投資が空/0（俺たち目だけの的中は対象外＝r.hits に入らない）。&invalert=0 で出さない */
+  var INVEST_ALERT = params.get("invalert") !== "0";
+  function investGaps() {
+    var gaps = [];
+    if (!state || !INVEST_ALERT) return gaps;
+    Object.keys(state.results || {}).forEach(function (key) {
+      var s = window.Derive.settleRace(state, key);
+      if (!s) return;
+      Object.keys(s.byRacer).forEach(function (pid) {
+        var r = s.byRacer[pid];
+        if (r.hits.length && !(r.invest > 0)) gaps.push({ id: "inv|" + key + "|" + pid, kind: "invest", key: key, pid: pid, hits: r.hits });
+      });
+    });
+    return gaps;
+  }
+  /** §127 アラートの欄から投資額を保存（予想入力のカードを開かなくてよい＝トークのレースを動かさない） */
+  function saveGapInvest(g, v) {
+    if (!(v > 0)) return false;
+    var entry = ensurePredEntry(g.key, g.pid);
+    entry.investInput = v;
+    var d = predDrafts[draftKey(g.key, g.pid)];
+    if (d) d.invest = String(v); // 書きかけの下書きがあっても投資だけは今の値に
+    save();
+    renderAll();
+    return true;
+  }
   /** 集計待ちのレースを結果入力に開く（警告バーのタップとアラートの「このレースを開く」で共用） */
   function openRefundGap(gap) {
     var parts = gap.key.split("|");
@@ -2751,7 +2778,16 @@
     var el = $("refund-warn");
     if (!el || !state) return;
     var gaps = refundGaps();
-    refundAlertUpdate(gaps); // 🔔 新しく集計待ちになった瞬間に目立つ通知（10/3）
+    var igaps = investGaps();
+    refundAlertUpdate(gaps.concat(igaps)); // 🔔 新しく集計待ち／投資空の的中になった瞬間に目立つ通知（10/3・§127）
+    if (!gaps.length && igaps.length) { // §127 投資空だけ＝バーにもどこの何Rかを出し、タップでアラートを開く
+      var ig = igaps[0], ip = ig.key.split("|");
+      el.textContent = "⚠ 投資額が未入力の的中：" + ip[0] + ip[1] + "R（" + ig.pid + "）" +
+        (igaps.length > 1 ? " ほか" + (igaps.length - 1) + "件" : "") + " → タップで入力";
+      el.classList.remove("hidden");
+      el.onclick = function () { refundAlertShow(true); };
+      return;
+    }
     if (!gaps.length) { el.classList.add("hidden"); el.textContent = ""; el.onclick = null; return; }
     var gap = gaps[0], parts = gap.key.split("|");
     el.textContent = "⚠ 回収額が未入力の的中：" + parts[0] + parts[1] + "R（" + gap.pid + "）" +
@@ -2790,10 +2826,19 @@
     if (!fresh && !el.classList.contains("hidden") && sig === raSig) return; // 同じ中身なら描き直さない（押そうとしたボタンを作り直さない）
     raSig = sig;
     var yen = function (n) { return "¥" + (+n || 0).toLocaleString("ja-JP"); };
-    el.innerHTML = '<div class="ra-title">🔔 回収枚数が入力されていません</div>' +
+    var nInv = raGaps.filter(function (g) { return g.kind === "invest"; }).length;
+    var title = !nInv ? "回収枚数が入力されていません" : nInv === raGaps.length ? "投資額が入力されていません" : "回収枚数・投資額が入力されていません";
+    el.innerHTML = '<div class="ra-title">🔔 ' + title + "</div>" +
       raGaps.map(function (g, i) {
         var parts = g.key.split("|");
         var hits = g.hits.map(function (h) { return esc(h.type + " " + h.comboLabel) + "（払戻 " + yen(h.amount) + "）"; }).join(" / ");
+        if (g.kind === "invest") { // §127 どこの何Rの誰の投資かを明示し、その場で入れられる（トークのレースは動かさない）
+          return '<div class="ra-item ra-inv">' +
+            '<div class="ra-msg">' + esc(g.pid) + "さんの" + esc(parts[0] + parts[1]) + "Rの投資額が入力されていません</div>" +
+            '<div class="ra-sub">的中 ' + hits + "</div>" +
+            '<div class="ra-invrow"><span class="ra-invlbl">' + esc(parts[0] + parts[1]) + 'Rの投資</span><input type="number" class="ra-invin" data-i="' + i + '" min="0" step="100" inputmode="numeric"><span>円</span>' +
+            '<button type="button" class="btn small ra-invsave" data-i="' + i + '">保存</button></div></div>';
+        }
         return '<div class="ra-item">' +
           '<div class="ra-msg">' + esc(g.pid) + "さんの" + esc(parts[0] + parts[1]) + "Rの回収枚数が入力されていません</div>" +
           '<div class="ra-sub">的中 ' + hits + "　投資 " + yen(g.invest) + "</div>" +
@@ -2809,6 +2854,18 @@
         raDismissedAt = Date.now(); el.classList.add("hidden");
         if (g) openRefundGap(g);
       });
+    });
+    el.querySelectorAll(".ra-invsave").forEach(function (b) {
+      var i = +b.getAttribute("data-i");
+      var inp = el.querySelector('.ra-invin[data-i="' + i + '"]');
+      var go = function () {
+        var g = raGaps[i], v = Math.round(+(inp && inp.value) || 0);
+        if (!g) return;
+        if (!(v > 0)) { if (inp) { inp.classList.add("pf-missing"); inp.focus(); } return; }
+        saveGapInvest(g, v); // 保存→renderAll で一覧が更新される（回収も空ならすぐ「回収枚数」の件として出直す）
+      };
+      b.addEventListener("click", go);
+      if (inp) inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
     });
     var later = el.querySelector(".ra-later");
     if (later) later.addEventListener("click", function () { raDismissedAt = Date.now(); el.classList.add("hidden"); });
