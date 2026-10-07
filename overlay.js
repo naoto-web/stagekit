@@ -2839,6 +2839,7 @@
      ・プラ転と重なったら「プラ転！」→「回収率○○%突破！」の順（popUntil で後ろへずらす）
      ・読み込み直後は、その時点の精算済み回収率より上の節目だけ「出せる状態」＝読み直しで過去の突破を再生しない */
   var MS_MIN_PROFIT = +(params.get("msmin") || 10000); // 節目を出す最低のもうけ（円）。200%なら最低でも投資1万・回収2万超
+  var MS_MIN_INVEST = params.get("msinv") !== null ? +params.get("msinv") : 10000; // §128 節目を出す最低の投資の合計（円）・&msinv=0で旧
   function msElig(p, T) { return Object.prototype.hasOwnProperty.call(p.ms, T) ? p.ms[T] : T >= p.msInit; }
   function platenCheck(rid, ht) {
     if (!PLATEN) return;
@@ -2862,6 +2863,8 @@
     // もうけ（回収−投資）が MS_MIN_PROFIT 未満なら出さない（9/26 Naoto「1,000円が3,500円で派手なのは恥ずかしい」）。
     // 出さなかった節目も「出した」扱いのまま＝あとで額が増えても突破の瞬間でないので遅れて出さない。プラ転には下限なし
     if (top && ht.refund - ht.invest < MS_MIN_PROFIT) top = 0;
+    // §128（10/7 Naoto）投資の合計（発走済み＝画面の数字）が MS_MIN_INVEST 未満でも出さない（もとき 投資2,000→回収12,100で600%突破が出た）
+    if (top && ht.invest < MS_MIN_INVEST) top = 0;
     if (top > p.msArmed) p.msArmed = top;
     if (!REFPOP) { platenFire(rid); msFire(rid); } // ピコーンを止めている場合は即
   }
@@ -7718,6 +7721,23 @@
     hitGlows = []; hitPhase0 = 0;
     hitSwitched = {};
   }
+  /* §128（10/7 Naoto）日付が変わったら演出の記憶を捨てる（§96のテスト用リセットと同じもの・本番も）。
+     10/7 ムネオの今日最初の的中で「プラ転！」＝前日 10/6 をマイナスで終えた platenSt.losing が、OBSが夜のあいだ読み直されず残っていた。
+     進んだ時だけ（日付が戻る遅延応答では捨てない）。読み込み直後の日付は「見た」扱いにするだけ。&dayfx=0 で旧 */
+  var DAYFX = params.get("dayfx") !== "0";
+  var lastStateDate;
+  function dateResetCheck(s) {
+    if (!DAYFX || !s || !s.date) return;
+    if (lastStateDate === undefined) { lastStateDate = s.date; return; }
+    if (s.date <= lastStateDate) return;
+    lastStateDate = s.date;
+    firedFx = {}; saveFired();
+    seenHits = null; // 起動直後と同じ扱い＝その日すでにある的中をまとめて演出しない（§96は {}＝入れ直した的中を出すため）
+    refAnim = {}; platenSt = {}; recSeen = null;
+    tickSeen = null; tickHold = {}; tickGlow = {};
+    hitGlows = []; hitPhase0 = 0;
+    hitSwitched = {};
+  }
   function applyState(s, path) {
     if (!s) return;
     if (s.rev) {
@@ -7732,6 +7752,7 @@
     state = window.Derive.normalizeState(merged);
     derived = window.Derive.day(state);
     testResetCheck(state); // §96 テスト接続だけ＝リセットの合図なら演出の記憶を捨ててから描く
+    dateResetCheck(state); // §128 日付が進んだら演出の記憶を捨てる（前日の「マイナス中」でプラ転が出ないように）
     syncPath = path;
     lastSyncAt = new Date();
     renderAll();
