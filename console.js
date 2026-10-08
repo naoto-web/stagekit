@@ -677,7 +677,7 @@
   function oreMissingInBuys(key, text, ore) {
     if (!ore || !String(ore).trim()) return null;
     var cars = autoCars(key);
-    var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(ore), "3連単", cars);
+    var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(ore), "3連単", cars, window.Derive.absentOf(state, key));
     var oreL = op.lines && op.lines[0];
     if (!oreL || !oreL.ok || !oreL.combos.length) return null;
     var keyOf = function (type, c) {
@@ -685,7 +685,7 @@
       return type + "|" + cc.join("-");
     };
     var have = {};
-    window.Keirin.parsePrediction(text, "3連単", cars).lines.forEach(function (l) {
+    window.Keirin.parsePrediction(text, "3連単", cars, window.Derive.absentOf(state, key)).lines.forEach(function (l) {
       if (!l.ok || l.cut) return; // 切り目行は「買っている目」に数えない（8/10 FB122）
       l.combos.forEach(function (c) { have[keyOf(l.type, c)] = true; });
     });
@@ -996,7 +996,7 @@
     var type = form.querySelector(".pf-type").value;
     var ta = form.querySelector(".pf-text");
     fitPredText(ta);
-    var parsed = window.Keirin.parsePrediction(ta.value, type, cars);
+    var parsed = window.Keirin.parsePrediction(ta.value, type, cars, window.Derive.absentOf(state, key)); // §129 欠車は点数から外す
     var cutWarn = "";
     /* 右列＝買目欄の1行に1行ずつ対応（9/25）。parsePrediction は空行を飛ばすので、
        欄の行を頭から歩いて空行には空の行を置く＝高さがそろう。入力そのものは左に見えているので右には結果だけ */
@@ -1367,19 +1367,25 @@
     requestAnimationFrame(sync);
   }
 
+  /* §130（10/8 Naoto）払戻は必ず10円単位（100円あたり）＝下一桁が0でない金額はありえない。
+     10/8 静岡4R 2-1-7 が手で「5739」（公式5,740）と入り、もときの回収が59,398円になった。欄を赤枠＋エラー文・確定も止める。&paycheck=0 で旧 */
+  var PAY_CHECK = params.get("paycheck") !== "0";
+  function payBad(p) { return PAY_CHECK && p && p.amount > 0 && p.amount % 10 !== 0; }
+  var PAY_BAD_MSG = "払戻は10円単位です（下一桁は0）";
   function renderPayoutRows() {
     var el = $("payout-rows");
     el.innerHTML = payoutRows.map(function (p, i) {
       return '<div class="payout-row">' +
         '<span class="pr-label">' + esc(p.type) + " " + esc(window.Keirin.comboLabel(p.type, p.combo)) + "</span>" +
-        '<input type="number" class="inp pr-amount" data-i="' + i + '" value="' + (p.amount || "") + '" placeholder="払戻">' +
+        '<input type="number" class="inp pr-amount' + (payBad(p) ? " pf-missing" : "") + '" data-i="' + i + '" value="' + (p.amount || "") + '" placeholder="払戻">' +
         '<span class="pr-unit">円</span>' + // 8/27 FB146＝単位を明示（上下ボタンはCSSで非表示）
         // 9/25 Naoto「✕は出さず、1210と入れたら12.1倍と出して」＝行を消す✕は撤去。
         // 🔑打ち間違いの行は金額を空にすれば消したのと同じ＝確定は amount>0 の行しか使わない／
         //   3連単の空行は着順を打ち直すと syncPayoutPresets が掃除する
         '<span class="pr-odds" data-i="' + i + '">' + oddsText(p.amount) + "</span>" +
         // 自動で入れた金額の出どころ（§46）。人が打ち直したら消える
-        '<span class="pr-src" data-i="' + i + '">' + payoutSrcText(p.src) + "</span></div>";
+        '<span class="pr-src" data-i="' + i + '">' + payoutSrcText(p.src) + "</span>" +
+        '<span class="pr-err" data-i="' + i + '">' + (payBad(p) ? PAY_BAD_MSG : "") + "</span></div>"; // §130
     }).join("");
     el.querySelectorAll(".pr-amount").forEach(function (inp) {
       inp.addEventListener("input", function () {
@@ -1391,6 +1397,10 @@
         if (sr) sr.textContent = "";
         var od = el.querySelector('.pr-odds[data-i="' + i + '"]');
         if (od) od.textContent = oddsText(payoutRows[i].amount);
+        var bad = payBad(payoutRows[i]); // §130 打った瞬間に赤枠＋エラー文
+        inp.classList.toggle("pf-missing", bad);
+        var er = el.querySelector('.pr-err[data-i="' + i + '"]');
+        if (er) er.textContent = bad ? PAY_BAD_MSG : "";
         markResDirty();
         renderSettlePreview();
       });
@@ -1576,6 +1586,16 @@
       $("settle-preview").innerHTML = '<span class="manche">⚖ 同着モードですが、他の着順が読めません（例：132／複数あるときは1行に1つ）　→ 解除するなら「同着（解除）」を押してください</span>';
       return;
     }
+    // §130 10円単位でない払戻があれば確定させない（ありえない金額＝打ち間違い）
+    var badPays = payoutRows.filter(payBad);
+    if (badPays.length) {
+      $("settle-preview").innerHTML = '<span class="manche">⚠ ' + PAY_BAD_MSG + "：" + badPays.map(function (p) {
+        return esc(p.type + " " + window.Keirin.comboLabel(p.type, p.combo)) + " " + p.amount.toLocaleString("ja-JP") + "円";
+      }).join(" ／ ") + "　→ 直してから確定してください</span>";
+      var bi = $("payout-rows") && $("payout-rows").querySelector(".pr-amount.pf-missing");
+      if (bi) bi.focus();
+      return;
+    }
     // 的中しているのに払戻が未入力なら確定させない（0倍の的中速報が画面に載る事故防止）
     var validPayouts = payoutRows.filter(function (p) { return p.amount > 0; });
     var missing = [];
@@ -1590,7 +1610,7 @@
       });
       // 俺たち目の的中も払戻必須（0倍でティッカーに載る事故防止）
       if (rp.entry.oreTachi) {
-        var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
+        var op = window.Keirin.parsePrediction(window.Keirin.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9, window.Derive.absentOf(state, key));
         window.Keirin.settle(op, 0, orders, validPayouts).hits.forEach(function (h) {
           var label = h.type + " " + h.comboLabel + "（俺たち目）";
           if (!h.amount && missing.indexOf(label) < 0) missing.push(label);
@@ -2749,6 +2769,39 @@
     });
     return gaps;
   }
+  /** §131（10/8 Naoto）手で確定した払戻が公式と違うレース（10/8 静岡4R＝確定 5,739円 → 公式 5,740円）。
+      手で確定した結果は公式が来ても上書きしない（applyAutoResults）＝従来はそのレースを結果入力で開いた時だけ警告が出た。
+      自動取込（auto）の結果は公式そのもの＝対象外。&paydiff=0 で出さない */
+  var PAYDIFF_ALERT = params.get("paydiff") !== "0";
+  function payDiffs(rec, r) {
+    var mine = keepPayouts(rec.payouts), out = [];
+    keepPayouts(r.payouts).forEach(function (q) {
+      var label = window.Keirin.comboLabel(q.type, q.combo), m = null;
+      mine.forEach(function (p) { if (window.Keirin.comboLabel(p.type, p.combo) === label) m = p; });
+      if (m && m.amount !== q.amount) out.push({ label: q.type + " " + label, mine: m.amount, off: q.amount });
+    });
+    return out;
+  }
+  function payGaps() {
+    var gaps = [];
+    if (!state || !PAYDIFF_ALERT) return gaps;
+    Object.keys(state.results || {}).forEach(function (key) {
+      var rec = state.results[key], r = autoResults[key];
+      if (!rec || !r || rec.auto) return;
+      var d = payDiffs(rec, r);
+      if (!d.length) return;
+      gaps.push({ id: "pay|" + key + "|" + d.map(function (x) { return x.label + ":" + x.mine + ">" + x.off; }).join(","), kind: "pay", key: key, diffs: d, hits: [] });
+    });
+    return gaps;
+  }
+  /** §131 アラートの「公式の払戻で確定し直す」＝そのレースを結果入力に開き、公式の払戻を入れて確定（枚数は確定時の refundUnits から戻る＝回収も公式×枚数で数え直し） */
+  function resettleOfficial(g) {
+    openRefundGap(g);
+    applyAutoToForm(g.key);
+    renderSettlePreview();
+    $("btn-settle").click(); // 枚数が戻らない等で止まったら、結果入力に理由が出る（開いたままなので直して確定できる）
+    renderAll(); // 確定ボタンはアラートを描き直さない＝直した件をすぐ消す
+  }
   /** §127 アラートの欄から投資額を保存（予想入力のカードを開かなくてよい＝トークのレースを動かさない） */
   function saveGapInvest(g, v) {
     if (!(v > 0)) return false;
@@ -2785,7 +2838,7 @@
     if (!el || !state) return;
     var gaps = refundGaps();
     var igaps = investGaps();
-    refundAlertUpdate(gaps.concat(igaps)); // 🔔 新しく集計待ち／投資空の的中になった瞬間に目立つ通知（10/3・§127）
+    refundAlertUpdate(gaps.concat(igaps, payGaps())); // §131 公式と違う払戻も同じ通知に // 🔔 新しく集計待ち／投資空の的中になった瞬間に目立つ通知（10/3・§127）
     if (!gaps.length && igaps.length) { // §127 投資空だけ＝バーにもどこの何Rかを出し、タップでアラートを開く
       var ig = igaps[0], ip = ig.key.split("|");
       el.textContent = "⚠ 投資額が未入力" + (ig.miss ? "（不的中）" : "の的中") + "：" + ip[0] + ip[1] + "R（" + ig.pid + "）" +
@@ -2833,11 +2886,21 @@
     raSig = sig;
     var yen = function (n) { return "¥" + (+n || 0).toLocaleString("ja-JP"); };
     var nInv = raGaps.filter(function (g) { return g.kind === "invest"; }).length;
-    var title = !nInv ? "回収枚数が入力されていません" : nInv === raGaps.length ? "投資額が入力されていません" : "回収枚数・投資額が入力されていません";
+    var nPay = raGaps.filter(function (g) { return g.kind === "pay"; }).length; // §131
+    var nRef = raGaps.length - nInv - nPay;
+    var title = nPay === raGaps.length ? "公式の払戻と違うレースがあります"
+      : nPay ? "入力を確認してください（" + [nRef ? "回収枚数" : "", nInv ? "投資額" : "", "払戻"].filter(Boolean).join("・") + "）"
+      : !nInv ? "回収枚数が入力されていません" : nInv === raGaps.length ? "投資額が入力されていません" : "回収枚数・投資額が入力されていません";
     el.innerHTML = '<div class="ra-title">🔔 ' + title + "</div>" +
       raGaps.map(function (g, i) {
         var parts = g.key.split("|");
         var hits = g.hits.map(function (h) { return esc(h.type + " " + h.comboLabel) + "（払戻 " + yen(h.amount) + "）"; }).join(" / ");
+        if (g.kind === "pay") { // §131 公式と違う払戻＝ボタン1つで公式の払戻に直して確定し直す
+          return '<div class="ra-item ra-pay">' +
+            '<div class="ra-msg">' + esc(parts[0] + parts[1]) + "Rの払戻が公式と違います</div>" +
+            '<div class="ra-sub">' + g.diffs.map(function (d) { return esc(d.label) + " 確定 " + yen(d.mine) + " → 公式 " + yen(d.off); }).join(" ／ ") + "</div>" +
+            '<button type="button" class="btn small ra-repay" data-i="' + i + '">公式の払戻で確定し直す</button></div>';
+        }
         if (g.kind === "invest") { // §127 どこの何Rの誰の投資かを明示し、その場で入れられる（トークのレースは動かさない）
           return '<div class="ra-item ra-inv">' +
             '<div class="ra-msg">' + esc(g.pid) + "さんの" + esc(parts[0] + parts[1]) + "Rの投資額が入力されていません" + (g.miss ? "（不的中）" : "") + "</div>" +
@@ -2859,6 +2922,12 @@
         var g = raGaps[+b.getAttribute("data-i")];
         raDismissedAt = Date.now(); el.classList.add("hidden");
         if (g) openRefundGap(g);
+      });
+    });
+    el.querySelectorAll(".ra-repay").forEach(function (b) { // §131
+      b.addEventListener("click", function () {
+        var g = raGaps[+b.getAttribute("data-i")];
+        if (g) resettleOfficial(g);
       });
     });
     el.querySelectorAll(".ra-invsave").forEach(function (b) {
@@ -3136,6 +3205,28 @@
   }
   loadTimetable();
   setInterval(loadTimetable, window.APP_CONFIG.TT_POLL_MS || 600000);
+
+  /* §129（10/8 えーす要望「欠車なら買い目に反映されないように」）本日の欠車一覧を5分ごとにGASから読み、
+     変わったときだけ state.absent（{date, races:{"場|R":[車番]}}）へ書いて保存＝OBS・点数・合成・的中判定が欠車絡みの組を外す。
+     時刻表（GAS 3時間キャッシュ）とは別経路＝keirin.jp に「(欠場)」が出てからおおむね5〜10分で反映。&absent=0 で止める */
+  var ABSENT_POLL = params.get("absent") !== "0";
+  function absentSig(m) {
+    return Object.keys(m || {}).sort().map(function (k) { return k + ":" + (m[k] || []).slice().sort(function (a, b) { return a - b; }).join(","); }).join(";");
+  }
+  function loadAbsent() {
+    if (!ABSENT_POLL || !stateLoaded || !state || !window.Sync.fetchAbsent) return;
+    window.Sync.fetchAbsent().then(function (a) {
+      if (!a || !a.venues || a.date !== state.date) return; // 取れなかった／日付違い（前日のstate）は触らない
+      var next = a.absent || {};
+      var cur = state.absent && state.absent.date === a.date ? state.absent.races : null;
+      if (cur && absentSig(next) === absentSig(cur)) return;
+      state.absent = { date: a.date, races: next };
+      save();
+      renderAll();
+    }).catch(function () { /* 次の5分で取り直す */ });
+  }
+  setTimeout(loadAbsent, 8000);
+  setInterval(loadAbsent, 300000);
 
   setInterval(function () { tickStatus(); autoAlignTick(); talkAdvTick(); }, 1000); // 自動追従は毎秒エッジ検知（8/9 FB96）
   if (AUTOVENUE) setInterval(autoVenueTick, 30000); // §61 本日の場の自動（分単位の判定なので30秒ごとで足りる）

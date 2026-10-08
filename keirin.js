@@ -281,9 +281,14 @@
     toks.forEach(function (t) { if (/\d[\-－ー=＝]+.*\d/.test(t)) n++; });
     return n >= 2;
   }
-  function parsePrediction(text, defaultType, carCount) {
+  /* §129（10/8 えーす要望）absent＝欠車の車番の配列。欠車を含む組み合わせは買えない＝点数・的中判定・合成オッズから外す
+     （かぶり目と同じ場所で除く）。表示（disp）は書いたまま＝「7-135-全」は全のまま点数だけ減る。行の全部が欠車絡みなら absentAll */
+  function parsePrediction(text, defaultType, carCount, absent) {
     var lines = String(text || "").split(/\r?\n/);
     var out = { lines: [], memos: [], points: 0 };
+    var absSet = {};
+    (absent || []).forEach(function (n) { if (+n) absSet[+n] = true; });
+    var hasAbs = Object.keys(absSet).length > 0;
     var seen = {}; // 行またぎの「かぶり目」除外（先に書いた行が優先・点数/的中/表示すべてから除外）
     // 1周目＝切り目行を先に集める（順不同で効かせるため）
     var cutSet = {}, cutParsed = {};
@@ -311,13 +316,21 @@
       }
       var p = parseLine(raw, defaultType, carCount);
       if (p.ok) {
+        var nAbs = 0;
         var kept = p.combos.filter(function (c) {
+          if (hasAbs && c.some(function (n) { return absSet[n]; })) { nAbs++; return false; } // §129 欠車絡み
           var k = p.type + "|" + normalizedComboKey(p.type, c);
           if (seen[k] || cutSet[k]) return false; // かぶり目 or 切り目
           seen[k] = true;
           return true;
         });
-        p.dupCount = p.combos.length - kept.length;
+        p.absentCount = nAbs;
+        p.dupCount = p.combos.length - kept.length - nAbs;
+        if (nAbs) {
+          p.combos = kept;
+          p.points = kept.length;
+          if (!kept.length) p.absentAll = true; // 行の全部が欠車絡み＝0点（表示は残す）
+        }
         if (p.dupCount) {
           p.combos = kept;
           p.points = kept.length;

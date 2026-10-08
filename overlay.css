@@ -3436,6 +3436,14 @@ html.ticknote .tick-note::before, html.ticknote .tick-note::after {
 html.ticknote .tick-note::after { animation-delay: 1.1s; }
 @keyframes tnTwinkle { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
 
+/* §129（10/8）欠場の選手＝出走表の行を灰色に薄く＋名前の後ろに「欠」（①1段・①③2段・空席ワイプ共通）。行の高さ・並びは変えない */
+.sl-abs { filter: grayscale(1); opacity: .42; }
+/* §129 予想帯の買目で行の全部が欠車絡み＝切り目と同じグレー帯・札は「欠車」（濃いグレー）・チップは薄く */
+.pl-cut.pl-abs { background: #555; color: #fff; }
+.abs-line > :not(.pl-cut) { filter: grayscale(1); opacity: .45; }
+.abs-tag { display: inline-block; margin-left: .3em; padding: 0 .28em; font-size: .72em; font-weight: 900; line-height: 1.35;
+  color: #fff; background: #555; border-radius: 4px; vertical-align: .12em; white-space: nowrap; }
+
 /* ---------- デバッグバッジ（?debug=1のみ） ---------- */
 .dbg { display: none; position: absolute; left: 8px; bottom: 70px; z-index: 40;
   font-size: 14px; font-weight: 700; color: #fff; background: rgba(0,0,0,.7);

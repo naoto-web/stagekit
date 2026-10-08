@@ -169,10 +169,17 @@
 
   /** 予想エントリをパースして投資額を解決する。
       投資＝手入力の実額のみ（単価×点数方式は廃止・2026/8/4）。回収も結果側の手入力実額 */
+  /** §129 そのレースの欠車の車番（コンソールが5分ごとにGASの欠車一覧を state.absent＝{date, races:{"場|R":[車番]}} へ書く）。
+      ⚠️キー「場|R」は日付を持たない＝state.absent.date が今の state.date と同じときだけ使う（前日の欠車を今日の同じ場・Rに効かせない） */
+  function absentOf(state, key) {
+    var a = state && state.absent;
+    if (!a || !a.races || a.date !== state.date) return [];
+    return a.races[key] || [];
+  }
   function resolvePred(state, key, racerId) {
     var race = state.preds[key] || {};
     var p = predOf(state, key, racerId);
-    var parsed = K.parsePrediction(p.text, p.defaultType, race.cars || 9);
+    var parsed = K.parsePrediction(p.text, p.defaultType, race.cars || 9, absentOf(state, key)); // §129 欠車は点数・的中から外す
     var invest = p.investInput > 0 ? p.investInput : 0;
     return { entry: p, parsed: parsed, points: parsed.points, unit: 0, invest: invest };
   }
@@ -199,7 +206,7 @@
       // 俺たち目（無料公開1点）も的中判定に参加（8/4）。金額計算には入れない＝投資/回収は不変
       s.oreHits = [];
       if (rp.entry.oreTachi) {
-        var op = K.parsePrediction(K.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9);
+        var op = K.parsePrediction(K.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9, absentOf(state, key));
         s.oreHits = K.settle(op, 0, orders, result.payouts || []).hits;
       }
       byRacer[pid] = s;
@@ -552,6 +559,7 @@
 
   root.Derive = {
     raceKey: raceKey,
+    absentOf: absentOf,
     defaultState: defaultState,
     normalizeState: normalizeState,
     colorOf: colorOf,

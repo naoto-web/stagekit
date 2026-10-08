@@ -48,6 +48,13 @@ body {
 .refund-alert .ra-sub { flex: 1 1 auto; font-size: 12px; font-weight: 700; color: #ffd1d1; font-variant-numeric: tabular-nums; }
 .refund-alert .btn.ra-open { background: #ffd98a; border-color: #ffd98a; color: #3a2a00; font-weight: 900; }
 .refund-alert .btn.ra-open:hover { background: #ffe6ad; }
+/* §130 払戻が10円単位でない＝欄を赤枠＋右にエラー文（確定も止める・JS payBad） */
+#payout-rows .inp.pf-missing, #payout-rows .inp.pf-missing:focus { border-color: #e5484d; box-shadow: 0 0 0 2px #e5484d; background: rgba(229, 72, 77, .14); }
+#payout-rows .payout-row { flex-wrap: wrap; }
+#payout-rows .pr-err { flex: 1 1 100%; padding-left: 118px; color: #ff6b70; font-weight: 800; font-size: 13px; } /* 欄の下の行・欄の頭（ラベル幅110＋間8）にそろえる */
+#payout-rows .pr-err:empty { display: none; }
+html.theme-light #payout-rows .inp.pf-missing { background: #fdecec; }
+html.theme-light #payout-rows .pr-err { color: #c62828; }
 /* §127 投資額が空の的中＝アラートの中で投資を入れて保存（どこの何Rの誰の投資かを行の頭に出す） */
 .refund-alert .ra-invrow { flex: 1 1 100%; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; }
 .refund-alert .ra-invrow > * { flex: 0 0 auto; white-space: nowrap; }
@@ -56,6 +63,8 @@ body {
 .refund-alert .ra-invin.pf-missing { border-color: #e5484d; box-shadow: 0 0 0 2px #e5484d; }
 .refund-alert .btn.ra-invsave { background: #ffd98a; border-color: #ffd98a; color: #3a2a00; font-weight: 900; }
 .refund-alert .btn.ra-invsave:hover { background: #ffe6ad; }
+.refund-alert .btn.ra-repay { background: #ffd98a; border-color: #ffd98a; color: #3a2a00; font-weight: 900; } /* §131 */
+.refund-alert .btn.ra-repay:hover { background: #ffe6ad; }
 .refund-alert .ra-foot { display: flex; justify-content: flex-end; margin-top: 6px; }
 .refund-alert .btn.ra-later { background: rgba(0,0,0,.25); border-color: rgba(255,255,255,.35); color: #fff; }
 .refund-alert .btn.ra-later:hover { background: rgba(0,0,0,.4); }

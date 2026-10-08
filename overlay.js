@@ -1886,6 +1886,11 @@
           return '<div class="pred-line chips cut-line"><span class="pl-cut' + (small ? " sm" : "") + (cutShort ? " cut-short" : "") + '">' + (cutShort ? "切" : "切り目") + "</span>" +
             lineChips(/全/.test(l.rawRest || "") ? l.rawRest : (l.disp || l.rawRest || l.raw), small) + "</div>";
         }
+        // §129 行の全部が欠車絡み（「2-7-1」で2番が欠車）＝切り目と同じグレー帯に「欠車」の札・0点（.cut-short＝fitCutLabels が「切り目」に書き換えない）
+        if (l.ok && l.absentAll) {
+          return '<div class="pred-line chips cut-line abs-line"><span class="pl-cut pl-abs cut-short' + (small ? " sm" : "") + '">欠車</span>' +
+            lineChips(l.disp || String(l.raw).trim(), small) + "</div>";
+        }
         if (!l.ok) return '<div class="pred-line chips">' + lineChips(String(l.raw).trim(), small) + "</div>"; // 書きかけ
         var g = [];
         glows.forEach(function (gl) {
@@ -3787,6 +3792,7 @@
     // 競走得点の1位＝赤・2位＝青（同点は同色）
     var scoreVals = [];
     race.racers.forEach(function (p) {
+      if (slAbsent(key, p)) return; // §129 欠場は順位の色から外す
       var sv = parseFloat(scores[String(p.no)]);
       if (!isNaN(sv) && scoreVals.indexOf(sv) < 0) scoreVals.push(sv);
     });
@@ -3801,9 +3807,11 @@
       // 年齢＝選手名の右に半角の(36)（8/15）。名前と同じspanの中＝行のgapを挟まずぴったり続ける
       var age = String(ages[String(p.no)] || "").replace(/[^0-9]/g, "");
       var jm = isJimoto(vName, p.pref); // 地元＝名前と府県を濃い金（§52）
-      return '<li class="slist-row"><i class="car c' + p.no + '">' + p.no + "</i>" +
+      var ab = slAbsent(key, p); // §129
+      if (ab) scls = "sl-score";
+      return '<li class="slist-row' + (ab ? " sl-abs" : "") + '"><i class="car c' + p.no + '">' + p.no + "</i>" +
         '<span class="sl-name">' + (jm ? '<span class="jm">' + esc(p.name) + "</span>" : esc(p.name)) +
-        (age ? '<span class="sl-age">(' + age + ")</span>" : "") +
+        (age ? '<span class="sl-age">(' + age + ")</span>" : "") + (ab ? ABS_TAG : "") +
         '</span><span class="sl-sub">' + (jm && sub.indexOf(p.pref) === 0 ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span>" +
         (sc ? '<span class="' + scls + '">' + esc(sc) + "</span>" : "") + "</li>";
     }).join("");
@@ -3865,6 +3873,15 @@
     "玉野": "岡山", "広島": "広島", "防府": "山口", "高松": "香川", "小松島": "徳島", "高知": "高知", "松山": "愛媛",
     "小倉": "福岡", "久留米": "福岡", "武雄": "佐賀", "佐世保": "長崎", "別府": "大分", "熊本": "熊本"
   };
+  /* §129（10/8 Naoto）欠場の選手は出走表で灰色＋「欠」＝出走表の印（時刻表 racers[].absent・GAS 3時間キャッシュ）か
+     コンソールが5分ごとに書く欠車一覧（state.absent）のどちらか。得点などの1位赤・2位青からも外す。&slabs=0 で旧 */
+  var SLABS = params.get("slabs") !== "0";
+  function slAbsent(key, p) {
+    if (!SLABS || !p) return false;
+    var cd = ((narabiAuto[key] || {}).cards || {})[String(p.no)] || {};
+    return !!p.absent || /欠/.test(cd.h || "") || window.Derive.absentOf(state, key).indexOf(+p.no) >= 0;
+  }
+  var ABS_TAG = '<span class="abs-tag">欠</span>';
   function isJimoto(vName, pref) {
     var vp = VENUE_PREF[String(vName || "").replace(/\s/g, "")];
     return !!(JIMOTO && vp && String(pref || "").replace(/\s/g, "") === vp);
@@ -3874,8 +3891,9 @@
     var vName = String(key || "").split("|")[0];
     var scores = na.scores || {}, ages = na.ages || {}, cards = na.cards || {};
     var stOf = function (p) { return (cards[String(p.no)] || {}).st || []; };
-    var scRank = rankOf(race.racers.map(function (p) { return scores[String(p.no)]; }));
-    var colRank = SL2_COLS.map(function (c) { return rankOf(race.racers.map(function (p) { return stOf(p)[c.i]; })); });
+    var live = race.racers.filter(function (p) { return !slAbsent(key, p); }); // §129 欠場は順位の色から外す
+    var scRank = rankOf(live.map(function (p) { return scores[String(p.no)]; }));
+    var colRank = SL2_COLS.map(function (c) { return rankOf(live.map(function (p) { return stOf(p)[c.i]; })); });
     var head = '<li class="sl2-th"><span></span><span></span><span class="sl2-ky">脚</span><span class="sl2-sc">得点</span>' +
       SL2_COLS.map(function (c) { return '<span class="sl2-n' + (c.i === 7 ? " sl2-wr" : "") + '">' + c.h + "</span>"; }).join("") + "</li>";
     // 🧪ライン順（9/27 Naoto「空席ワイプと同じくラインごとの並び・区切りは横線」・&slline=1）。
@@ -3897,9 +3915,11 @@
       // 的中の行＝車番バッジは買目チップと同じ hit-glow（同じ拍子・光だけ）＋行を光の帯がキラーンと横切る（--shd＝全行同時・9/28 Naoto）
       var ph = hitRow ? hitPhaseStyle() : "";
       var shd = hitRow ? ' style="--shd:-' + (((Date.now() - hitPhase0) % 2000 + 2000) % 2000) + 'ms"' : "";
-      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + '"' + shd + '><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
-        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (SL3 && c.h ? "(" + esc(p.name) + ")" : esc(p.name)) +
-        (!SL3 && c.h ? '<span class="sl2-hj">(' + esc(String(c.h).charAt(0)) + ")</span>" : "") + "</span>" +
+      var ab = slAbsent(key, p); // §129
+      var hj = c.h && !/欠/.test(c.h) ? c.h : ""; // 補充・追加だけ（keirin.jp の同じ欄に「(欠場)」も入る＝括弧付きの補充扱いにしない）
+      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + (ab ? " sl-abs" : "") + '"' + shd + '><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
+        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (SL3 && hj ? "(" + esc(p.name) + ")" : esc(p.name)) +
+        (!SL3 && hj ? '<span class="sl2-hj">(' + esc(String(hj).charAt(0)) + ")</span>" : "") + (ab ? ABS_TAG : "") + "</span>" +
         '<span class="sl2-sub">' + (isJimoto(vName, p.pref) && sub.indexOf(p.pref) === 0 // 地元は下段の県名も同じ色（§52）
           ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span></span>" +
         '<span class="sl2-ky">' + esc(c.k || p.kyaku || "") + "</span>" +
@@ -4074,6 +4094,7 @@
       // 得点1位＝赤・2位＝青（同点は同色）＝右レールの出走表と同じ
       var vals = [];
       race.racers.forEach(function (p) {
+        if (slAbsent(key, p)) return; // §129 欠場は順位の色から外す
         var v = parseFloat(scores[String(p.no)]);
         if (!isNaN(v) && vals.indexOf(v) < 0) vals.push(v);
       });
@@ -4083,6 +4104,7 @@
       [4, 5, 6].forEach(function (i) {
         var vs = [];
         race.racers.forEach(function (p) {
+          if (slAbsent(key, p)) return;
           var v = parseFloat(((cards[String(p.no)] || {}).st || [])[i]);
           if (v > 0 && vs.indexOf(v) < 0) vs.push(v);
         });
@@ -4117,11 +4139,14 @@
           nums += '<span class="n' + (SEP[i] ? " sep" : "") + (!v || v === "0" ? " z" : "") + tcls + '">' +
             esc(v === "" ? "-" : v) + "</span>";
         }
+        var ab = slAbsent(key, p); // §129
+        if (ab) scls = "";
+        var hj = c.h && !/欠/.test(c.h) ? c.h : ""; // 補充・追加だけ（欠場は括弧にしない）
         return (o.gap ? gapRow : "") +
-          '<div class="stc-row stc-tr"><span><i class="car c' + p.no + '">' + p.no + "</i></span>" +
+          '<div class="stc-row stc-tr' + (ab ? " sl-abs" : "") + '"><span><i class="car c' + p.no + '">' + p.no + "</i></span>" +
           // 補充・追加の選手は名前の後ろに「(補)」「(追)」（9/25 Naoto・当初「(補充)」→頭1文字に短縮。GAS cards.h＝「補充」「追加」のまま）
-          '<span class="nm">' + (c.h ? '<span class="nm1' + (jm ? " jm" : "") + '">' + esc(p.name) + '<span class="hj">(' + esc(String(c.h).charAt(0)) + ")</span></span>"
-            : (jm ? '<span class="jm">' + esc(p.name) + "</span>" : esc(p.name))) +
+          '<span class="nm">' + (hj ? '<span class="nm1' + (jm ? " jm" : "") + '">' + esc(p.name) + '<span class="hj">(' + esc(String(hj).charAt(0)) + ")</span></span>"
+            : (jm ? '<span class="jm">' + esc(p.name) + "</span>" : esc(p.name))) + (ab ? ABS_TAG : "") +
           "<small>" + (jm && sub.indexOf(p.pref) === 0 ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</small></span>" +
           "<span>" + esc(c.c || "") + "</span><span>" + esc(c.k || p.kyaku || "") + "</span>" +
           '<span class="sc' + scls + '">' + esc(sc) + "</span>" + nums +

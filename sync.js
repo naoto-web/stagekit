@@ -88,6 +88,13 @@
           return j.timetable;
         });
     },
+    /** §129 本日の欠車一覧 {date, absent:{"場|R":[車番]}, venues}（GAS 5分キャッシュ・コンソールが5分ごとに読む） */
+    fetchAbsent: function () {
+      return getJson(cfg.GAS_URL + "?action=absent").then(function (j) {
+        if (!j.ok) throw new Error(j.error || "absent fetch failed");
+        return j.absent;
+      });
+    },
     /** 確定済みレース結果の自動取得。[{no, order, names, kimarite, payouts}] */
     fetchResults: function (jo, force) {
       var url = cfg.GAS_URL + "?action=results&jo=" + encodeURIComponent(jo) + (force ? "&force=1" : "");
