@@ -39,6 +39,19 @@
     var d = new Date();
     return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
   }
+  /** §132 そのレースの発走（0時からの秒）。時刻表に無ければ null */
+  function raceStartSecOf(key) {
+    if (!key || !timetable) return null;
+    var p = String(key).split("|"), sec = null;
+    (timetable.venues || []).forEach(function (v) {
+      if (v.name !== p[0]) return;
+      (v.races || []).forEach(function (r) { if (r.no === +p[1]) sec = timeToSec(r.start); });
+    });
+    return sec;
+  }
+  /* §132（10/8 Naoto）noteでないレースで買目0点の投資は集計しない（derive.resolvePred の counted）＋買目欄の赤枠。&zeroinv=0 で旧 */
+  var ZEROINV = params.get("zeroinv") !== "0";
+  if (!ZEROINV) window.DERIVE_ZEROINV_OFF = true;
   function fmtCount(sec) {
     if (sec < 0) sec = 0;
     return pad2(Math.floor(sec / 60)) + ":" + pad2(sec % 60);
@@ -1031,6 +1044,18 @@
     var needFill = parsed.points > 0;
     markMissing(form.querySelector(".pf-ore"), needFill && !form.querySelector(".pf-ore").value.trim());
     markMissing(form.querySelector(".pf-invest"), needFill && !investInput);
+    /* §132（10/8 Naoto）投資があるのに買目0点＝買目欄を赤枠＋「買目が入っていません」。noteでないレースは公式締切から・
+       noteのレース（発走後に買目を入れるのが通常運転）は結果が確定しても0点のときだけ。発走後のnoteでないレースは投資を集計していない旨も */
+    var noteBox = form.querySelector(".pf-note");
+    var isNoteF = !!(noteBox && noteBox.checked);
+    var stSec = raceStartSecOf(key), nowS = nowSec();
+    var closeS = stSec === null ? null : stSec - ((state.cfg && state.cfg.closeMin) || 3) * 60;
+    var settledF = !!(state.results && state.results[key]);
+    var needBuy = ZEROINV && investInput > 0 && !(parsed.points > 0) &&
+      (isNoteF ? settledF : (settledF || (closeS !== null && nowS >= closeS)));
+    markMissing(ta, needBuy);
+    ta.placeholder = needBuy ? (!isNoteF && (settledF || (stSec !== null && nowS >= stSec))
+      ? "買目が入っていません\n（投資は集計して\nいません）" : "買目が入っていません") : "";
     var syn = odds ? window.Keirin.synthOdds(parsed, odds) : null; // 合成オッズ＝投資の右（9/25 Naoto）
     /* §84（9/28 Naoto）入力時の合成＝「最後に買目を変えたとき」の合成を覚えて「合成 8.2倍（入力時 15.1倍）」。コンソールだけ（OBSには出さない）。
        ・記録＝このPCで買目を打ち、SYNIN_SETTLE_MS 打たなかったら、そのときの合成を予想に保存（entry.synIn／どの買目のときの値かを synInSig）。
@@ -3229,6 +3254,13 @@
   setInterval(loadAbsent, 300000);
 
   setInterval(function () { tickStatus(); autoAlignTick(); talkAdvTick(); }, 1000); // 自動追従は毎秒エッジ検知（8/9 FB96）
+  // §132 締切・発走・結果確定で「買目が入っていません」の赤枠が変わる＝時間の経過でも描き直す（打っている欄の中身は触らない）
+  setInterval(function () {
+    if (!ZEROINV || !state) return;
+    var k = predKey();
+    if (!k) return;
+    document.querySelectorAll("#pred-forms [data-racer]").forEach(function (f) { if (f.querySelector(".pf-text")) updatePredInfo(f, k); });
+  }, 20000);
   if (AUTOVENUE) setInterval(autoVenueTick, 30000); // §61 本日の場の自動（分単位の判定なので30秒ごとで足りる）
   if (CON2) setInterval(function () { if (state) renderNotePick(); }, 30000); // §62 発走したRを薄くする（描き直さないと薄くならない）
 })();

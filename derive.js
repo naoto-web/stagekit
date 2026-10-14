@@ -181,7 +181,12 @@
     var p = predOf(state, key, racerId);
     var parsed = K.parsePrediction(p.text, p.defaultType, race.cars || 9, absentOf(state, key)); // §129 欠車は点数・的中から外す
     var invest = p.investInput > 0 ? p.investInput : 0;
-    return { entry: p, parsed: parsed, points: parsed.points, unit: 0, invest: invest };
+    /* §132（10/8 Naoto）counted＝投資の合計・回収率に数える額。noteでないレースで買目0点なら数えない
+       （10/8 カズ 大垣9R＝レースを間違えて買目だけ入れ直し、投資2,000円が取り残された）。
+       noteのレースは発走後に買目を入れるのが通常運転＝0点でも数える。表示（予想帯の「投資 ¥〇」）は invest のまま。
+       root.DERIVE_ZEROINV_OFF（&zeroinv=0）で旧＝常に数える */
+    var counted = (parsed.points > 0 || p.isNote || root.DERIVE_ZEROINV_OFF) ? invest : 0;
+    return { entry: p, parsed: parsed, points: parsed.points, unit: 0, invest: invest, counted: counted };
   }
 
   /** 1レースの精算（結果が無ければ null）。
@@ -242,7 +247,7 @@
     Object.keys(state.preds || {}).forEach(function (key) {
       var br = (state.preds[key] || {}).byRacer || {};
       Object.keys(br).forEach(function (pid) {
-        tOf(pid).invest += resolvePred(state, key, pid).invest;
+        tOf(pid).invest += resolvePred(state, key, pid).counted; // §132 noteでない買目0点は数えない
       });
     });
 

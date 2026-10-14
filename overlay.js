@@ -2819,6 +2819,7 @@
     }).join("");
   }
   var PLATEN = params.get("platen") !== "0";
+  if (params.get("zeroinv") === "0") window.DERIVE_ZEROINV_OFF = true; // §132 &zeroinv=0＝買目0点の投資も集計（旧）
   var platenSt = {}; // 配信者id → { refund, sInv, losing, armed }
   function headTotals(rid) {
     var bt = derived.totals[rid] || { invest: 0, refund: 0, pending: false };
@@ -2827,7 +2828,7 @@
     Object.keys(state.preds || {}).forEach(function (key) {
       var br = (state.preds[key] || {}).byRacer || {};
       if (!br[rid]) return;
-      var v = window.Derive.resolvePred(state, key, rid).invest;
+      var v = window.Derive.resolvePred(state, key, rid).counted; // §132 noteでない買目0点は数えない
       if (!v) return;
       var done = !!(state.results && state.results[key]);
       var s = raceStartSecOf(key);
