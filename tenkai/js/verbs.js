@@ -92,12 +92,12 @@ var Verbs = (function () {
     return paths;
   }
 
-  /** 誘導員がもう退いているか（先頭が打鐘の位置を過ぎた）。board.js の出し入れと同じ境目 */
+  /** 誘導員がもう退いているか（先頭が赤板の位置を過ぎた・10/14に打鐘→赤板）。board.js の出し入れと同じ境目 */
   function pacerGone() {
     var ln = leaderNo();
-    return ln !== null && data().riders[ln].d <= CONFIG.BELL_D + 1e-4;
+    return ln !== null && data().riders[ln].d <= CONFIG.PACER_OUT_D + 1e-4;
   }
-  /** 誰も後ろ向きに進まないよう、行き先を全体に前へずらす（打鐘を過ぎた後の並べ替え用）。
+  /** 誰も後ろ向きに進まないよう、行き先を全体に前へずらす（誘導員が退いた後＝10/14から赤板以降の並べ替え用）。
       🐞9/27 Naoto「打鐘でカマシを入れると一瞬誘導員が出る」＝叩かれたラインが引く途中で先頭が打鐘の手前へ戻り、
       誘導員の出し入れ（先頭の位置で決まる）が反応した。全員が前へ進めば先頭は戻らない＝実際のレースとも同じ */
   function noRetreat(fin) {

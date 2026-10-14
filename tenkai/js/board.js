@@ -262,10 +262,10 @@ var Board = (function () {
     barsLayer.style.opacity = String(barOp);
     barsLayer.style.display = barOp <= 0.001 ? 'none' : '';
 
-    /* 誘導員：先頭の1車身前・内。先頭が打鐘の位置に近づくと外へ上がりながら薄くなって消える（§5） */
-    /* ⚠️境目に余裕を持たせる：先頭がちょうど打鐘の位置（1.5）のときに小数の誤差で「まだ手前」と判定され、
+    /* 誘導員：先頭の1車身前・内。先頭が赤板の位置に近づくと外へ上がりながら薄くなって消える（§5・10/14に打鐘→赤板） */
+    /* ⚠️境目に余裕を持たせる：先頭がちょうど退避の位置（2.0）のときに小数の誤差で「まだ手前」と判定され、
        透明の誘導員が残らないように（9/27の検査で発見） */
-    var bell = CONFIG.BELL_D + 1e-4, fade = 0.06;
+    var bell = CONFIG.PACER_OUT_D + 1e-4, fade = 0.06;
     if (leader !== null && leader > bell) {
       var t = Math.min(1, (leader - bell) / fade);
       var lane = -1 + (1 - t) * 1.6;
