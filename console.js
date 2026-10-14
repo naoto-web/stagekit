@@ -544,7 +544,9 @@
       if (state.currentRace[name] === r.no) cls += " cur";
       else if (next && next.no === r.no) cls += " next";
       if (s !== null && s + RC_DONE_SEC <= now) cls += " done";
-      return '<button class="' + cls + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small></button>";
+      var hj = hojuOf(window.Derive.raceKey(name, r.no)).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : ""; // §134
+      if (hj) cls += " has-hoju";
+      return '<button class="' + cls + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
     }).join("");
     el.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -620,7 +622,8 @@
     if (!editVenue) { rg.innerHTML = ""; return; }
     var curNo = editRace || state.currentRace[editVenue];
     rg.innerHTML = venueRaces(editVenue).map(function (r) {
-      return '<button class="rc' + kubunColorCls(editVenue) + (curNo === r.no ? " cur" : "") + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small></button>";
+      var hj = hojuOf(window.Derive.raceKey(editVenue, r.no)).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : ""; // §134
+      return '<button class="rc' + kubunColorCls(editVenue) + (curNo === r.no ? " cur" : "") + (hj ? " has-hoju" : "") + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
     }).join("");
     rg.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -762,8 +765,35 @@
       }).join("");
   }
 
+  /* §134（10/15 Naoto）補充＝keirin.jp JSJ017 の「(補充)」（GAS action=absent に hoju として同梱・5分ごとに loadAbsent が受け取る）。
+     追加は出さない。コンソールの表示だけ＝state には書かない（OBSは出走表の「(補)」で別に出している）。&hoju=0 で出さない */
+  var HOJU = params.get("hoju") !== "0";
+  var hoju = null; // { date, races: { "場|R": [車番] } }
+  function hojuOf(key) {
+    if (!HOJU || !hoju || !state || hoju.date !== state.date || !key) return [];
+    return hoju.races[key] || [];
+  }
+  /** 予想入力の「1R 2R…」と「〇〇 の予想」の間のアラート＝入力先のレースに補充の選手がいるときだけ */
+  function renderHoju(key) {
+    var el = $("pred-hoju");
+    if (!el) return;
+    var cars = hojuOf(key);
+    if (!cars.length) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+    var p = key.split("|");
+    var race = venueRaces(p[0]).filter(function (r) { return r.no === +p[1]; })[0];
+    var names = {};
+    ((race && race.racers) || []).forEach(function (x) { names[+x.no] = x.name; });
+    el.innerHTML = '<div class="hj-ic">⚠️</div><div class="hj-body"><div class="hj-t">' + esc(p[0]) + " " + esc(p[1]) + "R に補充の選手がいます</div>" +
+      cars.map(function (no) {
+        return '<div class="hj-r"><i class="pn-car c' + no + '">' + no + "</i>" + esc(names[no] || "") + "（補充）</div>";
+      }).join("") +
+      '<div class="hj-sub">並び・買目を確認してください</div></div>';
+    el.classList.remove("hidden");
+  }
+
   function renderPredForms() {
     var key = predKey(); // 入力先＝放送に追従 or 固定（8/6 FB11）
+    renderHoju(key); // §134
     // 固定中は「どこに固定しているか」＋「放送は今どこか」を出す（8/27 FB139）。
     // 放送＝固定先が一致している間は括弧を出さない（同じ情報を2回言わない）
     var pinNote = "";
@@ -3242,6 +3272,13 @@
     if (!ABSENT_POLL || !stateLoaded || !state || !window.Sync.fetchAbsent) return;
     window.Sync.fetchAbsent().then(function (a) {
       if (!a || !a.venues || a.date !== state.date) return; // 取れなかった／日付違い（前日のstate）は触らない
+      // §134 補充（コンソールの表示だけ・state には書かない）＝変わったときだけレースボタンとアラートを描き直す
+      if (!hoju || hoju.date !== a.date || absentSig(hoju.races) !== absentSig(a.hoju || {})) {
+        hoju = { date: a.date, races: a.hoju || {} };
+        renderRaceChips();
+        renderPredTarget();
+        renderHoju(predKey());
+      }
       var next = a.absent || {};
       var cur = state.absent && state.absent.date === a.date ? state.absent.races : null;
       if (cur && absentSig(next) === absentSig(cur)) return;
