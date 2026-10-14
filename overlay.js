@@ -1916,6 +1916,8 @@
 
   /** 予想帯ヘッダーのはみ出し防止（8/6 FB）：投資/回収の金額とnoteバッジを段階的に縮小して1行に収める */
   function fitBandHead(headEl) {
+    // §133追補（10/14 Naoto）②ワイプの上の帯＝ワイプが広いとき（NEXT枠なし・532px）だけ字を大きく（.wide）。隠れている間は測れないので前の判定のまま
+    if (headEl.classList.contains("winv")) { var wc = headEl.closest(".cam"); if (wc && wc.clientWidth) headEl.classList.toggle("wide", wc.clientWidth > 450); }
     var inv = headEl.querySelector(".band-inv");
     var badge = headEl.querySelector(".note-badge");
     var race = headEl.querySelector(".bh-race"); // RB2（②）＝見出しに移したレース名も一緒に縮める
@@ -3369,6 +3371,7 @@
         if (wCam) wCam.classList.toggle("winv-on", wOn);
         if (wOn) {
           wHead.style.background = color;
+          var wName = $("winv-name-" + slot); if (wName) wName.textContent = name; // 追補2：ワイプが広いとき（.wide）だけCSSで出す
           setBandInv($("winv-inv-" + slot), refundHeaderText(rc, derived.totals[rc.id] || { invest: 0, refund: 0 }));
           fitBandHead(wHead);
         }

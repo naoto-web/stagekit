@@ -4070,3 +4070,10 @@ html.rkmine-b .rk-chips.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinit
 #scene-race .race-wipes .cam .winv.hidden { display: none; }
 body #scene-race .race-wipes .cam .winv .band-inv { display: inline; margin: 0; font-size: 24px; white-space: nowrap; }
 #scene-race .race-wipes .cam.winv-on .hit-fx-badge { top: 66px; }
+/* §133追補（10/14 Naoto）ワイプが広いとき（NEXT枠なし＝幅532px）だけ字を大きく＝24→32px（金額≈38px）。判定はJS（fitBandHead が .wide を付ける） */
+body #scene-race .race-wipes .cam .winv.wide .band-inv { font-size: 32px; }
+/* §133追補2（10/14 Naoto）ワイプが広いとき（NEXT枠なし＝左の「〇〇 (NEXT)」見出しも消える）は左端に名前・投資回収は右寄せ＝①の見出しと同じ並び。
+   名前は32pxで縮めない・入り切らなければ fitBandHead が投資回収のほうを縮める */
+#scene-race .race-wipes .cam .winv .winv-name { display: none; }
+#scene-race .race-wipes .cam .winv.wide { justify-content: space-between; padding: 0 14px; }
+#scene-race .race-wipes .cam .winv.wide .winv-name { display: inline; font-size: 32px; font-weight: 900; white-space: nowrap; margin-right: 16px; }
