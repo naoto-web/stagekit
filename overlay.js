@@ -2747,6 +2747,9 @@
   /** 見出しの「投資 ¥○○　回収 ¥○○」を画面に入れる（9/25 Naoto「金額だけ『〇〇 予想』と同じ大きさに」）。
       文字列はそのまま（refAnim.text 等の比較・カウントアップは従来どおり文字列で回す）、描くときだけ
       金額（¥…／集計中）を .bi-v で包む＝CSSで金額だけ大きく。同じ文字列なら触らない */
+  /* §133（10/14 Naoto・配信者の要望）②ワイプの上に投資・回収＝①の見出しと同じ中身（その日の投資・回収・ピコーン・プラ転の金）。
+     席にいる人だけ。的中バッジは帯の下へ（CSS .winv-on）。&winv=0で旧 */
+  var WINV = params.get("winv") !== "0";
   function setBandInv(el, text) {
     if (!el || el._biText === text) return;
     el._biText = text;
@@ -2890,7 +2893,7 @@
       pop.innerHTML = html;
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
-      var panel = el.closest(".panel");
+      var panel = el.closest(".panel") || el.closest(".cam"); // §133 ②ワイプの上はワイプの幅に収める
       var avail = panel ? r.right - panel.getBoundingClientRect().left - 16 : r.right - 16;
       if (avail > 0 && pop.offsetWidth > avail) {
         pop.style.fontSize = (parseFloat(getComputedStyle(pop).fontSize) * avail / pop.offsetWidth).toFixed(1) + "px";
@@ -2982,12 +2985,12 @@
     ["a", "b"].forEach(function (slot) {
       var rc = seats[slot];
       if (!rc) return;
-      ["band-", "tband-", "kband-"].forEach(function (bp) {
+      ["band-", "tband-", "kband-", "winv-"].forEach(function (bp) { // winv-＝§133 ②ワイプの上
         var el = $(bp + "inv-" + slot);
         if (!el) return;
         var before = el._biText;
         setBandInv(el, refundHeaderText(rc, derived.totals[rc.id] || { invest: 0, refund: 0 }));
-        if (el._biText !== before) { var head = el.closest(".band-head"); if (head) fitBandHead(head); }
+        /* §133 ②は画面に出たときに幅を合わせ直す（隠れている間は測れない） */ if (el._biText !== before || bp === "winv-") { var head = el.closest(".band-head"); if (head) fitBandHead(head); }
       });
     });
   }
@@ -3072,7 +3075,7 @@
     var seats = seatMap(), out = [];
     ["a", "b"].forEach(function (slot) {
       if (!seats[slot] || seats[slot].id !== rid) return;
-      ["tband-", "band-", "kband-"].forEach(function (bp) {
+      ["tband-", "band-", "kband-", "winv-"].forEach(function (bp) {
         var el = $(bp + "inv-" + slot);
         if (el) out.push(el);
       });
@@ -3109,6 +3112,13 @@
       else pop.textContent = delta < 0 ? "−" + fmtYen(-delta) : "＋" + fmtYen(delta);
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
+      // §133 ②ワイプの上から出すピコーンは①の約半分の字（99px→54px）＋ワイプの幅に収める（①の大きさだと左の列・上のタイマーまで覆った）
+      var wCam = el.closest(".winv") && el.closest(".cam");
+      if (wCam) {
+        pop.style.fontSize = "54px";
+        var wAvail = r.right - wCam.getBoundingClientRect().left - 16;
+        if (wAvail > 0 && pop.offsetWidth > wAvail) pop.style.fontSize = (54 * wAvail / pop.offsetWidth).toFixed(1) + "px";
+      }
       setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 5400); // CSS 5s＋余裕
     });
     var t0 = Date.now() + REFPOP_POP_LEAD_MS;
@@ -3351,6 +3361,18 @@
         var cam = el.closest(".cam");
         if (cam) cam.style.borderColor = color;
       });
+      // §133 ②ワイプの上の投資・回収（10/14）
+      var wHead = $("winv-head-" + slot);
+      if (wHead) {
+        var wOn = WINV && !!rc, wCam = wHead.closest(".cam");
+        wHead.classList.toggle("hidden", !wOn);
+        if (wCam) wCam.classList.toggle("winv-on", wOn);
+        if (wOn) {
+          wHead.style.background = color;
+          setBandInv($("winv-inv-" + slot), refundHeaderText(rc, derived.totals[rc.id] || { invest: 0, refund: 0 }));
+          fitBandHead(wHead);
+        }
+      }
       var rp = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
       var isNote = !!(rp && rp.entry.isNote);  // note予想（勝負レース）＝ヘッダーバッジはメインレース基準
       var talkKeys = talkKeysOf(rc);           // この配信者のトーク表示レース（1〜3）

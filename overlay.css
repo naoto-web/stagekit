@@ -4060,3 +4060,13 @@ html.rkmine-b .rk-chips.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinit
 /* 組（買目＋そのレースのオッズ）の間は線なし・組と組の間は線（10/4）＝どの買目のオッズかを線で見せる */
 .talk-band .buy-line .race-split > .race-col + .tk-rk-col.tk1-pair { border-left-color: transparent; }
 .talk-band .buy-line .race-split.tk1-4 > .tk-rk-col + .race-col { border-left: 2px solid var(--panel-line); }
+
+/* §133（10/14 Naoto・配信者の要望）②ワイプの上に投資・回収＝①トークの見出しと同じ見た目
+   （メンバーカラーの塗り・白字＋黒フチ .txt-edge・金額は一回り大きく .bi-v・プラスの間は回収が金 .pl-gold）。
+   ワイプ幅362pxに収まる24px（大きい金額は fitBandHead が縮める）・高さ52px＝左の「〇〇 (NEXT)」見出しと同じ。
+   ⚠️②では予想帯の投資/回収を隠している（body.v2 #scene-race .band-inv・8/13）＝帯の中だけ表示に戻す。的中バッジは帯の下へ。&winv=0で旧 */
+#scene-race .race-wipes .cam .winv { position: absolute; left: 0; right: 0; top: 0; height: 52px; margin: 0; padding: 0 8px;
+  display: flex; align-items: center; justify-content: center; color: #fff; z-index: 6; border-radius: 0; overflow: hidden; }
+#scene-race .race-wipes .cam .winv.hidden { display: none; }
+body #scene-race .race-wipes .cam .winv .band-inv { display: inline; margin: 0; font-size: 24px; white-space: nowrap; }
+#scene-race .race-wipes .cam.winv-on .hit-fx-badge { top: 66px; }
