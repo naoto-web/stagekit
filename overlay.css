@@ -4077,3 +4077,9 @@ body #scene-race .race-wipes .cam .winv.wide .band-inv { font-size: 32px; }
 #scene-race .race-wipes .cam .winv .winv-name { display: none; }
 #scene-race .race-wipes .cam .winv.wide { justify-content: space-between; padding: 0 14px; }
 #scene-race .race-wipes .cam .winv.wide .winv-name { display: inline; font-size: 32px; font-weight: 900; white-space: nowrap; margin-right: 16px; }
+
+/* §135（10/15 Naoto）①2人とも予想なし（左1〜18・右19〜36番人気）＝1つの表に見せる。見出し（名前・投資回収）と外側の縁は各自のまま。
+   右の見出し札は visibility:hidden＝場所は残す（左右で表の上端がそろう）。見本＝モック/①予想なしの人気順_つなげる/。&tkjoin=0 で旧 */
+.talk-band.tk-join > .panel.slot-a { border-right-width: 0; }
+.talk-band.tk-join > .panel.slot-b { border-left-width: 0; }
+.talk-band.tk-join > .panel.slot-b .tk-rk-lab { visibility: hidden; }

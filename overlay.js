@@ -1606,9 +1606,24 @@
     else if (spec.t === "split") Array.prototype.forEach.call(cols, function (c, i) { if (spec.ks[i]) mark(c, spec.ks[i]); });
     else if (spec.t === "half" && cols[0]) mark(cols[0], spec.k);
   }
+  /* §135（10/15 Naoto）①2人とも予想なし（左1〜18・右19〜36）＝1つの表に見せる：白い本文の真ん中の線を消す・右の「場R 3連単オッズ人気順」は隠す
+     （CSS .talk-band.tk-join）・左右の表の大きさを小さいほうにそろえる（別々に合わせると字の大きさ・行の高さがずれた）。&tkjoin=0 で旧 */
+  var TKJOIN = params.get("tkjoin") !== "0";
+  function tkJoinScale() {
+    var ba = $("tband-pred-a"), bb = $("tband-pred-b"), wrap = ba && ba.closest(".talk-band");
+    if (!wrap || !bb) return;
+    var on = TKJOIN && ba.classList.contains("tk-full2") && bb.classList.contains("tk-full2");
+    wrap.classList.toggle("tk-join", on);
+    if (!on) return;
+    var sa = +ba.getAttribute("data-rks0"), sb = +bb.getAttribute("data-rks0");
+    if (!(sa > 0 && sb > 0)) return;
+    var s = Math.min(sa, sb).toFixed(3);
+    [ba, bb].forEach(function (b) { b.setAttribute("data-rks", s); var t = b.querySelector(".rk-odds"); if (t) t.style.transform = "scale(" + s + ")"; });
+  }
   function fitTkOdds(band) {
     var cols = band.querySelectorAll(".tk-rk-col");
     if (cols.length) Array.prototype.forEach.call(cols, fitRankOdds); else fitRankOdds(band);
+    tkJoinScale(); // §135
   }
   /** 人気順の表を帯いっぱいに（縮小も拡大も・上限1.6倍＝②の買目の拡大と同じ） */
   function fitRankOdds(band) {
@@ -1629,6 +1644,7 @@
     if (!(aw > 0 && ah > 0 && w > 0 && h > 0)) return;
     var s = Math.min(1.6, aw / w, ah / h).toFixed(3);
     band.setAttribute("data-rks", s);
+    band.setAttribute("data-rks0", s); // §135 その枠だけで合わせた縮尺（左右をそろえるときの元）
     t.style.transform = "scale(" + s + ")"; // 置き場所は CSS（.rk-on＝flex で真ん中）・ここは縮尺だけ
   }
   /* オッズの上下と最終の演出（9/26 Naoto・要件定義§35・OBSだけ＝コンソールは演出なし）
@@ -3437,7 +3453,8 @@
         // ②レース観戦は従来どおり操作中のメインレースのみ
         if (bp === "tband-") {
           /* 🧪§110 モック（&tkrk=1）①2人配信の3連単人気順＝どこに何を出すかは tkOddsPlan。見出しは「〇〇 予想 投資 回収」のまま・区画の左上に札「場 R 3連単オッズ」 */
-          band.classList.remove("rk-on", "tk-rk");
+          band.classList.remove("rk-on", "tk-rk", "tk-full2");
+          tkJoinScale(); // §135 この枠が人気順でなくなったら「つなげる」を外す
           var tkSpec = TKRK && rc && TALKAUTO && seats.a && seats.b ? tkOddsPlan(key, talkKeysOf(seats.a), talkKeysOf(seats.b))[slot] : null;
           var tkOddsCol = function (k, from, count, perCol) { // オッズの区画＝札（場R 3連単オッズ）＋表
             var h = rankOddsHtml(k, from, count, perCol);
@@ -3463,6 +3480,7 @@
             if (TKNOYOSO && bandName && name) { bandName.innerHTML = esc(name); fitBandHead(bandHead); }
             band.innerHTML = tkRk;
             band.classList.add("rk-on", "tk-rk");
+            if (tkSpec && tkSpec.t === "full" && !tk1) band.classList.add("tk-full2"); // §135
             band.classList.remove("note-fire", "rc-closed", "rc-fx");
             band.removeAttribute("data-rck");
             tkMarkClose(band, tkSpec, slot); // 締切でオッズもグレー＋ハンコ（&tkrkclose=0 で旧）
