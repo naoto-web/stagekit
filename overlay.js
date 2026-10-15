@@ -1933,7 +1933,7 @@
   /** 予想帯ヘッダーのはみ出し防止（8/6 FB）：投資/回収の金額とnoteバッジを段階的に縮小して1行に収める */
   function fitBandHead(headEl) {
     // §133追補（10/14 Naoto）②ワイプの上の帯＝ワイプが広いとき（NEXT枠なし・532px）だけ字を大きく（.wide）。隠れている間は測れないので前の判定のまま
-    if (headEl.classList.contains("winv")) { var wc = headEl.closest(".cam"); if (wc && wc.clientWidth) headEl.classList.toggle("wide", wc.clientWidth > 450); }
+    if (headEl.classList.contains("winv")) winvPlace(headEl); // §133追補4 位置と幅を合わせてから測る（旧＝ワイプの幅で .wide を切り替え）
     var inv = headEl.querySelector(".band-inv");
     var badge = headEl.querySelector(".note-badge");
     var race = headEl.querySelector(".bh-race"); // RB2（②）＝見出しに移したレース名も一緒に縮める
@@ -2768,6 +2768,21 @@
   /* §133（10/14 Naoto・配信者の要望）②ワイプの上に投資・回収＝①の見出しと同じ中身（その日の投資・回収・ピコーン・プラ転の金）。
      席にいる人だけ。的中バッジは帯の下へ（CSS .winv-on）。&winv=0で旧 */
   var WINV = params.get("winv") !== "0";
+  /** §133追補4（10/15 Naoto「NEXTの文字を消して全部NEXTなし版にそろえる」）帯の位置と幅＝その席のワイプの上辺。
+      NEXT枠が出ている席は NEXT枠の左端から（「〇〇 (NEXT)」の見出しは帯の下に隠れる）。シーンが隠れている間は測れないので前の位置のまま */
+  function winvPlace(h) {
+    var slot = h.id.slice(-1), cam = document.querySelector("#scene-race .race-wipes .cam.slot-" + slot);
+    var rail = cam && cam.closest(".vrail");
+    if (!cam || !rail) return;
+    var cr = cam.getBoundingClientRect();
+    if (!cr.width) return;
+    var rr = rail.getBoundingClientRect(), sub = document.querySelector("#scene-race .sub-panel.slot-" + slot);
+    var sr = sub && sub.classList.contains("sub-on") ? sub.getBoundingClientRect() : null;
+    var bl = cam.clientLeft, bt = cam.clientTop, left = (sr && sr.width ? sr.left : cr.left) + bl;
+    h.style.left = (left - rr.left - rail.clientLeft).toFixed(1) + "px";
+    h.style.top = (cr.top + bt - rr.top - rail.clientTop).toFixed(1) + "px";
+    h.style.width = (cr.right - bl - left).toFixed(1) + "px";
+  }
   function setBandInv(el, text) {
     if (!el || el._biText === text) return;
     el._biText = text;
@@ -2911,7 +2926,7 @@
       pop.innerHTML = html;
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
-      var panel = el.closest(".panel") || el.closest(".cam"); // §133 ②ワイプの上はワイプの幅に収める
+      var panel = el.closest(".panel") || el.closest(".winv"); // §133 ②ワイプの上はワイプの幅に収める
       var avail = panel ? r.right - panel.getBoundingClientRect().left - 16 : r.right - 16;
       if (avail > 0 && pop.offsetWidth > avail) {
         pop.style.fontSize = (parseFloat(getComputedStyle(pop).fontSize) * avail / pop.offsetWidth).toFixed(1) + "px";
@@ -3131,7 +3146,7 @@
       pop.style.left = r.right + "px"; pop.style.top = r.top + "px";
       document.body.appendChild(pop);
       // §133 ②ワイプの上から出すピコーンは①の約半分の字（99px→54px）＋ワイプの幅に収める（①の大きさだと左の列・上のタイマーまで覆った）
-      var wCam = el.closest(".winv") && el.closest(".cam");
+      var wCam = el.closest(".winv"); // 追補4＝帯の幅に収める
       if (wCam) {
         pop.style.fontSize = "54px";
         var wAvail = r.right - wCam.getBoundingClientRect().left - 16;
@@ -3382,11 +3397,12 @@
       // §133 ②ワイプの上の投資・回収（10/14）
       var wHead = $("winv-head-" + slot);
       if (wHead) {
-        var wOn = WINV && !!rc, wCam = wHead.closest(".cam");
+        var wOn = WINV && !!rc, wCam = document.querySelector("#scene-race .race-wipes .cam.slot-" + slot); // 追補4＝帯はワイプの外
         wHead.classList.toggle("hidden", !wOn);
         if (wCam) wCam.classList.toggle("winv-on", wOn);
         if (wOn) {
           wHead.style.background = color;
+          wHead.classList.add("wide"); // 追補4＝いつも「名前が左・投資回収が右」
           var wName = $("winv-name-" + slot); if (wName) wName.textContent = name; // 追補2：ワイプが広いとき（.wide）だけCSSで出す
           setBandInv($("winv-inv-" + slot), refundHeaderText(rc, derived.totals[rc.id] || { invest: 0, refund: 0 }));
           fitBandHead(wHead);
