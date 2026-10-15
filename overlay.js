@@ -2778,7 +2778,8 @@
     if (!cr.width) return;
     var rr = rail.getBoundingClientRect(), sub = document.querySelector("#scene-race .sub-panel.slot-" + slot);
     var sr = sub && sub.classList.contains("sub-on") ? sub.getBoundingClientRect() : null;
-    var bl = cam.clientLeft, bt = cam.clientTop, left = (sr && sr.width ? sr.left : cr.left) + bl;
+    // 追補5（10/15 Naoto「名前の左下にへこみ」）＝NEXT枠がある席は NEXT枠の縁（3px）の内側から。ワイプの縁（6px）で測ると左下に白い隙間がのぞいた
+    var bl = cam.clientLeft, bt = cam.clientTop, left = sr && sr.width ? sr.left + sub.clientLeft : cr.left + bl;
     h.style.left = (left - rr.left - rail.clientLeft).toFixed(1) + "px";
     h.style.top = (cr.top + bt - rr.top - rail.clientTop).toFixed(1) + "px";
     h.style.width = (cr.right - bl - left).toFixed(1) + "px";
