@@ -1870,6 +1870,7 @@
   var RBMETA = params.get("rbmeta") === "0" ? "" : /^(left|top|bottom)$/.test(params.get("rbmeta") || "") ? params.get("rbmeta") : "bottom";
   var RBLEFT = params.get("rbleft") !== "0"; // §146 左詰め（packRaceBand の search）
   var RB2V = params.get("rb2v") !== "0"; // §148 2行は縦に積む（packRaceBand の KEEP_PRED_COL）
+  var RB1COL = params.get("rb1col") !== "0", RB1COL_PX = +(params.get("rb1colpx") || 40); // §150 1列のときの左の空き（上限px）
   function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
   /** 合計欄（band-meta）を左の列／上の1行に置き、俺たち目をその中へ移し、買目が使える場所（帯の padding）を空ける。
       戻り値＝置いたら true（packRaceBand は合計欄との衝突判定をしない） */
@@ -2239,6 +2240,7 @@
       if (ok) break;
     }
     long.forEach(subAlignRight);
+    subWrapMark(lines); // §149 背景は行間の計算より前に付ける（padding は変わらないが念のため順番を固定）
     subSpread(scope, lines, cz);
   }
   /* §147（10/16 Naoto「NEXT枠は縦にスペースがある＝買目の行と行の間をもう少し広げて・1つの買目の折り返しは詰めたまま」）
@@ -2257,6 +2259,11 @@
     if (free <= 2) return;
     var each = Math.min(free / (lines.length - 1), (cz || 28) * 0.5);
     lines.forEach(function (l, i) { if (i) l.style.marginTop = each.toFixed(1) + "px"; });
+  }
+  /* §149（10/16 Naoto「NEXT枠で改行している買目だけ、ひとまとまりと分かるように背景グレー」）＝実際に2段以上に折れている買目だけ .nx-wrapped。&nxwrapbg=0 で出さない */
+  var NXWRAPBG = params.get("nxwrapbg") !== "0";
+  function subWrapMark(lines) {
+    lines.forEach(function (l) { l.classList.toggle("nx-wrapped", NXWRAPBG && l.classList.contains("sg-wrap") && subRows(l) > 1); });
   }
   /** 折り返した行の段数（車番バッジの縦位置の種類で数える） */
   function subRows(line) {
@@ -2612,6 +2619,15 @@
       if (maxN > 1 && room > 1) {
         var rg = ROWGAP + room * 0.98 / (maxN - 1);
         Array.prototype.forEach.call(flow.children, function (c) { c.style.rowGap = rg.toFixed(1) + "px"; });
+      }
+      /* §150（10/16 Naoto「1列（2行）だと右が空いて左寄りに見える＝左から少し空けて」）＝列が1つのときだけ、
+         右の余りの半分（上限 RB1COL_PX）を左に空ける。&rb1col=0 で旧 */
+      if (RB1COL && best.cols.length === 1) {
+        var freeW = availW - flow.offsetWidth * k2;
+        // 10/16 Naoto「あと半バッジ分左に」＝上限から車番バッジ半分（実際の表示幅）を引く
+        var car1 = flow.querySelector(".car"), halfCar = car1 ? car1.offsetWidth * k2 / 2 : 0;
+        var sh = Math.min(freeW / 2, RB1COL_PX) - halfCar;
+        if (freeW > 8 && sh > 1) flow.style.marginLeft = sh.toFixed(1) + "px";
       }
     }
     /* ③の場名の札は①と同じく最大1.6倍まで（9/26）＝買目が1行だけだと帯ごと3倍になり札が巨大になった。
@@ -4528,7 +4544,8 @@
   /* §136（10/16 Naoto）欠車は並び（①出走表の下・②レース観戦の中央）の車番も出走表と同じ灰色。&nbabs=0 で旧 */
   var NBABS = params.get("nbabs") !== "0";
   /* §137（10/16 Naoto）②の並びの苗字も、補充・追加なら半角括弧「(三宅)」。&nbhj=0 で旧 */
-  var NBHJ = params.get("nbhj") !== "0";
+  // 🔄10/16 夜 Naoto「レース観戦の並びは（）なしに戻して」＝既定OFF（&nbhj=1 で出す）
+  var NBHJ = params.get("nbhj") === "1";
   /* opts.names＝車番チップの下に苗字を出す／opts.noType＝戦型（三分戦等）を出さない。
      どちらも②の中央ライン専用。①③は従来どおり（引数なし＝挙動不変） */
   function renderNarabi(vName, rNo, nbId, opts) {

@@ -1235,6 +1235,8 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
 .sub-line.subv-tight .pred-line.chips.sg-alt { background: rgba(0,0,0,.07); }
 /* §147（10/16 Naoto）買目どうしの間を空けたので、買目ごとのグレーの縞はなし（&nxgap=0 で縞も戻る） */
 html.nxgap .sub-line.subv-tight .pred-line.chips.sg-alt { background: transparent; }
+/* §149（10/16 Naoto）折り返している買目だけグレーの地＝ひとまとまりと分かるように */
+.sub-line.subv-tight .pred-line.chips.nx-wrapped, html.nxgap .sub-line.subv-tight .pred-line.chips.nx-wrapped { background: rgba(0,0,0,.07); }
 /* 🧪&subv=slim＝tight＋バッジを細め（幅＝高さの85%）＋余白を削る（枠の左右10→5px・縞の内側4→3px）＝1行に入る数を1個増やす */
 .sub-line.subv-slim { padding-left: 5px; padding-right: 5px; }
 .sub-line.subv-slim .pred-line.chips { padding-left: 3px; padding-right: 3px; }
