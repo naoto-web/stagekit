@@ -4094,3 +4094,12 @@ body #scene-race .race-wipes .winv.wide .band-inv { font-size: 32px; }
 /* §142（10/16 Naoto）ガールズ＝グレードの札と同じ形のピンクの♥（グレードの札があればその右）。&gbheart=0 で出さない */
 .grade-badge.girls { background: #e64980; padding: 2px 8px; font-family: "Segoe UI Symbol", "Yu Gothic UI", sans-serif; }
 .grade-badge + .grade-badge.girls { margin-left: 4px; }
+
+/* §143 note勝負バナーの番号の枠（右寄せ）＝「・」を縦にそろえる */
+.nh-split .nh-num { display: inline-block; text-align: right; }
+.nh-split .nh-rr { display: inline-block; text-align: right; }
+.nh-items.nh-f .nh-item { justify-self: end; }
+.nh-items.nh-f .nh-split .nh-v { width: auto; }
+.nh-items.nh-g { justify-items: stretch; }
+.nh-items.nh-g .nh-split { justify-content: space-between; }
+.nh-items.nh-g .nh-split .nh-v { width: auto; }

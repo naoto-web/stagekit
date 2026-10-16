@@ -393,7 +393,7 @@
           var rTxt = sg.nums.map(function (n) {
             return n.replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }); // 8/11 FB129＝2桁も全角
           }).join("・") + "R";
-          g.items.push({ t: sg.v + " " + rTxt, v: sg.v, r: rTxt, seq: seq }); // r＝R部分（場名の列そろえ用・9/25）
+          g.items.push({ t: sg.v + " " + rTxt, v: sg.v, r: rTxt, nums: sg.nums, seq: seq }); // r＝R部分（場名の列そろえ用・9/25）／nums＝§143
         });
         return;                                 // 分割済み＝以降の単場処理はしない
       }
@@ -432,7 +432,7 @@
           t = venue + " " + rPart;
         }
       }
-      g.items.push({ t: t, v: venue, r: rPart, seq: seq }); // r が無い行（自由文）は原文のまま1つの文字列
+      g.items.push({ t: t, v: venue, r: rPart, nums: rPart ? nums : null, seq: seq }); // r が無い行（自由文）は原文のまま1つの文字列／nums＝§143
     });
     // 枠内の並び＝場の順で自動ソート（8/9 FB104・Naoto指定）＝タイマーカードと同じ順。
     // 場が読めない行は末尾（同順位は書いた順の安定ソート）
@@ -490,26 +490,88 @@
            「場名」と「〇R」を別の部品にし、場名の欄の幅を枠内でいちばん長い場名の文字数（em）にそろえる。
            場名は全角だけ＝1文字1em で幅が決まる。整形できない自由文の行（r なし）は従来どおり1つの文字列 */
         var nhv = 0;
-        g.items.forEach(function (it) { if (it.r && it.v.length > nhv) nhv = it.v.length; });
+        // §143 枠が上下に積まれる日（全員1行ずつ＝nh-stack）は、場名の欄・番号の枠を全員の行で合わせる＝上下の枠どうしでも「・」がそろう
+        var nhPool = NHDOT && maxItems === 1 && groups.length >= 2 ? groups.reduce(function (a, x) { return a.concat(x.items); }, []) : g.items;
+        nhPool.forEach(function (it) { if (it.r && it.v.length > nhv) nhv = it.v.length; });
+        // §143 番号の枠の幅（j番目の番号どうし）＝a：その列でいちばん長い番号のけた数／b：どれも2けた／c：1つ目の番号だけ（2つ目以降は詰めて書く）
+        var slotW = [];
+        if (NHDOT) nhPool.forEach(function (it) {
+          if (it.r && it.nums) it.nums.forEach(function (n, j) { if ((NHDOT === "c" && j > 0) || NHDOT === "d" || NHDOT === "e" || NHDOT === "f" || NHDOT === "g" || NHDOT === "h") return; var w = NHDOT === "b" ? 2 : String(n).length; if (!(slotW[j] >= w)) slotW[j] = w; });
+        });
+        // d：最後の「・」とRをそろえる（10/16 Naoto）＝番号の部分を右寄せ（全行同じ幅 rowU）＋最後の番号の枠だけ幅 lastW
+        var lastW = 0, rowU = 0;
+        if (NHDOT === "d" || NHDOT === "e") {
+          nhPool.forEach(function (it) { if (it.r && it.nums && it.nums.length) { var L = String(it.nums[it.nums.length - 1]).length; if (L > lastW) lastW = L; } });
+          nhPool.forEach(function (it) {
+            if (!(it.r && it.nums && it.nums.length)) return;
+            var u = (NHDOT === "e" ? String(it.nums[it.nums.length - 1]).length : lastW) + it.nums.length - 1;
+            it.nums.slice(0, -1).forEach(function (n) { u += String(n).length; });
+            if (u > rowU) rowU = u;
+          });
+        }
+        var nhFw = function (n) { return String(n).replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }); };
+        var nhNumHtml = function (it) {
+          if (NHDOT === "d" || NHDOT === "e") { // e：Rだけ右でそろえ、番号は詰めて書く
+            var last = it.nums.length - 1;
+            return '<span class="nh-rr" style="width:' + rowU + 'em">' + it.nums.map(function (n, j) {
+              return j === last && NHDOT === "d" ? '<span class="nh-num" style="width:' + lastW + 'em">' + nhFw(n) + "</span>" : nhFw(n);
+            }).join('<span class="nh-dot">・</span>') + "</span>R";
+          }
+          return it.nums.map(function (n, j) {
+            return '<span class="nh-num"' + (slotW[j] ? ' style="width:' + slotW[j] + 'em"' : "") + '>' + String(n).replace(/\d/g, function (d) { return "０１２３４５６７８９".charAt(+d); }) + "</span>";
+          }).join('<span class="nh-dot">・</span>') + "R"; // R は今までどおり（rTxt と同じ）
+        };
         var items = g.items.map(function (it) {
           // グレードバッジ＝8/10 FB111で廃止（Naoto指示・タイマーカードの〇R右バッジは存続）
           if (it.r) return '<span class="nh-item nh-split"><span class="nh-v">' + esc(it.v) + '</span><span class="nh-r">' +
-            esc(it.r) + "</span></span>";
+            (NHDOT && it.nums ? nhNumHtml(it) : esc(it.r)) + "</span></span>";
           return '<span class="nh-item">' + esc(it.t) + "</span>";
         }).join("");
         return '<span class="nh-group"' + (col ? ' style="border-color:' + col + '"' : "") + ">" + name +
-          '<span class="nh-items' + (g.items.length === 4 ? " nh-r2" : "") + '"' + (nhv ? ' style="--nhv:' + nhv + 'em"' : "") + ">" +
+          '<span class="nh-items' + (g.items.length === 4 ? " nh-r2" : "") + (NHDOT === "f" ? " nh-f" : NHDOT === "g" ? " nh-g" : "") + '"' + (nhv && NHDOT !== "f" && NHDOT !== "g" ? ' style="--nhv:' + nhv + 'em"' : "") + ">" +
           items + "</span></span>";
       }).join("") + "</span>";
+    if (NHDOT === "h") { // §143
+      var hset = el.classList.contains("nh-stack") ? [el] : Array.prototype.slice.call(el.querySelectorAll(".nh-items"));
+      hset.forEach(function (sc) {
+        var vs = sc.querySelectorAll(".nh-split .nh-v"), rs = sc.querySelectorAll(".nh-split .nh-r"), mv = 0, mr = 0;
+        vs.forEach(function (x) { x.style.width = "auto"; mv = Math.max(mv, x.getBoundingClientRect().width); });
+        rs.forEach(function (x) { x.style.width = ""; x.style.display = "inline-block"; mr = Math.max(mr, x.getBoundingClientRect().width); });
+        if (mv > 0) vs.forEach(function (x) { x.style.width = Math.ceil(mv) + "px"; });
+        if (mr > 0) rs.forEach(function (x) { x.style.boxSizing = "border-box"; x.style.paddingRight = ""; x.style.textAlign = "right"; x.style.width = Math.ceil(mr) + "px"; });
+        // レースの数が少ない行（10/16 Naoto「1レースのRを2レースの・の位置に」）＝その行のRの中心を、いちばん多い行の
+        // 「右から数えて（足りない数）番目の・」の中心に合わせる（右の余白で左へずらす）。1レース×2レース＝Rが・の真下
+        var cnt = function (x) { return x.querySelectorAll(".nh-dot").length + 1; }, rsa = Array.prototype.slice.call(rs), mc = 0;
+        rsa.forEach(function (x) { mc = Math.max(mc, cnt(x)); });
+        var ref = rsa.filter(function (x) { return cnt(x) === mc; })[0];
+        if (ref && mc > 1) rsa.forEach(function (x) {
+          var k = cnt(x);
+          if (k >= mc || !x.lastChild || x.lastChild.nodeType !== 3) return;
+          var dots = ref.querySelectorAll(".nh-dot"), dot = dots[dots.length - (mc - k)];
+          if (!dot) return;
+          var rg = document.createRange(); rg.selectNodeContents(x.lastChild);
+          var rb = rg.getBoundingClientRect(), db = dot.getBoundingClientRect();
+          var shift = (rb.left + rb.right) / 2 - (db.left + db.right) / 2;
+          if (shift > 0) x.style.paddingRight = Math.round(shift) + "px";
+        });
+      });
+    }
     // 名前の札の幅をいちばん広い札にそろえる（9/27 Naoto「カズとムネオの文字数の違いで場名の頭がずれる」）＝縦積みのときだけ。
     // 文字数em の見積もりでは合わなかった（書体の字幅が1emより狭い）＝描いた後に実寸で測る
     if (el.classList.contains("nh-stack")) {
       var nms = el.querySelectorAll(".nh-name"), mw = 0;
       nms.forEach(function (n) { mw = Math.max(mw, n.getBoundingClientRect().width); });
       if (mw > 0) nms.forEach(function (n) { n.style.boxSizing = "border-box"; n.style.minWidth = Math.ceil(mw) + "px"; });
+      if (NHDOT === "g") { // §143
+        var its = el.querySelectorAll(".nh-item.nh-split"), iw = 0;
+        its.forEach(function (x) { x.style.minWidth = ""; iw = Math.max(iw, x.getBoundingClientRect().width); });
+        if (iw > 0) its.forEach(function (x) { x.style.boxSizing = "border-box"; x.style.minWidth = Math.ceil(iw) + "px"; });
+      }
     }
   }
 
+  /* §143（10/16 Naoto「しょーたの別府と四日市で・の位置がズレてる」）note勝負バナーの番号を1つずつ枠に入れ、縦に並ぶ番号どうしで枠の幅をそろえる（右寄せ）＝「・」が縦にそろう */
+  var NHDOT = params.get("nhdot") === "0" ? "" : (params.get("nhdot") || "h");
   function tickClock() {
     var now = new Date();
     var days = ["日", "月", "火", "水", "木", "金", "土"];
