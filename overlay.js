@@ -3905,6 +3905,11 @@
     applyTomorrow(); // §100 配信の終わり＝①右の出走表枠を明日の出走表に（お礼カードと同じ時）
   }
 
+  /* §144（10/16 Naoto）出走表の見出し（①③・空席ワイプ）にもグレードの札・ガールズの♥（§142と同じ札）。&slgb=0 で出さない */
+  var SLGB = params.get("slgb") !== "0";
+  function slBadges(vName, rNo, race) {
+    return SLGB && vName && rNo ? '<span class="sl-gb">' + gradeBadge(vName) + girlsBadge(vName, rNo, race) + "</span>" : "";
+  }
   function renderStartListInto(ids, vName, rNo) {
     var el = $(ids.list);
     if (!el) return;
@@ -3920,7 +3925,8 @@
     var subEl = $(ids.sub);
     if (subEl) {
       if (vName && rNo) {
-        subEl.innerHTML = '<b class="sl-vr">' + esc(vName) + " " + rNo + "R</b>" +
+        // §144 場名Rの右にグレードの札・ガールズの♥（sl-vr の中＝見出しの縮小計算に札の幅も入る）
+        subEl.innerHTML = '<b class="sl-vr">' + esc(vName) + " " + rNo + "R" + slBadges(vName, rNo, race) + "</b>" +
           (race && race.cls ? '<span class="sl-cls">' + esc(race.cls) + "</span>" : "");
       } else {
         subEl.textContent = "";
@@ -4311,7 +4317,7 @@
           '<span class="sc' + scls + '">' + esc(sc) + "</span>" + nums +
           (cmp ? "" : '<span class="role sep">' + esc(STC_ROLE[roles[p.no]] || "") + "</span>") + "</div>";
       }).join("");
-      html = '<div class="stc-hd"><b class="stc-vr">' + esc(vName + " " + rNo + "R") + "</b>" +
+      html = '<div class="stc-hd"><b class="stc-vr">' + esc(vName + " " + rNo + "R") + slBadges(vName, rNo, race) + "</b>" +
         (race.cls ? '<span class="stc-cls">' + esc(race.cls) + "</span>" : "") +
         (race.lineType ? '<span class="stc-lt">' + esc(race.lineType) + "</span>" : "") + "</div>" +
         '<div class="stc-row stc-th"><span>車</span><span>選手名</span><span>級</span><span>脚</span>' +
@@ -4683,15 +4689,32 @@
   function tickKey(h) { // 手動の的中は id が並び順（manual-0…）で、追加でずれる＝中身で見分ける
     return /^manual-/.test(String(h.id || "")) ? "m|" + h.racerName + "|" + h.place + "|" + h.type + "|" + h.mult : String(h.id);
   }
+  /* §144（10/16 Naoto）的中速報にも場Rの右にグレードの札・ガールズの♥（§142と同じ札）。&tickgb=0 で出さない。
+     場・レースは的中の id（場|R|配信者|…）から・手動の的中は place（「青森5R」）から読む */
+  var TICKGB = params.get("tickgb") !== "0";
+  function hitBadges(h) {
+    if (!TICKGB) return "";
+    var v = "", r = "", p = String(h.id || "").split("|");
+    if (!/^manual-/.test(String(h.id || "")) && p.length >= 2) { v = p[0]; r = p[1]; }
+    else { var m = /^(.+?)(\d+)R$/.exec(String(h.place || "")); if (m) { v = m[1]; r = m[2]; } }
+    return v ? gradeBadge(v) + girlsBadge(v, r) : "";
+  }
+  /* §144 noteの万車＝大小（tick-m）はそのまま・文字は赤でなくほかのnote的中と同じ金＋光の帯（✨も今どおり）。&mnnote=0 で旧（赤字） */
+  var MNNOTE = params.get("mnnote") !== "0";
   function tickItemHtml(h) {
     // 式別ラベルは3連単運用のため省略（俺たち目・例外買いのワイド等だけ残す・8/6 FB）
     var typeLabel = h.type && h.type !== "3連単" ? " " + esc(h.type) : "";
     var noteLabel = h.note ? " note" : ""; // note予想レースの的中は場Rの後ろにnote表記（8/6 FB53）
+    var gb = hitBadges(h);
+    // 札は金文字（.tn-t＝背景を文字で切り抜く）の外に置く＝札の地まで切り抜かれない
+    function gold(a, b) { return gb ? '<span class="tn-t">' + a + "</span>" + gb + '<span class="tn-t">' + b + "</span>" : '<span class="tn-t">' + a + b + "</span>"; }
+    var head = esc(h.racerName) + " " + esc(h.place), tail = noteLabel + typeLabel + " " + multTxt(h.mult);
     if (h.manche && h.amount) {
-      return '<span class="tick-manche">💥 万車速報：' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍</span>";
+      if (TICKNOTE && MNNOTE && h.note) return '<span class="tick-manche tick-mn-note">💥 ' + gold("万車速報：" + head, tail + "倍") + "</span>";
+      return '<span class="tick-manche">💥 万車速報：' + head + gb + tail + "倍</span>";
     }
-    if (TICKNOTE && h.note) return '<span>🎯 <span class="tn-t">' + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍 的中</span></span>"; // §126 文字だけ金にする（絵文字は色を変えない）
-    return "<span>🎯 " + esc(h.racerName) + " " + esc(h.place) + noteLabel + typeLabel + " " + multTxt(h.mult) + "倍 的中</span>";
+    if (TICKNOTE && h.note) return "<span>🎯 " + gold(head, tail + "倍 的中") + "</span>"; // §126 文字だけ金にする（絵文字は色を変えない）
+    return "<span>🎯 " + head + gb + tail + "倍 的中</span>";
   }
   /* §126（10/6 Naoto・配信者の声「下の的中レースってnoteレースだけもっとギラギラにさりげなく」）＝的中速報のnote的中だけ
      金文字＋光の帯＋前後に✨がまたたく（B案）。noteの万車は文字は赤のまま✨だけ付く。&ticknote=0で旧 */
