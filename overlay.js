@@ -4307,6 +4307,8 @@
   function surnameOf(vName, rNo, no) {
     return fullNameOf(vName, rNo, no).split(/[\s　]+/)[0];
   }
+  /* §136（10/16 Naoto）欠車は並び（①出走表の下・②レース観戦の中央）の車番も出走表と同じ灰色。&nbabs=0 で旧 */
+  var NBABS = params.get("nbabs") !== "0";
   /* opts.names＝車番チップの下に苗字を出す／opts.noType＝戦型（三分戦等）を出さない。
      どちらも②の中央ライン専用。①③は従来どおり（引数なし＝挙動不変） */
   function renderNarabi(vName, rNo, nbId, opts) {
@@ -4318,6 +4320,7 @@
     // keirin.jp経路では時刻表に並び・戦型（三分戦等）が同梱されている
     var ttNarabi = "";
     var lineType = "";
+    var nbAbs = {}; // §136 欠車の車番
     if (vName && rNo && timetable) {
       (timetable.venues || []).forEach(function (tv) {
         if (tv.name !== vName) return;
@@ -4325,9 +4328,12 @@
           if (r.no !== +rNo) return;
           if (r.narabi) ttNarabi = r.narabi;
           if (r.lineType) lineType = r.lineType;
+          if (NBABS) (r.racers || []).forEach(function (p) { if (slAbsent(key, p)) nbAbs[+p.no] = 1; });
         });
       });
     }
+    // 時刻表に選手が無いとき（旧経路等）もコンソールの欠車一覧（state.absent）は効かせる
+    if (NBABS && SLABS && key) window.Derive.absentOf(state, key).forEach(function (n) { nbAbs[+n] = 1; });
     var auto = key && narabiAuto[key] ? narabiAuto[key].val : "";
     if (key && !narabiAuto[key]) ensureNarabi(vName, rNo, key); // 得点＋並びの保険はエンドポイントから
     var groups = window.Keirin.normalize(manual || ttNarabi || auto).split(/[^0-9]+/).filter(Boolean);
@@ -4348,10 +4354,11 @@
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {
           var glowN = !!(nbHit && nbHit[+n]);
-          var chip = '<i class="car c' + n + (glowN ? " hit-glow" : "") + '"' + (glowN ? hitPhaseStyle() : "") + ">" + n + "</i>";
+          var abN = !!nbAbs[+n]; // §136 欠車＝出走表と同じ灰色（②は苗字ごと）
+          var chip = '<i class="car c' + n + (glowN ? " hit-glow" : "") + (abN && !o.names ? " sl-abs" : "") + '"' + (glowN ? hitPhaseStyle() : "") + ">" + n + "</i>";
           if (!o.names) return chip;
           // 苗字が取れない選手（時刻表が旧経路等）はチップだけ＝高さが揃うよう空要素は残す
-          return '<span class="nb-cell">' + chip +
+          return '<span class="nb-cell' + (abN ? " sl-abs" : "") + '">' + chip +
             '<b class="nb-nm' + (isJimoto(vName, prefOf(vName, rNo, n)) ? " jm" : "") + '">' + esc(surnameOf(vName, rNo, n)) + "</b></span>";
         }).join("") + "</span>";
       }).join('<span class="nb-dot">・</span>');
