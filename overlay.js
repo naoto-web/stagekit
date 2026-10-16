@@ -1868,6 +1868,7 @@
   //   &rbmeta=bottom＝枠の一番下に1行（上に区切り線・左端に俺たち目・右に合成／合計／投資）＝10/16 Naoto「やっぱり一番下の一列」
   //   ✅10/16 本番は bottom が既定。&rbmeta=0 で旧（右下の固定枠）／left・top は見本のまま残置
   var RBMETA = params.get("rbmeta") === "0" ? "" : /^(left|top|bottom)$/.test(params.get("rbmeta") || "") ? params.get("rbmeta") : "bottom";
+  var RBLEFT = params.get("rbleft") !== "0"; // §146 左詰め（packRaceBand の search）
   function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
   /** 合計欄（band-meta）を左の列／上の1行に置き、俺たち目をその中へ移し、買目が使える場所（帯の padding）を空ける。
       戻り値＝置いたら true（packRaceBand は合計欄との衝突判定をしない） */
@@ -2467,8 +2468,18 @@
     function predTogether(cols) {
       return cols.some(function (c) { return predIdx.every(function (i) { return c.indexOf(i) >= 0; }); });
     }
+    /* 🧪§146（10/16 Naoto「バッジの大きさが変わらないなら左詰め」）＝②の下の1行のとき、いちばん大きい倍率の99%以上の組み方の中から
+       左の列ほど行が多いもの（列ごとの行数を左から比べて大きい方）を選ぶ＝3行なら「左1・右2」でなく「左2・右1」。&rbleft=0 で旧 */
+    var LEFTPACK = rbm && RBMETA === "bottom" && RBLEFT;
+    function leftHeavier(a, b) {
+      for (var i = 0; i < Math.max(a.length, b.length); i++) {
+        var x = a[i] ? a[i].length : 0, y = b[i] ? b[i].length : 0;
+        if (x !== y) return x > y;
+      }
+      return false;
+    }
     function search() {
-      var b = null;
+      var b = null, cands = [];
       seqs.forEach(function (seq) {
         (function rec(start, cols) {
           for (var end = start + 1; end <= seq.length; end++) {
@@ -2476,6 +2487,7 @@
             if (end === seq.length) {
               if (KEEP_PRED_COL && !predTogether(cols)) { cols.pop(); continue; }
               var k = evalCols(cols);
+              if (LEFTPACK) cands.push({ k: k, cols: cols.map(function (c) { return c.slice(); }) });
               if (!b || k > b.k + 1e-6) b = { k: k, cols: cols.map(function (c) { return c.slice(); }) };
             } else if (cols.length < maxCols) {
               rec(end, cols);
@@ -2484,6 +2496,13 @@
           }
         })(0, []);
       });
+      if (LEFTPACK && b) { // §146 99%以上の中で左詰め（同じ詰め方なら大きい方）
+        var top = b;
+        cands.forEach(function (c) {
+          if (c.k < top.k * 0.99) return;
+          if (leftHeavier(c.cols, b.cols) || (!leftHeavier(b.cols, c.cols) && c.k > b.k + 1e-6)) b = c;
+        });
+      }
       return b;
     }
     /* 🧪RB2＝右下の 合計・合成・投資 の形を2通り試して、買目が大きく入る方を採る（9/25 Naoto「バランスで選んで」）：
