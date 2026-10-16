@@ -4090,3 +4090,7 @@ body #scene-race .race-wipes .winv.wide .band-inv { font-size: 32px; }
 /* §138 かぶり買目（&kaburi=0 で出さない）＝かぶった目の車番チップを相手のメンバーカラーで縁取り */
 .car.kb-on, .pl-all.kb-on { box-shadow: 0 0 0 3px var(--kbc), 0 0 9px 3px var(--kbc); position: relative; z-index: 1; }
 
+
+/* §142（10/16 Naoto）ガールズ＝グレードの札と同じ形のピンクの♥（グレードの札があればその右）。&gbheart=0 で出さない */
+.grade-badge.girls { background: #e64980; padding: 2px 8px; font-family: "Segoe UI Symbol", "Yu Gothic UI", sans-serif; }
+.grade-badge + .grade-badge.girls { margin-left: 4px; }

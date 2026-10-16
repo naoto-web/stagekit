@@ -794,7 +794,7 @@
         var gb = gradeBadge(c.venue);
         var tight = gb && cards.length >= 3 && c.venue.length >= (cards.length >= 4 ? 3 : 4);
         var head = '<div class="vt-head' + (tight ? " vh-tight" : "") + '">' + esc(c.venue) +
-          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + "</div>";
+          (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + girlsBadge(c.venue, null, c.race) + "</div>";
         var body;
         if (!c.race) {
           body = '<div class="vt-rows"><div class="vt-done">' + (timetable ? "本日終了" : "時刻取得中…") + "</div></div>";
@@ -1084,7 +1084,7 @@
     // 見出しの縮小は文字数の当て推量（vh-tight）でなく実測（fitTimerHeads＝入るまで1pxずつ）に変更（9/26）
     var head = '<div class="vt-head">' +
       (note ? '<span class="vt-fire">🔥</span>' : "") + esc(c.venue) + // 🔥は場名の前（9/26 Naoto「🔥岐阜10R」・旧＝グレードバッジの右）
-      (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + "</div>";
+      (c.race ? '<span class="vt-r">' + c.race.no + "R</span>" : "") + gb + girlsBadge(c.venue, null, c.race) + "</div>";
     var body, cls = "vt-card";
     if (mode === "done") {
       cls += " vt-done-card"; // 本日終了のカード（9/27・CSSは :has を使わずこのクラスで）
@@ -1131,6 +1131,17 @@
     if (pulse) { void el.offsetWidth; el.classList.add("cd-pulse"); }
   }
   /** 3〜4場のタイマー用＝「GⅢ」→「Ⅲ」（GPはそのまま） */
+  /* §142（10/16 Naoto）ガールズ（時刻表のクラス「Ｌ級ガ…」）のレースは、グレードの札と同じ形のピンクの♥の札。
+     グレードがある開催（GⅠの中のガールズ等）はグレードの札の右に並べる。レースが決まっている場所だけ（場名だけのタブ・表の見出しは出さない）。&gbheart=0 で出さない */
+  var GBHEART = params.get("gbheart") !== "0";
+  function girlsBadge(vName, rNo, race) {
+    if (!GBHEART) return "";
+    var r = race || null;
+    if (!r && timetable && vName && rNo) (timetable.venues || []).forEach(function (tv) {
+      if (tv.name === vName) (tv.races || []).forEach(function (x) { if (x.no === +rNo) r = x; });
+    });
+    return r && /[LＬ]\s*級|ガールズ/.test(r.cls || "") ? '<span class="grade-badge girls" title="ガールズ">♥</span>' : "";
+  }
   function gradeBadgeShort(venueName) { return gradeBadge(venueName).replace(/>G([ⅠⅡⅢ])</, ">$1<"); }
   /** 見出し（🔥場名R グレード）と締切のハンコを、カードの幅に入るまで1pxずつ縮める（表示中の容器だけ＝非表示は幅0で測れない）。
       旧＝文字数の当て推量で一段縮めていた（4場＋🔥＋GⅢで14pxまで落ちて「字が小さい」9/26 Naoto）。
@@ -2763,7 +2774,7 @@
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     var note = p && p.entry.isNote;
     return '<div class="race-col-head">' + esc(keyLabel(k)) +
-      (k ? gradeBadge(String(k).split("|")[0]) : "") +
+      (k ? gradeBadge(String(k).split("|")[0]) + girlsBadge(String(k).split("|")[0], String(k).split("|")[1]) : "") +
       (note ? (split ? '<br>' : " ") + '<span class="note-tag"><span class="nt-fire">🔥</span>note予想</span>' : "") + // 🔥だけゆらゆら（9/27 Naoto・①も）
       "</div>";
   }
@@ -3496,7 +3507,7 @@
           var tkSpec = TKRK && rc && TALKAUTO && seats.a && seats.b ? tkOddsPlan(key, talkKeysOf(seats.a), talkKeysOf(seats.b))[slot] : null;
           var tkOddsCol = function (k, from, count, perCol) { // オッズの区画＝札（場R 3連単オッズ）＋表
             var h = rankOddsHtml(k, from, count, perCol);
-            return h ? '<div class="race-col-head tk-rk-lab">' + esc(keyLabel(k)) + gradeBadge(k.split("|")[0]) + ' <span class="tk-rk-sub">' + tkSubText(count) + '</span></div><div class="rk-box">' + h + "</div>" : "";
+            return h ? '<div class="race-col-head tk-rk-lab">' + esc(keyLabel(k)) + gradeBadge(k.split("|")[0]) + girlsBadge(k.split("|")[0], k.split("|")[1]) + ' <span class="tk-rk-sub">' + tkSubText(count) + '</span></div><div class="rk-box">' + h + "</div>" : "";
           };
           var tkHalf = ""; // 1場の人の右半分に出すオッズ（下の通常描画で左に買目を置く）
           if (tkSpec && tkSpec.t === "half") tkHalf = tkOddsCol(tkSpec.k, 0, 9, 9);
@@ -4376,7 +4387,7 @@
       // 場名とRは2段組み＝1行だと「西武園 11R」で240px近く食い、そのぶん苗字が縮小される。
       // 縦は枠を広げた分の余りがあるので、高さを使って幅を節約する（8/13 FB）
       // グレードバッジ＝R番号の右（9/26 Naoto「並びの左の場にグレードバッジを」）。F級は出ない（gradeBadge が空）
-      (o.race ? '<span class="nb-race"><b>' + esc(vName) + "</b><b>" + esc(String(rNo)) + "R</b>" + gradeBadge(vName) + "</span>" : "") +
+      (o.race ? '<span class="nb-race"><b>' + esc(vName) + "</b><b>" + esc(String(rNo)) + "R</b>" + gradeBadge(vName) + girlsBadge(vName, rNo) + "</span>" : "") +
       '<span class="nb-arrow">←</span>' +
       groups.map(function (g) {
         return '<span class="nb-group">' + g.split("").map(function (n) {
