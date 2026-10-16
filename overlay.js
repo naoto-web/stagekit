@@ -4309,6 +4309,8 @@
   }
   /* §136（10/16 Naoto）欠車は並び（①出走表の下・②レース観戦の中央）の車番も出走表と同じ灰色。&nbabs=0 で旧 */
   var NBABS = params.get("nbabs") !== "0";
+  /* §137（10/16 Naoto）②の並びの苗字も、補充・追加なら半角括弧「(三宅)」。&nbhj=0 で旧 */
+  var NBHJ = params.get("nbhj") !== "0";
   /* opts.names＝車番チップの下に苗字を出す／opts.noType＝戦型（三分戦等）を出さない。
      どちらも②の中央ライン専用。①③は従来どおり（引数なし＝挙動不変） */
   function renderNarabi(vName, rNo, nbId, opts) {
@@ -4358,8 +4360,11 @@
           var chip = '<i class="car c' + n + (glowN ? " hit-glow" : "") + (abN && !o.names ? " sl-abs" : "") + '"' + (glowN ? hitPhaseStyle() : "") + ">" + n + "</i>";
           if (!o.names) return chip;
           // 苗字が取れない選手（時刻表が旧経路等）はチップだけ＝高さが揃うよう空要素は残す
+          // §137 補充・追加の選手は苗字を半角括弧で（出走表の「(名前)」と同じ印・欠場は括弧にしない）
+          var nm = surnameOf(vName, rNo, n), hjN = NBHJ && nm ? ((((narabiAuto[key] || {}).cards || {})[String(n)] || {}).h || "") : "";
+          if (hjN && !/欠/.test(hjN)) nm = "(" + nm + ")";
           return '<span class="nb-cell' + (abN ? " sl-abs" : "") + '">' + chip +
-            '<b class="nb-nm' + (isJimoto(vName, prefOf(vName, rNo, n)) ? " jm" : "") + '">' + esc(surnameOf(vName, rNo, n)) + "</b></span>";
+            '<b class="nb-nm' + (isJimoto(vName, prefOf(vName, rNo, n)) ? " jm" : "") + '">' + esc(nm) + "</b></span>";
         }).join("") + "</span>";
       }).join('<span class="nb-dot">・</span>');
     fitNarabi(nbId); // 収まらない時は行ごと縮小（8/6 FB44）
