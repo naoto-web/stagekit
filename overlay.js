@@ -2069,7 +2069,8 @@
 
   /* §138（10/16 Naoto）2人が同じレースを予想しているとき、かぶった買目を見せる（10/16 Naoto「札はいらない・合計も的中演出も不要」＝チップの光だけ・&kaburi=0 で出さない）。
      かぶり＝同じ券種・同じ組（comboLabel）。相手＝席にいるもう1人。切り目・欠車だけの行・俺たち目は数えない */
-  var KABURI = params.get("kaburi") !== "0";
+  // 🔄10/16 夜 Naoto「目がちかちかする・バッジが小さいとハイフンやオッズと被って見づらい」＝既定OFF（&kaburi=1 で出す）
+  var KABURI = params.get("kaburi") === "1";
   function kaburiOf(k, rc) {
     var seats = seatMap(), other = seats.a && seats.a.id === rc.id ? seats.b : (seats.b && seats.b.id === rc.id ? seats.a : null);
     if (!other) return null;
