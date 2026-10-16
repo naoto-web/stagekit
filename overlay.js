@@ -3980,7 +3980,7 @@
       SL2_COLS.map(function (c) { return '<span class="sl2-n' + (c.i === 7 ? " sl2-wr" : "") + '">' + c.h + "</span>"; }).join("") + "</li>";
     // 🧪ライン順（9/27 Naoto「空席ワイプと同じくラインごとの並び・区切りは横線」・&slline=1）。
     //   並べ方は空席ワイプと同じ stcOrder（競りも同じ位置に並べる・並びが未発表なら車番順）
-    var ord = SL2_LINE ? stcOrder(race.racers, seatLinesOf(key, race)) : race.racers.map(function (p) { return { p: p, gap: false }; });
+    var ord = SL2_LINE && !girlsNoOrd(race) ? stcOrder(race.racers, seatLinesOf(key, race)) : race.racers.map(function (p) { return { p: p, gap: false }; });
     el.innerHTML = head + ord.map(function (o) {
       var p = o.p;
       var c = cards[String(p.no)] || {}, st = stOf(p);
@@ -4096,6 +4096,10 @@
     });
     return map;
   }
+  /* §139（10/16 えーす要望）ガールズ（クラス「Ｌ級ガ…」）の出走表は車番順（全員単騎＝並び順にする意味がない）。
+     ①③の出走表・空席ワイプとも。下の並び（ライン無し ← …）は keirin.jp のまま。&glno=0 で旧（並び順） */
+  var GLNO = params.get("glno") !== "0";
+  function girlsNoOrd(race) { return GLNO && /[LＬ]\s*級|ガールズ/.test((race && race.cls) || ""); }
   /** 行の順＝並び順（ラインの切れ目に gap）。並びに無い車は末尾に車番順＝黙って消さない */
   function stcOrder(racers, lines) {
     if (!lines.length) return racers.map(function (p) { return { p: p, gap: false }; });
@@ -4172,7 +4176,7 @@
       var scores = na.scores || {}, ages = na.ages || {}, cards = na.cards || {};
       var lines = seatLinesOf(key, race);
       var roles = stcRoles(lines);
-      var ord = stcOrder(race.racers, lines);
+      var ord = stcOrder(race.racers, girlsNoOrd(race) ? [] : lines); // §139 ガールズは車番順
       // 得点1位＝赤・2位＝青（同点は同色）＝右レールの出走表と同じ
       var vals = [];
       race.racers.forEach(function (p) {
