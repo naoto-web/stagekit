@@ -2238,6 +2238,24 @@
       if (ok) break;
     }
     long.forEach(subAlignRight);
+    subSpread(scope, lines, cz);
+  }
+  /* §147（10/16 Naoto「NEXT枠は縦にスペースがある＝買目の行と行の間をもう少し広げて・1つの買目の折り返しは詰めたまま」）
+     ＝縦の余り（最後の行の下〜合計欄の上）を、買目どうしの間（2行目以降の上）に均等に配る。1間あたり上限＝チップの半分。
+     折り返しの段の間（.sg-wrap の row-gap）は触らない。&nxgap=0 で旧 */
+  var NXGAP = params.get("nxgap") !== "0";
+  if (NXGAP) document.documentElement.classList.add("nxgap"); // 行の間が空く＝買目ごとのグレーの縞は消す（10/16 Naoto）
+  function subSpread(scope, lines, cz) {
+    lines.forEach(function (l) { l.style.marginTop = ""; });
+    if (!NXGAP || lines.length < 2) return;
+    var last = lines[lines.length - 1], bm = scope.querySelector(":scope > .bm-total");
+    var sr = scope.getBoundingClientRect(), lr = last.getBoundingClientRect();
+    var floor = bm && !bm.classList.contains("hidden") && bm.offsetHeight ? bm.getBoundingClientRect().top - 6
+      : sr.bottom - (parseFloat(getComputedStyle(scope).paddingBottom) || 0);
+    var free = floor - lr.bottom;
+    if (free <= 2) return;
+    var each = Math.min(free / (lines.length - 1), (cz || 28) * 0.5);
+    lines.forEach(function (l, i) { if (i) l.style.marginTop = each.toFixed(1) + "px"; });
   }
   /** 折り返した行の段数（車番バッジの縦位置の種類で数える） */
   function subRows(line) {
@@ -3829,6 +3847,9 @@
             if (bandHead.parentElement) bandHead.parentElement.style.borderColor = RK_GRAY;
             fitBandHead(bandHead);
             band.style.paddingLeft = ""; band.style.paddingRight = ""; band.style.paddingTop = ""; band.style.paddingBottom = ""; // §145 下の1行で詰めた余白を戻す
+            // §145 合計欄も元に戻して隠す（10/16 Naoto「3連単人気順にも下線が入ってる」＝区切り線つきの欄が表の上に残っていた）
+            var rkMeta = $(bp + "meta-" + slot);
+            if (rkMeta) { rkMeta.classList.remove("rbm-left", "rbm-top", "rbm-bottom"); rkMeta.style.top = ""; rkMeta.style.left = ""; rkMeta.style.width = ""; rkMeta.classList.add("hidden"); }
             band.innerHTML = rkHtml;
             band.classList.remove("note-fire");
             band.style.transform = "";

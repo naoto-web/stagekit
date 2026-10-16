@@ -1114,6 +1114,8 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
 .band-meta.rbm-bottom { display: flex; align-items: center; gap: 18px; padding-top: 4px; border-top: 2px solid #d5d9e1; box-sizing: border-box; min-height: 38px; } /* 高さ固定＝俺たち目のある枠とない枠で線の高さがそろう */
 .band-meta.rbm-bottom .bm-part { white-space: nowrap; }
 .band-meta.rbm-bottom .rbm-ore + .bm-part, .band-meta.rbm-bottom > .bm-part:first-child { margin-left: auto; }
+/* 🐞10/16 隠した欄（.hidden）は必ず隠す＝上の display:flex が後に書いてあるので .hidden に勝っていた（人気順の表の上に区切り線だけ出た） */
+.band-meta.rbm-left.hidden, .band-meta.rbm-top.hidden, .band-meta.rbm-bottom.hidden { display: none; }
 /* 数字＝主役・ハイフン＝脇役（8/6 視聴者FB2・スマホ縦で買い目が読めない）。
    高さ26pxは不変＝俺たち目＋買い目3行の縦収まりを維持し、横幅拡大で数字を大きく */
 .race-band .buy-line .car { width: 22px; height: 26px; font-size: 24px; border-radius: 3px; }
@@ -1231,6 +1233,8 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
 /* 長い行だけ区切りの後ろで折り返す（2段目は少し字下げ＝続きだと分かる）。塊そのものが幅を超えるときは塊の中でも折る */
 .sub-line.subv-tight .pred-line.chips { align-self: stretch; padding: 2px 4px; border-radius: 4px; }
 .sub-line.subv-tight .pred-line.chips.sg-alt { background: rgba(0,0,0,.07); }
+/* §147（10/16 Naoto）買目どうしの間を空けたので、買目ごとのグレーの縞はなし（&nxgap=0 で縞も戻る） */
+html.nxgap .sub-line.subv-tight .pred-line.chips.sg-alt { background: transparent; }
 /* 🧪&subv=slim＝tight＋バッジを細め（幅＝高さの85%）＋余白を削る（枠の左右10→5px・縞の内側4→3px）＝1行に入る数を1個増やす */
 .sub-line.subv-slim { padding-left: 5px; padding-right: 5px; }
 .sub-line.subv-slim .pred-line.chips { padding-left: 3px; padding-right: 3px; }
