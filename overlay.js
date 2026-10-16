@@ -1869,6 +1869,7 @@
   //   ✅10/16 本番は bottom が既定。&rbmeta=0 で旧（右下の固定枠）／left・top は見本のまま残置
   var RBMETA = params.get("rbmeta") === "0" ? "" : /^(left|top|bottom)$/.test(params.get("rbmeta") || "") ? params.get("rbmeta") : "bottom";
   var RBLEFT = params.get("rbleft") !== "0"; // §146 左詰め（packRaceBand の search）
+  var RB2V = params.get("rb2v") !== "0"; // §148 2行は縦に積む（packRaceBand の KEEP_PRED_COL）
   function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
   /** 合計欄（band-meta）を左の列／上の1行に置き、俺たち目をその中へ移し、買目が使える場所（帯の padding）を空ける。
       戻り値＝置いたら true（packRaceBand は合計欄との衝突判定をしない） */
@@ -2482,7 +2483,8 @@
        （帯が2人分の幅＝横に並べた方が倍率は上がるが、読みにくい）。俺たち目の列・メモ行は従来どおり。戻す＝&solov2=0 */
     var predIdx = [];
     rows.forEach(function (el, i) { if (el.classList.contains("pred-line")) predIdx.push(i); });
-    var KEEP_PRED_COL = SOLO_RB && SOLOV2 && predIdx.length === 2;
+    /* §148（10/16 Naoto「1行2列と2行1列なら2行の方が見やすい・バッジが小さくなっても」）＝②の下の1行のときは2人配信でも買目2行は縦に積む。&rb2v=0 で旧 */
+    var KEEP_PRED_COL = (SOLO_RB && SOLOV2 || (rbm && RBMETA === "bottom" && RB2V)) && predIdx.length === 2;
     function predTogether(cols) {
       return cols.some(function (c) { return predIdx.every(function (i) { return c.indexOf(i) >= 0; }); });
     }
