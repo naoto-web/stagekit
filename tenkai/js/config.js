@@ -63,10 +63,13 @@ var CONFIG = (function () {
      バック・最終ストレートは「場所」で決めてから d に換算する（ゴール線がホーム直線の端にあるため0.5周≠バック中央） */
   var P_C = TRACK.GOAL_OFF + Math.PI * TRACK.RREF;         // バック直線の始まり（2角の出口）
   var P_D = P_C + TRACK.LSTR;                               // バック直線の終わり（3角の入口）
+  /* 打鐘（10/16 えーす「3コーナーあたりで打鐘だとわかりやすい」）＝3角〜4角の半円の4分の1（3角の中ほど）。
+     旧1.5（残り1周半＝この盤面ではバック直線の終わり＝3角の入口。札がバックの上にあり分かりにくかった） */
+  var BELL_D = 1 - (P_D + Math.PI * TRACK.RREF * 0.25) / LAP + 1;
   var PHASES = [
     { key: 'start',   label: 'スタート',   d: 3.0 },
     { key: 'red',     label: '赤板',       d: 2.0 },
-    { key: 'bell',    label: '打鐘',       d: 1.5 },
+    { key: 'bell',    label: '打鐘',       d: BELL_D },
     { key: 'home',    label: '最終ホーム', d: 1.0 },
     { key: 'back',    label: '最終バック', d: 1 - (P_C + TRACK.LSTR / 2) / LAP },
     /* 4角は9/27に廃止（最終バックと最終ストレートの間で押し分ける場面がない・Naoto）。ホイールでは今までどおり止められる */
@@ -85,7 +88,7 @@ var CONFIG = (function () {
     LAP: LAP,
     CAR: CAR,
     PHASES: PHASES,
-    BELL_D: 1.5,        // 打鐘の位置（路面の破線）
+    BELL_D: BELL_D,     // 打鐘の位置（路面の破線）＝3角の中ほど（10/16）
     /* 誘導員が退避する位置（先頭がここを過ぎたら消える）。10/14 えーす「上がってくる選手がいれば赤板ホームから退避」
        →打鐘（1.5＝バック）から赤板（2.0＝ホーム）へ。毎回赤板で退避（上昇の有無では分けない・Naoto） */
     PACER_OUT_D: 2.0,

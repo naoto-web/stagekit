@@ -72,7 +72,7 @@ var Board = (function () {
     label(g, cx - 40, inBot - 30, 'ホーム');
     label(g, gx, inBot - 30, 'ゴール');
     label(g, cx + 40, inTop + 42, 'バック');
-    label(g, bIn.x, inTop + 42, '🔔 打鐘');
+    label(g, bOut.x - 14, bOut.y - 12, '🔔 打鐘'); // 10/16 3角へ移したので破線の外の端（左上）に
     /* 角の名前は半円の中心寄り（半径約30px）。インフィールドの半径は59px（案3・9/27）＝旧位置（約56px）だと白線にかかって切れた。
        縁寄りだとコーナーを回る内レーンの苗字チップとも被る */
     label(g, G.XR + 22, T.CY + 22, '1角');
