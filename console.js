@@ -546,7 +546,9 @@
       if (s !== null && s + RC_DONE_SEC <= now) cls += " done";
       var hj = hojuOf(window.Derive.raceKey(name, r.no)).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : ""; // §134
       if (hj) cls += " has-hoju";
-      return '<button class="' + cls + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
+      var gl = girlsHeart(r); // §141
+      if (gl) cls += " has-girls";
+      return '<button class="' + cls + '" data-no="' + r.no + '">' + gl + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
     }).join("");
     el.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -623,7 +625,8 @@
     var curNo = editRace || state.currentRace[editVenue];
     rg.innerHTML = venueRaces(editVenue).map(function (r) {
       var hj = hojuOf(window.Derive.raceKey(editVenue, r.no)).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : ""; // §134
-      return '<button class="rc' + kubunColorCls(editVenue) + (curNo === r.no ? " cur" : "") + (hj ? " has-hoju" : "") + '" data-no="' + r.no + '">' + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
+      var gl = girlsHeart(r); // §141
+      return '<button class="rc' + kubunColorCls(editVenue) + (curNo === r.no ? " cur" : "") + (hj ? " has-hoju" : "") + (gl ? " has-girls" : "") + '" data-no="' + r.no + '">' + gl + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
     }).join("");
     rg.querySelectorAll(".rc").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -768,6 +771,25 @@
   /* §134（10/15 Naoto）補充＝keirin.jp JSJ017 の「(補充)」（GAS action=absent に hoju として同梱・5分ごとに loadAbsent が受け取る）。
      追加は出さない。コンソールの表示だけ＝state には書かない（OBSは出走表の「(補)」で別に出している）。&hoju=0 で出さない */
   var HOJU = params.get("hoju") !== "0";
+  /* §141（10/16 Naoto・案G）ガールズ（時刻表のクラス「Ｌ級ガ…」）のレースボタンは立体のハート型。
+     ボタン自体は切り抜かない＝後ろに同じ形のハートを2枚（裏＝濃い色を2px下へ・表＝グラデ＋1pxの縁）。補充の「補」は今までどおり右上にはみ出す。
+     色はほかのボタンと同じ（選択中＝開催区分の色・次のレース＝赤い縁）。見本＝モック/コンソール_ガールズ♥/案G。&girls=0 で出さない */
+  var GIRLS = params.get("girls") !== "0";
+  var HEART_D = "M50 94 Q45 94 38 91 C14 82 1 74 1 42 C1 16 13 2 29 2 C40 2 47 8 50 16 C53 8 60 2 71 2 C87 2 99 16 99 42 C99 74 86 82 62 91 Q55 94 50 94Z";
+  function girlsHeart(r) {
+    if (!GIRLS || !r || !/[LＬ]\s*級|ガールズ/.test(r.cls || "")) return "";
+    if (!document.getElementById("rc-heart-defs")) { // 表面のグラデーション（全ボタン共通・1回だけ）
+      var d = document.createElement("div");
+      d.id = "rc-heart-defs"; d.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+      d.innerHTML = '<svg width="0" height="0"><defs>' +
+        '<linearGradient id="rcHeartGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e8e3d8"/></linearGradient>' +
+        '<linearGradient id="rcHeartGradH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f1ede4"/></linearGradient>' +
+        "</defs></svg>";
+      document.body.appendChild(d);
+    }
+    var svg = function (c) { return '<svg class="rc-heart ' + c + '" viewBox="0 0 100 94" preserveAspectRatio="none" aria-hidden="true"><path d="' + HEART_D + '"/></svg>'; };
+    return svg("hb") + svg("hf");
+  }
   var hoju = null; // { date, races: { "場|R": [車番] } }
   function hojuOf(key) {
     if (!HOJU || !hoju || !state || hoju.date !== state.date || !key) return [];

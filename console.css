@@ -897,3 +897,23 @@ html.theme-light.kcol[data-kc] .inp:focus, html.theme-light.kcol[data-kc] #res-p
 .hoju-alert .hj-r .pn-car { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
   border-radius: 4px; font-style: normal; font-size: 17px; font-weight: 900; border: 1px solid rgba(0,0,0,.25); }
 .hoju-alert .hj-sub { margin-top: 3px; font-size: 14px; color: #6b6f78; font-weight: 700; }
+/* §141（10/16 Naoto・案G）ガールズのレースボタン＝立体のハート型。後ろに同じ形のハート2枚（裏＝2px下・表＝グラデ＋1pxの縁）。
+   幅はボタン＋左右2pxまで（隣にかぶらない）・厚みはほかのボタンの半分（2px＝Naoto「半分がバランスいい」）。&girls=0 で出さない */
+.rc.has-girls { position: relative; background: none !important; border: none !important; box-shadow: none !important; isolation: isolate;
+  padding-top: 6px; padding-bottom: 12px; }
+.rc-heart { position: absolute; left: -2px; right: -2px; width: calc(100% + 4px); z-index: -1; pointer-events: none; overflow: visible; }
+.rc-heart.hf { top: 0; height: calc(100% - 2px); }
+.rc-heart.hb { top: 2px; height: calc(100% - 2px); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .14)); }
+.rc-heart path { vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.rc-heart.hf path { fill: url(#rcHeartGrad); stroke: #a29b8a; stroke-width: 1px; }
+.rc-heart.hb path { fill: #857e6c; stroke: #857e6c; stroke-width: 1px; }
+.rc.has-girls:hover .rc-heart.hf path { fill: url(#rcHeartGradH); }
+.rc.has-girls:active { transform: translateY(1px); }
+.rc.has-girls:active .rc-heart.hb { top: 1px; }
+.rc.has-girls.cur { color: #fff !important; }
+.rc.has-girls.cur .rc-heart.hf path { fill: var(--lt-sel, #2b2f36); stroke: var(--lt-sel, #2b2f36); }
+.rc.has-girls.cur .rc-heart.hb path { fill: var(--lt-sel-b, #0f1114); stroke: var(--lt-sel-b, #0f1114); }
+.rc.has-girls.next .rc-heart.hf path { stroke: #e5484d; stroke-width: 2px; }
+.rc.has-girls.next .rc-heart.hb path { fill: #b3262b; stroke: #b3262b; }
+.rc.has-girls.done { opacity: .45; }
+.rc.has-girls.done .rc-heart.hb { top: 1px; filter: none; }
