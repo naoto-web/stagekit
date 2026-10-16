@@ -1869,6 +1869,7 @@
   //   ✅10/16 本番は bottom が既定。&rbmeta=0 で旧（右下の固定枠）／left・top は見本のまま残置
   var RBMETA = params.get("rbmeta") === "0" ? "" : /^(left|top|bottom)$/.test(params.get("rbmeta") || "") ? params.get("rbmeta") : "bottom";
   var RBLEFT = params.get("rbleft") !== "0"; // §146 左詰め（packRaceBand の search）
+  var RBEVEN = params.get("rbeven") !== "0"; // §151 上・行の間・下を均等
   var RB2V = params.get("rb2v") !== "0"; // §148 2行は縦に積む（packRaceBand の KEEP_PRED_COL）
   var RB1COL = params.get("rb1col") !== "0", RB1COL_PX = +(params.get("rb1colpx") || 40); // §150 1列のときの左の空き（上限px）
   function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
@@ -2616,7 +2617,13 @@
       var maxN = 0;
       best.cols.forEach(function (c) { if (c.length > maxN) maxN = c.length; });
       var room = availH / Math.max(k2, 0.35) - flow.offsetHeight; // offsetHeight は縮尺前の高さ
-      if (maxN > 1 && room > 1) {
+      /* §151（10/16 Naoto「上・1行目と2行目の間・2行目と下線の間が同じくらいに」）＝余りを 行数＋1 か所に均等に配る
+         （上の空き＝flow の margin-top は縮尺の外なので k2 を掛ける）。&rbeven=0 で旧（行の間だけ） */
+      if (RBEVEN && room > 1) {
+        var ge = room * 0.98 / (maxN + 1);
+        flow.style.marginTop = (ge * k2).toFixed(1) + "px";
+        if (maxN > 1) Array.prototype.forEach.call(flow.children, function (c) { c.style.rowGap = (ROWGAP + ge).toFixed(1) + "px"; });
+      } else if (maxN > 1 && room > 1) {
         var rg = ROWGAP + room * 0.98 / (maxN - 1);
         Array.prototype.forEach.call(flow.children, function (c) { c.style.rowGap = rg.toFixed(1) + "px"; });
       }
