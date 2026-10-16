@@ -4086,3 +4086,7 @@ body #scene-race .race-wipes .winv.wide .band-inv { font-size: 32px; }
 /* §133追補4（10/15 Naoto）帯はワイプの外（.race-wipes の直下・位置と幅は JS winvPlace）＝NEXT枠があれば NEXT枠の左端〜ワイプの右端。
    いつも .wide（名前が左・投資回収が右・32pxから自動縮小）。セレクタの .cam を外した（旧＝ワイプの中） */
 #scene-race .race-wipes .winv { right: auto; }
+
+/* §138 かぶり買目（&kaburi=0 で出さない）＝かぶった目の車番チップを相手のメンバーカラーで縁取り */
+.car.kb-on, .pl-all.kb-on { box-shadow: 0 0 0 3px var(--kbc), 0 0 9px 3px var(--kbc); position: relative; z-index: 1; }
+

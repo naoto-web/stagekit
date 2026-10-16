@@ -1294,14 +1294,15 @@
         片方しか光らないと「両方持っているのに1つしか光らない」になる＝どちらかに当たる車番を全部光らせる */
   /* noSep＝区切り（- =）を描かない（9/26 Naoto「俺たち目はハイフンを入れて入力しても画面ではハイフン無しで」）。
      当たり目を光らせる判定（strict＝区切りが全部「-」なら着順どおりに照合）は入力どおりの区切りで行う＝表示だけ消す */
-  function lineChips(raw, small, hlCombo, noSep) {
+  function lineChips(raw, small, hlCombo, noSep, kbCombos) {
     var toks = window.Keirin.displayTokens(raw);
+    var kbs = kbCombos && kbCombos.length ? kbCombos : null; // §138 かぶった組
     // 単一の [5,2,3] でも複数の [[5,2,3],[5,3,2]] でも受ける
     var hls = !hlCombo || !hlCombo.length ? null
       : (Array.isArray(hlCombo[0]) ? hlCombo.filter(function (c) { return c && c.length; }) : [hlCombo]);
     if (hls && !hls.length) hls = null;
     var strict = false;
-    if (hls) {
+    if (hls || kbs) {
       var seps = toks.filter(function (t) { return t.t === "sep"; });
       strict = seps.length > 0 &&
         seps.every(function (t) { return t.v === "-"; }) &&
@@ -1314,11 +1315,12 @@
           var glow = !!hls && hls.some(function (c) {
             return strict ? c[pos] === tk.v : c.indexOf(tk.v) >= 0;
           });
-          return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + (glow ? " hit-glow" : "") + '"' + (glow ? hitPhaseStyle() : "") + ">" + tk.v + "</i>";
+          var kbOn = !!kbs && kbs.some(function (c) { return strict ? c[pos] === tk.v : c.indexOf(tk.v) >= 0; });
+          return '<i class="car ' + (small ? "sm " : "") + "c" + tk.v + (glow ? " hit-glow" : "") + (kbOn ? " kb-on" : "") + '"' + (glow ? hitPhaseStyle() : "") + ">" + tk.v + "</i>";
         }
         case "sep": pos++; return noSep ? "" : '<span class="pl-sep">' + (tk.v === "=" ? "=" : "−") + "</span>";
         case "label": return '<span class="pl-type">' + esc(tk.v) + "</span>";
-        case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hls ? " hit-glow" : "") + '"' + (hls ? hitPhaseStyle() : "") + ">全</span>";
+        case "all": return '<span class="pl-all' + (small ? " sm" : "") + (hls ? " hit-glow" : "") + (kbs ? " kb-on" : "") + '"' + (hls ? hitPhaseStyle() : "") + ">全</span>";
         case "box": return '<span class="pl-box' + (small ? " sm" : "") + '">BOX</span>';
         case "gap": return '<span class="pl-gap"></span>';
         default: return '<span class="pl-txt">' + esc(tk.v) + "</span>";
@@ -1889,6 +1891,7 @@
     var glows = rc && k ? glowsFor(k, rc.id) : [];
     var oreGlow = [];
     glows.forEach(function (g) { if (g.type === "俺たち目") oreGlow.push(g.combo); });
+    var kb = KABURI && rc && k ? kaburiOf(k, rc) : null; // §138
     // 俺たち目の右にもオッズ（9/25 Naoto）。俺たち目は「126」＝1-2-6 の記法補正を通してから組を出す
     var oreOdds = ore && !noOdds ? oddsHtml(k, window.Keirin.parseLine(window.Keirin.oreNormalize(ore), "3連単"), small) : "";
     // ②レース観戦（RB2）は札の文字を「俺」だけに（9/25 Naoto・狭い②だけ。①③は「俺たち目」のまま＝言葉を覚えてもらう）
@@ -1917,19 +1920,37 @@
             if (window.Keirin.comboLabel(l.type, c) === gl.comboLabel) g.push(gl.combo);
           });
         });
+        var kc = [];
+        if (kb) l.combos.forEach(function (c) { if (kb.set[l.type + "|" + window.Keirin.comboLabel(l.type, c)]) kc.push(c); });
+        var kbAttr = kc.length ? ' style="--kbc:' + kb.col + '"' : "";
         var src = (keepAll && !l.dupCount && /全/.test(l.raw)) ? l.raw : (l.disp || l.raw);
         if (!l.dupCount && TRAIL_SEP_RE.test(l.raw || "")) src = String(l.raw).trim(); // 末尾が区切り＝打ちかけの形のまま
         var oh = noOdds ? "" : oddsHtml(k, l, small);
         // ODDS2（①③）＝幅のある倍率の行は .pl-2row（まず1段・入りきらなければ fitPredLines が .stack で下の段へ）
         if (ODDS2 && oh && oh.indexOf("〜") > 0) {
-          return '<div class="pred-line pl-2row"><span class="pl-chips chips">' + lineChips(src, small, g) + "</span>" + oh + "</div>";
+          return '<div class="pred-line pl-2row"' + kbAttr + '><span class="pl-chips chips">' + lineChips(src, small, g, false, kc) + "</span>" + oh + "</div>";
         }
-        return '<div class="pred-line chips">' + lineChips(src, small, g) + oh + "</div>";
+        return '<div class="pred-line chips"' + kbAttr + '>' + lineChips(src, small, g, false, kc) + oh + "</div>";
       }).join("") +
       (memos.length ? '<div class="buy-meta">' + esc(memos.join("　")) + "</div>" : "") +
       metaLine;
   }
 
+  /* §138（10/16 Naoto）2人が同じレースを予想しているとき、かぶった買目を見せる（10/16 Naoto「札はいらない・合計も的中演出も不要」＝チップの光だけ・&kaburi=0 で出さない）。
+     かぶり＝同じ券種・同じ組（comboLabel）。相手＝席にいるもう1人。切り目・欠車だけの行・俺たち目は数えない */
+  var KABURI = params.get("kaburi") !== "0";
+  function kaburiOf(k, rc) {
+    var seats = seatMap(), other = seats.a && seats.a.id === rc.id ? seats.b : (seats.b && seats.b.id === rc.id ? seats.a : null);
+    if (!other) return null;
+    var rp2 = window.Derive.resolvePred(state, k, other.id);
+    if (!rp2) return null;
+    var set = {}, n = 0;
+    rp2.parsed.lines.forEach(function (l) {
+      if (!l.ok || l.cut || l.absentAll || l.allDup || !l.combos) return;
+      l.combos.forEach(function (c) { set[l.type + "|" + window.Keirin.comboLabel(l.type, c)] = 1; n++; });
+    });
+    return n ? { set: set, col: window.Derive.colorOf(other.color) || "#888" } : null;
+  }
   /** 予想帯ヘッダーのはみ出し防止（8/6 FB）：投資/回収の金額とnoteバッジを段階的に縮小して1行に収める */
   function fitBandHead(headEl) {
     // §133追補（10/14 Naoto）②ワイプの上の帯＝ワイプが広いとき（NEXT枠なし・532px）だけ字を大きく（.wide）。隠れている間は測れないので前の判定のまま
