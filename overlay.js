@@ -1871,7 +1871,7 @@
   var RBLEFT = params.get("rbleft") !== "0"; // §146 左詰め（packRaceBand の search）
   var RBEVEN = params.get("rbeven") !== "0"; // §151 上・行の間・下を均等
   var RB2V = params.get("rb2v") !== "0"; // §148 2行は縦に積む（packRaceBand の KEEP_PRED_COL）
-  var RB1COL = params.get("rb1col") !== "0", RB1COL_PX = +(params.get("rb1colpx") || 40); // §150 1列のときの左の空き（上限px）
+  var RB1COL = params.get("rb1col") !== "0", RB1COL_PX = +(params.get("rb1colpx") || 25); // §150 1列のときの左の空き（上限px）
   function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
   /** 合計欄（band-meta）を左の列／上の1行に置き、俺たち目をその中へ移し、買目が使える場所（帯の padding）を空ける。
       戻り値＝置いたら true（packRaceBand は合計欄との衝突判定をしない） */
@@ -2629,11 +2629,11 @@
       }
       /* §150（10/16 Naoto「1列（2行）だと右が空いて左寄りに見える＝左から少し空けて」）＝列が1つのときだけ、
          右の余りの半分（上限 RB1COL_PX）を左に空ける。&rb1col=0 で旧 */
-      if (RB1COL && best.cols.length === 1) {
+      // 🔄10/16 夜 Naoto「3行（2列以上）でも右が空いていれば同じぐらい左を空けて・1行も同様」＝列の数を問わない
+      if (RB1COL) {
         var freeW = availW - flow.offsetWidth * k2;
-        // 10/16 Naoto「あと半バッジ分左に」＝上限から車番バッジ半分（実際の表示幅）を引く
-        var car1 = flow.querySelector(".car"), halfCar = car1 ? car1.offsetWidth * k2 / 2 : 0;
-        var sh = Math.min(freeW / 2, RB1COL_PX) - halfCar;
+        // 10/16 Naoto「あと半バッジ分左に」→「1行も3行も2行と同じぐらい」＝バッジの大きさに関係なく固定の上限（2行のときの見た目＝約25px）
+        var sh = Math.min(freeW / 2, RB1COL_PX);
         if (freeW > 8 && sh > 1) flow.style.marginLeft = sh.toFixed(1) + "px";
       }
     }
