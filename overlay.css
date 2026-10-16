@@ -1099,6 +1099,21 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
 .band-meta { position: absolute; right: 14px; bottom: 8px; font-size: 26px; font-weight: 900;
   color: var(--txt); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .band-meta.hidden { display: none; }
+/* 🧪§145（10/16 Naoto）②の合計欄を左の1列（rbm-left）／一番上の1行（rbm-top）へ。位置は JS rbMetaPlace（帯の左上から）。
+   札「合」「投」は小さめの灰色の箱・点数は札なし。俺たち目（.rbm-ore）も同じ欄の先頭 */
+.rb2 .race-band .band-meta.rbm-left, .rb2 .race-band .band-meta.rbm-top { right: auto; bottom: auto; font-size: 24px; line-height: 1.15; }
+.band-meta.rbm-left { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.band-meta.rbm-top { display: flex; flex-direction: row; align-items: center; gap: 18px; }
+.band-meta.rbm-top .bm-part { display: inline-flex; align-items: center; white-space: nowrap; }
+.band-meta.rbm-left .bm-part { display: block; white-space: nowrap; } /* 左の列＝「合成 6.2倍」の間の空白を残す（flex だと詰まる） */
+.band-meta .rbm-l { font-style: normal; font-size: .72em; padding: 1px 5px; margin-right: 5px; border-radius: 4px; background: #e3e6ec; color: #4a5160; }
+.band-meta .rbm-ore { padding: 0; gap: 0; }
+.band-meta.rbm-left { padding-right: 12px; border-right: 2px solid #e3e6ec; }
+/* 一番下の1行（rbm-bottom）＝上に区切り線・俺たち目は左端・合成／合計／投資は右寄せ */
+.rb2 .race-band .band-meta.rbm-bottom { right: auto; bottom: auto; font-size: 24px; line-height: 1.15; }
+.band-meta.rbm-bottom { display: flex; align-items: center; gap: 18px; padding-top: 4px; border-top: 2px solid #d5d9e1; box-sizing: border-box; min-height: 38px; } /* 高さ固定＝俺たち目のある枠とない枠で線の高さがそろう */
+.band-meta.rbm-bottom .bm-part { white-space: nowrap; }
+.band-meta.rbm-bottom .rbm-ore + .bm-part, .band-meta.rbm-bottom > .bm-part:first-child { margin-left: auto; }
 /* 数字＝主役・ハイフン＝脇役（8/6 視聴者FB2・スマホ縦で買い目が読めない）。
    高さ26pxは不変＝俺たち目＋買い目3行の縦収まりを維持し、横幅拡大で数字を大きく */
 .race-band .buy-line .car { width: 22px; height: 26px; font-size: 24px; border-radius: 3px; }

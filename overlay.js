@@ -1863,12 +1863,70 @@
     var b = invest > 0 ? '<span class="bm-part bm-inv">投資 ' + fmtYen(invest) + "</span>" : "";
     return (st ? '<span class="bm-part bm-syn">' + st + "</span>" : "") + a + b;
   }
+  /* 🧪§145（10/16 Naoto「買目が多いと、バッジは小さいのに余白がある」）②の合計・合成・投資（＋俺たち目）を買目の枠から外す見本。
+     &rbmeta=left＝枠の左の1列（俺たち目／合／点／投 を縦に）・右を買目に全部使う／&rbmeta=top＝枠の一番上に1行。②の予想枠（band-pred-*）だけ。手元のみ */
+  //   &rbmeta=bottom＝枠の一番下に1行（上に区切り線・左端に俺たち目・右に合成／合計／投資）＝10/16 Naoto「やっぱり一番下の一列」
+  //   ✅10/16 本番は bottom が既定。&rbmeta=0 で旧（右下の固定枠）／left・top は見本のまま残置
+  var RBMETA = params.get("rbmeta") === "0" ? "" : /^(left|top|bottom)$/.test(params.get("rbmeta") || "") ? params.get("rbmeta") : "bottom";
+  function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
+  /** 合計欄（band-meta）を左の列／上の1行に置き、俺たち目をその中へ移し、買目が使える場所（帯の padding）を空ける。
+      戻り値＝置いたら true（packRaceBand は合計欄との衝突判定をしない） */
+  function rbMetaPlace(band) {
+    var mode = rbMetaMode(band), meta = band.parentElement ? band.parentElement.querySelector(".band-meta") : null;
+    band.style.paddingLeft = ""; band.style.paddingRight = ""; band.style.paddingTop = ""; band.style.paddingBottom = "";
+    if (!meta) return false;
+    var ore = band.querySelector(":scope > .ore-row");
+    if (ore) {
+      var old = meta.querySelector(".rbm-ore"); if (old) old.remove();
+      var w = document.createElement("div");
+      w.className = "buy-line rbm-ore";
+      w.appendChild(ore);
+      meta.insertBefore(w, meta.firstChild);
+      meta.classList.remove("hidden");
+      // 下の1行は横に余裕がある＝札は「俺」でなく「俺たち目」（10/16 Naoto）
+      var ol = mode === "bottom" ? w.querySelector(".ore-label") : null;
+      if (ol) ol.textContent = "俺たち目";
+    }
+    meta.classList.remove("rbm-left", "rbm-top", "rbm-bottom", "m1");
+    if (meta.classList.contains("hidden")) return true;
+    meta.classList.add("rbm-" + mode);
+    meta.style.fontSize = ""; meta.style.top = ""; meta.style.left = ""; meta.style.width = ""; meta.style.transform = "";
+    var bt = band.offsetTop, bl = band.offsetLeft, bh = band.clientHeight;
+    if (mode === "bottom") { // 帯の底に横いっぱい（線は帯の左右の内側まで）＝買目はその上の残りで組む
+      meta.style.left = (bl + 10) + "px"; meta.style.width = (band.clientWidth - 20) + "px";
+      meta.style.top = (bt + bh - meta.offsetHeight - 4) + "px";
+      // 買目は区切り線の3px上まで・左右の余白は 16→8px（10/16 Naoto「下線の近くまで・右も攻めて」）
+      band.style.paddingBottom = (meta.offsetHeight + 7) + "px";
+      band.style.paddingLeft = "8px"; band.style.paddingRight = "8px";
+      return true;
+    }
+    meta.style.top = (bt + (mode === "left" ? 6 : 4)) + "px";
+    meta.style.left = (bl + 10) + "px";
+    if (mode === "left") {
+      // 縦に入るまで字を1pxずつ縮める（4段×約30px＝帯の高さ約135pxに収まる大きさ）
+      var fs = parseFloat(getComputedStyle(meta).fontSize) || 24, g = 0;
+      while (meta.offsetHeight > bh - 10 && fs > 12 && g++ < 20) { fs -= 1; meta.style.fontSize = fs + "px"; }
+      band.style.paddingLeft = (meta.offsetWidth + 22) + "px";
+    } else {
+      band.style.paddingTop = (meta.offsetHeight + 8) + "px";
+    }
+    return true;
+  }
   /** 右下の固定枠（②③＝band-meta／①の1場表示＝tband-meta）に 合計・合成・投資 を入れる。合成が無いときは従来の1行テキスト */
   function fillBandMeta(bMeta, rc, key) {
     if (!bMeta) return;
     var rpm = rc && key ? window.Derive.resolvePred(state, key, rc.id) : null;
     var st = rpm ? synthText(key, rpm) : ""; // 合成オッズ（§13）＝投資の上・右寄せ
     var has = !!(rpm && (rpm.points || rpm.invest > 0));
+    if (RBMETA && SCENE === "race" && /^band-meta-/.test(bMeta.id || "")) { // 🧪§145 上の1行＝短い札（合／点／投）／左の列＝今までどおりの言葉（10/16 Naoto「俺たち目が一番長い＝左の列はフルで使っていい」）
+      var full = RBMETA !== "top";
+      bMeta.innerHTML = has ? (st ? '<span class="bm-part bm-syn">' + (full ? st : st.replace(/^合成\s*/, '<i class="rbm-l">合</i>')) + "</span>" : "") +
+        (rpm.points ? '<span class="bm-part bm-pts">' + (full ? "合計 " : "") + rpm.points + "点</span>" : "") +
+        (rpm.invest > 0 ? '<span class="bm-part bm-inv">' + (full ? "投資 " : '<i class="rbm-l">投</i>') + fmtYen(rpm.invest) + "</span>" : "") : "";
+      bMeta.classList.remove("has-synth");
+      bMeta.classList.toggle("hidden", !has);
+      return;
+    }
     if (st && has) {
       bMeta.innerHTML = metaPartsHtml(rpm.points, st, rpm.invest);
     } else {
@@ -2306,6 +2364,7 @@
       列ごとの実座標で衝突判定＝右下に届く列だけが避ける。場Rラベル・メモ行には列幅の決定権を
       持たせない（チップ行より幅広なら行側を列幅へ縮小）。renderPredsのたびに再構成する */
   function packRaceBand(band) {
+    var rbm = rbMetaMode(band) ? rbMetaPlace(band) : false; // 🧪§145 合計欄を左の列／上の1行へ（先に場所を取ってから買目を組む）
     var rows = Array.prototype.slice.call(band.children);
     if (!rows.length) return;
     var cs = getComputedStyle(band);
@@ -2342,7 +2401,7 @@
     var CAP = hasPred ? 3.0 : 1.5;           // ラベルだけの帯は控えめに留める
     // 右下固定の合計/投資：表示中なら帯コンテンツ原点からの左端・上端（renderPredsが先にmetaを確定させる前提）
     var metaL = Infinity, metaT = Infinity;
-    var meta = band.parentElement ? band.parentElement.querySelector(".band-meta") : null;
+    var meta = band.parentElement && !rbm ? band.parentElement.querySelector(".band-meta") : null; // §145 合計欄を外へ出したら衝突判定は不要
     if (meta) meta.style.fontSize = ""; // 1人配信で大きくした分を毎回戻してから測る（席が2人に戻ったとき残らないように）
     function measureMeta() {
       metaL = Infinity; metaT = Infinity;
@@ -2497,12 +2556,23 @@
       flow.appendChild(col);
     });
     flow.removeChild(mcol);
-    var k2 = Math.max(0.35, best.k * 0.97); // 3%マージン（丸め・フォント描画ゆらぎの吸収）
+    var k2 = Math.max(0.35, best.k * (rbm && RBMETA === "bottom" ? 0.99 : 0.97)); // 3%マージン（丸め・フォント描画ゆらぎの吸収）／§145 下の1行は1%まで攻める（はみ出しは fitRbScale が実測で縮める）
     // オッズ更新のたびの伸び縮みを止める（keepScale）＝同じ並べ方なら6%未満の拡大は据え置き
     k2 = keepScale(band.id, k2, best.cols.map(function (c) { return c.join(","); }).join("/") + "|" + rows.length);
     if (k2 < 0.995 || k2 > 1.02) {
       flow.style.transform = "scale(" + k2.toFixed(3) + ")";
       flow.style.transformOrigin = "left top";
+    }
+    /* 🧪§145 下の1行（10/16 Naoto）＝横幅で頭打ちのとき縦が余る→余りを行の間に配って区切り線の近くまで使う。
+       どの列も同じ行間にする（行数の違う列どうしでも行の高さがそろう） */
+    if (rbm && RBMETA === "bottom") {
+      var maxN = 0;
+      best.cols.forEach(function (c) { if (c.length > maxN) maxN = c.length; });
+      var room = availH / Math.max(k2, 0.35) - flow.offsetHeight; // offsetHeight は縮尺前の高さ
+      if (maxN > 1 && room > 1) {
+        var rg = ROWGAP + room * 0.98 / (maxN - 1);
+        Array.prototype.forEach.call(flow.children, function (c) { c.style.rowGap = rg.toFixed(1) + "px"; });
+      }
     }
     /* ③の場名の札は①と同じく最大1.6倍まで（9/26）＝買目が1行だけだと帯ごと3倍になり札が巨大になった。
        札だけ元に戻す向きに縮める（場所は取ったまま＝下の買目の位置は変わらない） */
@@ -2547,7 +2617,7 @@
     // 実座標から厳密に出し、一発で解消する倍率へ補正（過小補正の段階縮小が映るのを防ぐ・FB58レビュー反映）
     var fixM = 1;
     var meta = band.parentElement.querySelector(".band-meta");
-    if (meta && !meta.classList.contains("hidden")) {
+    if (meta && !meta.classList.contains("hidden") && !rbMetaMode(band)) { // §145 外へ出した合計欄とは重ならない
       var mr = meta.getBoundingClientRect();
       if (mr.width > 0) {
         for (var i = 0; i < flow.children.length; i++) {
@@ -3738,6 +3808,7 @@
             bandHead.style.background = RK_GRAY;
             if (bandHead.parentElement) bandHead.parentElement.style.borderColor = RK_GRAY;
             fitBandHead(bandHead);
+            band.style.paddingLeft = ""; band.style.paddingRight = ""; band.style.paddingTop = ""; band.style.paddingBottom = ""; // §145 下の1行で詰めた余白を戻す
             band.innerHTML = rkHtml;
             band.classList.remove("note-fire");
             band.style.transform = "";
