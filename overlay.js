@@ -3135,15 +3135,20 @@
     });
     return { invest: inv, refund: bt.refund, pending: bt.pending, sInv: sInv };
   }
-  /* 回収率の節目（9/26 Naoto・要件定義§20）＝200%から100%刻み。考え方はプラ転と同じ：
+  /* 回収率の節目（9/26 Naoto・要件定義§20）＝200%から100%刻み→§154（10/17）150%から50%刻み（MS_START/MS_STEP）。考え方はプラ転と同じ：
      ・判定は結果の瞬間だけ・画面の数字（回収÷発走済み投資）が節目を**超えた**ら（ちょうどは出さない）
      ・節目ごとの「出せる状態」＝精算済みの回収率（結果の出たレースだけ）がその節目以下になったら戻る＝本当に割ってからまた超えたら何度でも
        （発走で一時的に下がって見えただけでは戻らない）
      ・1レース目の的中でも出す（1日の始まりは全節目が「出せる状態」）・一気に複数超えたら一番上だけ
      ・プラ転と重なったら「プラ転！」→「回収率○○%突破！」の順（popUntil で後ろへずらす）
      ・読み込み直後は、その時点の精算済み回収率より上の節目だけ「出せる状態」＝読み直しで過去の突破を再生しない */
-  var MS_MIN_PROFIT = +(params.get("msmin") || 10000); // 節目を出す最低のもうけ（円）。200%なら最低でも投資1万・回収2万超
+  // 節目を出す最低のもうけ（円）。§154（10/17 Naoto）既定0＝もうけの条件は外し「投資の合計1万円以上」（MS_MIN_INVEST）だけに。
+  //   §128 の投資条件が入ってからは、少額で派手に出る場面（9/26「1,000円が3,500円」）はそちらで防げている。&msmin=10000 で旧
+  var MS_MIN_PROFIT = +(params.get("msmin") || 0);
   var MS_MIN_INVEST = params.get("msinv") !== null ? +params.get("msinv") : 10000; // §128 節目を出す最低の投資の合計（円）・&msinv=0で旧
+  // §154（10/17 Naoto）節目は150%から50%刻み（150・200・250・300…）。&msstep=100 で旧（200%から100%刻み）
+  var MS_STEP = params.get("msstep") === "100" ? 100 : 50;
+  var MS_START = MS_STEP === 100 ? 200 : 150;
   function msElig(p, T) { return Object.prototype.hasOwnProperty.call(p.ms, T) ? p.ms[T] : T >= p.msInit; }
   function platenCheck(rid, ht) {
     if (!PLATEN) return;
@@ -3162,7 +3167,7 @@
     else if (ht.refund - ht.sInv < 0) p.losing = true;
     // 節目：超えたもののうち「出せる状態」だった一番上を出す。超えた節目は全部「出した」扱い
     var top = 0;
-    for (var T = 200; T < dispR; T += 100) { if (msElig(p, T)) top = T; p.ms[T] = false; }
+    for (var T = MS_START; T < dispR; T += MS_STEP) { if (msElig(p, T)) top = T; p.ms[T] = false; }
     Object.keys(p.ms).forEach(function (t) { if (!p.ms[t] && setR <= +t) p.ms[t] = true; }); // 本当に割った＝また出せる
     // もうけ（回収−投資）が MS_MIN_PROFIT 未満なら出さない（9/26 Naoto「1,000円が3,500円で派手なのは恥ずかしい」）。
     // 出さなかった節目も「出した」扱いのまま＝あとで額が増えても突破の瞬間でないので遅れて出さない。プラ転には下限なし
