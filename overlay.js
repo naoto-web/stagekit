@@ -839,6 +839,8 @@
     }).join(",");
     var bye = byeTimerOn(); // §90 お礼カード（本番）
     if (bye) keys = "BYE" + BYEMSG;
+    // §152 お礼カードに切り替わった瞬間に明日の出走表も（旧＝5秒ごとの見直し待ち）
+    if (TMSYNC && bye && keys !== timerRowKeys && SCENE === "talk") setTimeout(applyTomorrow, 0);
     if (keys !== timerRowKeys) {
       timerRowKeys = keys;
       var html = bye ? byeTimerHtml() : cards.map(function (c) {
@@ -908,15 +910,28 @@
     var now = nowSec();
     return vs.every(function (v) { return (v.name in last) && now >= last[v.name] + TFX_RACE + BYE_DONE_WAIT; });
   }
+  /** 時刻表のその日の最後のレースの発走（秒）・無ければ null */
+  function lastRaceSec() {
+    var last = null;
+    allRaces().forEach(function (r) { if (typeof r.startSec === "number" && (last === null || r.startSec > last)) last = r.startSec; });
+    return last;
+  }
+  /* §152（10/17 Naoto「最終レースが終わると本日の場を全部消す→明日の出走表がすぐ出ない」）
+     ①0場になったのが、時刻表の最後のレースの発走 BYE_EARLY_MIN 分前より後なら、発走を待たずにお礼カード＋明日の出走表（&byeearly=0 で旧）
+       ※「夕方以降なら」だと夜の部の開始前（まだ場を入れていない時間）にお礼が出てしまう＝最後のレースの近くだけに絞る
+     ②お礼カードに切り替わった瞬間に明日の出走表も描く（&tmsync=0 で旧＝5秒ごとの見直し待ち）
+     ③明日の時刻表は最後のレースの TMRW_PRE_MIN 分前から10分ごとに前もって取っておく（GASの作り直し20〜40秒を待たない・&tmpre=0 で旧） */
+  var BYEEARLY = params.get("byeearly") !== "0", BYE_EARLY_MIN = 30;
+  var TMSYNC = params.get("tmsync") !== "0";
+  var TMPRE = params.get("tmpre") !== "0", TMRW_PRE_MIN = 60;
   function byeTimerOn() {
     if (byeOn()) return true;
     if (BYETIMER && BYEDONE && timetable && state && allVenuesDone()) return true;
     if (!BYETIMER || !timetable || !state || (state.venues || []).length) return false;
     // 0〜5時は前の日の配信の続き（9/30）＝本日の場0場ならもう終わっている。時刻表は0時に翌日へ切り替わる＝下の「最後のレースの後」が外れてお礼が消えていた
     if (nowSec() < 5 * 3600) return true;
-    var last = null;
-    allRaces().forEach(function (r) { if (typeof r.startSec === "number" && (last === null || r.startSec > last)) last = r.startSec; });
-    return last !== null && nowSec() >= last;
+    var last = lastRaceSec();
+    return last !== null && nowSec() >= last - (BYEEARLY ? BYE_EARLY_MIN * 60 : 0);
   }
   function byeTimerHtml() {
     return '<li class="vt-card vt-bye-card"><div class="vt-rows vt-bye">' +
@@ -1053,7 +1068,10 @@
     else if (!tmrwTT || (tmrwDay !== 1 && tmrwDay !== -1) ||
       (tmrwDay === 1 && (tmrwTT.pending || []).some(function (v) { return !v.first; }) && Date.now() - tmrwAt > 10 * 60 * 1000)) { // 🆕10/1 時刻未発表の場がある間は10分ごとに取り直す（GASも20分キャッシュ）
       if (tmrwTT && tmrwDay === 1) tmrwAt = Date.now(); // 取り直し中も今の表は出したまま（下で描く）＝連打しない
-      if (!tmrwBusy) { tmrwBusy = true; window.Sync.fetchTimetable(1).then(function (t) { tmrwTT = t; tmrwDay = 1; tmrwAt = Date.now(); tmrwBusy = false; applyTomorrow(); }).catch(function () { tmrwBusy = false; }); }
+      if (!tmrwBusy) { tmrwBusy = true; window.Sync.fetchTimetable(1).then(function (t) {
+        tmrwBusy = false;
+        if (TMPRE && t && t.building && !(t.venues || []).length) return; // §152 GASが作り直し中の空の返事は使わない（次の見直しで取り直す）
+        tmrwTT = t; tmrwDay = 1; tmrwAt = Date.now(); applyTomorrow(); }).catch(function () { tmrwBusy = false; }); }
       if (!(tmrwTT && tmrwDay === 1)) return;
     }
     var d = String(tmrwTT.date || "");
@@ -1119,8 +1137,24 @@
     document.body.classList.add("tmrw-on");
     requestAnimationFrame(fitTmHeads);
   }
+  /** §152③ 明日の時刻表（＋明日のシフト）を、最後のレースの TMRW_PRE_MIN 分前から10分ごとに取っておく。失敗・作り直し中は1分後に再挑戦 */
+  var tmrwPreAt = 0;
+  function tmrwPrefetch() {
+    if (!TMPRE || !TMRW || !timetable || tmrwOffset() !== 1 || tmrwBusy) return;
+    var last = lastRaceSec();
+    if (last === null || nowSec() < last - TMRW_PRE_MIN * 60) return;
+    var have = tmrwTT && tmrwDay === 1;
+    if (Date.now() - tmrwPreAt < (have ? 600000 : 60000)) return;
+    tmrwPreAt = Date.now(); tmrwBusy = true;
+    window.Sync.fetchTimetable(1).then(function (t) {
+      tmrwBusy = false;
+      if (!t || (t.building && !(t.venues || []).length)) { tmrwPreAt = Date.now() - 540000; return; } // GASが作り直し中＝1分後にもう一度
+      tmrwTT = t; tmrwDay = 1; tmrwAt = Date.now();
+      tmrwShiftOf(String(t.date || "")); // 明日の配信者も先に取っておく
+    }).catch(function () { tmrwBusy = false; tmrwPreAt = Date.now() - 540000; });
+  }
   // 最後のレースの発走を過ぎた瞬間は state が変わらない＝出走表の描き直しが起きない→5秒ごとに見直す（条件外なら何もしない）
-  if (TMRW && SCENE === "talk") setInterval(applyTomorrow, 5000);
+  if (TMRW && SCENE === "talk") setInterval(function () { tmrwPrefetch(); applyTomorrow(); }, 5000);
   function byeBandHtml(rc) {
     if (BYEMSG === 2) {
       return '<div class="bye-band"><div class="bye-main">' + esc(rc.name) + "の予想は以上です</div>" +
