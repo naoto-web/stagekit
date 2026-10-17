@@ -2261,10 +2261,44 @@
       tight＝28pxでも1行に入らない長い行（1-23-45678 等）だけ区切りの後ろで折り返してよい＝その行のせいで全体を小さくしない */
   // 9/26 Naoto「2マスで改行しているのがある・デフォルトはそこまで大きくなくていい」＝上限40px／折り返す行は2段まで
   var SUB_WRAP_CZ = 28, SUB_MAX_CZ = 40, SUB_WRAP_ROWS = 2;
+  /* §156（10/17 Naoto「投資額とか点数が見切れてます」）NEXT枠の買目が多い（俺たち目＋11行など）と、車番18pxまで縮めても入らず、
+     最後の買目と一番下の合計・投資（計○点 投¥○）が枠の外へ押し出されていた（行と行の間には最低限の空きがあるので、
+     車番を小さくし続けても14行などは入らない）。→ 1列で18px以上にできないときは、買目を2列（書いた順に左の列→右の列）に
+     分けた形も試し、1列で入らないとき・車番が3px以上大きくなるときだけ2列にする。どちらも入らないときは10pxまで縮める。
+     少ない日は今までどおり（1列で18px以上なら2列は試さない）。&nx2col=0 で2列を試さない・&nxmin=18 で旧の下限 */
+  var SUB_MIN_CZ = +(params.get("nxmin") || 10), SUB_2COL_BELOW = 18, NX2COL = params.get("nx2col") !== "0";
+  var NXBMOFF = params.get("nxbmoff") !== "0"; // §156改 多いときは合計欄を出さない
   function fitSubGrow(scope) {
     var cs = getComputedStyle(scope);
     var avail = scope.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    subUnwrap2(scope);
     var lines = Array.prototype.slice.call(scope.querySelectorAll(".pred-line, .ore-row"));
+    var bm = scope.querySelector(":scope > .bm-total");
+    if (bm) bm.classList.remove("nx-bm-off");
+    var r1 = subTryFit(scope, lines, avail);
+    /* §156改（10/17 Naoto「こんなに小さくなるなら投資額と点数は表示しないで枠確保」）＝1列で18px以上にできないときは
+       合計・投資（計○点 投¥○）を出さず、その場所も買目に使う（その日の投資・回収は上の帯§133に出ている）。&nxbmoff=0 で出したまま縮める */
+    if (NXBMOFF && bm && (!r1.ok || r1.cz < SUB_2COL_BELOW)) {
+      bm.classList.add("nx-bm-off");
+      r1 = subTryFit(scope, lines, avail);
+    }
+    var preds = Array.prototype.slice.call(scope.querySelectorAll(":scope > .pred-line"));
+    if (NX2COL && SUBV === "tight" && (!r1.ok || r1.cz < SUB_2COL_BELOW) && preds.length >= 4) {
+      var box = subWrap2(scope, preds);
+      var colW = (avail - SUB_2COL_GAP) / 2;
+      var r2 = subTryFit(scope, lines, colW);
+      // 2列は1列で入らないとき、または車番が3px以上大きくなるときだけ（幅170pxの枠を2つに割ると1列あたり約77px＝
+      // 長い買目が折れて縞が増える割に大きくならないことが多い・11行で1列13px／2列14px だった）
+      if ((r2.ok && !r1.ok) || (r2.ok && r2.cz >= r1.cz + 3)) { r1 = r2; }
+      else { subUnwrap2(scope); r1 = subTryFit(scope, lines, avail); }
+      void box;
+    }
+    r1.long.forEach(subAlignRight);
+    subWrapMark(lines); // §149 背景は行間の計算より前に付ける（padding は変わらないが念のため順番を固定）
+    if (!scope.querySelector(":scope > .nx-2col")) subSpread(scope, lines, r1.cz); // 2列のときは行の間を広げない（もう余りがない）
+  }
+  /** 車番の大きさ（--cz）を、幅 avail・枠の高さに入る最大まで上げる。戻り値 {cz, ok, long} */
+  function subTryFit(scope, lines, avail) {
     lines.forEach(function (l) {
       l.classList.remove("sg-wrap");
       Array.prototype.forEach.call(l.querySelectorAll(".sg"), function (g) { g.style.marginLeft = ""; });
@@ -2275,9 +2309,10 @@
       long = lines.filter(function (l) { return l.querySelector(".sg") && l.scrollWidth > avail + 1; });
       long.forEach(function (l) { l.classList.add("sg-wrap"); });
     }
-    for (var cz = SUB_MAX_CZ; cz >= 18; cz--) {
+    var ok = false;
+    for (var cz = SUB_MAX_CZ; cz >= SUB_MIN_CZ; cz--) {
       scope.style.setProperty("--cz", cz + "px");
-      var ok = scope.scrollHeight <= scope.clientHeight + 1;
+      ok = scope.scrollHeight <= scope.clientHeight + 1;
       for (var i = 0; ok && i < lines.length; i++) if (lines[i].scrollWidth > avail + 1) ok = false;
       // 折り返す行は2段まで（大きくしすぎて「23-／23-／156／7」と細かく折れていた）
       for (var j = 0; ok && j < long.length; j++) {
@@ -2289,9 +2324,24 @@
       }
       if (ok) break;
     }
-    long.forEach(subAlignRight);
-    subWrapMark(lines); // §149 背景は行間の計算より前に付ける（padding は変わらないが念のため順番を固定）
-    subSpread(scope, lines, cz);
+    if (!ok) { cz = SUB_MIN_CZ; scope.style.setProperty("--cz", cz + "px"); }
+    return { cz: cz, ok: ok, long: long };
+  }
+  /** §156 買目を2列の箱へ（書いた順に左の列を上から→右の列）。俺たち目・場名の札・合計欄は箱の外のまま */
+  var SUB_2COL_GAP = 8;
+  function subWrap2(scope, preds) {
+    var box = document.createElement("div");
+    box.className = "nx-2col";
+    box.style.setProperty("--nxr", String(Math.ceil(preds.length / 2)));
+    preds[0].parentNode.insertBefore(box, preds[0]);
+    preds.forEach(function (l) { box.appendChild(l); });
+    return box;
+  }
+  function subUnwrap2(scope) {
+    var box = scope.querySelector(":scope > .nx-2col");
+    if (!box) return;
+    while (box.firstChild) scope.insertBefore(box.firstChild, box);
+    box.parentNode.removeChild(box);
   }
   /* §147（10/16 Naoto「NEXT枠は縦にスペースがある＝買目の行と行の間をもう少し広げて・1つの買目の折り返しは詰めたまま」）
      ＝縦の余り（最後の行の下〜合計欄の上）を、買目どうしの間（2行目以降の上）に均等に配る。1間あたり上限＝チップの半分。
