@@ -5494,6 +5494,32 @@
     return t;
   }
 
+  /* 神降臨（10/17 Naoto案・ピンクのラッキーナンバー限定＝LUCKY_FX）の尺
+       10/17 改（Naoto「最初のピカッを長く→ゆっくり降臨→当たった数字を1着左上・2着右の真ん中・3着左下に
+       じわっじわっじわっ→全部出たら下に台詞」）
+       FLASH_HOLD…真っ白に光りっぱなしの時間／FLASH_FADE…そこから後光の画面へ明けていく時間
+       DROP_AT・DESCEND…キャラが降り始める時刻・降りきるまで（ゆっくり）
+       NUM_AT…1着の数字が浮かび始める時刻／NUM…次の数字までの間隔／NUM_IN…1つが浮かびきるまで
+       LINE…最後の数字が浮かび始めてから台詞まで（＝浮かびきってから一拍）／HOLD＝台詞の余韻（END＝バッジ） */
+  var KAMI_BASE = { FLASH_HOLD: 1000, FLASH_FADE: 1200, DROP_AT: 1500, DESCEND: 3000,
+                    NUM_AT: 4700, NUM: 1200, NUM_IN: 1100, LINE: 1500, HOLD: 2800, FADE: 600 };
+  function kamiTimes(n) {
+    var t = { DROP: KAMI_BASE.DROP_AT, NUM0: KAMI_BASE.NUM_AT };
+    t.LINE = t.NUM0 + Math.max(0, (n || 3) - 1) * KAMI_BASE.NUM + KAMI_BASE.LINE;
+    t.END = t.LINE + KAMI_BASE.HOLD;
+    t.GONE = t.END + KAMI_BASE.FADE;
+    return t;
+  }
+  /* 台詞＝動画「占い師が選んだ4つの数字だけで勝負したら奇跡が起きた！」（もときの武雄回）から。
+     配列の1要素＝1行（狭いワイプでも読めるよう長い台詞は2行に割ってある）。
+     どれが出るかは的中IDで決まる＝OBSの全ソースで同じ台詞（抽選と同じ決定性） */
+  var KAMI_LINES = [
+    ["これが神の力です"],
+    ["これを人々は", "的中と呼ぶのでしょう"],
+    ["非常に幸福です"],
+    ["数字が", "我々を選んでいます"]
+  ];
+
   /* お茶の尺（8/9 FB90・橙メンバーの2つ目の演出）
        WALK   …画面右からてくてく歩いて中央に着くまでのms
        STEP   …歩行2コマの切替間隔ms（小さいほど小刻み＝速足に見える）
@@ -5922,6 +5948,7 @@
   });
   (function () { var im = new Image(); im.src = "fx_coin.png"; })(); // 役物のコインも先読み（8/8 FB82）
   (function () { var im = new Image(); im.src = "fx_sumo.png"; })(); // 相撲も先読み（8/9 FB86）
+  (function () { var im = new Image(); im.src = "fx_kami.png"; })(); // 神降臨も先読み（10/17）
   ["fx_tea_w1.png", "fx_tea_w2.png", "fx_tea_stand.png", "fx_tea_up.png"].forEach(function (f) {
     var im = new Image(); im.src = f;   // お茶は4コマ（8/9 FB90）＝歩き出しでコマ落ちしないよう先読み
   });
@@ -6461,6 +6488,76 @@
     setTimeout(function () { box.classList.add("talk2"); }, T.B2);
     setTimeout(function () { box.classList.add("out"); }, T.END);
     setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+
+  /* 神降臨（10/17 Naoto案・ピンクのラッキーナンバー限定）：
+     真っ白にピカッ（長め）→ 明けると後光・虹の輪・金の光の粒 → 白装束のキャラが上からゆっくり降りてくる →
+     当たった数字だけを 1着＝左上・2着＝右の真ん中・3着＝左下 に1つずつじわっと浮かべる
+     （白い明朝に数字ごとの色の光＝動画のテロップ「4_1457の数字2」・1白・4水色・5金・7橙）→
+     全部出たら下に明朝の台詞（KAMI_LINES）→ バッジへ。
+     絵（fx_kami.png）＝Naoto が Gemini で起こした白装束・両手を広げるポーズ（10/17）を
+     素材加工/fx_kami_make.py（isnet-anime で切り抜き）で作る。差し替えたら KAMI_AR も貼り直す */
+  var KAMI_NUM_POS = ["p1", "p2", "p3"]; // 着順→置き場所（p1＝左上・p2＝右の真ん中・p3＝左下）
+  var KAMI_AR = 891 / 1000; // fx_kami.png の実寸比（横/縦）＝fx_kami_make.py の出力
+  function spawnKami(cam, key, hit, combo) {
+    var old = cam.querySelector(".fx-kami");
+    if (old) old.parentNode.removeChild(old);
+    var T = kamiTimes(combo.length);
+    var cw = cam.clientWidth || 400, ch = cam.clientHeight || 300;
+    // window.__KAMI_LINE＝確認用に台詞を番号（0〜3）で固定（ラボ・撮影だけ。本番は的中IDで決まる）
+    var li = window.__KAMI_LINE != null ? +window.__KAMI_LINE
+      : fxHash(String((hit && hit.id) || Math.random()) + "|kami") % KAMI_LINES.length;
+    var lines = KAMI_LINES[li] || KAMI_LINES[0];
+    var box = document.createElement("div");
+    box.className = "fx-kami m-" + key;
+    box.style.setProperty("--kh", Math.round(ch * 0.84) + "px");
+    box.style.setProperty("--kw", Math.round(ch * 0.84 * KAMI_AR) + "px");
+    box.style.setProperty("--knum", Math.round(ch * 0.30) + "px");
+    box.style.setProperty("--kring", Math.round(ch * 0.78) + "px");
+    // 尺をCSSへ（アニメの長さをJSの定数と1か所でそろえる）
+    box.style.setProperty("--kflash", (KAMI_BASE.FLASH_HOLD + KAMI_BASE.FLASH_FADE) / 1000 + "s");
+    box.style.setProperty("--kfhold", KAMI_BASE.FLASH_HOLD / 1000 + "s");
+    box.style.setProperty("--kdesc", KAMI_BASE.DESCEND / 1000 + "s");
+    box.style.setProperty("--knumin", KAMI_BASE.NUM_IN / 1000 + "s");
+    var html = '<i class="fx-kami-veil"></i><i class="fx-kami-rays"></i><i class="fx-kami-ring"></i>' +
+      '<div class="fx-kami-sparks">';
+    for (var i = 0; i < 26; i++) {
+      html += '<i style="left:' + (Math.random() * 100).toFixed(1) + '%;top:' + (8 + Math.random() * 84).toFixed(1) +
+        '%;--d:' + (Math.random() * 2.4).toFixed(2) + 's;--s:' + (0.5 + Math.random() * 0.9).toFixed(2) + '"></i>';
+    }
+    // 絵はCSSの background（url はCSSファイル基準＝ラボ等どのページから読んでも同じ所を指す・ほかの演出と同じ流儀）
+    html += '</div><div class="fx-kami-body"><i class="fx-kami-art"></i></div>';
+    // 当たった数字だけ・着順の場所に置く（2車単なら左上と右の真ん中の2つ）
+    combo.forEach(function (n, i) {
+      html += '<span class="fx-kami-num n' + n + ' ' + KAMI_NUM_POS[i] + '">' + n + '</span>';
+    });
+    html += '<div class="fx-kami-line">' + lines.map(function (s) { return "<span>" + s + "</span>"; }).join("<br>") + '</div>' +
+      '<i class="fx-kami-flash"></i>';
+    box.innerHTML = html;
+    cam.appendChild(box);
+    fitKamiLine(box.querySelector(".fx-kami-line"), cw, ch);
+    setTimeout(function () { box.classList.add("veil"); }, 30);           // ピカッ（白）＋その下で後光の画面を用意
+    setTimeout(function () { box.classList.add("glow"); }, KAMI_BASE.FLASH_HOLD); // 明け始め＝後光・虹の輪・粒
+    setTimeout(function () { box.classList.add("drop"); }, T.DROP);
+    // 1着→2着→3着の順にじわっと浮かべる
+    var nums = box.querySelectorAll(".fx-kami-num");
+    Array.prototype.forEach.call(nums, function (el, i) {
+      setTimeout(function () { el.classList.add("lit"); }, T.NUM0 + i * KAMI_BASE.NUM);
+    });
+    setTimeout(function () { box.classList.add("line"); }, T.LINE);
+    setTimeout(function () { box.classList.add("out"); }, T.END);
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, T.GONE);
+  }
+  /** 台詞の字を枠に合わせる＝各行を幅いっぱい（上限＝ワイプ高の14%）・はみ出す時だけ段階縮小 */
+  function fitKamiLine(el, cw, ch) {
+    var fs = Math.round(ch * 0.14), avail = cw * 0.92, guard = 0;
+    el.style.fontSize = fs + "px";
+    var widest = function () {
+      var w = 0;
+      Array.prototype.forEach.call(el.querySelectorAll("span"), function (s) { w = Math.max(w, s.scrollWidth); });
+      return w;
+    };
+    while (widest() > avail && fs > 14 && guard < 60) { fs -= 2; el.style.fontSize = fs + "px"; guard++; }
   }
   /** 吹き出しの文字を幅に収める（fitTeaCapと同じ手法・複数行は一番長い行で判定） */
   function fitMoroCap(bubble, availW, baseFs) {
@@ -7400,6 +7497,23 @@
     return Math.max.apply(null, ms) < LOWODDS_MAX;
   }
 
+  /* ══════════ ラッキーナンバー限定演出（10/17 Naoto案＝🙏神降臨） ══════════
+     ギャル神・オリハルコンと同じ「限定枠」の流儀＝その人の**当たり目がラッキーナンバーだけ**で
+     できているとき必ずこの演出（100%・抽選なし）。元ネタ＝もときの武雄回（1457のボックスだけで勝負）。
+       例）1-5-7・4-7・7-1-4 → 神降臨／1-3-5（3が混ざる）→ 従来どおりスロット
+     優先順位＝?fx=強制 > ダブル的中の共演 > FX_PIN > ギャル神 > オリハルコン > **この表** > 種別枠 > 抽選。
+     判定できない的中（手動追加＝当たり目なし）は false＝通常の抽選に落ちる（安全側）。
+     &kami=0 で止める（従来どおりスロット）。
+     ⚠️MEMBER_RATESにもFX_KNOWNにも書かない（galgod/ori/hitouchと同じ安全弁＝書くと通常の的中でも出る） */
+  var LUCKY_FX = { pink: { fx: "kami", nums: [1, 4, 5, 7] } };
+  var KAMI_ON = params.get("kami") !== "0";
+  function isLuckyHit(key, hit) {
+    var t = LUCKY_FX[key];
+    if (!t || !KAMI_ON) return false;
+    var combo = slotCombo(hit);
+    return combo.length > 0 && combo.every(function (n) { return t.nums.indexOf(n) >= 0; });
+  }
+
   /* ══════════ 的中の「種別」で決まる枠（9/4 Naoto指示＝役物の輝きスキン） ══════════
      演出を決める4つ目の軸。「誰が」（MEMBER_RATES）「2人揃ったか」（pairEffectOf）
      「どんなレースを」（GIRLS_FX / LOWODDS_FX）に続く「**どんな当たり方をしたか**」。
@@ -7478,6 +7592,7 @@
     if (FX_PIN[key]) return FX_PIN[key]; // 今だけの固定枠（上のFX_PIN参照・戻し忘れ注意）
     if (GIRLS_FX[key] && isGirlsHit(hit)) return GIRLS_FX[key]; // ガールズ限定枠＝ギャル神（9/1）
     if (LOWODDS_FX[key] && isLowOddsHit(hit)) return LOWODDS_FX[key]; // 低倍率限定枠＝オリハルコン（9/2）
+    if (isLuckyHit(key, hit)) return LUCKY_FX[key].fx; // ラッキーナンバー限定枠＝神降臨（10/17）
     var kindFx = kindFxFor(key, hit); // 種別枠＝青の万車→虹の役物／note→金の役物（9/4・KIND_FX参照）
     if (kindFx) return kindFx;
     var rates = MEMBER_RATES[key];
@@ -7900,8 +8015,8 @@
     var gen = fxGen;
     // スロットは当たり目の数字そのものを見せる演出。車番が取れない的中（手動追加）では
     // 数字を作り話にせず、既定のアイコン走行に落とす
-    var combo = eff === "slot" ? slotCombo(hit) : [];
-    if (eff === "slot" && !combo.length) eff = "";
+    var combo = (eff === "slot" || eff === "kami") ? slotCombo(hit) : [];
+    if ((eff === "slot" || eff === "kami") && !combo.length) eff = ""; // 神降臨も当たり目が要る（?fx=kami の手動追加など）
     // 選手リスペクトは結果の1〜3着が要る。揃わない的中では既定のアイコン走行に落とす
     if (eff === "thanks" && !thxResult(hit)) eff = "";
     // バッジまでの待ち時間＝その人の前奏の長さ。専用演出は退場開始と同時に出す（消えきるのを待たない）
@@ -7914,6 +8029,7 @@
       : eff === "pray" || eff === "pray_ng" ? prayTimes().END
       : eff === "morotade" ? moroTimes().END
       : eff === "ori" ? oriTimes().END
+      : eff === "kami" ? kamiTimes(combo.length).END   // 神降臨（10/17・ピンクのラッキーナンバー限定）
       : eff === "tea" ? teaTimes().END
       : eff === "nicha" ? nichaTimes().END
       : eff === "samba" ? sambaTimes().END
@@ -7952,6 +8068,7 @@
       else if (eff === "pray" || eff === "pray_ng") spawnPray(cam, key, eff === "pray_ng");
       else if (eff === "morotade") spawnMorotade(cam, key, rc);  // もろたで（9/1・黄の3つ目＝相方の名前入り）
       else if (eff === "ori") spawnOri(cam, key, hit);           // オリハルコン（9/2・橙の低倍率限定）
+      else if (eff === "kami") spawnKami(cam, key, hit, combo);  // 神降臨（10/17・ピンクのラッキーナンバー限定）
       else if (eff === "tea") spawnTea(cam, key);
       else if (eff === "nicha") spawnTea(cam, key, "nicha");  // ニチャー（8/29・お茶の派生＝歩きは共通）
       else if (eff === "samba") spawnSamba(cam, key, rc && rc.name);
