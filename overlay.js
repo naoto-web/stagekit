@@ -1729,6 +1729,20 @@
     var s = Math.min(sa, sb).toFixed(3);
     [ba, bb].forEach(function (b) { b.setAttribute("data-rks", s); var t = b.querySelector(".rk-odds"); if (t) t.style.transform = "scale(" + s + ")"; });
   }
+  /* §155（10/17 Naoto「3連単人気順が改行されて表が下にずれてる」）①の人気順の札「京王閣 12R [GⅢ] 3連単人気順」は
+     §144でグレード札が入って幅が足りず「順」だけ2行目へ落ち、札が2段になったぶん表が下がっていた。
+     → 札は1行のまま（CSS nowrap）、区画の幅に入らないときだけ札の字を縮める（下限は元の65%）。&tklabfit=0 で旧 */
+  var TKLABFIT = params.get("tklabfit") !== "0";
+  if (TKLABFIT) document.documentElement.classList.add("tklabfit");
+  function fitTkLab(lab, aw) {
+    lab.style.fontSize = "";
+    if (!(aw > 0) || lab.offsetWidth <= aw) return;
+    var fs0 = parseFloat(getComputedStyle(lab).fontSize) || 26, fs = fs0;
+    for (var i = 0; i < 3 && lab.offsetWidth > aw && fs > fs0 * 0.65; i++) { // 字の幅に比例して縮む＝2〜3回で収まる
+      fs = Math.max(fs0 * 0.65, fs * aw / lab.offsetWidth - 0.5);
+      lab.style.fontSize = fs.toFixed(1) + "px";
+    }
+  }
   function fitTkOdds(band) {
     var cols = band.querySelectorAll(".tk-rk-col");
     if (cols.length) Array.prototype.forEach.call(cols, fitRankOdds); else fitRankOdds(band);
@@ -1739,14 +1753,15 @@
     var t = band && band.querySelector(".rk-odds");
     if (!t) return;
     var lab = band.querySelector(".tk-rk-lab"); // §110 ①B案＝札の下の残りに合わせる
+    var cs = getComputedStyle(band);
+    var aw = band.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    if (lab && TKLABFIT) fitTkLab(lab, aw);
     var labH = lab ? lab.offsetHeight + 6 : 0;
     /* 🐞9/29 Naoto「オッズがたまにポンって大きくなる」＝描き直すたびに表が1.0倍で出て、次のフレームで1.05倍に合わせていた。
        前回の縮尺（data-rks）を先にかけて出す＝描き直しでも大きさが変わらない。transform は配置に影響しない＝測り方は同じ */
     var prev = band.getAttribute("data-rks");
     t.style.transformOrigin = "center center";
     if (prev) t.style.transform = "scale(" + prev + ")";
-    var cs = getComputedStyle(band);
-    var aw = band.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
     var ah = band.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) - labH;
     // offsetWidth/Height＝表そのものの大きさ（scrollWidth は確定の「キラン」の✦＝はみ出す飾りまで含み、キラン中の1秒だけ縮んでいた・9/29 Naoto「確定のあとピクッ」）
     var w = t.offsetWidth, h = t.offsetHeight;

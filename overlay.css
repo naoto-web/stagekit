@@ -4119,6 +4119,8 @@ body.rk-merge #scene-race .race-band > .panel.slot-b { display: none; } /* 🐞1
 .talk-band .buy-line.tk-rk .rk-box { flex: 1 1 0; min-height: 0; width: 100%; align-self: stretch; display: flex; align-items: center; justify-content: center; }
 .talk-band .buy-line.tk-rk .tk-rk-lab { align-self: flex-start; }
 .talk-band .buy-line .tk-rk-sub { color: #6b7280; font-size: .8em; }
+/* §155（10/17）人気順の札は1行（入らないときは JS fitTkLab が字を縮める）＝「順」だけ2行目に落ちて表が下がるのを防ぐ。&tklabfit=0 で旧 */
+html.tklabfit .talk-band .buy-line .tk-rk-lab { white-space: nowrap; max-width: none; }
 .talk-band .buy-line .rk-chips { display: inline-flex; align-items: center; gap: 2px; }
 .talk-band .buy-line .rk-chips .car { width: 26px; height: 31px; font-size: 28px; border-radius: 4px; }
 .talk-band .buy-line .rk-cell .pl-odds { margin-left: 5px; font-size: 26px; min-width: 2.75em; text-align: right; font-weight: 600; }
