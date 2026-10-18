@@ -706,8 +706,8 @@
      ⚠️ヘッドレスEdgeでは AudioContext の時計が進まない＝音そのものはクロコ側で確かめられない（JSエラーの有無まで）。聞こえ方は Naoto の耳で */
   var CUSND = params.get("cusnd") !== "0";
   // 点滅の速さ＝10/18 Naoto「15回/秒に」（試聴の既定30から変更）。&curate= で試せる
-  // 音量＝10/18 Naoto がテストOBSで聞いて「大きい」→ 0.6 → 0.45 → 10/18夜「ちょっと大きい」→ 0.3。&cuvol= で試せる
-  var CU_VOL = +(params.get("cuvol") || 0.3), CU_PITCH = 700, CU_RATE = +(params.get("curate") || 15), CU_DUN_LEAD_MS = 400;
+  // 音量＝10/18 Naoto がテストOBSで聞いて「大きい」→ 0.6 → 0.45 → 10/18夜「ちょっと大きい」→ 0.3 → 0.2。&cuvol= で試せる
+  var CU_VOL = +(params.get("cuvol") || 0.2), CU_PITCH = 700, CU_RATE = +(params.get("curate") || 15), CU_DUN_LEAD_MS = 400;
   var cuMaster = null, cuManche = {}; // cuManche＝配信者ID→万車の的中を出した時刻（次のカウントアップを「大きい的中」の音にする）
   function cuCtx() {
     if (!CUSND || !audible()) return null;
