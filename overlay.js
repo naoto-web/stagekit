@@ -190,6 +190,11 @@
   })();
   // &tshift=秒＝時計を進める／戻す検証用パラメータ（9/26・タイマー演出のモック撮影用。実運用では付けない）
   var TSHIFT_MS = (+params.get("tshift") || 0) * 1000;
+  /* §160（10/18 Naoto）配信の遅れ（YouTube 約20秒）ぶん、締切を早めに数える＝視聴者の画面で本当の締切ちょうどに0・「締切」になる。
+     早めるのは締切がらみだけ（カウントダウン・色・ピピッ・ハンコ・締切カード・①買目のグレー）。
+     発走！・レース中・自動シーン切替・放送のレース（②）は映像と一緒に遅れて届く＝ずれていないので今のまま。
+     締切の時刻表示（1時間以上前の「15:27」）は本当の時刻のまま。&lag=秒 で変える（&lag=0 で旧） */
+  var CLOSE_LAG = params.get("lag") === null ? 20 : (+params.get("lag") || 0);
   function nowDate() { return new Date(Date.now() + TSHIFT_MS); }
   function nowSec() {
     if (MOCK_NOW !== null) return MOCK_NOW;
@@ -912,7 +917,7 @@
   function renderTimers() {
     var cards = nextByVenue();
     var now = nowSec();
-    var offSec = (state.cfg.closeMin || 3) * 60;
+    var offSec = (state.cfg.closeMin || 3) * 60 + CLOSE_LAG; // §160 締切カードも配信の遅れぶん早めに
     // 公式締切〜発走の間は「締切ました」CTAカードに切り替える（モードもキーに含めて跨いだ瞬間に再構築）
     // グレードもキーに含める＝場タブ廃止（FB99）でバッジがここへ移設・後着のグレードでも再構築される
     var keys = cards.map(function (c) {
@@ -1385,12 +1390,13 @@
   }
   function tickTimerCounts() {
     var now = nowSec();
-    var netSec = (state.cfg.netCloseMin || 5) * 60;
-    var offSec = (state.cfg.closeMin || 3) * 60;
+    // §160 tgt＝配信の遅れぶん早めた締切（数え・色・音はこれ）／時刻の表示だけ本当の締切（tgt + CLOSE_LAG）
+    var netSec = (state.cfg.netCloseMin || 5) * 60 + CLOSE_LAG;
+    var offSec = (state.cfg.closeMin || 3) * 60 + CLOSE_LAG;
     document.querySelectorAll("[data-net]").forEach(function (el) {
       var tgt = +el.getAttribute("data-net") - netSec; // 民間締切の絶対秒
       var remain = tgt - now;
-      setCount(el, remain, tgt);
+      setCount(el, remain, tgt + CLOSE_LAG);
       // 民間締切ベースの信号機色をカードに反映＋色が上がる瞬間にピピッ。
       // 色・音とも小数秒で判定（旧＝秒切り捨てで色が最大1秒先行し音が後追いだった・8/6 FB6）
       var card = el.closest(".vt-card");
@@ -1417,7 +1423,7 @@
     });
     document.querySelectorAll("[data-off]").forEach(function (el) {
       var tgtOff = +el.getAttribute("data-off") - offSec;
-      setCount(el, tgtOff - now, tgtOff);
+      setCount(el, tgtOff - now, tgtOff + CLOSE_LAG);
     });
     if (TFX) tfxTick();
     applyRaceClosed(); // §53 ①の買目区画を締切でグレーに（既定ON・&rcclose=0で旧）
@@ -2232,8 +2238,16 @@
       race.classList.remove("fire-only");
       if (headEl.scrollWidth > headEl.clientWidth + 1 && race.querySelector(".bhn-t")) race.classList.add("fire-only");
     }
+    // §161 はみ出しの判定に「投資・回収の右端が右の余白（padding）の内側か」も足す＝scrollWidth は余白に食い込んだ分を数えない
+    //（20px の余白へ7px食い込んでも縮まず、回収額が帯の右端にかかって見えた）。②ワイプの上の帯（.winv）は今のまま
+    var padIn = BHGAP && inv && !headEl.classList.contains("winv");
+    var over = function () {
+      if (headEl.scrollWidth > headEl.clientWidth + 1) return true;
+      if (!padIn) return false;
+      return inv.getBoundingClientRect().right > headEl.getBoundingClientRect().right - (parseFloat(getComputedStyle(headEl).paddingRight) || 0) + 1;
+    };
     var guard = 0;
-    while (headEl.scrollWidth > headEl.clientWidth + 1 && guard < 8) {
+    while (over() && guard < 8) {
       var shrunk = false;
       [inv, badge, race].forEach(function (el) {
         if (!el) return;
@@ -3052,7 +3066,7 @@
   function raceCloseAt(k) {
     var parts = String(k || "").split("|"), hit = null;
     allRaces().forEach(function (r) { if (r.venue === parts[0] && +r.no === +parts[1]) hit = r; });
-    return hit ? hit.startSec - (state.cfg.closeMin || 3) * 60 : null;
+    return hit ? hit.startSec - (state.cfg.closeMin || 3) * 60 - CLOSE_LAG : null; // §160 配信の遅れぶん早めに
   }
   function applyRaceClosed() {
     if (!RCCLOSE) return;
@@ -3193,10 +3207,16 @@
     h.style.top = (cr.top + bt - rr.top - rail.clientTop).toFixed(1) + "px";
     h.style.width = (cr.right - bl - left).toFixed(1) + "px";
   }
+  /* §161（10/18 Naoto「回収の数字の右が右端にかかって見える・予想と投資の間はせまいのに投資額と回収の間は空いている」）
+     見出しの余白をそろえる＝投資額〜「回収」を全角1文字→0.6em／「予想」〜「投資」は最低0.3em／右端に金の光（drop-shadow 約8px）ぶんの余白。
+     入らない日は従来どおり fitBandHead が字を縮める（余白も込みで測る）。②ワイプの上の帯（.winv）は今のまま。&bhgap=0 で旧 */
+  var BHGAP = params.get("bhgap") !== "0";
+  if (BHGAP) document.documentElement.classList.add("bhgap");
   function setBandInv(el, text) {
     if (!el || el._biText === text) return;
     el._biText = text;
     var html = esc(text || "").replace(/(¥[0-9,]+|集計中)/g, '<span class="bi-v">$1</span>');
+    if (BHGAP) html = html.replace("　", '<span class="bi-gap"></span>'); // §161 投資額と「回収」の間（全角スペース）を詰める＝文字列は不変（比較・カウントアップ用）
     // プラ転（9/26）＝回収＞投資の間は回収額を金色（同額・集計中は付かない）。カウントアップの途中も文字列で判定＝追い越した瞬間に金になる
     if (PLATEN) {
       var m = String(text || "").match(/投資 ¥([0-9,]+)　回収 ¥([0-9,]+)/);

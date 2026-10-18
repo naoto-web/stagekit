@@ -959,6 +959,12 @@ body.debug #scene-tenkai .slist:empty::after {
 /* 金額だけ「〇〇 予想」（40px）と同じ大きさに（9/25 Naoto）＝「投資」「回収」は34pxのまま。
    em指定（40/34）＝fitBandHead が .band-inv を縮めたときも比率を保って一緒に縮む。JSの setBandInv が .bi-v で包む */
 .band-head .band-inv .bi-v { font-size: 1.1765em; }
+/* §161（10/18 Naoto）余白をそろえる＝投資額〜「回収」0.6em（旧＝全角スペース1em）・「予想」〜「投資」は最低0.3em（あとは margin-left:auto の余り）・右端に金の光ぶん8px。
+   最低を0.6emにすると字が1段（2px）縮んで左が約50pxに開きすぎた（ピーター ¥123,000／¥124,460）。
+   ②ワイプの上の帯（.winv）は対象外。&bhgap=0 で旧（html.bhgap が付かない＝全角スペースのまま） */
+html.bhgap .band-head:not(.winv) .band-inv { padding-left: .3em; padding-right: 8px; }
+html.bhgap .band-inv .bi-gap { display: inline-block; width: .6em; }
+html.bhgap .band-head.winv .band-inv .bi-gap { width: 1em; }
 /* 🧪RB2（9/25 Naoto・②だけ・テストGAS接続時のみ）
    A＝帯の中の「別府 7R」ラベルは出さない。note予想の人だけ見出しに白い札「🔥note」（左の席＝名前の右／右の席＝名前の左） */
 .rb2 .bh-race { display: inline-block; margin: 0 6px; padding: 0 12px 2px; border-radius: 7px;
