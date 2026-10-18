@@ -577,8 +577,10 @@
 
   /* §143（10/16 Naoto「しょーたの別府と四日市で・の位置がズレてる」）note勝負バナーの番号を1つずつ枠に入れ、縦に並ぶ番号どうしで枠の幅をそろえる（右寄せ）＝「・」が縦にそろう */
   var NHDOT = params.get("nhdot") === "0" ? "" : (params.get("nhdot") || "h");
+  // §162（10/19 Naoto）右上の時計も配信の遅れ（CLOSE_LAG・実測で約20秒）ぶん進める＝視聴者の画面で本当の時刻。&clklag=0 で時計だけ旧
+  var CLK_LAG_MS = params.get("clklag") === "0" ? 0 : CLOSE_LAG * 1000;
   function tickClock() {
-    var now = new Date();
+    var now = new Date(Date.now() + CLK_LAG_MS);
     var days = ["日", "月", "火", "水", "木", "金", "土"];
     var d = now.getFullYear() + "/" + (now.getMonth() + 1) + "/" + now.getDate() + "（" + days[now.getDay()] + "）";
     var t = pad2(now.getHours()) + ":" + pad2(now.getMinutes()); // 秒は出さない（8/5 FB）
