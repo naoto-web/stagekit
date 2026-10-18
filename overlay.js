@@ -3420,13 +3420,7 @@
     if (!hs.length) return;
     var h = mergeHits(hs), key = memberKey(rc);
     window.__fxBadgeAt = Math.max(window.__fxBadgeAt || 0, Date.now());
-    fxWipes(slot).forEach(function (cam) {
-      cam.classList.add("hit-fx");
-      if (key) cam.classList.add("m-" + key);
-      if (h.note) cam.classList.add("hit-fx-note");
-      if (h.manche) cam.classList.add("hit-fx-manche");
-      showHitBadge(cam, h, key);
-    });
+    showBadgeAt(slot, h, key, HIT_FX_MS); // §157 席替えでついて行くバッジとして出す（中身は従来と同じ＝枠の光＋バッジ）
   }
   function refpopWait(rid) {
     var a = refAnim[rid];
@@ -7991,6 +7985,7 @@
     " .fx-ori, .fx-adj, .fx-samba, .fx-dance, .fx-ent, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
   function clearHitFx() {
     fxGen++;
+    badgeLive = {}; // §157 消したバッジは追いかけない
     var nodes = document.querySelectorAll(FX_ROOTS);
     for (var i = 0; i < nodes.length; i++) {
       if (nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
@@ -8120,14 +8115,16 @@
     var stage = fxStageHost(hit);
     /* バッジ・枠パルス＝**常にワイプ**（8/30 Naoto決定「前奏だけ全画面」＝35秒残るのはこちら側
        だけ。全画面ホストには前奏が終わったあと何も残らない） */
-    wipes.forEach(function (cam) {
-      cam.classList.add("hit-fx");
-      if (key) cam.classList.add("m-" + key);             // 個人演出のフック（8/8 FB73）
-      if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
-      if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
-      // 掃除（clearHitFx）が挟まったらバッジは出さない＝消したのに後から出る事故を防ぐ
-      setTimeout(function () { if (gen === fxGen) showHitBadge(cam, hit, key); }, rainMs);
-    });
+    wipes.forEach(function (cam) { hitCamOn(cam, hit, key); });
+    /* 掃除（clearHitFx）が挟まったらバッジは出さない＝消したのに後から出る事故を防ぐ。
+       §157（10/18 Naoto）バッジは「出る瞬間に当てた人がいる席」のワイプに出す＝前奏の途中で席替えしても、
+       前奏は元の席でやり切り、バッジから新しい席へ（前奏の枠の光は元の席から外す）。&badgefollow=0 で旧（元の席のまま） */
+    setTimeout(function () {
+      if (gen !== fxGen) return;
+      var now = BADGEFOLLOW ? (slotOfRacer(hit.racerName) || slot) : slot;
+      if (now !== slot) wipes.forEach(function (cam) { hitCamOff(cam, key); });
+      showBadgeAt(now, hit, key, HIT_FX_MS);
+    }, rainMs);
     /* 前奏＝アイコンの走行（8/7 FB65）／専用演出のメンバーは走行を出さない
        （役物FB82・スロットFB83・相撲FB86・念仏FB88）。
        万車＝全画面ホスト**1枚だけ**に出す（5シーンぶん撒かない・fxStageHostのコメント参照） */
@@ -8190,10 +8187,57 @@
     }
     return n;
   }
-  function showHitBadge(cam, hit, key) {
+  /* ══ §157 バッジは当てた人について行く（10/18 Naoto「席替えしたら演出はそのままやり切って、バッジから移す」） ══
+     ・前奏（スロット・神降臨など）は始まった席でやり切る（途中の演出を動かすと CSS の動きとタイマーがずれる＝作り直しが要る）
+     ・バッジは出る瞬間に当てた人の席へ（fireHitFx）／バッジが出ている35秒の間に席替えしたら、残り時間のままバッジと枠の光を新しい席へ（followBadges）
+     ・移した先では 0.5秒の「ポン」（hitPop）がもう一度入る＝移ったことが分かる
+     ・当てた人が席にいない（配信者を変えた）ときは動かさない。&badgefollow=0 で旧 */
+  var BADGEFOLLOW = params.get("badgefollow") !== "0";
+  var badgeLive = {}; // 的中ID → { hit, key, slot, until }＝いま出ているバッジ
+  function slotOfRacer(name) {
+    if (!name || !state) return null;
+    var s = seatMap();
+    return s.a && s.a.name === name ? "a" : s.b && s.b.name === name ? "b" : null;
+  }
+  function hitCamOn(cam, hit, key) {
+    cam.classList.add("hit-fx");
+    if (key) cam.classList.add("m-" + key);             // 個人演出のフック（8/8 FB73）
+    if (hit.note) cam.classList.add("hit-fx-note");     // note＝黄金の強パルス（8/7 FB59）
+    if (hit.manche) cam.classList.add("hit-fx-manche"); // 万車＝レインボーパルス（8/7 FB59・旧赤）
+  }
+  function hitCamOff(cam, key) {
+    if (cam.querySelector(".hit-fx-badge")) return; // ほかの的中のバッジが残っている＝光はそのまま
+    cam.classList.remove("hit-fx", "hit-fx-note", "hit-fx-manche");
+    if (key) cam.classList.remove("m-" + key);
+  }
+  function showBadgeAt(slot, hit, key, ms) {
+    badgeLive[hit.id] = { hit: hit, key: key, slot: slot, until: Date.now() + ms };
+    fxWipes(slot).forEach(function (cam) { hitCamOn(cam, hit, key); showHitBadge(cam, hit, key, ms); });
+  }
+  function followBadges() {
+    if (!BADGEFOLLOW) return;
+    var now = Date.now();
+    Object.keys(badgeLive).forEach(function (id) {
+      var b = badgeLive[id];
+      if (b.until <= now) { delete badgeLive[id]; return; }
+      var to = slotOfRacer(b.hit.racerName);
+      if (!to || to === b.slot) return;
+      fxWipes(b.slot).forEach(function (cam) {
+        Array.prototype.forEach.call(cam.querySelectorAll(".hit-fx-badge"), function (el) {
+          if (el.getAttribute("data-hid") === String(id)) el.parentNode.removeChild(el);
+        });
+        hitCamOff(cam, b.key);
+      });
+      if (b.until - now > 300) showBadgeAt(to, b.hit, b.key, b.until - now);
+      else delete badgeLive[id];
+    });
+  }
+  function showHitBadge(cam, hit, key, ms) {
+    ms = ms || HIT_FX_MS;
     var old = cam.querySelector(".hit-fx-badge");
     if (old) old.parentNode.removeChild(old);
     var badge = document.createElement("div");
+    badge.setAttribute("data-hid", String(hit.id)); // §157 席替えで移すときの目印
     var streak = hitStreakOf(hit);
     badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "") +
       (streak >= 2 ? " streak" : "") + (streak >= 4 ? " streak-hi" : "") + (key ? " m-" + key : "");
@@ -8220,7 +8264,7 @@
         cam.classList.remove("hit-fx"); cam.classList.remove("hit-fx-manche"); cam.classList.remove("hit-fx-note");
         if (key) cam.classList.remove("m-" + key); // 個人演出のフックも一緒に外す（8/8 FB73）
       }
-    }, HIT_FX_MS);
+    }, ms);
   }
 
   /** 的中バッジの自動フィット（8/7 FB59）：基本サイズ＝ワイプ幅いっぱい・実テキストが収まらない時だけ
@@ -8334,6 +8378,7 @@
     syncPath = path;
     lastSyncAt = new Date();
     renderAll();
+    followBadges(); // §157 席替えでバッジを新しい席へ
     checkNewHits();
   }
 
