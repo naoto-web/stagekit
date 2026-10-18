@@ -696,6 +696,89 @@
       });
     } catch (e) { /* 音を出せない環境では無音のまま */ }
   }
+  /* ══ §159 回収額のカウントアップの音（10/18 Naoto・決定の経緯＝モック/カウントアップ音/再開メモ.md・試聴.html の案H2） ══
+     ・「＋¥」が浮かんでカウントが始まる0.4秒前に「ドゥン」→ カウント開始と同時に遊戯王のライフポイント風「とぅるるる」
+       （700Hz 一定・1秒に15回点滅・和音なし）→ 数字が止まった瞬間にピタッと止めて大判コイン「チャリーン」＋回収額をポンと弾ませる
+     ・プラ転（カウントが投資を追い越した瞬間）＝「ピコーン」／万車の的中＝チャリーンの余韻が長い・キラキラ多め・低音強め
+     ・鳴らすのはタイマーの「ピピッ」と同じく表示中の1ソースだけ（audible＝①②③で二重にならない）。回収が減った（確定し直し）ときは鳴らさない
+     ・テスト接続のOBSで Naoto が配信者の声との音量バランスを確認（10/18・0.6は大きい→0.45）→ ✅本番既定ON。
+       &cusnd=0 で止める／&cuvol=0.45 音量（試聴ページの音量つまみと同じ目盛り）
+     ⚠️ヘッドレスEdgeでは AudioContext の時計が進まない＝音そのものはクロコ側で確かめられない（JSエラーの有無まで）。聞こえ方は Naoto の耳で */
+  var CUSND = params.get("cusnd") !== "0";
+  // 点滅の速さ＝10/18 Naoto「15回/秒に」（試聴の既定30から変更）。&curate= で試せる
+  // 音量＝10/18 Naoto がテストOBSで聞いて「大きい」→ 0.6 → 0.45。&cuvol= で試せる
+  var CU_VOL = +(params.get("cuvol") || 0.45), CU_PITCH = 700, CU_RATE = +(params.get("curate") || 15), CU_DUN_LEAD_MS = 400;
+  var cuMaster = null, cuManche = {}; // cuManche＝配信者ID→万車の的中を出した時刻（次のカウントアップを「大きい的中」の音にする）
+  function cuCtx() {
+    if (!CUSND || !audible()) return null;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      if (!cuMaster) { cuMaster = audioCtx.createGain(); cuMaster.gain.value = CU_VOL; cuMaster.connect(audioCtx.destination); }
+      return audioCtx;
+    } catch (e) { return null; }
+  }
+  function cuTone(t, freq, dur, type, peak, freqEnd) {
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type || "sine"; o.frequency.setValueAtTime(freq, t);
+    if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak || 0.2, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(cuMaster); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function cuBoom(t, amp) { // 「ドゥン」＝150Hz→45Hz に落ちる低い一発
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.35);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(amp, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    o.connect(g); g.connect(cuMaster); o.start(t); o.stop(t + 0.5);
+  }
+  function cuCoinRing(t, f0, dur, amp) { // 金属の円板の鳴り（整数倍でない倍音を重ねる）
+    [[1, 0.1], [1.47, 0.06], [2.09, 0.05], [2.56, 0.03], [3.1, 0.02]].forEach(function (p) {
+      cuTone(t, f0 * p[0], dur / Math.sqrt(p[0]), "sine", p[1] * amp);
+      cuTone(t, f0 * p[0] * 1.004, dur / Math.sqrt(p[0]), "sine", p[1] * amp * 0.6);
+    });
+  }
+  function cuDun() { try { if (cuCtx()) cuBoom(audioCtx.currentTime + 0.01, 0.3); } catch (e) {} }
+  function cuChime(big) { // 大判コイン「チャリーン」＋キラキラ（試聴 CHIMES.shine）
+    try {
+      if (!cuCtx()) return;
+      var t = audioCtx.currentTime + 0.01;
+      cuBoom(t, big ? 0.3 : 0.18);
+      cuCoinRing(t, 1976, big ? 2.2 : 1.6, 1.6);
+      cuCoinRing(t + 0.09, 2960, big ? 1.8 : 1.2, 1.1);
+      for (var i = 0; i < (big ? 10 : 5); i++) cuTone(t + 0.15 + i * 0.07, 4200 + Math.random() * 2500, 0.3, "sine", 0.035);
+    } catch (e) {}
+  }
+  function cuPikon() { // プラ転「ピコーン」（試聴 PLATENS.pikon）
+    try {
+      if (!cuCtx()) return;
+      var t = audioCtx.currentTime + 0.01;
+      cuTone(t, 1175, 0.06, "square", 0.07, 2349); cuTone(t + 0.06, 2349, 0.35, "sine", 0.12); cuTone(t + 0.06, 3520, 0.2, "sine", 0.04);
+    } catch (e) {}
+  }
+  /** 「とぅるるる」を鳴らし始める＝700Hzの矩形波＋1オクターブ上のサイン波を、CU_RATE（15Hz）の矩形波で点滅させる。戻り値 { stop } か null */
+  function cuLifeStart() {
+    try {
+      if (!cuCtx()) return null;
+      var c = audioCtx, t = c.currentTime;
+      var o = c.createOscillator(), o2 = c.createOscillator(), gate = c.createGain(), vol = c.createGain();
+      var lfo = c.createOscillator(), lfoAmp = c.createGain(), off = c.createConstantSource(), o2g = c.createGain();
+      o.type = "square"; o.frequency.value = CU_PITCH; o2.type = "sine"; o2.frequency.value = CU_PITCH * 2;
+      lfo.type = "square"; lfo.frequency.value = CU_RATE; lfoAmp.gain.value = 0.5; off.offset.value = 0.5;
+      gate.gain.value = 0; lfo.connect(lfoAmp); lfoAmp.connect(gate.gain); off.connect(gate.gain);
+      o2g.gain.value = 0.4;
+      o.connect(gate); o2.connect(o2g); o2g.connect(gate); gate.connect(vol); vol.connect(cuMaster);
+      vol.gain.setValueAtTime(0.0001, t); vol.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+      [o, o2, lfo, off].forEach(function (n) { n.start(t); });
+      return { stop: function () {
+        try {
+          var s = c.currentTime; vol.gain.cancelScheduledValues(s); vol.gain.setValueAtTime(vol.gain.value, s); vol.gain.linearRampToValueAtTime(0, s + 0.02);
+          [o, o2, lfo, off].forEach(function (n) { n.stop(s + 0.05); });
+        } catch (e) {}
+      } };
+    } catch (e) { return null; }
+  }
   /* 色切替と音のズレ対策（8/6 FB6）：境界の実時刻にサンプル精度で事前予約する。
      キー＝「日付|民間締切の絶対秒|境界秒」＝レースごと・境界ごとに1回だけ（即時フォールバックとの二重鳴り防止）。
      ⚠️日付を前置するのは、締切の絶対秒が「0時からの経過秒」で日付を持たないため（8/15 追加）。
@@ -3481,20 +3564,39 @@
       setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 5400); // CSS 5s＋余裕
     });
     var t0 = Date.now() + REFPOP_POP_LEAD_MS;
+    // §159 カウントアップの音（回収が増えたときだけ）。万車の的中のあとなら「大きい的中」の音
+    var cuOn = CUSND && delta > 0, cuBig = false, cuLp = null, cuLast = null, cuEnded = false;
+    if (cuOn) {
+      cuBig = !!(cuManche[rid] && Date.now() - cuManche[rid] < 180000); delete cuManche[rid];
+      setTimeout(cuDun, Math.max(0, REFPOP_POP_LEAD_MS - CU_DUN_LEAD_MS)); // カウント開始の0.4秒前に「ドゥン」
+    }
     (function step() {
       var p = Math.min(1, Math.max(0, (Date.now() - t0) / REFPOP_COUNT_MS));
       var e = 1 - Math.pow(1 - p, 3); // ease-out
       var cur = from + delta * e;
+      // §159 音ありのときは、数字が見た目で動かなくなった（ease-out の最後）ところで終わりにする＝音と数字を同時に止める（試聴ページと同じ）
+      if (cuOn && p < 1) { var sv = Math.round(cur); if (sv === cuLast && p > 0.6) p = 1; cuLast = sv; }
+      if (cuOn && p > 0 && !cuLp && !cuEnded) cuLp = cuLifeStart(); // カウント開始と同時に「とぅるるる」
       a.text = textOf(p >= 1 ? to : cur);
       refpopBandInvs(rid).forEach(function (el) { setBandInv(el, a.text); });
       // プラ転＝カウントアップが投資を追い越した瞬間（9/26 Naoto「的中演出→ピコーン→投資を追い越したところでプラ転」）
       var ps = platenSt[rid], shownV = Math.round(p >= 1 ? to : cur);
-      if (ps && ps.armed && shownV > bt.invest) platenFire(rid);
+      if (ps && ps.armed && shownV > bt.invest) { if (cuOn) cuPikon(); platenFire(rid); } // §159 プラ転の瞬間に「ピコーン」
       // 回収率の節目（§20）＝カウントアップが「投資×節目%」を追い越した瞬間。プラ転と重なれば msFire がプラ転の後ろへずらす
-      if (ps && ps.msArmed && shownV * 100 > bt.invest * ps.msArmed) { if (ps.armed) platenFire(rid); msFire(rid); }
+      if (ps && ps.msArmed && shownV * 100 > bt.invest * ps.msArmed) { if (ps.armed) { if (cuOn) cuPikon(); platenFire(rid); } msFire(rid); }
       // ⚠️requestAnimationFrame ではなく 33ms のタイマー（9/25）＝rAF は見えていないページ・ヘッドレスで間引かれ、
       //   「消える1秒前に開始」が8秒後にずれた（ハーネス実測）。OBSのブラウザソースでも同じ間引きが起こりうる
       if (p < 1) { setTimeout(step, 33); return; }
+      if (cuOn && !cuEnded) { // §159 止まった瞬間＝「とぅるるる」をピタッと止めて「チャリーン」＋回収額をポン
+        cuEnded = true;
+        if (cuLp) cuLp.stop();
+        cuLp = null;
+        cuChime(cuBig);
+        refpopBandInvs(rid).forEach(function (el) {
+          var vs = el.querySelectorAll(".bi-v"), v = vs[vs.length - 1]; // 最後の金額＝回収
+          if (v) { v.classList.remove("cu-bump"); void v.offsetWidth; v.classList.add("cu-bump"); }
+        });
+      }
       a.shown = to; a.running = false;
       if (a.target !== null && (REFIX ? a.target !== a.shown : a.target > a.shown)) { a.waiting = true; refpopWait(rid); } // カウント中にさらに増えた（REFIX＝確定し直しで減った時も）
     })();
@@ -8082,6 +8184,7 @@
     // ⚠️pairFxは色キーが無い人には立たない（pairFxForが両者の色キーを要求する）＝keyなしでも安全
     var eff = pickEffect(key, hit, pairFx);
     var gen = fxGen;
+    if (hit.manche && hit.racerName) cuManche[hit.racerName] = Date.now(); // §159 次のカウントアップは「大きい的中」の音
     // スロットは当たり目の数字そのものを見せる演出。車番が取れない的中（手動追加）では
     // 数字を作り話にせず、既定のアイコン走行に落とす
     var combo = (eff === "slot" || eff === "kami") ? slotCombo(hit) : [];

@@ -2251,6 +2251,12 @@ html.nxgap .sub-line.subv-tight .pred-line.chips.sg-alt { background: transparen
 @keyframes moroOut { to { opacity: 0; } }
 .fx-moro.out { animation: moroOut .45s ease-in forwards; }
 
+/* §159（10/18 Naoto）カウントアップが止まった瞬間に回収額をポンと弾ませる（「チャリーン」と同時・試聴ページの bump と同じ動き）。
+   JS が音ありのとき（CUSND）だけ .cu-bump を付ける。inline-block でないと transform が効かない */
+.band-inv .bi-v.cu-bump { display: inline-block; animation: cuBump .45s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes cuBump {
+  0% { transform: scale(1); } 35% { transform: scale(1.28); filter: drop-shadow(0 0 10px rgba(240, 195, 90, .9)); } 100% { transform: scale(1); } }
+
 /* ══════════ 神降臨＝ピンクのラッキーナンバー限定演出（10/17 Naoto案）
    元ネタ＝もときの武雄回。白く明ける→後光・虹の輪・金の粒→白装束が降臨→四隅の1457が光る→明朝の台詞。
    数字の色は動画のテロップどおり（1白・4水色・5金・7橙）。発動はLUCKY_FX（overlay.js）＝抽選には入らない。
