@@ -965,6 +965,9 @@ body.debug #scene-tenkai .slist:empty::after {
 html.bhgap .band-head:not(.winv) .band-inv { padding-left: .3em; padding-right: 8px; }
 html.bhgap .band-inv .bi-gap { display: inline-block; width: .6em; }
 html.bhgap .band-head.winv .band-inv .bi-gap { width: 1em; }
+/* §163（10/19 Naoto）②ワイプの上の帯も同じ＝投資額〜「回収」0.6em・右端に金の光ぶん8px（既定ON・&bhwinv=0 で旧＝html.bhwinv が付かない） */
+html.bhgap.bhwinv .band-head.winv .band-inv .bi-gap { width: .6em; }
+html.bhgap.bhwinv body #scene-race .race-wipes .winv .band-inv { padding-right: 8px; }
 /* 🧪RB2（9/25 Naoto・②だけ・テストGAS接続時のみ）
    A＝帯の中の「別府 7R」ラベルは出さない。note予想の人だけ見出しに白い札「🔥note」（左の席＝名前の右／右の席＝名前の左） */
 .rb2 .bh-race { display: inline-block; margin: 0 6px; padding: 0 12px 2px; border-radius: 7px;

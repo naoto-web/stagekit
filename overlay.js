@@ -2242,7 +2242,7 @@
     }
     // §161 はみ出しの判定に「投資・回収の右端が右の余白（padding）の内側か」も足す＝scrollWidth は余白に食い込んだ分を数えない
     //（20px の余白へ7px食い込んでも縮まず、回収額が帯の右端にかかって見えた）。②ワイプの上の帯（.winv）は今のまま
-    var padIn = BHGAP && inv && !headEl.classList.contains("winv");
+    var padIn = BHGAP && inv && (BHWINV || !headEl.classList.contains("winv"));
     var over = function () {
       if (headEl.scrollWidth > headEl.clientWidth + 1) return true;
       if (!padIn) return false;
@@ -3214,6 +3214,9 @@
      入らない日は従来どおり fitBandHead が字を縮める（余白も込みで測る）。②ワイプの上の帯（.winv）は今のまま。&bhgap=0 で旧 */
   var BHGAP = params.get("bhgap") !== "0";
   if (BHGAP) document.documentElement.classList.add("bhgap");
+  // §163（10/19 Naoto「②の帯も投資額と回収が離れている」→「本番反映お願いします」）②ワイプの上の帯にも同じ詰め方＝既定ON・&bhwinv=0 で旧
+  var BHWINV = BHGAP && params.get("bhwinv") !== "0";
+  if (BHWINV) document.documentElement.classList.add("bhwinv");
   function setBandInv(el, text) {
     if (!el || el._biText === text) return;
     el._biText = text;
