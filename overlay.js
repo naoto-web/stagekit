@@ -3290,6 +3290,12 @@
     }).join("");
   }
   var PLATEN = params.get("platen") !== "0";
+  /* §164（10/19 Naoto「プラスの金文字にキラーン」→「本番反映お願いします」）金の回収額に白い光の帯が左→右へ横切る（CSS だけ・5秒に1回）。
+     既定ON・&plshine=0 で旧。&shinesec=＝くり返しの秒数（既定5） */
+  if (PLATEN && params.get("plshine") !== "0") {
+    document.documentElement.classList.add("plshine");
+    if (+params.get("shinesec") > 0) document.documentElement.style.setProperty("--shine-sec", (+params.get("shinesec")) + "s");
+  }
   if (params.get("zeroinv") === "0") window.DERIVE_ZEROINV_OFF = true; // §132 &zeroinv=0＝買目0点の投資も集計（旧）
   var platenSt = {}; // 配信者id → { refund, sInv, losing, armed }
   function headTotals(rid) {
