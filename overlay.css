@@ -998,6 +998,14 @@ html.bhgap.bhwinv body #scene-race .race-wipes .winv .band-inv { padding-right: 
 .race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;
   display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start;
   align-items: flex-start; gap: 8px 46px; padding: 12px 18px; overflow: hidden; }
+/* §166（10/19 Naoto）①トーク1場の帯（.talk-band .buy-line）
+   ②右の列が見切れる＝fitColBox がこの帯そのものを scale で縮めると、overflow:hidden の切り取り枠も一緒に縮み、右の列の端（倍率の末尾）が切れていた
+     （FB52 と同じ落とし穴・.race-col は対策済みで1場の帯だけ残っていた）→ 切り取らない（中身は fitColBox が帯の幅に収める）。&blclip=0 で旧
+   ①2列のとき左右の行がそろわない＝縦の折り返し（flex column wrap）は列ごとに積むだけ → 2列になったときだけ JS（blGrid）が表に組み替える：
+     左の列の行数は折り返しのときと同じ・同じ段の行は上端をそろえる（段の高さ＝その段の高い方）。&blgrid=0 で旧 */
+html.blclip .talk-band .buy-line { overflow: visible; }
+html.blgrid .talk-band .buy-line.bl-grid { display: grid; grid-auto-flow: column; grid-template-columns: max-content max-content;
+  justify-content: start; align-content: start; align-items: start; }
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0;
   display: flex; align-items: baseline; gap: 0 18px; } /* 合計/投資のパーツ間隔（旧全角スペース相当） */
 /* ①トークの合計・投資・メモは大きめに（8/6 FB・FB3でさらに拡大） */

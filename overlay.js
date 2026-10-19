@@ -2959,8 +2959,26 @@
   /** 1列ぶんの箱フィット（8/6 FB9→FB41で双方向化）：はみ出しは縮小（下限0.35）・余白は改行なしの
       まま拡大（上限1.6倍・レースラベルだけの空列は拡大しない）。子要素の実座標で測る
       （⚠️scrollWidth/Heightはflexであふれを報告しないことがある＝FB27/28実バグ） */
+  /* §166（10/19 Naoto）①トーク1場の帯＝2列になったときだけ表に組み替えて左右の行の上端をそろえる（CSS html.blgrid）。
+     いったん縦の折り返しに戻して2列になるか（右へ折り返す行があるか）を見て、なるなら左右に半分ずつ（左が多いか同じ）の段数の表にする
+     （⚠️「左の列に何個入るか」を段数にすると、数えた時点では倍率が右に並んで行が低く、その後 fitColBox が下の段へ回すと左に7行・右に2行と偏った）。
+     大きさの計算は今まで通り fitColBox。&blgrid=0 で旧 */
+  var BLGRID = params.get("blgrid") !== "0", BLCLIP = params.get("blclip") !== "0";
+  if (BLGRID) document.documentElement.classList.add("blgrid");
+  if (BLCLIP) document.documentElement.classList.add("blclip");
+  function blGrid(band) {
+    band.classList.remove("bl-grid"); band.style.gridTemplateRows = "";
+    var kids = band.children;
+    if (kids.length < 2) return;
+    var x0 = kids[0].offsetLeft, n1 = 0;
+    for (var i = 0; i < kids.length; i++) if (kids[i].offsetLeft <= x0 + 4) n1++; else break;
+    if (n1 >= kids.length) return; // 1列＝今まで通り
+    band.style.gridTemplateRows = "repeat(" + Math.ceil(kids.length / 2) + ", auto)";
+    band.classList.add("bl-grid");
+  }
   function fitColBox(col) {
     col.style.transform = "";
+    if (BLGRID && col.classList.contains("buy-line") && col.closest(".talk-band")) blGrid(col); // §166
     /* ①2〜3場の右下の合計欄（TMETA・.bm-total）＝CSSの margin-top:auto で区画の底へ寄せると、測った中身が常に
        区画の高さいっぱい＝拡大が一度も効かなかった（9/25夜 Naoto「川崎2Rの買目もっと大きくできそう」）。
        合計欄は倍率の計算から外して別に扱う：区画を拡大しても合計欄は元の大きさのまま（拡大すると合計欄の横幅が
