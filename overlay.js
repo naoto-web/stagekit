@@ -713,8 +713,8 @@
      ⚠️ヘッドレスEdgeでは AudioContext の時計が進まない＝音そのものはクロコ側で確かめられない（JSエラーの有無まで）。聞こえ方は Naoto の耳で */
   var CUSND = params.get("cusnd") !== "0";
   // 点滅の速さ＝10/18 Naoto「15回/秒に」（試聴の既定30から変更）。&curate= で試せる
-  // 音量＝10/18 Naoto がテストOBSで聞いて「大きい」→ 0.6 → 0.45 → 10/18夜「ちょっと大きい」→ 0.3 → 0.2 → 0.1。&cuvol= で試せる
-  var CU_VOL = +(params.get("cuvol") || 0.1), CU_PITCH = 700, CU_RATE = +(params.get("curate") || 15), CU_DUN_LEAD_MS = 400;
+  // 音量＝10/18 Naoto がテストOBSで聞いて「大きい」→ 0.6 → 0.45 → 10/18夜「ちょっと大きい」→ 0.3 → 0.2 → 0.1 → 10/19 §165 の音に変えて試聴ページで 0.3。&cuvol= で試せる
+  var CU_VOL = +(params.get("cuvol") || 0.3), CU_PITCH = 700, CU_RATE = +(params.get("curate") || 15), CU_DUN_LEAD_MS = 400;
   var cuMaster = null, cuManche = {}; // cuManche＝配信者ID→万車の的中を出した時刻（次のカウントアップを「大きい的中」の音にする）
   function cuCtx() {
     if (!CUSND || !audible()) return null;
@@ -748,6 +748,7 @@
   }
   function cuDun() { try { if (cuCtx()) cuBoom(audioCtx.currentTime + 0.01, 0.3); } catch (e) {} }
   function cuChime(big) { // 大判コイン「チャリーン」＋キラキラ（試聴 CHIMES.shine）
+    if (CUKATA) return cuTinrun(); // §165 ティンるんてぃんるん（万車も同じ）
     try {
       if (!cuCtx()) return;
       var t = audioCtx.currentTime + 0.01;
@@ -758,14 +759,67 @@
     } catch (e) {}
   }
   function cuPikon() { // プラ転「ピコーン」（試聴 PLATENS.pikon）
+    if (CUKATA) return; // §165 ピコーンは鳴らさない（10/19 Naoto）
     try {
       if (!cuCtx()) return;
       var t = audioCtx.currentTime + 0.01;
       cuTone(t, 1175, 0.06, "square", 0.07, 2349); cuTone(t + 0.06, 2349, 0.35, "sine", 0.12); cuTone(t + 0.06, 3520, 0.2, "sine", 0.04);
     } catch (e) {}
   }
+  /* ══ §165（10/19 Naoto）カウントアップの音を競輪場の払戻機に＝試聴.html の「K3＋最後は『ティンるんてぃんるん』」（モーターなし・ピコーンなし） ══
+     ・カウント中＝払戻機がお札を数える音（K3）＝Naoto の YouTube（shorts/33W-Jeqm9Es 10.9〜14.2秒）を数字で測った値：
+       1秒に28回（ゆらぎ±5%）・約0.22秒ごとの強弱（4.5回/秒）・粒＝帯域を絞った雑音（1.7〜2.1kHz 13ms＋2.4kHz の細い鳴り 16ms＋6.5kHz のシャー 8ms）。粒の大きさ CU_K3_GAIN＝2.5倍
+     ・止まった瞬間＝お札が戻る「ティンるんてぃんるん」＝YouTube（shorts/F6SASttfHT8 18.57秒〜）の測定値：高いド（1047＋2093Hz）とソ（784＋1568＋3136Hz）を約0.26秒おきに ド・ソ・ド・ソ（最後のソは0.6秒で消える）。万車も同じ
+     ・プラ転のピコーンは鳴らさない（見た目の金色・プラ転！は今のまま）。始まりのドゥン・数字のポンは今のまま。音量 CU_VOL＝0.3
+     ・&cukata=0 で §159 の音（とぅるるる＋チャリーン＋ピコーン）／&cuk3=＝粒の大きさ。元の音は使わない（数字をまねて合成） */
+  var CUKATA = params.get("cukata") !== "0";
+  var CU_K3_GAIN = +(params.get("cuk3") || 2.5);
+  var cuNoiseBuf = null;
+  function cuNoise() {
+    if (!cuNoiseBuf) {
+      cuNoiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+      var d = cuNoiseBuf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    var src = audioCtx.createBufferSource(); src.buffer = cuNoiseBuf; return src;
+  }
+  function cuBand(t, freq, q, dur, amp) { // 帯域を絞った雑音の短い1粒
+    var n = cuNoise(), f = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+    f.type = "bandpass"; f.frequency.value = freq; f.Q.value = q;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(amp, t + 0.0015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(f); f.connect(g); g.connect(cuMaster); n.start(t, Math.random()); n.stop(t + dur + 0.02);
+  }
+  function cuK3Grain(t) {
+    var ph = (t * 4.5) % 1, acc = 0.65 + 0.35 * Math.pow(Math.cos(ph * Math.PI * 2) * 0.5 + 0.5, 2);
+    var a = acc * (0.85 + Math.random() * 0.15) * CU_K3_GAIN;
+    cuBand(t, 1700 + Math.random() * 400, 1.6, 0.013, 0.36 * a);
+    cuBand(t, 2400, 9, 0.016, 0.22 * a);
+    cuBand(t + 0.001, 6500, 1.2, 0.008, 0.08 * a);
+  }
+  /** カタカタを鳴らし始める＝粒を AudioContext の時刻で0.08秒先まで予約し続ける（33msごと）。戻り値 { stop } か null */
+  function cuKataStart() {
+    try {
+      if (!cuCtx()) return null;
+      var c = audioCtx, nextT = c.currentTime + 0.01;
+      var fill = function () { var until = c.currentTime + 0.08; while (nextT < until) { cuK3Grain(nextT); nextT += (1 / 28) * (1 + (Math.random() * 2 - 1) * 0.05); } };
+      fill();
+      var timer = setInterval(function () { try { fill(); } catch (e) {} }, 33);
+      return { stop: function () { clearInterval(timer); } };
+    } catch (e) { return null; }
+  }
+  function cuTinrun() { // お札が戻る「ティンるんてぃんるん」（試聴 CHIMES.henkyaku）
+    try {
+      if (!cuCtx()) return;
+      var t = audioCtx.currentTime + 0.01;
+      var C = [[1047, 1], [2093, 0.8]], G = [[784, 1], [1568, 0.9], [3136, 0.45]];
+      [[0, C, 0.36, 0.11], [0.26, G, 0.36, 0.11], [0.52, C, 0.36, 0.12], [0.79, G, 0.6, 0.12]].forEach(function (n) {
+        n[1].forEach(function (pt) { cuTone(t + n[0], pt[0], n[2] / Math.sqrt(pt[0] / n[1][0][0]), "sine", n[3] * pt[1]); });
+      });
+    } catch (e) {}
+  }
   /** 「とぅるるる」を鳴らし始める＝700Hzの矩形波＋1オクターブ上のサイン波を、CU_RATE（15Hz）の矩形波で点滅させる。戻り値 { stop } か null */
   function cuLifeStart() {
+    if (CUKATA) return cuKataStart(); // §165 カタカタ
     try {
       if (!cuCtx()) return null;
       var c = audioCtx, t = c.currentTime;
