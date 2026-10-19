@@ -3856,18 +3856,18 @@ body.v2 .panel:not(.sub-panel), body.v2 .cam { border-width: 6px; }
           drop-shadow(0 0 5px rgba(255,220,80,.9));
 }
 /* §164（10/19 Naoto・既定ON＝html.plshine・&plshine=0 で旧）金の回収額にキラーン＝白い光の帯（2枚目の背景）を文字の形で切り抜いて左→右へ流す。
-   帯は背景の 250% 幅の真ん中＝位置 110%（左の外）→ -10%（右の外）。周期の 76〜92%（5秒なら約0.8秒）だけ動き、残りは外で待つ。
+   帯は背景の 250% 幅の真ん中＝位置 110%（左の外）→ -10%（右の外）。周期の 80〜98.75%（8秒なら1.5秒＝10/19 Naoto・旧＝5秒の76〜92%で約0.8秒）だけ動き、残りは外で待つ。
    金のグラデ（1枚目）と黒フチ・光（filter）は今のまま。&shinesec= で周期 */
 html.plshine .pl-gold {
   background-image: linear-gradient(105deg, rgba(255,255,255,0) 42%, rgba(255,255,255,.95) 50%, rgba(255,255,255,0) 58%),
                     linear-gradient(180deg, #fff7c8 0%, #ffd54f 45%, #e3a600 100%);
   background-size: 250% 100%, 100% 100%; background-repeat: no-repeat;
   background-position: 110% 0, 0 0;
-  animation: plShine var(--shine-sec, 5s) linear infinite;
+  animation: plShine var(--shine-sec, 8s) linear infinite;
 }
 @keyframes plShine {
-  0%, 76% { background-position: 110% 0, 0 0; }
-  92%, 100% { background-position: -10% 0, 0 0; }
+  0%, 80% { background-position: 110% 0, 0 0; }
+  98.75%, 100% { background-position: -10% 0, 0 0; }
 }
 .band-head.pl-flash { position: relative; }
 .band-head.pl-flash::after {

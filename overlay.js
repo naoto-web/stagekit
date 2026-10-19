@@ -3290,8 +3290,8 @@
     }).join("");
   }
   var PLATEN = params.get("platen") !== "0";
-  /* §164（10/19 Naoto「プラスの金文字にキラーン」→「本番反映お願いします」）金の回収額に白い光の帯が左→右へ横切る（CSS だけ・5秒に1回）。
-     既定ON・&plshine=0 で旧。&shinesec=＝くり返しの秒数（既定5） */
+  /* §164（10/19 Naoto「プラスの金文字にキラーン」→「本番反映お願いします」）金の回収額に白い光の帯が左→右へ横切る（CSS だけ・8秒に1回・約1.5秒＝10/19 Naoto「8秒に1回・1.5秒」・旧5秒に1回0.8秒）。
+     既定ON・&plshine=0 で旧。&shinesec=＝くり返しの秒数（既定8・横切る時間は周期の約19%） */
   if (PLATEN && params.get("plshine") !== "0") {
     document.documentElement.classList.add("plshine");
     if (+params.get("shinesec") > 0) document.documentElement.style.setProperty("--shine-sec", (+params.get("shinesec")) + "s");
