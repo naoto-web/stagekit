@@ -774,6 +774,9 @@
      ・&cukata=0 で §159 の音（とぅるるる＋チャリーン＋ピコーン）／&cuk3=＝粒の大きさ。元の音は使わない（数字をまねて合成） */
   var CUKATA = params.get("cukata") !== "0";
   var CU_K3_GAIN = +(params.get("cuk3") || 2.5);
+  // §165改（10/19 Naoto「カタカタ→ティンるんの間に一拍置きたい」→ 試聴で0.4秒／「ポンを音に合わせて2回」）
+  //   最後の粒が鳴り終わってから CU_TIN_GAP 秒あけて「ティンるんてぃんるん」・ポンはティン（0秒）とてぃん（0.52秒）の頭。&cugap=秒・&cubump2=0 で1回
+  var CU_TIN_GAP = params.get("cugap") === null ? 0.4 : (+params.get("cugap") || 0), CU_BUMP2 = params.get("cubump2") !== "0";
   var cuNoiseBuf = null;
   function cuNoise() {
     if (!cuNoiseBuf) {
@@ -804,13 +807,13 @@
       var fill = function () { var until = c.currentTime + 0.08; while (nextT < until) { cuK3Grain(nextT); nextT += (1 / 28) * (1 + (Math.random() * 2 - 1) * 0.05); } };
       fill();
       var timer = setInterval(function () { try { fill(); } catch (e) {} }, 33);
-      return { stop: function () { clearInterval(timer); } };
+      return { stop: function () { clearInterval(timer); return nextT - 1 / 28 + 0.02; } }; // §165改 最後の粒の鳴り終わり
     } catch (e) { return null; }
   }
-  function cuTinrun() { // お札が戻る「ティンるんてぃんるん」（試聴 CHIMES.henkyaku）
+  function cuTinrun(at) { // お札が戻る「ティンるんてぃんるん」（試聴 CHIMES.henkyaku）。at＝鳴らし始める AudioContext の時刻（省略＝今）
     try {
       if (!cuCtx()) return;
-      var t = audioCtx.currentTime + 0.01;
+      var t = Math.max(audioCtx.currentTime + 0.01, at || 0);
       var C = [[1047, 1], [2093, 0.8]], G = [[784, 1], [1568, 0.9], [3136, 0.45]];
       [[0, C, 0.36, 0.11], [0.26, G, 0.36, 0.11], [0.52, C, 0.36, 0.12], [0.79, G, 0.6, 0.12]].forEach(function (n) {
         n[1].forEach(function (pt) { cuTone(t + n[0], pt[0], n[2] / Math.sqrt(pt[0] / n[1][0][0]), "sine", n[3] * pt[1]); });
@@ -3674,13 +3677,21 @@
       if (p < 1) { setTimeout(step, 33); return; }
       if (cuOn && !cuEnded) { // §159 止まった瞬間＝「とぅるるる」をピタッと止めて「チャリーン」＋回収額をポン
         cuEnded = true;
-        if (cuLp) cuLp.stop();
+        var cuEndT = cuLp ? cuLp.stop() : null;
         cuLp = null;
-        cuChime(cuBig);
-        refpopBandInvs(rid).forEach(function (el) {
-          var vs = el.querySelectorAll(".bi-v"), v = vs[vs.length - 1]; // 最後の金額＝回収
-          if (v) { v.classList.remove("cu-bump"); void v.offsetWidth; v.classList.add("cu-bump"); }
-        });
+        var cuBump = function () {
+          refpopBandInvs(rid).forEach(function (el) {
+            var vs = el.querySelectorAll(".bi-v"), v = vs[vs.length - 1]; // 最後の金額＝回収
+            if (v) { v.classList.remove("cu-bump"); void v.offsetWidth; v.classList.add("cu-bump"); }
+          });
+        };
+        if (CUKATA) { // §165改 最後の粒の鳴り終わり＋一拍で「ティンるんてぃんるん」・ポンは音に合わせて（2回）
+          var cuAt = (audioCtx && cuEndT ? Math.max(cuEndT, audioCtx.currentTime) : (audioCtx ? audioCtx.currentTime : 0)) + CU_TIN_GAP;
+          var cuWait = audioCtx ? Math.max(0, (cuAt - audioCtx.currentTime) * 1000) : CU_TIN_GAP * 1000;
+          cuTinrun(cuAt);
+          setTimeout(cuBump, cuWait);
+          if (CU_BUMP2) setTimeout(cuBump, cuWait + 520);
+        } else { cuChime(cuBig); cuBump(); }
       }
       a.shown = to; a.running = false;
       if (a.target !== null && (REFIX ? a.target !== a.shown : a.target > a.shown)) { a.waiting = true; refpopWait(rid); } // カウント中にさらに増えた（REFIX＝確定し直しで減った時も）
