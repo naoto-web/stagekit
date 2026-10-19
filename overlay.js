@@ -3365,6 +3365,10 @@
     }).join("");
   }
   var PLATEN = params.get("platen") !== "0";
+  /* §164改2（10/19）ポン（.cu-bump＝cuBump 0.45秒）が終わったら印を外す＝付けたままだと金の回収額の animation が cuBump で上書きされ、
+     キラーン（plShine）が次に回収額が変わるまで止まっていた（最初のカウントアップの後はずっと出ていなかった）。
+     animationend は待たない＝画面に出ていない帯（①②③のほか）は動きが始まらず合図が来ない。0.6秒後に必ず外す（2回目のポンが来たら数え直し） */
+  function cuBumpOff(v) { clearTimeout(v._cuBumpT); v._cuBumpT = setTimeout(function () { v.classList.remove("cu-bump"); }, 600); }
   /* §164（10/19 Naoto「プラスの金文字にキラーン」→「本番反映お願いします」）金の回収額に白い光の帯が左→右へ横切る（CSS だけ・8秒に1回・約1.5秒＝10/19 Naoto「8秒に1回・1.5秒」・旧5秒に1回0.8秒）。
      既定ON・&plshine=0 で旧。&shinesec=＝くり返しの秒数（既定8・横切る時間は周期の約19%） */
   if (PLATEN && params.get("plshine") !== "0") {
@@ -3700,7 +3704,7 @@
         var cuBump = function () {
           refpopBandInvs(rid).forEach(function (el) {
             var vs = el.querySelectorAll(".bi-v"), v = vs[vs.length - 1]; // 最後の金額＝回収
-            if (v) { v.classList.remove("cu-bump"); void v.offsetWidth; v.classList.add("cu-bump"); }
+            if (v) { v.classList.remove("cu-bump"); void v.offsetWidth; v.classList.add("cu-bump"); cuBumpOff(v); }
           });
         };
         if (CUKATA) { // §165改 最後の粒の鳴り終わり＋一拍で「ティンるんてぃんるん」・ポンは音に合わせて（2回）
