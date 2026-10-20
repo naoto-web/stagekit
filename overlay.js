@@ -3112,6 +3112,8 @@
       // ⚠️1場表示は帯そのものにscaleを掛ける（下のelse）＝2〜3場へ切り替えた時に帯の拡大が残留し、
       // 中身全体が1.6倍で描かれ右列が見切れる実バグ（8/7 FB61・えーすnote＋和歌山で実発生）→必ず解除
       scope.style.transform = "";
+      // 🐞§166改（10/20 Naoto「2場で投資額・合計が出ていない」）1場で付けた表（.bl-grid）が2〜3場に切り替わっても残り、区画の並びが崩れて合計欄が帯の外へ出ていた→必ず外す
+      scope.classList.remove("bl-grid"); scope.style.gridTemplateRows = "";
       for (var i = 0; i < cols.length; i++) fitColBox(cols[i]);
     } else {
       fitColBox(scope); // 1場表示＝帯そのものを1つの箱として扱う
