@@ -1005,7 +1005,8 @@ html.bhgap.bhwinv body #scene-race .race-wipes .winv .band-inv { padding-right: 
      左の列の行数は折り返しのときと同じ・同じ段の行は上端をそろえる（段の高さ＝その段の高い方）。&blgrid=0 で旧 */
 html.blclip .talk-band .buy-line { overflow: visible; }
 html.blgrid .talk-band .buy-line.bl-grid { display: grid; grid-auto-flow: column; grid-template-columns: max-content max-content;
-  justify-content: start; align-content: start; align-items: start; }
+  justify-content: start; align-content: start; align-items: start;
+  justify-items: start; } /* 🐞10/20 Naoto「俺たち目の枠が伸びちゃってる」＝表のマスは既定で横いっぱい（stretch）＝札・俺たち目の枠が列の幅まで伸びていた→左寄せ */
 .buy-meta { font-size: 14px; color: var(--sub); font-weight: 700; letter-spacing: 0;
   display: flex; align-items: baseline; gap: 0 18px; } /* 合計/投資のパーツ間隔（旧全角スペース相当） */
 /* ①トークの合計・投資・メモは大きめに（8/6 FB・FB3でさらに拡大） */

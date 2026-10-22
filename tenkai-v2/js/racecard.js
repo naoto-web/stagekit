@@ -74,11 +74,17 @@ var RaceCard = (function () {
   /** 「山出 裕幸」→「山出」。
       keirin.jp の senName は姓名が半角スペース区切りで返ってくる（実データで確認済み）。
       万一区切りが無い場合だけ、日本人の姓で最も多い2文字で切る */
+  /* §167（10/22 Naoto「八日市屋さんが並びでフルネーム」）keirin.jp の名前は「姓 名」で6文字まで＝姓名あわせて6文字の選手は空白が入らない。
+     旧＝区切りが無いと先頭2文字（「八日」「大瀬」になっていた）→ 対応表（直近12か月の全選手で該当は2人だけ）・カタカナ1語（外国籍）はそのまま */
+  var SURNAME_FIX = { '八日市屋浩之': '八日市屋', '大瀬戸潤一郎': '大瀬戸' };
   function surname(full) {
     var s = String(full == null ? '' : full).replace(/[\s　]+/g, ' ').trim();
     if (!s) return '';
+    var fix = SURNAME_FIX[s.replace(/ /g, '')];
+    if (fix) return fix;
     var parts = s.split(' ');
-    return parts.length > 1 ? parts[0] : s.slice(0, 2);
+    if (parts.length > 1) return parts[0];
+    return /^[ァ-ヶー・]+$/.test(s) ? s : s.slice(0, 2);
   }
 
   function venues() {

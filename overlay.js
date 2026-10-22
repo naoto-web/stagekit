@@ -4864,9 +4864,13 @@
     });
     return out;
   }
-  /** 車番→苗字（②中央ライン用）＝フルネームの最初の空白まで */
+  /** 車番→苗字（②中央ライン用）＝フルネームの最初の空白まで。
+      🐞§167（10/22 Naoto「八日市屋さんが並びでフルネーム」）keirin.jp の名前は「姓 名」で6文字まで＝姓名あわせて6文字の選手は空白が入らない。
+      直近12か月の全選手（選手DB 1,881人）で該当は2人だけ＝対応表で苗字にする（カタカナ1語の外国籍選手はそのままで正しい） */
+  var SURNAME_FIX = { "八日市屋浩之": "八日市屋", "大瀬戸潤一郎": "大瀬戸" };
   function surnameOf(vName, rNo, no) {
-    return fullNameOf(vName, rNo, no).split(/[\s　]+/)[0];
+    var f = fullNameOf(vName, rNo, no);
+    return SURNAME_FIX[f.replace(/[\s　]+/g, "")] || f.split(/[\s　]+/)[0];
   }
   /* §136（10/16 Naoto）欠車は並び（①出走表の下・②レース観戦の中央）の車番も出走表と同じ灰色。&nbabs=0 で旧 */
   var NBABS = params.get("nbabs") !== "0";

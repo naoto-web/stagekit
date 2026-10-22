@@ -95,9 +95,12 @@ function carChip(no) {
   return e;
 }
 
-/** 苗字だけ（表示が長くなるところ用） */
+/** 苗字だけ（表示が長くなるところ用）。
+    §167（10/22）keirin.jp の名前は「姓 名」で6文字まで＝姓名あわせて6文字の選手は空白が入らない＝対応表で苗字に（overlay.js の SURNAME_FIX と同じ） */
+var SURNAME_FIX = { '八日市屋浩之': '八日市屋', '大瀬戸潤一郎': '大瀬戸' };
 function surname(name) {
-  return String(name || '').split(/[\s　]+/)[0] || '';
+  var s = String(name || '');
+  return SURNAME_FIX[s.replace(/[\s　]+/g, '')] || s.split(/[\s　]+/)[0] || '';
 }
 
 function roleLabel(key) {
