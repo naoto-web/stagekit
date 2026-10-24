@@ -759,7 +759,7 @@
     } catch (e) {}
   }
   function cuPikon() { // プラ転「ピコーン」（試聴 PLATENS.pikon）
-    if (CUKATA) return; // §165 ピコーンは鳴らさない（10/19 Naoto）
+    if (CUKATA || CUDREAM) return; // §165 ピコーンは鳴らさない（10/19 Naoto）・§169 も同じ
     try {
       if (!cuCtx()) return;
       var t = audioCtx.currentTime + 0.01;
@@ -820,8 +820,66 @@
       });
     } catch (e) {}
   }
+  /* ══ §169（10/24 Naoto）カウントアップの音を「ブルル→ブシューン＋ベル＋コイン」に＝試聴.html の案M1＋決定音B6 ══
+     ・きっかけ＝視聴者「§165 のカタカタが虫が飛んでるみたい」。Naoto 指定の動画（pSiukQrmHWM・30〜35秒）を数字で測った値：
+       カウント中＝200Hz の正弦（高さ一定）を1秒に13.4回の正弦で強弱（いちばん弱いところで約1割＝ゲイン 0.555±0.445）。元の音は使わない
+     ・止まった瞬間（間0秒）＝ブシューン（低い音が160→45Hz に下がる「ブ」＋雑音の帯域が7k→1.2kHz へ流れる「シュー」0.45秒・強さ0.7）
+       ＋ベル（1936Hz＋1952Hz のうなり＋7742Hz＋3871Hz＋661Hz・約1.3秒）＋コイン（cuCoinRing 2637Hz）。決定音だけ0.7倍
+     ・万車（大きい的中）＝シューが1.3倍長く・ベルとコインの余韻が長い。数字のポンは1回＝決定音の頭から 0.05秒＋PCの音の出遅れ（outputLatency）だけ遅らせる
+     ・始まりのドゥン（カウント0.4秒前）は今のまま・プラ転のピコーンは鳴らさない。&cudream=0 で §165（カタカタ＋ティンるん）
+     ・&cubrr=倍（ブルルの大きさ）／&cudvol=倍（決定音の大きさ）／&cubumpdly=秒（ポンの遅れ） */
+  var CUDREAM = params.get("cudream") !== "0";
+  var CU_BRR_GAIN = +(params.get("cubrr") || 1), CU_DECIDE_VOL = +(params.get("cudvol") || 0.7); // 10/24 試聴1.5倍→今の本番より約12dB大きい（測定）→ Naoto 0.7倍（約6dB大きい程度）
+  var CU_BUMP_DLY = params.get("cubumpdly") === null ? 0.05 : (+params.get("cubumpdly") || 0); // 10/24 Naoto 0.3→0.05秒
+  /** ブルルを鳴らし始める。戻り値 { stop }（stop の返り値＝鳴り終わりの AudioContext 時刻）か null */
+  function cuBrrStart() {
+    try {
+      if (!cuCtx()) return null;
+      var c = audioCtx, t = c.currentTime, peak = 0.22 * CU_BRR_GAIN;
+      var o = c.createOscillator(), am = c.createGain(), vol = c.createGain(), lfo = c.createOscillator(), lfoAmp = c.createGain(), off = c.createConstantSource();
+      o.frequency.value = 200; lfo.frequency.value = 13.4; lfoAmp.gain.value = 0.445; off.offset.value = 0.555; am.gain.value = 0;
+      lfo.connect(lfoAmp); lfoAmp.connect(am.gain); off.connect(am.gain); o.connect(am); am.connect(vol); vol.connect(cuMaster);
+      vol.gain.setValueAtTime(0.0001, t); vol.gain.exponentialRampToValueAtTime(peak, t + 0.02);
+      [o, lfo, off].forEach(function (n) { n.start(t); });
+      return { stop: function () {
+        try {
+          var s = c.currentTime; vol.gain.cancelScheduledValues(s); vol.gain.setValueAtTime(peak, s); vol.gain.exponentialRampToValueAtTime(0.0001, s + 0.04);
+          [o, lfo, off].forEach(function (n) { n.stop(s + 0.06); });
+          return s;
+        } catch (e) { return null; }
+      } };
+    } catch (e) { return null; }
+  }
+  function cuBushu(t, big, amp, len) { // 「ブ」＋「シュー」
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.25);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.55 * amp, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    o.connect(g); g.connect(cuMaster); o.start(t); o.stop(t + 0.4);
+    var L = len * (big ? 1.3 : 1), n = cuNoise(), f = audioCtx.createBiquadFilter(), ng = audioCtx.createGain();
+    f.type = "bandpass"; f.Q.value = 1.2; f.frequency.setValueAtTime(7000, t); f.frequency.exponentialRampToValueAtTime(1200, t + L);
+    ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.45 * amp, t + 0.015); ng.gain.exponentialRampToValueAtTime(0.12 * amp, t + L * 0.5); ng.gain.exponentialRampToValueAtTime(0.0001, t + L);
+    n.connect(f); f.connect(ng); ng.connect(cuMaster); n.start(t, Math.random()); n.stop(t + L + 0.02);
+  }
+  function cuDreamBell(t, big) { // ベル（試聴 mBell）
+    var L = big ? 1.8 : 1.3;
+    [[1936, 0.16, L], [1952, 0.1, L], [7742, 0.034, L * 0.45], [3871, 0.006, L * 0.5], [661, 0.055, L * 0.45]].forEach(function (p) {
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = p[0];
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(p[1], t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + p[2]);
+      o.connect(g); g.connect(cuMaster); o.start(t); o.stop(t + p[2] + 0.05);
+    });
+  }
+  /** 決定音（試聴 DECIDE.B6）。at＝鳴らし始める AudioContext の時刻。決定音だけ CU_DECIDE_VOL 倍（つなぐ間だけ cuMaster を差し替える） */
+  function cuDecide(at, big) {
+    try {
+      if (!cuCtx()) return;
+      var t = Math.max(audioCtx.currentTime + 0.01, at || 0), real = cuMaster, g = audioCtx.createGain();
+      g.gain.value = CU_DECIDE_VOL; g.connect(real); cuMaster = g;
+      try { cuBushu(t, big, 0.7, 0.45); cuDreamBell(t + 0.04, big); cuCoinRing(t + 0.06, 2637, big ? 1.8 : 1.4, 1.5); } finally { cuMaster = real; }
+    } catch (e) {}
+  }
   /** 「とぅるるる」を鳴らし始める＝700Hzの矩形波＋1オクターブ上のサイン波を、CU_RATE（15Hz）の矩形波で点滅させる。戻り値 { stop } か null */
   function cuLifeStart() {
+    if (CUDREAM) return cuBrrStart(); // §169 ブルル
     if (CUKATA) return cuKataStart(); // §165 カタカタ
     try {
       if (!cuCtx()) return null;
@@ -3709,7 +3767,12 @@
             if (v) { v.classList.remove("cu-bump"); void v.offsetWidth; v.classList.add("cu-bump"); cuBumpOff(v); }
           });
         };
-        if (CUKATA) { // §165改 最後の粒の鳴り終わり＋一拍で「ティンるんてぃんるん」・ポンは音に合わせて（2回）
+        if (CUDREAM) { // §169 ブルルが止まった瞬間（間0秒）に決定音・ポンは1回＝決定音の頭＋0.05秒＋PCの音の出遅れ
+          var cdAt = audioCtx ? Math.max(cuEndT || 0, audioCtx.currentTime) : 0;
+          cuDecide(cdAt, cuBig);
+          var cdLat = audioCtx ? (audioCtx.outputLatency || audioCtx.baseLatency || 0) : 0;
+          setTimeout(cuBump, (audioCtx ? Math.max(0, cdAt - audioCtx.currentTime) : 0) * 1000 + (cdLat + CU_BUMP_DLY) * 1000);
+        } else if (CUKATA) { // §165改 最後の粒の鳴り終わり＋一拍で「ティンるんてぃんるん」・ポンは音に合わせて（2回）
           var cuAt = (audioCtx && cuEndT ? Math.max(cuEndT, audioCtx.currentTime) : (audioCtx ? audioCtx.currentTime : 0)) + CU_TIN_GAP;
           var cuWait = audioCtx ? Math.max(0, (cuAt - audioCtx.currentTime) * 1000) : CU_TIN_GAP * 1000;
           cuTinrun(cuAt);
