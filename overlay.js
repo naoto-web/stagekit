@@ -5182,6 +5182,14 @@
      金文字＋光の帯＋前後に✨がまたたく（B案）。noteの万車は文字は赤のまま✨だけ付く。&ticknote=0で旧 */
   var TICKNOTE = params.get("ticknote") !== "0";
   if (TICKNOTE) document.documentElement.classList.add("ticknote");
+  /* §168（10/24 Naoto・視聴者「色盲なせいか的中の金文字が見えにくい」）note的中の金文字の見え方。
+     既定＝3（E案ノーマル＝黒文字＋後ろに長方形の金の板と光）／&tnaura=0 で旧の金文字／1・2＝D案（文字のフチに金のオーラ・ノーマル／強め）／4＝E案強め */
+  var TNAURA = params.get("tnaura") || "3";
+  // &tnaura=3（ノーマル）／=4（強め）＝E案＝文字は黒のまま・後ろに長方形の金の板＋光
+  if (/^[1-4]$/.test(TNAURA || "")) document.documentElement.classList.add("tnaura");
+  if (TNAURA === "2") document.documentElement.classList.add("tnaura2");
+  if (TNAURA === "3" || TNAURA === "4") document.documentElement.classList.add("tnbox");
+  if (TNAURA === "4") document.documentElement.classList.add("tnbox2");
   /** 演出が一段落する時刻＝バッジ＋ピコーン（0.5s後に出て4s後からカウント3s）／プラ転・節目・最高額（popUntil）／ピコーンの実行中 */
   function fxQuietAt() {
     var t = (window.__fxBadgeAt || 0) + REFPOP_AFTER_BADGE_MS + REFPOP_POP_LEAD_MS + REFPOP_COUNT_MS + 500;

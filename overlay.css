@@ -3576,6 +3576,44 @@ html.ticknote .tick-note::before, html.ticknote .tick-note::after {
   content: "✨"; display: inline-block; font-size: .8em; margin: 0 4px; animation: tnTwinkle 2.2s ease-in-out infinite; }
 html.ticknote .tick-note::after { animation-delay: 1.1s; }
 @keyframes tnTwinkle { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+/* §168（10/24 Naoto・視聴者「色盲なせいか的中の金文字が見えにくい」）D案＝文字は黒（黒テーマは白）＋まわりに金のオーラ。
+   光の帯の代わりにオーラが4秒に1回ふわっと明るくなる。&tnaura=1（ノーマル）／&tnaura=2（強め）。✅採用は下の E案ノーマル（既定）・&tnaura=0 で旧の金文字。
+   比較＝モック/的中速報_金文字_黒フチ/ */
+html.ticknote.tnaura .tick-note .tn-t,
+html.ticknote.tnaura body[data-theme="w"] .tick-note .tn-t {
+  background: none; color: #fff; filter: none;
+  animation: tnAura 4s ease-in-out infinite;
+}
+html.ticknote.tnaura body[data-theme="w"] .tick-note .tn-t { color: #16202e; }
+html.ticknote.tnaura.tnaura2 .tick-note .tn-t,
+html.ticknote.tnaura.tnaura2 body[data-theme="w"] .tick-note .tn-t { animation-name: tnAura2; }
+@keyframes tnAura {
+  0%, 55%, 95%, 100% { text-shadow: 0 0 4px #ffc400, 0 0 8px #ffc400, 0 0 14px rgba(255,180,0,.85), 0 0 0 rgba(255,210,60,0), 0 0 0 rgba(255,210,60,0); }
+  75% { text-shadow: 0 0 5px #ffd54f, 0 0 10px #ffc400, 0 0 20px rgba(255,190,0,1), 0 0 30px rgba(255,210,60,.8), 0 0 0 rgba(255,210,60,0); }
+}
+/* E案（10/24 Naoto「文字のフチでなく長方形のエリアで金色のオーラ」）＝文字は黒のまま・文字の後ろに角丸の金の板＋外へ金の光。
+   &tnaura=3（ノーマル）／&tnaura=4（強め）。板は中の span（🎯〜的中）に付ける＝外の .tick-note の大小（万車）・光る帯（tick-new）・✨とぶつからない */
+html.ticknote.tnaura.tnbox .tick-note .tn-t,
+html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note .tn-t { text-shadow: none; animation: none; }
+html.ticknote.tnaura.tnbox .tick-note > span {
+  display: inline-block; padding: 1px 10px; border-radius: 10px;
+  background: rgba(255, 196, 0, .28); animation: tnBox 4s ease-in-out infinite;
+}
+html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note > span { background: rgba(255, 205, 40, .55); }
+html.ticknote.tnaura.tnbox.tnbox2 .tick-note > span { animation-name: tnBox2; }
+html.ticknote.tnaura.tnbox.tnbox2 body[data-theme="w"] .tick-note > span { background: rgba(255, 196, 0, .75); }
+@keyframes tnBox {
+  0%, 55%, 95%, 100% { box-shadow: 0 0 8px 2px rgba(255, 190, 0, .65); }
+  75% { box-shadow: 0 0 16px 6px rgba(255, 200, 30, .95); }
+}
+@keyframes tnBox2 {
+  0%, 55%, 95%, 100% { box-shadow: 0 0 12px 4px rgba(255, 180, 0, .85); }
+  75% { box-shadow: 0 0 24px 10px rgba(255, 195, 20, 1); }
+}
+@keyframes tnAura2 {
+  0%, 55%, 95%, 100% { text-shadow: 0 0 3px #ffb300, 0 0 6px #ffb300, 0 0 10px #ffb300, 0 0 18px rgba(255,170,0,.9), 0 0 26px rgba(255,200,40,.7); }
+  75% { text-shadow: 0 0 4px #ffc400, 0 0 8px #ffb300, 0 0 14px #ffb300, 0 0 26px rgba(255,180,0,1), 0 0 40px rgba(255,210,60,.9); }
+}
 /* §144（10/16 Naoto）的中速報の場Rの右にグレードの札・ガールズの♥（.grade-badge をそのまま＝字の.72em）。札の後ろは半角ぶん空ける */
 .tick-item .grade-badge { margin-left: 6px; margin-right: 2px; }
 .tick-item .grade-badge + .grade-badge.girls { margin-left: 3px; }
