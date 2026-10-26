@@ -3614,6 +3614,9 @@
   }
   setInterval(refreshBandInvs, 2000);
   function refundHeaderText(rc, bt) {
+    /* 10/26 Naoto「強制更新で回収額が0からカウントアップし直して音も鳴った」＝起動直後の1回目の描画は既定の state（しょーた・ピーター着席・回収0）で走る
+       → その0をカウントアップの起点（refAnim）・プラ転・最高額の記憶にしていた。本物の state を一度受け取るまでは何も覚えない */
+    if (rc && !stateApplied) return "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
     if (rc) { bt = headTotals(rc.id); platenCheck(rc.id, bt); recCheck(); refixDetect(rc); }
     var normal = "投資 " + fmtYen(bt.invest) + "　回収 " + (bt.pending ? "集計中" : fmtYen(bt.refund));
     if (!REFPOP || !rc) return normal;
@@ -8517,7 +8520,7 @@
      ・数が増えた瞬間＝ポン（.up）／途切れた瞬間＝A 砕ける・B 灰色→しぼむ・C 落ちる をランダム（.outA/B/C・約1.5秒で片付け）。
        途切れた＝前回まで2以上で見えていて、同じ人のまま2未満になった。的中バッジで隠す・配信者が変わった ときは消え方を付けない */
   var STKCHIP = params.get("stkchip") !== "0";
-  var STKHIDE = params.has("stkhide") ? +params.get("stkhide") || 0 : 7;
+  var STKHIDE = params.has("stkhide") ? +params.get("stkhide") || 0 : 5.5;
   // 10/26 Naoto「右下だと顔に被りそう」＝札はワイプの右上の角（&stkpos=br で旧の右下）
   if (params.get("stkpos") !== "br") document.body.classList.add("stk-tr");
   function currentStreakOf(pid) {
@@ -8749,6 +8752,8 @@
      ・巻き戻り2000以上だけはバックエンド初期化とみなして受け入れる
        （revの進みは1日600前後＝遅延応答がそこまで古いことはあり得ない） */
   var maxSeenRev = 0;
+  // 本物の state を一度でも受け取ったか（起動直後の既定 state での描画を演出の記憶に使わない・10/26）
+  var stateApplied = false;
   /* 🧪§96（9/29 Naoto「テスト用OBSだけにはリセットボタンほしい」）コンソールの「🧪テストをリセット」が state.testResetAt を新しくする
      → テスト接続（IS_TEST_BACKEND）のOBSだけ「演出の記憶」を捨てる＝同じ結果を入れ直しても演出が最初から出る。本番のOBSは何もしない。
      捨てるもの＝出した演出（firedFx・sessionStorage 分も）／既知の的中（seenHits）／回収カウントアップ（refAnim）／
@@ -8802,6 +8807,7 @@
     dateResetCheck(state); // §128 日付が進んだら演出の記憶を捨てる（前日の「マイナス中」でプラ転が出ないように）
     syncPath = path;
     lastSyncAt = new Date();
+    stateApplied = true;
     renderAll();
     followBadges(); // §157 席替えでバッジを新しい席へ
     checkNewHits();
