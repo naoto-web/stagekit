@@ -173,16 +173,30 @@
     saveRetries: 0,   // やり直した回数（診断表示用）
 
     /* ---------- オーバーレイ用ポーリング ---------- */
+    /* 🆕10/27 返事待ちの見張り（10/20〜22 本番GASが遅い＝state 最大49秒の対策・保険）。
+       旧＝前の返事を待たずに5秒ごとに送る＝GASが遅いと1枚で何本も重なり、GASの同時実行の上限に詰まってさらに遅くなる（雪だるま）。
+       新＝返事が来るまで次を送らない（60秒来なければ見切って送る）／返事にかかった時間が間隔より長いときは、その時間だけ空けてから次。
+       ふだん（約1秒）は旧と同じ5秒ごと。?pollguard=0 で旧 */
     startPolling: function (onState, onError) {
       var self = this;
+      var guard = new URLSearchParams(location.search).get("pollguard") !== "0";
+      var busyAt = 0, nextAt = 0;
       var tick = function () {
+        var now = Date.now();
+        if (guard && ((busyAt && now - busyAt < 60000) || now < nextAt)) return;
+        var mine = busyAt = now;
         self.fetchState().then(function (state) {
           if (state && state.rev !== self.lastRev) {
             self.lastRev = state.rev;
             onState(state, "poll");
           }
           if (onError) onError(null);
-        }).catch(function (e) { if (onError) onError(e); });
+        }).catch(function (e) { if (onError) onError(e); }).then(function () {
+          if (busyAt !== mine) return; // 見切った後に届いた古い返事
+          busyAt = 0;
+          var took = Date.now() - mine;
+          if (took > (cfg.POLL_MS || 5000)) nextAt = Date.now() + took;
+        });
       };
       tick();
       return setInterval(tick, cfg.POLL_MS || 5000);

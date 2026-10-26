@@ -1702,7 +1702,11 @@
   var oddsData = {}, oddsWant = {}, oddsPending = {}, oddsDate = "", oddsKick = null, oddsSeq = 0;
   /* 取得中の印＝送った時刻。20秒たっても返事が無ければ取得中とみなさない（9/26 岸和田7R＝②に切り替わってから
      ずっと倍率が出なかった。fetch には時間切れが無い＝返事の来ない1本が残ると、その印のせいで二度と取りに行かなかった） */
-  var ODDS_PENDING_MS = 20000;
+  /* 🆕10/27 保険（10/20〜22 本番GASが遅い＝odds 10〜63秒）＝20秒で送り直すと遅い返事を待つ間に注文が重なる（雪だるま）→60秒。
+     返事に10秒より長くかかったら、その時間だけ次の取得を空ける（oddsSlowUntil）。&pollguard=0 で旧（20秒・空けない） */
+  var POLLGUARD = params.get("pollguard") !== "0";
+  var ODDS_PENDING_MS = POLLGUARD ? 60000 : 20000;
+  var oddsSlowUntil = 0;
   function oddsBusy(k, now) { return !!oddsPending[k] && now - oddsPending[k] < ODDS_PENDING_MS; }
   function oddsHtml(k, l, small) {
     if (!ODDS || !k || l.type !== "3連単" || !l.combos || !l.combos.length) return "";
@@ -2203,6 +2207,7 @@
     // 時刻表（場名→場コード）がまだ無い＝起動直後。空振りで30秒待たせない（9/25 Naoto「OBSだけ出るのが遅い」の原因）。
     // 時刻表が届いた時点でも loadTimetable から呼ぶ
     if (!timetable) return;
+    if (POLLGUARD && Date.now() < oddsSlowUntil) return; // 🆕10/27 GASが遅い間は間を空ける
     // 🐞9/27「②に切り替えても倍率が出ない」の真因＝ここで oddsWant まで消していた。読み込み直後は oddsDate が "" なので、
     //   時刻表が届いた最初の取得で「日付が変わった」扱いになり、先に描画で登録した「取りたいレース」を全部捨てていた
     //   →以後は誰かが入力して描き直すまで一度も取りに行かない（公開の自動読み直しのたびに起きうる）。
@@ -2221,6 +2226,7 @@
       var sentAt = now;
       g.races.forEach(function (r) { oddsPending[g.name + "|" + r] = sentAt; });
       window.Sync.fetchOdds(jo, g.races).then(function (res) {
+        oddsSlowCheck(sentAt);
         var changed = false;
         g.races.forEach(function (r) {
           var k = g.name + "|" + r, d = res[r];
@@ -2233,9 +2239,15 @@
         if (changed) renderPreds();
         if (changed && SOLOODDS && (SCENE === "race" || (SCENE === "tenkai" && TKSOLO))) renderStartList(); // 🧪10/4 1人配信の空きワイプの人気順も新しいオッズで（③は &tksolo=1）
       }).catch(function () {
+        oddsSlowCheck(sentAt);
         g.races.forEach(function (r) { var k = g.name + "|" + r; if (oddsPending[k] === sentAt) delete oddsPending[k]; });
       });
     });
+  }
+  /** 🆕10/27 返事に10秒より長くかかった＝GASが混んでいる→かかった時間だけ次のオッズ取得を空ける */
+  function oddsSlowCheck(sentAt) {
+    var took = Date.now() - sentAt;
+    if (POLLGUARD && took > 10000) oddsSlowUntil = Math.max(oddsSlowUntil, Date.now() + took);
   }
   // 検証用（&debug=1 のときだけ）＝そのレースのオッズを「今この瞬間に確定した」扱いにする（確定演出の撮影用）
   // 検証用（&debug=1）＝そのレースの倍率を全部 factor 倍にする（オッズの上下・カウントの撮影用）

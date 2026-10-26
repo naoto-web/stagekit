@@ -576,12 +576,25 @@
     return bcAlive ? CONFIG.FOLLOW_MS_BC : CONFIG.FOLLOW_MS;
   }
   var lastFollowAt = 0;
+  /* 🆕10/27 保険（10/20〜22 本番GASが遅い）＝返事が来るまで次を送らない（60秒で見切る）・返事が間隔より遅ければその時間だけ空ける。
+     ?pollguard=0 で旧（返事を待たずに5秒ごと） */
+  var POLLGUARD = new URLSearchParams(location.search).get('pollguard') !== '0';
+  var followBusyAt = 0, followNextAt = 0;
   function followTick(force) {
     if (!RaceCard.enabled()) return;
     var now = Date.now();
     if (!force && lastFollowAt && (now - lastFollowAt) < followDue(now)) return;
+    if (POLLGUARD && ((followBusyAt && now - followBusyAt < 60000) || (!force && now < followNextAt))) return;
     lastFollowAt = now;
-    RaceCard.fetchConsoleRace().then(applyConsoleSel);
+    var mine = followBusyAt = now;
+    RaceCard.fetchConsoleRace().then(function (sel) {
+      if (followBusyAt === mine) {
+        followBusyAt = 0;
+        var took = Date.now() - mine;
+        if (took > CONFIG.FOLLOW_MS) followNextAt = Date.now() + took;
+      }
+      applyConsoleSel(sel);
+    });
   }
 
   /* 放送通知の経路。⚠️必ず聞き専（pongを返すとコンソールの疎通テストが嘘をつく） */
