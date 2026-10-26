@@ -8517,7 +8517,7 @@
      ・数が増えた瞬間＝ポン（.up）／途切れた瞬間＝A 砕ける・B 灰色→しぼむ・C 落ちる をランダム（.outA/B/C・約1.5秒で片付け）。
        途切れた＝前回まで2以上で見えていて、同じ人のまま2未満になった。的中バッジで隠す・配信者が変わった ときは消え方を付けない */
   var STKCHIP = params.get("stkchip") !== "0";
-  var STKHIDE = params.has("stkhide") ? +params.get("stkhide") || 0 : 8;
+  var STKHIDE = params.has("stkhide") ? +params.get("stkhide") || 0 : 7;
   // 10/26 Naoto「右下だと顔に被りそう」＝札はワイプの右上の角（&stkpos=br で旧の右下）
   if (params.get("stkpos") !== "br") document.body.classList.add("stk-tr");
   function currentStreakOf(pid) {
