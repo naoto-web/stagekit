@@ -219,7 +219,13 @@ var Board = (function () {
   /** 苗字チップを出す側。内レーン＝インフィールド側／外レーン＝外側／真ん中＝空いている側、
       内外の両隣が埋まっていれば丸の後ろ（スタートの升目で真ん中の列の苗字が隠れた・9/27 Naoto） */
   function chipMode(no, r, cars, view) {
-    if (r.lane < -0.5) return 'in';
+    /* §172（10/26 Naoto「名前が真ん中の緑と被る・コース内に」）＝内レーンも札はコース側（外）。
+       外の隣（中・外レーン）に並走がいるときだけ丸の後ろ（旧＝内レーンはインフィールド側） */
+    if (r.lane < -0.5) {
+      var nb = 0.9 * CONFIG.CAR, busy = false;
+      cars.forEach(function (o) { if (o === no) return; var q = view[o]; if (q && Math.abs(q.d - r.d) < nb && q.lane >= -0.5) busy = true; });
+      return busy ? 'back' : 'out';
+    }
     if (r.lane > 0.5) return 'out';
     var near = 0.9 * CONFIG.CAR, inner = false, outer = false;
     cars.forEach(function (o) {
@@ -275,7 +281,7 @@ var Board = (function () {
       pacerEl.style.display = '';
       pacerEl.style.opacity = String(t);
       Icons.setSize(pacerEl, px);
-      Icons.place(pacerEl, Track.pointAt(pd, lane), Track.outward(pd), lane);
+      Icons.place(pacerEl, Track.pointAt(pd, lane), Track.outward(pd), lane, 'out');   // §172 誘導員の札も選手と同じコース側（外）
     } else {
       pacerEl.style.display = 'none';
     }
@@ -310,6 +316,7 @@ var Board = (function () {
       if (!visible) continue;
       Icons.setSize(g, px);
       Icons.setName(g, d.showNames === 'off' ? '' : (d.names[no] || ''));
+      Icons.setJimoto(g, (d.jimoto || []).indexOf(+no) >= 0);   // §172 地元＝濃い金
     }
     wallRect.setAttribute('fill', d.bg === 'green' ? '#00b140' : '#2b313a');
     titleMain.textContent = d.titleMain || '';

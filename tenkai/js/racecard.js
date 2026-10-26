@@ -129,6 +129,24 @@ var RaceCard = (function () {
     return out;
   }
 
+  /* §172 地元＝開催場と同じ都道府県（OBS overlay.js の VENUE_PREF と同じ表・競輪の慣用＝隣県は「準地元」で別） */
+  var VENUE_PREF = {
+    '函館': '北海道', '青森': '青森', 'いわき平': '福島', '弥彦': '新潟', '前橋': '群馬', '取手': '茨城', '宇都宮': '栃木',
+    '大宮': '埼玉', '西武園': '埼玉', '京王閣': '東京', '立川': '東京', '松戸': '千葉', '千葉': '千葉',
+    '川崎': '神奈川', '平塚': '神奈川', '小田原': '神奈川', '伊東': '静岡', '静岡': '静岡',
+    '名古屋': '愛知', '豊橋': '愛知', '岐阜': '岐阜', '大垣': '岐阜', '富山': '富山', '松阪': '三重', '四日市': '三重',
+    '福井': '福井', '奈良': '奈良', '向日町': '京都', '和歌山': '和歌山', '岸和田': '大阪',
+    '玉野': '岡山', '広島': '広島', '防府': '山口', '高松': '香川', '小松島': '徳島', '高知': '高知', '松山': '愛媛',
+    '小倉': '福岡', '久留米': '福岡', '武雄': '佐賀', '佐世保': '長崎', '別府': '大分', '熊本': '熊本'
+  };
+  /** 地元の選手の車番の配列 */
+  function jimotoOf(venue, race) {
+    var vp = VENUE_PREF[String((venue && venue.name) || '').replace(/\s/g, '')], out = [];
+    if (!vp) return out;
+    ((race && race.racers) || []).forEach(function (r) { if (String(r.pref || '').replace(/\s/g, '') === vp) out.push(+r.no); });
+    return out;
+  }
+
   /** 表示用のレース見出し（例：和歌山 7R Ｓ級特選・三分戦） */
   function labelOf(venue, race) {
     var s = (venue ? venue.name : '') + ' ' + (race ? race.no : '') + 'R';
@@ -150,6 +168,7 @@ var RaceCard = (function () {
     findRace: findRace,
     carsOf: carsOf,
     namesOf: namesOf,
+    jimotoOf: jimotoOf,
     labelOf: labelOf,
     surname: surname
   };

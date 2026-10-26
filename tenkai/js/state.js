@@ -45,6 +45,8 @@ var State = (function () {
       showNames: 'on',
       /* 車番→苗字。出走表を読み込むと入る */
       names: {},
+      /* §172 地元の選手（開催場と同じ都道府県）の車番。出走表を読み込むと入る */
+      jimoto: [],
       /* 選択中のレース。date＝この盤面を組んだ時刻表の日付（yyyyMMdd）。
          ⚠️日付を外さないこと。場コードとR番号だけだと**翌日の同じ場・同じR**を
             「もう出している同じレース」と誤判定して盤面を組み直さない（2026-09-21の事故） */
@@ -85,6 +87,7 @@ var State = (function () {
     var cs = carList(raw.cars);
     if (cs.length) d.cars = cs;
     d.raceCars = carList(raw.raceCars);
+    d.jimoto = carList(raw.jimoto);   // §172
     if (typeof raw.iconRatio === 'number' && isFinite(raw.iconRatio)) {
       d.iconRatio = clamp(raw.iconRatio, CONFIG.ICON_RATIO_MIN, CONFIG.ICON_RATIO_MAX);
     }
@@ -230,6 +233,7 @@ var State = (function () {
       data.cars = d0.cars;
       data.raceCars = [];
       data.names = {};
+      data.jimoto = [];
       data.lines = [];
       data.lineupText = '';
       data.finish = null;
@@ -246,7 +250,7 @@ var State = (function () {
       var keep = {
         cars: data.cars, raceCars: data.raceCars,
         iconRatio: data.iconRatio, bg: data.bg,
-        names: data.names, sel: data.sel,
+        names: data.names, jimoto: data.jimoto, sel: data.sel,
         titleMain: data.titleMain, titleSub: data.titleSub
       };
       data = defaultData();

@@ -388,7 +388,7 @@
     if (d.v !== 2) d = fromV1(d);
     State.set(State.sanitize(d));
 
-    var sig = JSON.stringify([d.cars, d.lines, d.names, d.titleMain, d.titleSub,
+    var sig = JSON.stringify([d.cars, d.lines, d.names, d.jimoto, d.titleMain, d.titleSub,   // §172 jimoto
                               d.iconRatio, d.bg, d.showBars, d.showNames, d.sel]);
     if (sig !== lastRemoteSig) {
       lastRemoteSig = sig;
@@ -615,6 +615,7 @@
       sel: { date: ttDate(), joCode: String(v.joCode), raceNo: +r.no },
       raceCars: raceCars,
       names: RaceCard.namesOf(r),
+      jimoto: RaceCard.jimotoOf(v, r),   // §172 地元＝名前を濃い金
       titleMain: v.name + ' ' + r.no + 'R',
       titleSub: [v.grade, r.cls, r.lineType].filter(Boolean).join('・')
     });

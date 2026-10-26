@@ -29,8 +29,9 @@ var Icons = (function () {
     var g = el('g', { 'class': 'rider', 'data-no': String(no) });
 
     var chip = el('g', { 'class': 'rider-chip' });
-    chip.appendChild(el('rect', { 'class': 'chip-bg', rx: 4, ry: 4, fill: 'rgba(14,17,22,.74)' }));
-    chip.appendChild(el('text', { 'class': 'chip-text', fill: '#fff', 'font-weight': 700,
+    /* §172（10/26 Naoto「選手の名前は白地に黒文字・地元は金文字」）＝選手の札だけ白地に黒字（誘導員は黒地に金のまま＝見分け） */
+    chip.appendChild(el('rect', { 'class': 'chip-bg', rx: 4, ry: 4, fill: 'rgba(255,255,255,.94)', stroke: 'rgba(35,37,42,.28)', 'stroke-width': 1 }));
+    chip.appendChild(el('text', { 'class': 'chip-text', fill: '#23252a', 'font-weight': 700,
       'font-family': FONT, 'text-anchor': 'middle', 'dominant-baseline': 'central' }));
 
     var hit = el('circle', { 'class': 'rider-hit', r: 30, fill: 'transparent' });
@@ -111,6 +112,12 @@ var Icons = (function () {
     layoutChip(g);
   }
 
+  /** §172 地元（開催場と同じ都道府県）の選手は名前を濃い金（OBS の出走表と同じ色）。on=false で黒 */
+  function setJimoto(g, on) {
+    var text = g.querySelector('.rider-chip .chip-text');
+    if (text) text.setAttribute('fill', on ? '#8f6a00' : '#23252a');
+  }
+
   /**
    * コース上の位置へ置く
    * @param {{x,y}} pt   丸の中心（仮想座標）
@@ -152,6 +159,7 @@ var Icons = (function () {
     createPacer: createPacer,
     setSize: setSize,
     setName: setName,
+    setJimoto: setJimoto,
     place: place,
     el: el,
     FONT: FONT
