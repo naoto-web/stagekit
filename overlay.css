@@ -3599,12 +3599,14 @@ html.ticknote.tnaura.tnbox .tick-note > span {
   display: inline-block; padding: 1px 10px; border-radius: 10px;
   background: rgba(255, 196, 0, .28); animation: tnBox 4s ease-in-out infinite;
 }
-html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note > span { background: rgba(255, 205, 40, .55); }
+/* §175（10/26 Naoto「背景の金色を今の半分ぐらい薄く」）.55 → .28 */
+html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note > span { background: rgba(255, 205, 40, .28); }
 html.ticknote.tnaura.tnbox.tnbox2 .tick-note > span { animation-name: tnBox2; }
 html.ticknote.tnaura.tnbox.tnbox2 body[data-theme="w"] .tick-note > span { background: rgba(255, 196, 0, .75); }
 /* §170（10/24 Naoto）noteの万車は文字を濃い赤に＝金の板が「note」・赤字が「万車」の目印。普通の万車の赤（#d32f2f）より濃く＝金の板の上で明るさの差を確保
    （色覚シミュでも濃い灰色〜こげ茶で読める・比較＝モック/的中速報_note万車_文字色/）。白テーマのみ */
-html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note .tick-mn-note .tn-t { color: #b71c1c; }
+/* §175（10/26 Naoto）濃い赤 #b71c1c → 普通の万車と同じ赤（.tick-manche の白テーマ #d32f2f） */
+html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note .tick-mn-note .tn-t { color: #d32f2f; }
 @keyframes tnBox {
   0%, 55%, 95%, 100% { box-shadow: 0 0 8px 2px rgba(255, 190, 0, .65); }
   75% { box-shadow: 0 0 16px 6px rgba(255, 200, 30, .95); }

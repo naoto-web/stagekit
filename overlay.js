@@ -5235,15 +5235,18 @@
     function gold(a, b) { return gb ? '<span class="tn-t">' + a + "</span>" + gb + '<span class="tn-t">' + b + "</span>" : '<span class="tn-t">' + a + b + "</span>"; }
     var head = esc(h.racerName) + " " + esc(h.place), tail = noteLabel + typeLabel + " " + multTxt(h.mult);
     if (h.manche && h.amount) {
-      if (TICKNOTE && MNNOTE && h.note) return '<span class="tick-manche tick-mn-note">💥 ' + gold("万車速報：" + head, tail + "倍") + "</span>";
+      // §175（10/26 Naoto「万車noteも炎マークに」）note万車の頭も🔥（&tnfire=0 で💥）
+      if (TICKNOTE && MNNOTE && h.note) return '<span class="tick-manche tick-mn-note">' + (TNFIRE ? "🔥 " : "💥 ") + gold("万車速報：" + head, tail + "倍") + "</span>";
       return '<span class="tick-manche">💥 万車速報：' + head + gb + tail + "倍</span>";
     }
-    if (TICKNOTE && h.note) return "<span>🎯 " + gold(head, tail + "倍 的中") + "</span>"; // §126 文字だけ金にする（絵文字は色を変えない）
+    // §175（10/26 Naoto）note的中の頭の絵文字＝🔥（note の印にそろえる・旧🎯）。&tnfire=0 で🎯
+    if (TICKNOTE && h.note) return "<span>" + (TNFIRE ? "🔥 " : "🎯 ") + gold(head, tail + "倍 的中") + "</span>"; // §126 文字だけ金にする（絵文字は色を変えない）
     return "<span>🎯 " + head + gb + tail + "倍 的中</span>";
   }
   /* §126（10/6 Naoto・配信者の声「下の的中レースってnoteレースだけもっとギラギラにさりげなく」）＝的中速報のnote的中だけ
      金文字＋光の帯＋前後に✨がまたたく（B案）。noteの万車は文字は赤のまま✨だけ付く。&ticknote=0で旧 */
   var TICKNOTE = params.get("ticknote") !== "0";
+  var TNFIRE = params.get("tnfire") !== "0"; // §175
   if (TICKNOTE) document.documentElement.classList.add("ticknote");
   /* §168（10/24 Naoto・視聴者「色盲なせいか的中の金文字が見えにくい」）note的中の金文字の見え方。
      既定＝3（E案ノーマル＝黒文字＋後ろに長方形の金の板と光）／&tnaura=0 で旧の金文字／1・2＝D案（文字のフチに金のオーラ・ノーマル／強め）／4＝E案強め */
