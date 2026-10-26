@@ -917,3 +917,33 @@ html.theme-light.kcol[data-kc] .inp:focus, html.theme-light.kcol[data-kc] #res-p
 .rc.has-girls.next .rc-heart.hb path { fill: #b3262b; stroke: #b3262b; }
 .rc.has-girls.done { opacity: .45; }
 .rc.has-girls.done .rc-heart.hb { top: 1px; filter: none; }
+
+/* §179 買目アシスト「参考（現在未購入の似ている買目）」（10/27 Naoto）＝予想入力カードの合計の行の下。買目の1行ごとに1セット（行の文字を小さな見出しに）・
+   2列（左＝3着を変えた目／右＝組み替え）・各列は倍率の高い順に3つまで・目は並びと同じ車番バッジ（.pn-car の色・少し小さく）。
+   見出しを押すと折りたたみ（既定は開く・開閉はこのPCで覚える）。⚠️#pred-forms を付ける＝details.card[open] summary の指定（▾・margin）に負けないため。&assist=0 で出さない */
+#pred-forms .pf-assist { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #4a4f58; font-variant-numeric: tabular-nums; font-weight: 400; }
+#pred-forms .pf-assist > summary.pa-cap { font-size: 12px; font-weight: 700; color: #9aa0ab; cursor: pointer; list-style: none; margin: 0 0 2px; }
+#pred-forms .pf-assist > summary.pa-cap::-webkit-details-marker { display: none; }
+#pred-forms .pf-assist > summary.pa-cap::before { content: "▾ "; color: #9aa0ab; }
+#pred-forms .pf-assist:not([open]) > summary.pa-cap::before { content: "▸ "; }
+#pred-forms .pf-assist .pa-line { font-size: 13px; font-weight: 800; color: #c9ccd3; margin-top: 4px; line-height: 1.5; }
+#pred-forms .pf-assist .pa-line::before { content: "▸ "; color: #6d7480; }
+#pred-forms .pf-assist .pa-cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
+#pred-forms .pf-assist .pa-row { display: flex; align-items: center; gap: 8px; height: 28px; white-space: nowrap; }
+#pred-forms .pf-assist .pa-combo { display: inline-flex; align-items: center; gap: 2px; }
+/* バッジの間のハイフン（10/27 Naoto） */
+#pred-forms .pf-assist .pa-combo .pa-sep { font-weight: 800; font-size: 14px; color: #8a8f99; line-height: 22px; margin: 0 1px; }
+/* .pn-car の形の指定は .pred-narabi の中だけ＝ここで同じ形を与える */
+#pred-forms .pf-assist .pa-combo .pn-car { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+  font-size: 14px; font-weight: 900; font-style: normal; border-radius: 3px; border: 1px solid transparent; }
+/* 2番（黒）は黒テーマの地に溶ける＝白の薄い枠（.pn-car.c2 の指定を上の border が消すので付け直す） */
+#pred-forms .pf-assist .pa-combo .pn-car.c2 { border-color: rgba(255, 255, 255, .5); }
+#pred-forms .pf-assist .pa-odds { font-weight: 800; font-size: 15px; color: #d9a441; }
+#pred-forms .pf-assist .pa-odds small { font-weight: 700; font-size: .85em; margin-left: 1px; }
+html.theme-light #pred-forms .pf-assist { border-top-color: #c9cbd1; }
+html.theme-light #pred-forms .pf-assist > summary.pa-cap, html.theme-light #pred-forms .pf-assist > summary.pa-cap::before { color: #7a7f88; }
+html.theme-light #pred-forms .pf-assist .pa-line { color: #4a4f58; }
+html.theme-light #pred-forms .pf-assist .pa-line::before { color: #9a9ea6; }
+/* 1番（白）は白い地で消える＝灰色の枠 */
+html.theme-light #pred-forms .pf-assist .pa-combo .pn-car.c1 { border-color: #9a9ea6; }
+html.theme-light #pred-forms .pf-assist .pa-odds { color: #9a6b0a; }

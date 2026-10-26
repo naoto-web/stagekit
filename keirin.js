@@ -570,6 +570,62 @@
     return bad || !n ? null : 1 / inv;
   }
 
+  /* §179 買目アシスト「参考オッズ（買目に近い未購入の目）」（10/27 Naoto・発端＝しょーた 23-23-456 で 2-3-7（980倍）を逃す）。
+     買目の1行ごとに：
+       add  ＝足す目：その行の目の3着だけを、その行に使っていない車に差し替えた目（頭・2着はそのまま）
+       shift＝組み替え：その行の車だけで作る目。どの車も、その行で使っている位置から1つまでしかずれない（1着⇄2着・2着⇄3着は可・1着⇄3着は不可）
+     どちらも買目全体で買っていない目だけ・倍率が取れる目だけ・欠車は入れない・各列は倍率の高い順に limit（既定3）まで・
+     同じ目が2つの行から出たら先の行にだけ。3連単の行だけ（メモ行・切り目・0点の行・他の式別は飛ばす）。
+     戻り＝[{raw, add:[{combo, odds, txt}], shift:[…]}]（候補の無い行は入れない）。表示だけ＝点数・的中・精算には一切使わない */
+  function assistCombos(parsed, o, carCount, absent, limit) {
+    if (!o || !parsed || !parsed.lines) return [];
+    limit = limit || 3;
+    var bought = {}, shown = {}, abs = {};
+    parsed.lines.forEach(function (l) {
+      if (!l.ok || l.cut || !l.combos) return;
+      l.combos.forEach(function (c) { bought[c.join("")] = true; });
+    });
+    (absent || []).forEach(function (n) { abs[+n] = true; });
+    var out = [];
+    parsed.lines.forEach(function (l) {
+      if (!l.ok || l.cut || l.allDup || l.type !== "3連単" || !l.combos || !l.combos.length) return;
+      var inLine = {}, pos = {}; // pos[車番] = { 0:1着で使った, 1:2着で, 2:3着で }
+      l.combos.forEach(function (c) { c.forEach(function (n, i) { inLine[n] = true; (pos[n] = pos[n] || {})[i] = true; }); });
+      var can = function (n, i) { var p = pos[n]; return !!p && !!(p[i] || p[i - 1] || p[i + 1]); };
+      var pick = function (list) {
+        var seen = {}, rows = [];
+        list.forEach(function (c) {
+          var k = c.join("");
+          if (seen[k] || bought[k] || shown[k]) return;
+          seen[k] = true;
+          var v = o[k];
+          if (!(v > 0)) return;
+          rows.push({ combo: c, odds: v, txt: oddsInt(v) });
+        });
+        rows.sort(function (a, b) { return b.odds - a.odds; });
+        rows = rows.slice(0, limit);
+        rows.forEach(function (r) { shown[r.combo.join("")] = true; });
+        return rows;
+      };
+      var addList = [];
+      l.combos.forEach(function (c) {
+        for (var x = 1; x <= carCount; x++) { if (inLine[x] || abs[x]) continue; addList.push([c[0], c[1], x]); }
+      });
+      var cars = Object.keys(inLine).map(Number).filter(function (n) { return !abs[n]; });
+      var shiftList = [];
+      cars.forEach(function (a) {
+        if (!can(a, 0)) return;
+        cars.forEach(function (b) {
+          if (b === a || !can(b, 1)) return;
+          cars.forEach(function (c) { if (c === a || c === b || !can(c, 2)) return; shiftList.push([a, b, c]); });
+        });
+      });
+      var add = pick(addList), shift = pick(shiftList);
+      if (add.length || shift.length) out.push({ raw: String(l.raw || "").trim(), add: add, shift: shift });
+    });
+    return out;
+  }
+
   return {
     TYPES: TYPES,
     normalize: normalize,
@@ -579,6 +635,7 @@
     setComma: setComma,       // 9/29 §97（3桁区切りのカンマを付けるか）
     oddsLabel: oddsLabel,     // 9/25 §13
     synthOdds: synthOdds,     // 9/25 §13
+    assistCombos: assistCombos, // 10/27 §179 買目アシスト
     oreNormalize: oreNormalize,
     parseLine: parseLine,
     parsePrediction: parsePrediction,

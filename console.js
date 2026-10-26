@@ -1023,6 +1023,45 @@
      予想入力の対象レースだけを30秒ごと（初回は即）に取る。表示だけ＝保存・計算には入れない */
   // 9/25 本番化＝既定ON（本番GAS v12 に action=odds 追加済み）。&odds=0 で点数表示に戻せる
   var CON_ODDS = params.get("odds") ? params.get("odds") !== "0" : true;
+  /* §179 買目アシスト「参考オッズ（買目に近い未購入の目）」（10/27 Naoto）＝合計の行の下。買目の1行ごとに1セット・
+     2列（左＝3着を変えた目／右＝組み替え）・各列は倍率の高い順に3つまで・目は並びと同じ車番バッジ。計算は Keirin.assistCombos。
+     見出しを押すと折りたたみ（既定は開く・2枚のカードは一緒に開閉・開閉はこのPCで覚える）。表示だけ＝保存・OBS・点数には出ない。&assist=0 で出さない */
+  var ASSIST = params.get("assist") !== "0";
+  var ASSIST_LS = "stagekit.assistOpen";
+  function assistOpen() { try { return localStorage.getItem(ASSIST_LS) !== "0"; } catch (e) { return true; } }
+  function assistHtml(parsed, odds, cars, absent) {
+    if (!ASSIST || !odds || !window.Keirin.assistCombos) return "";
+    var sets = window.Keirin.assistCombos(parsed, odds, cars, absent);
+    if (!sets.length) return "";
+    // バッジの間はハイフン（10/27 Naoto「ハイフンありがいい」＝買目欄の書き方 2-3-7 と同じ形）
+    var chips = function (c) { return '<span class="pa-combo">' + c.map(function (n) { return '<i class="pn-car c' + n + '">' + n + "</i>"; }).join('<b class="pa-sep">-</b>') + "</span>"; };
+    var col = function (rows) {
+      return '<div class="pa-col">' + rows.map(function (r) {
+        return '<div class="pa-row">' + chips(r.combo) + '<span class="pa-odds">' + r.txt + "<small>倍</small></span></div>";
+      }).join("") + "</div>";
+    };
+    return '<details class="pf-assist"' + (assistOpen() ? " open" : "") + '><summary class="pa-cap">参考オッズ（買目に近い未購入の目）</summary>' +
+      sets.map(function (s) { return '<div class="pa-line">' + esc(s.raw) + '</div><div class="pa-cols">' + col(s.add) + col(s.shift) + "</div>"; }).join("") +
+      "</details>";
+  }
+  /* §179 参考ブロックの上端を、横に並ぶカード同士でそろえる（10/27 Naoto「点線は左右合わせて」）＝合計の行が片方だけ折り返すと点線がずれる。
+     alignPredHeads と同じ考え方（上端が同じカード同士だけ）。ブロックの上の余白（既定6px）を足して合わせる */
+  function alignAssist() {
+    var ds = Array.prototype.slice.call(document.querySelectorAll("#pred-forms .pred-form .pf-assist"));
+    ds.forEach(function (d) { d.style.marginTop = ""; });
+    var rows = {};
+    ds.forEach(function (d) {
+      var card = d.closest(".pred-form"), ct = card.getBoundingClientRect().top;
+      (rows[Math.round(ct)] = rows[Math.round(ct)] || []).push({ d: d, top: d.getBoundingClientRect().top - ct });
+    });
+    Object.keys(rows).forEach(function (t) {
+      var g = rows[t];
+      if (g.length < 2) return;
+      var mx = Math.max.apply(null, g.map(function (x) { return x.top; }));
+      g.forEach(function (x) { if (mx - x.top > 0.5) x.d.style.marginTop = (6 + mx - x.top) + "px"; });
+    });
+  }
+  window.addEventListener("resize", alignAssist);
   var conOdds = {}, conOddsAt = {}, conOddsPending = {}, conOddsEnd = {};
   function ensureConOdds(key, force) {
     if (!CON_ODDS || !key || conOddsPending[key]) return;
@@ -1171,7 +1210,17 @@
     if (!form.querySelector(".pf-ore").value.trim() && (saved.text || "").trim()) {
       html += '<div class="unit-warn">⚠ 「俺たち目」が入力されていません（買い目だけの表示はOK・レースまでに入力→保存）</div>';
     }
+    html += assistHtml(parsed, odds, cars, window.Derive.absentOf(state, key)); // §179 買目アシスト（いちばん下）
     form.querySelector(".pf-total").innerHTML = html;
+    var det = form.querySelector(".pf-assist");
+    if (det) det.addEventListener("toggle", function () {
+      // 開閉は2枚のカードで一緒（10/27 Naoto）＝片方を押したらもう片方も同じに。覚える値も1つ。
+      // ⚠️Chrome は <details open> を挿入しただけでも toggle が飛ぶ＝描き直しのたびに同じ値を書き直すだけで無害
+      var v = det.open;
+      document.querySelectorAll("#pred-forms .pf-assist").forEach(function (x) { if (x.open !== v) x.open = v; });
+      try { localStorage.setItem(ASSIST_LS, v ? "1" : "0"); } catch (e) {}
+    });
+    alignAssist(); // §179 参考ブロックの上端をカード同士でそろえる（片方だけ合計の行が折り返しても点線の高さが同じ）
     form.classList.toggle("dirty", dirty);
   }
 
