@@ -8596,6 +8596,12 @@
         // 右上の②は場所が狭い＝「🎯N連中」（10/26 Naoto）
         var txt = "🎯" + n + (p === "np-race-" && document.body.classList.contains("stk-tr") ? "連中" : "連続中");
         if (chip.textContent !== txt) chip.textContent = txt;
+        // 右上の①＝ワイプが広い＝角から内側へ（10/26 Naoto「縦は半バッジ分下・横はバッジの長さの1/4左」）。大きさは段階で変わる＝その都度測る
+        if (p === "np-talk-" && document.body.classList.contains("stk-tr")) {
+          var tTop = Math.round(4 + chip.offsetHeight / 2) + "px", tRight = Math.round(4 + chip.offsetWidth / 4) + "px";
+          if (chip.style.top !== tTop) chip.style.top = tTop;
+          if (chip.style.right !== tRight) chip.style.right = tRight;
+        }
         if (n > (chip.__n || 0)) {                                         // 数が増えた（出た瞬間も）＝ポン
           chip.classList.remove("up"); void chip.offsetWidth; chip.classList.add("up");
           setTimeout(function () { chip.classList.remove("up"); }, 600);
