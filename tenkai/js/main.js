@@ -43,6 +43,7 @@
   function schedulePrepare() {
     if (VIEW !== 'control') return;
     clearTimeout(prepareTimer);
+    if (CONFIG.START_LINE) return;   // 10/26 スタートも一列＝升目→一列の組み替えが無い＝計画は要らない
     prepareTimer = setTimeout(function () {
       var d = State.data;
       if (!d.cars || d.cars.length < 2 || Anim.busy()) return;
@@ -81,6 +82,14 @@
 
   /* ---------- 並びの適用 ---------- */
 
+  /** スタートの隊列。10/26〜（CONFIG.START_LINE）＝並びがあれば並びの一列（ライン順・全員内）をスタートの位置に。
+      並びが無い・?startgrid=1 のときは車番順の升目（9/27） */
+  function startFormation(cars) {
+    var d = State.data;
+    if (CONFIG.START_LINE && d.lines && d.lines.length) return Lineup.layout(d.lines, CONFIG.PHASES[0].d);
+    return Lineup.grid(cars);
+  }
+
   /** ラインに出てくる車番＝盤面に出す車番 */
   function carsFromLines(lines) {
     var out = [];
@@ -111,11 +120,11 @@
       lines: result.lines,
       cars: carsFromLines(result.lines)
     });
-    State.setRiders(Lineup.grid(carsFromLines(result.lines)));   // スタート＝車番順の升目
+    State.setRiders(startFormation(carsFromLines(result.lines)));   // スタート＝並びの一列（10/26〜）
     render();
 
     var shown = result.lines.map(function (l) { return l.join('-'); }).join(' / ');
-    var msg = '配置しました（スタートは車番順・赤板で並びの一列になります）： ' + shown;
+    var msg = (CONFIG.START_LINE ? '配置しました（スタートから並びの一列）： ' : '配置しました（スタートは車番順・赤板で並びの一列になります）： ') + shown;
     var warn = false;
     if (result.missing.length) {
       msg += '　／ 並びに無い ' + result.missing.join('・') + ' 番は盤面に出していません';
@@ -207,9 +216,10 @@
     var target = null, hint;
 
     if (key === 'start') {
-      target = Lineup.grid(d.cars, ph.d);
-      hint = 'スタート（車番順）に戻しました。';
-    } else if (fromStart) {
+      /* 10/26〜 スタートも並びの一列＝逆走しながら一列のままスタートへ（手で動かした形は並びの一列に戻る） */
+      target = (CONFIG.START_LINE && d.lines && d.lines.length) ? lineFormation(ph.d) : Lineup.grid(d.cars, ph.d);
+      hint = CONFIG.START_LINE ? 'スタートに戻しました。' : 'スタート（車番順）に戻しました。';
+    } else if (fromStart && !CONFIG.START_LINE) {   // 10/26〜 START_LINE なら組み替えは無い＝下の「全員を同じ量だけ」
       target = lineFormation(ph.d);
       hint = ph.label + 'へ。走りながら並び（' + (d.lines || []).map(function (l) { return l.join(''); }).join(' ') + '）の一列になりました。';
     }
@@ -638,7 +648,7 @@
       lines: result.lines,
       cars: carsFromLines(result.lines)
     });
-    State.setRiders(Lineup.grid(carsFromLines(result.lines)));   // スタート＝車番順の升目
+    State.setRiders(startFormation(carsFromLines(result.lines)));   // スタート＝並びの一列（10/26〜）
     render();
 
     if (nowRaceEl) nowRaceEl.textContent = RaceCard.labelOf(v, r);
@@ -788,9 +798,11 @@
 
       if (d.lines && d.lines.length) {
         Undo.push();
-        State.setRiders(Lineup.grid(d.cars));
+        State.setRiders(startFormation(d.cars));
         render();
-        setHint('スタート（車番順）に戻しました。赤板で並び ' + d.lines.map(function (l) { return l.join('-'); }).join(' / ') +
+        setHint(CONFIG.START_LINE
+          ? 'スタートに戻しました（並び ' + d.lines.map(function (l) { return l.join('-'); }).join(' / ') + ' の一列）。（取り消しで元に戻せます）'
+          : 'スタート（車番順）に戻しました。赤板で並び ' + d.lines.map(function (l) { return l.join('-'); }).join(' / ') +
                 ' の一列になります。（取り消しで元に戻せます）');
         return;
       }
@@ -834,7 +846,7 @@
         lines: result.lines,
         cars: carsFromLines(result.lines)
       });
-      State.setRiders(Lineup.grid(carsFromLines(result.lines)));
+      State.setRiders(startFormation(carsFromLines(result.lines)));
     }
 
     var jo = q.get('jo');

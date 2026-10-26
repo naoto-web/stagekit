@@ -256,7 +256,8 @@ var Board = (function () {
     /* 連結バーはスタートの升目では隠し、走り出してから赤板までに浮かび上がらせる（9/27）。
        升目の時点ではラインがまだ組まれていない＝バーを出すとジグザグに見える */
     /* 赤板（2.0）の直前だけで浮かび上がる。早く出すと、組み替えの途中でバーがジグザグに見えた（9/27） */
-    var barOp = leader === null ? 1 : Math.max(0, Math.min(1, (2.2 - leader) / 0.2));
+    /* 🆕10/26 スタートも並びの一列（CONFIG.START_LINE）＝升目が無いのでバーは最初から出す */
+    var barOp = (leader === null || CONFIG.START_LINE) ? 1 : Math.max(0, Math.min(1, (2.2 - leader) / 0.2));
     /* 決着の表示中は消す：抜け出した選手までバーが斜めに伸びて帯のように残った（9/27） */
     if (d.finish && d.finish.length && leader !== null && leader < 1e-4) barOp = 0;
     barsLayer.style.opacity = String(barOp);
