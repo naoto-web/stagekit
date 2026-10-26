@@ -973,7 +973,7 @@ html.con2 #pred-narabi.pn-market { display: block !important; }
 #pred-narabi.pn-market.pm-nine .pm-group.box { padding: 4px 6px 5px; }
 #pred-narabi.pn-market.pm-nine .pm-cars { gap: 8px; }
 #pred-narabi.pn-market.pm-nine .pm-col { min-width: 42px; }
-#pred-narabi.pn-market.pm-nine .pm-name { font-size: 12px; }
+#pred-narabi.pn-market.pm-nine .pm-name, #pred-narabi.pn-market.pm-nine .pm-score { font-size: 12px; }
 #pred-narabi.pn-market.pm-nine .pm-badge .pn-car { width: 28px; height: 28px; font-size: 18px; }
 #pred-narabi.pn-market.pm-nine .pm-num, #pred-narabi.pn-market.pm-nine .pm-line { font-size: 15px; }
 #pred-narabi.pn-market.pm-nine .pm-dot { width: 18px; }
@@ -981,16 +981,23 @@ html.con2 #pred-narabi.pn-market { display: block !important; }
 #pred-narabi.pn-market .pm-badge { height: 32px; display: inline-flex; align-items: center; }
 #pred-narabi.pn-market .pm-badge .pn-car { width: 30px; height: 30px; font-size: 19px; }
 #pred-narabi.pn-market .pn-car.abs { opacity: .35; }
+/* §181 競走得点（バッジの下・1着率の上・10/27 Naoto） */
+#pred-narabi.pn-market .pm-score { height: 18px; line-height: 18px; font-size: 13px; font-weight: 700; color: #c9ccd3; white-space: nowrap; }
 #pred-narabi.pn-market .pm-num { height: 22px; line-height: 22px; font-size: 16px; font-weight: 800; color: #e8e8ec; }
 #pred-narabi.pn-market .pm-line { height: 22px; line-height: 22px; font-size: 16px; font-weight: 800; color: #d9a441; white-space: nowrap; }
 #pred-narabi.pn-market .pm-line.solo, #pred-narabi.pn-market .pm-num.none { color: #6d7480; font-weight: 700; }
 #pred-narabi.pn-market .pm-dot { width: 26px; text-align: center; font-size: 18px; font-weight: 900; color: #e8e8ec; line-height: 32px; margin-top: 18px; }
 html.theme-light #pred-narabi.pn-market .pm-cap, html.theme-light #pred-narabi.pn-market .pm-legend { color: #7a7f88; }
 html.theme-light #pred-narabi.pn-market .pm-cap .pm-note { color: #9a9ea6; }
-html.theme-light #pred-narabi.pn-market .pm-name { color: #4a4f58; }
+html.theme-light #pred-narabi.pn-market .pm-name, html.theme-light #pred-narabi.pn-market .pm-score { color: #4a4f58; }
 html.theme-light #pred-narabi.pn-market .pm-num { color: #2b2f36; }
 html.theme-light #pred-narabi.pn-market .pm-line { color: #9a6b0a; }
 html.theme-light #pred-narabi.pn-market .pm-line.solo, html.theme-light #pred-narabi.pn-market .pm-num.none { color: #9aa0ab; }
 html.theme-light #pred-narabi.pn-market .pm-dot { color: #2b2f36; }
 html.theme-light #pred-narabi.pn-market .pm-group.box { background: #fff; border-color: #c9cbd1; }
+/* §181 1番高い＝赤字・2番目＝青字（競走得点・1着率（個人）・1着率（ライン）／ライン決着率は付けない・10/27 Naoto） */
+#pred-narabi.pn-market .r1 { color: #ff6b6b !important; font-weight: 900; }
+#pred-narabi.pn-market .r2 { color: #6aa8ff !important; font-weight: 900; }
+html.theme-light #pred-narabi.pn-market .r1 { color: #d32f2f !important; }
+html.theme-light #pred-narabi.pn-market .r2 { color: #1f5fc8 !important; }
 html.theme-light #pred-narabi.pn-market .pm-badge .pn-car.c1 { border-color: #9a9ea6; }

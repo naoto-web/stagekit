@@ -757,21 +757,43 @@
     var odds = CON_ODDS ? conOdds[key] : null;
     var ms = odds ? window.Keirin.marketShares(odds, hasLines ? groups.map(function (g) { return g.split(""); }) : []) : null;
     var pct = function (v) { return Math.round(v * 100) + "%"; };
-    var col = function (n) {
-      var num = absent[n] ? '<span class="pm-num none">ー</span>' : ms ? '<span class="pm-num">' + pct(ms.win[n] || 0) + "</span>" : '<span class="pm-num">&nbsp;</span>';
-      return '<span class="pm-col"><span class="pm-name">' + esc(names[n] || "") + '</span><span class="pm-badge"><i class="pn-car c' + n + (absent[n] ? " abs" : "") + '">' + n + "</i></span>" + num + "</span>";
+    var scores = (ent && ent.scores) || {}; // §181 競走得点（並びと一緒に届く・未発表は空欄）
+    /* §181 1番高い＝赤字・2番目＝青字（10/27 Naoto）＝競走得点・1着率（個人）・1着率（ライン）。ライン決着率は付けない。
+       %は画面に出す値（四捨五入後）で比べる＝同じ数字は同じ色。競走得点は表示は小数第1位に丸めるが、色は元の値（第2位まで）で比べる
+       （Naoto「112.84と112.86は表示が同じでも色は分けて＝出走表上は分かれている」）。欠車は外す */
+    var rankOf = function (vals) {
+      var ds = Object.keys(vals).map(function (k) { return vals[k]; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return b - a; });
+      var out = {};
+      Object.keys(vals).forEach(function (k) { out[k] = vals[k] === ds[0] ? " r1" : ds.length > 1 && vals[k] === ds[1] ? " r2" : ""; });
+      return out;
     };
+    var scV = {}, winV = {};
+    carNos.forEach(function (n) {
+      if (absent[n]) return;
+      var sc = parseFloat(scores[n] || scores[String(n)]); if (sc > 0) scV[n] = sc;
+      if (ms) winV[n] = Math.round((ms.win[n] || 0) * 100);
+    });
+    var scR = rankOf(scV), winR = rankOf(winV);
+    var col = function (n) {
+      var num = absent[n] ? '<span class="pm-num none">ー</span>' : ms ? '<span class="pm-num' + (winR[n] || "") + '">' + pct(ms.win[n] || 0) + "</span>" : '<span class="pm-num">&nbsp;</span>';
+      var sc = parseFloat(scores[n] || scores[String(n)]);
+      return '<span class="pm-col"><span class="pm-name">' + esc(names[n] || "") + '</span><span class="pm-badge"><i class="pn-car c' + n + (absent[n] ? " abs" : "") + '">' + n + "</i></span>" +
+        '<span class="pm-score' + (scR[n] || "") + '">' + (sc > 0 ? sc.toFixed(1) : "&nbsp;") + "</span>" + num + "</span>";
+    };
+    var lnV = {};
+    if (hasLines && ms) ms.lines.forEach(function (ln, gi) { lnV[gi] = Math.round(ln.win * 100); });
+    var lnR = rankOf(lnV);
     var html = '<div class="pm-cap">オッズ支持率（3連単の売れ方から逆算）' +
       (!ms ? '<span class="pm-note">オッズ待ち</span>' : "") +
       (!girls && !groups.length ? '<span class="pm-note">並び' + (ent && ent.pending ? "取得中…" : "未発表") + "</span>" : "") + "</div>";
-    html += '<div class="pm-rows"><span class="pm-legend"><span class="pm-name">&nbsp;</span><span class="pm-badge">' + (hasLines ? "並び" : "車番") + '</span><span class="pm-num">1着率（個人）</span>' +
+    html += '<div class="pm-rows"><span class="pm-legend"><span class="pm-name">&nbsp;</span><span class="pm-badge">' + (hasLines ? "並び" : "車番") + '</span><span class="pm-score">競走得点</span><span class="pm-num">1着率（個人）</span>' +
       (hasLines ? '<span class="pm-line">1着率（ライン）</span><span class="pm-line">ライン決着率</span>' : "") + "</span>";
     if (hasLines) {
       // ラインごとに薄い枠で囲う（10/27 Naoto「囲むの見やすい」）＝列の間隔を広げてもラインの切れ目が分かる
       html += groups.map(function (g, gi) {
         var cars = g.split("").map(Number), ln = ms && ms.lines[gi];
         return '<span class="pm-group box"><span class="pm-cars">' + cars.map(col).join("") + "</span>" +
-          '<span class="pm-line">' + (ln ? pct(ln.win) : "&nbsp;") + "</span>" +
+          '<span class="pm-line' + (ln ? lnR[gi] || "" : "") + '">' + (ln ? pct(ln.win) : "&nbsp;") + "</span>" +
           '<span class="pm-line' + (cars.length < 2 ? " solo" : "") + '">' + (cars.length < 2 ? "ー" : ln ? pct(ln.settle) : "&nbsp;") + "</span></span>";
       }).join('<span class="pm-dot">・</span>');
     } else {
@@ -792,12 +814,13 @@
     var tt = "";
     venueRaces(vName).forEach(function (r) { if (r.no === rNo && r.narabi) tt = r.narabi; });
     var ent = predNarabiAuto[key];
-    if (!manual && !tt && !ent) {
+    // §181（10/27 Naoto）競走得点も並びと同じ取得（action=narabi の scores）で受け取る＝並びが手修正・時刻表同梱でも1回は取りに行く（旧＝並びが無いときだけ）
+    if (!ent) {
       var jo = joCodeOfName(vName);
       if (jo) {
-        predNarabiAuto[key] = { val: "", pending: true };
+        predNarabiAuto[key] = { val: "", scores: {}, pending: true };
         window.Sync.fetchNarabi(jo, rNo).then(function (info) {
-          predNarabiAuto[key] = { val: info.narabi || "" };
+          predNarabiAuto[key] = { val: info.narabi || "", scores: info.scores || {} };
           if (predKey() === key) renderPredNarabi(key);
         }).catch(function () { delete predNarabiAuto[key]; });
       }
