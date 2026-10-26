@@ -824,12 +824,12 @@
      ・きっかけ＝視聴者「§165 のカタカタが虫が飛んでるみたい」。Naoto 指定の動画（pSiukQrmHWM・30〜35秒）を数字で測った値：
        カウント中＝200Hz の正弦（高さ一定）を1秒に13.4回の正弦で強弱（いちばん弱いところで約1割＝ゲイン 0.555±0.445）。元の音は使わない
      ・止まった瞬間（間0秒）＝ブシューン（低い音が160→45Hz に下がる「ブ」＋雑音の帯域が7k→1.2kHz へ流れる「シュー」0.45秒・強さ0.7）
-       ＋ベル（1936Hz＋1952Hz のうなり＋7742Hz＋3871Hz＋661Hz・約1.3秒）＋コイン（cuCoinRing 2637Hz）。決定音だけ0.7倍
+       ＋ベル（1936Hz＋1952Hz のうなり＋7742Hz＋3871Hz＋661Hz・約1.3秒）＋コイン（cuCoinRing 2637Hz）。決定音だけ0.35倍（10/26 0.7→0.35）
      ・万車（大きい的中）＝シューが1.3倍長く・ベルとコインの余韻が長い。数字のポンは1回＝決定音の頭から 0.05秒＋PCの音の出遅れ（outputLatency）だけ遅らせる
      ・始まりのドゥン（カウント0.4秒前）は今のまま・プラ転のピコーンは鳴らさない。&cudream=0 で §165（カタカタ＋ティンるん）
      ・&cubrr=倍（ブルルの大きさ）／&cudvol=倍（決定音の大きさ）／&cubumpdly=秒（ポンの遅れ） */
   var CUDREAM = params.get("cudream") !== "0";
-  var CU_BRR_GAIN = +(params.get("cubrr") || 1), CU_DECIDE_VOL = +(params.get("cudvol") || 0.7); // 10/24 試聴1.5倍→今の本番より約12dB大きい（測定）→ Naoto 0.7倍（約6dB大きい程度）
+  var CU_BRR_GAIN = +(params.get("cubrr") || 1), CU_DECIDE_VOL = +(params.get("cudvol") || 0.35); // 10/24 試聴1.5倍→今の本番より約12dB大きい（測定）→ Naoto 0.7倍（約6dB大きい程度）→ 10/26 Naoto「決定音だけ音量半分」0.35倍
   var CU_BUMP_DLY = params.get("cubumpdly") === null ? 0.05 : (+params.get("cubumpdly") || 0); // 10/24 Naoto 0.3→0.05秒
   /** ブルルを鳴らし始める。戻り値 { stop }（stop の返り値＝鳴り終わりの AudioContext 時刻）か null */
   function cuBrrStart() {
