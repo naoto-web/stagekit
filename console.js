@@ -732,6 +732,57 @@
      優先順は overlay.js renderNarabi と同じ＝手修正（state.narabi）＞時刻表に同梱の並び＞GASの action=narabi。
      GASは読むだけ（OBS・stateには影響なし）。1レース1回・失敗したら次の描画で取り直す */
   var predNarabiAuto = {}; // raceKey → { val, pending }
+  /* §180 オッズ支持率（10/27 Naoto）＝予想入力の「並び」の行をこのブロックに置き換える。
+     見出し「オッズ支持率（3連単の売れ方から逆算）」→ 苗字 → 並びのバッジ（ラインの間に「・」）→ 1着率（個人）→ 1着率（ライン）→ ライン決着率。
+     数字は Keirin.marketShares（3連単の全組のオッズから逆算）。ガールズ（時刻表のクラスがＬ級）と並び未発表は車番順に苗字と1着率（個人）だけ
+     （ラインの2行と「・」は出さない）。発売前（オッズ無し）は数字なしで「オッズ待ち」。欠車は薄いバッジと「ー」。
+     苗字＝出走表の名前の最初の空白まで（overlay.js §167 と同じ対応表）。表示だけ＝state・OBS・判定には出ない。&market=0 で旧の並びの行 */
+  var MARKET = params.get("market") !== "0";
+  var SURNAME_FIX = { "八日市屋浩之": "八日市屋", "大瀬戸潤一郎": "大瀬戸" };
+  function surnameOfFull(f) { f = String(f || ""); return SURNAME_FIX[f.replace(/[\s　]+/g, "")] || f.split(/[\s　]+/)[0]; }
+  function renderMarketBlock(box, key, vName, rNo, groups, ent) {
+    var race = venueRaces(vName).filter(function (r) { return r.no === rNo; })[0];
+    var names = {}, carNos = [];
+    ((race && race.racers) || []).forEach(function (p) {
+      var nm = p && p.name ? String(p.name).replace(/\s+/g, "") : "";
+      if (!nm || /欠/.test(nm) || !+p.no) return;
+      names[+p.no] = surnameOfFull(p.name); carNos.push(+p.no);
+    });
+    if (!carNos.length) { var nC = autoCars(key); for (var i = 1; i <= nC; i++) carNos.push(i); }
+    carNos.sort(function (a, b) { return a - b; });
+    var girls = !!(race && /[LＬ]\s*級|ガールズ/.test(race.cls || ""));
+    var hasLines = !girls && groups.length > 0;
+    var absent = {};
+    (window.Derive.absentOf(state, key) || []).forEach(function (n) { absent[+n] = true; });
+    var odds = CON_ODDS ? conOdds[key] : null;
+    var ms = odds ? window.Keirin.marketShares(odds, hasLines ? groups.map(function (g) { return g.split(""); }) : []) : null;
+    var pct = function (v) { return Math.round(v * 100) + "%"; };
+    var col = function (n) {
+      var num = absent[n] ? '<span class="pm-num none">ー</span>' : ms ? '<span class="pm-num">' + pct(ms.win[n] || 0) + "</span>" : '<span class="pm-num">&nbsp;</span>';
+      return '<span class="pm-col"><span class="pm-name">' + esc(names[n] || "") + '</span><span class="pm-badge"><i class="pn-car c' + n + (absent[n] ? " abs" : "") + '">' + n + "</i></span>" + num + "</span>";
+    };
+    var html = '<div class="pm-cap">オッズ支持率（3連単の売れ方から逆算）' +
+      (!ms ? '<span class="pm-note">オッズ待ち</span>' : "") +
+      (!girls && !groups.length ? '<span class="pm-note">並び' + (ent && ent.pending ? "取得中…" : "未発表") + "</span>" : "") + "</div>";
+    html += '<div class="pm-rows"><span class="pm-legend"><span class="pm-name">&nbsp;</span><span class="pm-badge">' + (hasLines ? "並び" : "車番") + '</span><span class="pm-num">1着率（個人）</span>' +
+      (hasLines ? '<span class="pm-line">1着率（ライン）</span><span class="pm-line">ライン決着率</span>' : "") + "</span>";
+    if (hasLines) {
+      // ラインごとに薄い枠で囲う（10/27 Naoto「囲むの見やすい」）＝列の間隔を広げてもラインの切れ目が分かる
+      html += groups.map(function (g, gi) {
+        var cars = g.split("").map(Number), ln = ms && ms.lines[gi];
+        return '<span class="pm-group box"><span class="pm-cars">' + cars.map(col).join("") + "</span>" +
+          '<span class="pm-line">' + (ln ? pct(ln.win) : "&nbsp;") + "</span>" +
+          '<span class="pm-line' + (cars.length < 2 ? " solo" : "") + '">' + (cars.length < 2 ? "ー" : ln ? pct(ln.settle) : "&nbsp;") + "</span></span>";
+      }).join('<span class="pm-dot">・</span>');
+    } else {
+      html += '<span class="pm-group"><span class="pm-cars">' + carNos.map(col).join("") + "</span></span>";
+    }
+    html += "</div>";
+    box.classList.add("pn-market");
+    box.classList.toggle("pm-boxed", hasLines);                                  // 囲いあり＝左の見出しと黒点の高さを合わせる
+    box.classList.toggle("pm-nine", Math.max.apply(null, carNos.concat([0])) >= 8); // 8車以上＝少し詰める（9車4ラインが1行に収まる）
+    box.innerHTML = html;
+  }
   function renderPredNarabi(key) {
     var box = $("pred-narabi");
     if (!box) return;
@@ -754,6 +805,8 @@
     var src = manual || tt || (ent ? ent.val : "");
     var groups = window.Keirin.normalize(src).split(/[^0-9]+/).filter(Boolean);
     box.classList.remove("hidden");
+    if (MARKET) { renderMarketBlock(box, key, vName, rNo, groups, ent); return; } // §180 オッズ支持率（並びの行の置き換え）
+    box.classList.remove("pn-market");
     if (!groups.length) {
       box.innerHTML = '<span class="pn-lbl">並び</span><span class="pn-none">' +
         (ent && ent.pending ? "取得中…" : "未発表") + "</span>";
@@ -1081,6 +1134,7 @@
       if (resultKey() === key) refreshAutoPayouts();
       if (predKey() !== key) return;
       document.querySelectorAll("#pred-forms .pred-form").forEach(function (f) { updatePredInfo(f, key); });
+      if (MARKET) renderPredNarabi(key); // §180 オッズが届いた・変わった＝支持率を描き直す
     }).catch(function () { delete conOddsPending[key]; conOddsAt[key] = Date.now(); });
   }
 

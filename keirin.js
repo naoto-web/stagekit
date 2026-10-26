@@ -626,6 +626,28 @@
     return out;
   }
 
+  /* §180 オッズ支持率（10/27 Naoto）＝3連単の全組のオッズから「お金の集まり方」を逆算する。
+     各組の倍率の逆数を全体で割って組ごとの割合にする（控除率はこの割り算で消える）→
+       win   ＝車ごとの1着率（個人）＝その車が1着の組の割合の合計
+       lines ＝並びのラインごとに { cars, win（1着率（ライン）＝そのラインの誰かが1着）, settle（ライン決着率＝1着と2着がそのラインの2人・単騎は null） }
+     groups＝並びの車番の配列（[[2,3],[4,5,6],[7],[1]]・無ければ []）。倍率が1つも無ければ null。表示だけ＝予想・判定には使わない */
+  function marketShares(o, groups) {
+    if (!o) return null;
+    var keys = Object.keys(o).filter(function (k) { return /^\d{3}$/.test(k) && o[k] > 0; });
+    if (!keys.length) return null;
+    var inv = {}, sum = 0;
+    keys.forEach(function (k) { inv[k] = 1 / o[k]; sum += inv[k]; });
+    var win = {};
+    keys.forEach(function (k) { var a = +k[0]; win[a] = (win[a] || 0) + inv[k] / sum; });
+    var lines = (groups || []).map(function (g) {
+      var cars = g.map(Number), set = {}, w = 0, s = 0;
+      cars.forEach(function (c) { set[c] = true; w += win[c] || 0; });
+      if (cars.length >= 2) keys.forEach(function (k) { if (set[+k[0]] && set[+k[1]]) s += inv[k] / sum; });
+      return { cars: cars, win: w, settle: cars.length >= 2 ? s : null };
+    });
+    return { win: win, lines: lines, n: keys.length };
+  }
+
   return {
     TYPES: TYPES,
     normalize: normalize,
@@ -636,6 +658,7 @@
     oddsLabel: oddsLabel,     // 9/25 §13
     synthOdds: synthOdds,     // 9/25 §13
     assistCombos: assistCombos, // 10/27 §179 買目アシスト
+    marketShares: marketShares, // 10/27 §180 オッズ支持率
     oreNormalize: oreNormalize,
     parseLine: parseLine,
     parsePrediction: parsePrediction,

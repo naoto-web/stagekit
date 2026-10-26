@@ -947,3 +947,50 @@ html.theme-light #pred-forms .pf-assist .pa-line::before { color: #9a9ea6; }
 /* 1番（白）は白い地で消える＝灰色の枠 */
 html.theme-light #pred-forms .pf-assist .pa-combo .pn-car.c1 { border-color: #9a9ea6; }
 html.theme-light #pred-forms .pf-assist .pa-odds { color: #9a6b0a; }
+
+/* §180 オッズ支持率（10/27 Naoto）＝予想入力の「並び」の行をこのブロックに置き換え（#pred-narabi に .pn-market）。
+   見出し→苗字→並びのバッジ（30px・ラインの間に「・」）→1着率（個人）→1着率（ライン）→ライン決着率。左の列は行の見出し。
+   行の高さは列と見出しでそろえる（苗字18・バッジ32・数字22・ライン22×2）。ガールズ・並び未発表はラインの2行と「・」なし。&market=0 で旧 */
+#pred-narabi.pn-market { display: block; padding: 10px 14px; font-variant-numeric: tabular-nums; }
+/* ⚠️con2（本番既定）は旧「並び」の行を display:none !important で隠している（§72）＝支持率のブロックはそれより強く出す */
+html.con2 #pred-narabi.pn-market { display: block !important; }
+#pred-narabi.pn-market .pm-cap { font-size: 13px; font-weight: 700; color: #9aa0ab; margin-bottom: 6px; }
+#pred-narabi.pn-market .pm-cap .pm-note { margin-left: 8px; color: #6d7480; }
+#pred-narabi.pn-market .pm-rows { display: flex; align-items: flex-start; flex-wrap: wrap; row-gap: 8px; }
+#pred-narabi.pn-market .pm-legend { display: flex; flex-direction: column; align-items: flex-start; margin-right: 18px; white-space: nowrap; color: #9aa0ab; }
+#pred-narabi.pn-market .pm-legend > span { font-size: 13px; font-weight: 700; color: inherit; }
+#pred-narabi.pn-market .pm-group { display: flex; flex-direction: column; align-items: center; }
+/* 列の間隔（10/27 Naoto「バッジ同士が近すぎて%がぎゅうぎゅう」＝6px/40px → 10px/46px）。ラインの切れ目は囲い（.box）で見せる */
+#pred-narabi.pn-market .pm-cars { display: flex; gap: 10px; }
+#pred-narabi.pn-market .pm-col { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+/* ラインの囲い（10/27 Naoto「囲むの見やすい」）＝角丸の薄い枠。並びがあるときだけ（ガールズ・未発表は囲わない） */
+#pred-narabi.pn-market .pm-group.box { padding: 4px 8px 5px; border-radius: 8px; background: rgba(255, 255, 255, .05); border: 1px solid #4a4f58; }
+#pred-narabi.pn-market.pm-boxed .pm-legend { padding-top: 5px; }   /* 囲いの上の余白＋線のぶん、見出しの行を下げてそろえる */
+#pred-narabi.pn-market.pm-boxed .pm-dot { margin-top: 23px; }
+/* 8車以上（.pm-nine）＝少し詰める（列42・間8・数字15px・バッジ28・囲いの余白6・見出し12px）＝9車4ラインでも1行に収まる */
+#pred-narabi.pn-market.pm-nine .pm-legend { margin-right: 10px; }
+#pred-narabi.pn-market.pm-nine .pm-legend > span { font-size: 12px; }
+#pred-narabi.pn-market.pm-nine .pm-group.box { padding: 4px 6px 5px; }
+#pred-narabi.pn-market.pm-nine .pm-cars { gap: 8px; }
+#pred-narabi.pn-market.pm-nine .pm-col { min-width: 42px; }
+#pred-narabi.pn-market.pm-nine .pm-name { font-size: 12px; }
+#pred-narabi.pn-market.pm-nine .pm-badge .pn-car { width: 28px; height: 28px; font-size: 18px; }
+#pred-narabi.pn-market.pm-nine .pm-num, #pred-narabi.pn-market.pm-nine .pm-line { font-size: 15px; }
+#pred-narabi.pn-market.pm-nine .pm-dot { width: 18px; }
+#pred-narabi.pn-market .pm-name { height: 18px; line-height: 18px; font-size: 13px; font-weight: 700; color: #c9ccd3; white-space: nowrap; }
+#pred-narabi.pn-market .pm-badge { height: 32px; display: inline-flex; align-items: center; }
+#pred-narabi.pn-market .pm-badge .pn-car { width: 30px; height: 30px; font-size: 19px; }
+#pred-narabi.pn-market .pn-car.abs { opacity: .35; }
+#pred-narabi.pn-market .pm-num { height: 22px; line-height: 22px; font-size: 16px; font-weight: 800; color: #e8e8ec; }
+#pred-narabi.pn-market .pm-line { height: 22px; line-height: 22px; font-size: 16px; font-weight: 800; color: #d9a441; white-space: nowrap; }
+#pred-narabi.pn-market .pm-line.solo, #pred-narabi.pn-market .pm-num.none { color: #6d7480; font-weight: 700; }
+#pred-narabi.pn-market .pm-dot { width: 26px; text-align: center; font-size: 18px; font-weight: 900; color: #e8e8ec; line-height: 32px; margin-top: 18px; }
+html.theme-light #pred-narabi.pn-market .pm-cap, html.theme-light #pred-narabi.pn-market .pm-legend { color: #7a7f88; }
+html.theme-light #pred-narabi.pn-market .pm-cap .pm-note { color: #9a9ea6; }
+html.theme-light #pred-narabi.pn-market .pm-name { color: #4a4f58; }
+html.theme-light #pred-narabi.pn-market .pm-num { color: #2b2f36; }
+html.theme-light #pred-narabi.pn-market .pm-line { color: #9a6b0a; }
+html.theme-light #pred-narabi.pn-market .pm-line.solo, html.theme-light #pred-narabi.pn-market .pm-num.none { color: #9aa0ab; }
+html.theme-light #pred-narabi.pn-market .pm-dot { color: #2b2f36; }
+html.theme-light #pred-narabi.pn-market .pm-group.box { background: #fff; border-color: #c9cbd1; }
+html.theme-light #pred-narabi.pn-market .pm-badge .pn-car.c1 { border-color: #9a9ea6; }
