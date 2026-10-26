@@ -8517,6 +8517,9 @@
      ・数が増えた瞬間＝ポン（.up）／途切れた瞬間＝A 砕ける・B 灰色→しぼむ・C 落ちる をランダム（.outA/B/C・約1.5秒で片付け）。
        途切れた＝前回まで2以上で見えていて、同じ人のまま2未満になった。的中バッジで隠す・配信者が変わった ときは消え方を付けない */
   var STKCHIP = params.get("stkchip") !== "0";
+  var STKHIDE = params.has("stkhide") ? +params.get("stkhide") || 0 : 8;
+  // 10/26 Naoto「右下だと顔に被りそう」＝札はワイプの右上の角（&stkpos=br で旧の右下）
+  if (params.get("stkpos") !== "br") document.body.classList.add("stk-tr");
   function currentStreakOf(pid) {
     if (!state || !state.results) return 0;
     var best = null, bestSec = -1;
@@ -8526,7 +8529,20 @@
       var sec = stkSecOf(key);
       if (sec > bestSec) { bestSec = sec; best = key; }
     });
-    return best ? streakAt(pid, best) : 0;
+    if (!best) return 0;
+    /* 🆕10/26（Naoto・カズ 名古屋11R＝その場の最終レースで外れ→結果が入らず札が残り続けた）
+       そのあとに買目を入れたレースが発走から STKHIDE 分たっても結果が入らない＝ほぼ外れ（的中なら配信者がすぐ入れる）→札を隠す。
+       あとで的中の結果が入れば数え直して戻る。&stkhide=分（0で止める） */
+    if (STKHIDE > 0) {
+      var now = nowSec(), stale = Object.keys(state.preds || {}).some(function (key) {
+        if (state.results[key] || !((state.preds[key] || {}).byRacer || {})[pid]) return false;
+        if (!(window.Derive.resolvePred(state, key, pid).points > 0)) return false;
+        var ps = raceStartSecOf(key);
+        return ps !== null && ps > bestSec && now >= ps + STKHIDE * 60;
+      });
+      if (stale) return 0;
+    }
+    return streakAt(pid, best);
   }
   function renderStreakChips() {
     if (!STKCHIP || !state) return;
@@ -8556,7 +8572,7 @@
         }
         if (n < 2) {
           if (shown && chip.__pid === pid) {                              // 途切れた＝ランダムな消え方
-            var k = ["outA", "outB", "outC"][Math.floor(Math.random() * 3)];
+            var k = (DEBUG && window.__stkOutKind) || ["outA", "outB", "outC"][Math.floor(Math.random() * 3)];
             chip.__out = true; setFrame(false);
             chip.classList.remove("up"); chip.classList.add(k);
             setTimeout(function () { chip.__out = false; hide(); }, 1500);
@@ -8566,9 +8582,19 @@
         if (!chip) { chip = document.createElement("div"); chip.className = "stk-chip"; chip.__n = 0; cam.appendChild(chip); }
         chip.__pid = pid;
         chip.style.display = "";
+        // 右上の②＝投資・回収の帯（winv-head・ワイプの外からワイプの上端に重ねている）が出ていればその下へ
+        if (document.body.classList.contains("stk-tr")) {
+          var wh = p === "np-race-" ? $("winv-head-" + slot) : null, top = "";
+          if (wh && !wh.classList.contains("hidden") && wh.offsetHeight && wh.offsetParent === cam.offsetParent) {
+            var hb = wh.offsetTop + wh.offsetHeight - cam.offsetTop;
+            if (hb > 0) top = Math.round(hb + 4) + "px";
+          }
+          if (chip.style.top !== top) chip.style.top = top;
+        }
         var tier = Math.min(n, 5);
         ["t2", "t3", "t4", "t5"].forEach(function (c) { chip.classList.toggle(c, c === "t" + tier); });
-        var txt = "🎯" + n + "連続中";
+        // 右上の②は場所が狭い＝「🎯N連中」（10/26 Naoto）
+        var txt = "🎯" + n + (p === "np-race-" && document.body.classList.contains("stk-tr") ? "連中" : "連続中");
         if (chip.textContent !== txt) chip.textContent = txt;
         if (n > (chip.__n || 0)) {                                         // 数が増えた（出た瞬間も）＝ポン
           chip.classList.remove("up"); void chip.offsetWidth; chip.classList.add("up");
