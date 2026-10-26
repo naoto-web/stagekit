@@ -4308,3 +4308,49 @@ body #scene-race .race-wipes .winv.wide .band-inv { font-size: 32px; }
 .nh-items.nh-g { justify-items: stretch; }
 .nh-items.nh-g .nh-split { justify-content: space-between; }
 .nh-items.nh-g .nh-split .nh-v { width: auto; }
+
+/* §173（10/26 Naoto）連続的中中の常時表示＝①②のワイプの右下に「🎯N連続中」。B案＝金の札に紺の字（note勝負ラベル・的中バッジと同じ語彙）。
+   段階＝t2（2連続：光がゆっくり脈打つ）／t3（3連続：光の帯が横切る）／t4（4連続：虹のふちが回る＋弾む＋✨）／t5（5連続以上：さらに大きい虹の札＋ワイプの内側のふちが金色に脈打つ .stk-frame）。
+   数が増えた瞬間＝.up（ポン）／途切れた瞬間＝.outA（砕ける）.outB（灰色→しぼむ）.outC（落ちる）を JS がランダムに付ける。
+   左下の名前の札と高さをそろえる（右下10px）。札とふちは overlay.js の renderStreakChips がワイプ（.cam）の中に差し込む。&stkchip=0 で出さない
+   比較・見本＝モック/連続的中中の常時表示/段階と消え方.html */
+.stk-chip { position: absolute; right: 10px; bottom: 10px; z-index: 7; pointer-events: none; white-space: nowrap; line-height: 1;
+  font-size: 26px; font-weight: 900; padding: 7px 12px 8px; border-radius: 10px; transform-origin: right bottom;
+  background: #ffd54f; color: #14204a; border: 2.5px solid #b8860b; box-shadow: 0 2px 10px rgba(0,0,0,.5); }
+.stk-chip.t2 { font-size: 28px; animation: stkGlow2 2.2s ease-in-out infinite; }
+@keyframes stkGlow2 { 0%,100% { box-shadow: 0 0 6px 1px rgba(255,210,70,.55), 0 2px 10px rgba(0,0,0,.5); } 50% { box-shadow: 0 0 18px 5px rgba(255,215,90,.9), 0 2px 10px rgba(0,0,0,.5); } }
+.stk-chip.t3 { font-size: 30px; border-color: #fff; overflow: hidden;
+  background-image: linear-gradient(105deg, rgba(255,255,255,0) 40%, rgba(255,255,255,.95) 50%, rgba(255,255,255,0) 60%), linear-gradient(120deg, #fff6c8, #ffd54f 30%, #ffb300 50%, #ffd54f 70%, #fff6c8);
+  background-size: 250% 100%, 100% 100%; background-repeat: no-repeat;
+  animation: stkShine3 4s linear infinite, stkGlow3 1.6s ease-in-out infinite; }
+@keyframes stkShine3 { 0%, 70% { background-position: 120% 0, 0 0; } 90%, 100% { background-position: -20% 0, 0 0; } }
+@keyframes stkGlow3 { 0%,100% { box-shadow: 0 0 10px 3px rgba(255,200,40,.7), 0 2px 10px rgba(0,0,0,.5); } 50% { box-shadow: 0 0 26px 8px rgba(255,215,90,1), 0 2px 10px rgba(0,0,0,.5); } }
+.stk-chip.t4, .stk-chip.t5 { font-size: 32px; border: 3px solid transparent; overflow: visible;
+  background: linear-gradient(120deg, #fff6c8, #ffd54f 30%, #ffb300 50%, #ffd54f 70%, #fff6c8) padding-box,
+              linear-gradient(90deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff, #ff5252) border-box;
+  background-size: 100% 100%, 300% 100%;
+  animation: stkRainbow 2.4s linear infinite, stkBounce 1.2s ease-in-out infinite, stkGlow4 1.2s ease-in-out infinite; }
+.stk-chip.t5 { font-size: 34px; animation: stkRainbow 2s linear infinite, stkBounce 1s ease-in-out infinite, stkGlow4 1s ease-in-out infinite; }
+@keyframes stkRainbow { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 300% 0; } }
+@keyframes stkBounce { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@keyframes stkGlow4 { 0%,100% { box-shadow: 0 0 14px 4px rgba(255,170,40,.8), 0 2px 10px rgba(0,0,0,.5); } 50% { box-shadow: 0 0 34px 12px rgba(255,120,200,.75), 0 2px 10px rgba(0,0,0,.5); } }
+.stk-chip.t4::before, .stk-chip.t4::after, .stk-chip.t5::before, .stk-chip.t5::after { content: "✨"; position: absolute; font-size: 18px; animation: stkTw 1.6s ease-in-out infinite; }
+.stk-chip.t5::before, .stk-chip.t5::after { font-size: 20px; animation-duration: 1.3s; }
+.stk-chip.t4::before, .stk-chip.t5::before { left: -14px; top: -14px; }
+.stk-chip.t4::after, .stk-chip.t5::after { right: -12px; bottom: -14px; animation-delay: .65s; }
+@keyframes stkTw { 0%,100% { opacity: .2; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
+/* 5連続以上＝ワイプの内側のふちが金色に脈打つ（札とは別の要素・JS が出し入れ） */
+.stk-frame { position: absolute; inset: 0; z-index: 6; pointer-events: none; animation: stkFrame 1.6s ease-in-out infinite; }
+@keyframes stkFrame { 0%,100% { box-shadow: inset 0 0 0 4px rgba(255,213,79,.85), inset 0 0 18px 6px rgba(255,190,40,.45); }
+  50% { box-shadow: inset 0 0 0 6px rgba(255,236,150,1), inset 0 0 40px 14px rgba(255,200,60,.75); } }
+/* 数が増えた瞬間＝ポン（段階の動きより優先） */
+.stk-chip.up { animation: stkPop .55s cubic-bezier(.2,1.6,.4,1) !important; }
+@keyframes stkPop { 0% { transform: scale(.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+/* 途切れた瞬間の消え方（JS がランダムに1つ）。的中バッジで隠すとき・配信者が変わったときは付けない＝普通に消す */
+.stk-chip.outA { animation: stkOutA 1.1s ease-in forwards !important; }
+@keyframes stkOutA { 0% { filter: none; transform: none; opacity: 1; } 15% { filter: brightness(1.8); transform: rotate(-3deg); } 25% { transform: rotate(3deg); }
+  35% { transform: rotate(-2deg) scale(1.05); filter: grayscale(.6) brightness(1.2); } 100% { transform: translateY(60px) rotate(18deg) scale(.7); opacity: 0; filter: grayscale(1); } }
+.stk-chip.outB { animation: stkOutB 1.4s ease-out forwards !important; }
+@keyframes stkOutB { 0% { filter: none; opacity: 1; transform: none; } 45% { filter: grayscale(1) brightness(.85); opacity: 1; transform: scale(1); } 100% { filter: grayscale(1); opacity: 0; transform: scale(.4); } }
+.stk-chip.outC { animation: stkOutC 1s cubic-bezier(.5,0,.75,0) forwards !important; }
+@keyframes stkOutC { 0% { transform: none; opacity: 1; } 20% { transform: translateY(-10px); } 100% { transform: translateY(90px) rotate(-8deg); opacity: 0; } }

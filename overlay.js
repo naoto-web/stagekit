@@ -8460,20 +8460,34 @@
   function hitStreakOf(hit) {
     var p = String(hit && hit.id || "").split("|");
     if (p.length < 5 || !state) return 0;
-    var target = p[0] + "|" + p[1], pid = p[2];
-    var secOf = function (key) {
-      var s = raceStartSecOf(key);
-      if (s !== null) return s;
-      var d = new Date((state.results[key] || {}).settledAt || 0); // 時刻表に無いレース＝結果を確定した時刻で代用
-      return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
-    };
-    if (!state.results || !state.results[target]) return 0;
-    var tSec = secOf(target), list = [];
+    return streakAt(p[2], p[0] + "|" + p[1]);
+  }
+  /* §173（10/26 Naoto）結果待ちのレースの扱いを変える＝**後に発走したレースの結果が入ったら、それより前に発走して
+     まだ結果が入っていない（買目を入れた）レースは外れとみなして連続を切る**。
+     きっかけ＝3連続中にA場5Rの外れの結果が遅れ、その間に後から走ったB場5Rの的中が「4連続的中！」と出た。
+     間違えるなら少なく言う側へ（多く言った表示は取り消せない・少なく言った分は結果が入れば常時表示が数え直す）。
+     時刻表に発走時刻が無いレースはこの判定に使わない（いつ走ったか分からない）。&stkpend=0 で旧（結果待ちは飛ばす） */
+  var STKPEND = params.get("stkpend") !== "0";
+  function stkSecOf(key) {
+    var s = raceStartSecOf(key);
+    if (s !== null) return s;
+    var d = new Date((state.results[key] || {}).settledAt || 0); // 時刻表に無いレース＝結果を確定した時刻で代用
+    return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+  }
+  /** pid（配信者ID）の、レース target の時点の連続的中数（target 自体が的中でなければ 0） */
+  function streakAt(pid, target) {
+    if (!state || !state.results || !state.results[target]) return 0;
+    var tSec = stkSecOf(target), list = [];
     Object.keys(state.preds || {}).forEach(function (key) {
       if (!((state.preds[key] || {}).byRacer || {})[pid]) return;
-      if (!state.results[key]) return;                                             // 結果の出ていないレースは飛ばす
       if (!(window.Derive.resolvePred(state, key, pid).points > 0)) return;       // 買目を入れたレースだけ
-      var sec = secOf(key);
+      if (!state.results[key]) {                                                   // 結果の出ていないレース
+        // §173 このレースより前に発走した結果待ち＝外れとみなす（旧＝飛ばす）
+        var ps = STKPEND && key !== target ? raceStartSecOf(key) : null;
+        if (ps !== null && ps < tSec) list.push({ key: key, sec: ps, pending: true });
+        return;
+      }
+      var sec = stkSecOf(key);
       if (key !== target && sec > tSec) return;                                    // このレースより後に発走したものは見ない
       list.push({ key: key, sec: sec });
     });
@@ -8482,6 +8496,7 @@
     list.sort(function (a, b) { return a.sec - b.sec || (a.key === target ? 1 : b.key === target ? -1 : 0); });
     var n = 0;
     for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i].pending) break;                                                  // §173 結果待ち＝外れとみなす
       var s = window.Derive.settleRace(state, list[i].key);
       var r = s && s.byRacer[pid];
       if (!r || !r.hits.length) break;
@@ -8489,6 +8504,79 @@
     }
     return n;
   }
+  /* ══ §173 連続的中中の常時表示（10/26 Naoto）══
+     ・その人の「今の連続数」＝結果が入っている買目ありのレースのうち、いちばん後に発走したレースの時点の連続数（streakAt）。
+       2以上なら ①トーク・②レース観戦のその人のワイプの右下に「🎯N連続中」（B案＝金の札に紺の字・4以上は光る）。
+       次に買目を入れたレースが外れと決まる（または後のレースの結果が入って前の結果待ちが外れとみなされる）と消える
+     ・結果を入力し直せば数え直す（毎秒と描き直しのたびに計算）。的中バッジが出ている間（35秒）はそのワイプでは隠す＝情報が二重
+     ・記号は🎯（🔥は note の印と重なるため使わない・10/26 Naoto）。&stkchip=0 で出さない
+     ・段階（10/26 Naoto「2と3でも大きく違う」）＝t2 光が脈打つ／t3 光の帯／t4 虹のふち＋弾む＋✨／t5（5以上）さらに大きい虹＋ワイプの内側のふちが金色（.stk-frame）
+     ・数が増えた瞬間＝ポン（.up）／途切れた瞬間＝A 砕ける・B 灰色→しぼむ・C 落ちる をランダム（.outA/B/C・約1.5秒で片付け）。
+       途切れた＝前回まで2以上で見えていて、同じ人のまま2未満になった。的中バッジで隠す・配信者が変わった ときは消え方を付けない */
+  var STKCHIP = params.get("stkchip") !== "0";
+  function currentStreakOf(pid) {
+    if (!state || !state.results) return 0;
+    var best = null, bestSec = -1;
+    Object.keys(state.preds || {}).forEach(function (key) {
+      if (!((state.preds[key] || {}).byRacer || {})[pid] || !state.results[key]) return;
+      if (!(window.Derive.resolvePred(state, key, pid).points > 0)) return;
+      var sec = stkSecOf(key);
+      if (sec > bestSec) { bestSec = sec; best = key; }
+    });
+    return best ? streakAt(pid, best) : 0;
+  }
+  function renderStreakChips() {
+    if (!STKCHIP || !state) return;
+    var seats = seatMap();
+    ["a", "b"].forEach(function (slot) {
+      var rc = seats[slot], n = 0, pid = rc ? rc.id : "";
+      try { n = rc ? currentStreakOf(rc.id) : 0; } catch (e) { n = 0; }
+      ["np-talk-", "np-race-"].forEach(function (p) {
+        var el = $(p + slot), cam = el && el.closest(".cam");
+        if (!cam) return;
+        var chip = cam.querySelector(".stk-chip"), frame = cam.querySelector(".stk-frame");
+        var setFrame = function (on) {
+          if (on && !frame) { frame = document.createElement("div"); frame.className = "stk-frame"; cam.appendChild(frame); }
+          if (frame) frame.style.display = on ? "" : "none";
+        };
+        var hide = function () { // 普通に消す（消え方なし）
+          if (chip) { chip.style.display = "none"; chip.className = "stk-chip"; chip.__n = 0; chip.__out = false; }
+          setFrame(false);
+        };
+        if (chip && chip.__out) return;                                  // 消え方の途中は触らない
+        if (chip && chip.__pid !== pid) hide();                           // 配信者が変わった
+        var shown = !!chip && chip.style.display !== "none" && (chip.__n || 0) >= 2;
+        if (cam.querySelector(".hit-fx-badge")) {                         // 的中バッジの間は隠す（数は覚えたまま）
+          if (chip) chip.style.display = "none";
+          setFrame(false);
+          return;
+        }
+        if (n < 2) {
+          if (shown && chip.__pid === pid) {                              // 途切れた＝ランダムな消え方
+            var k = ["outA", "outB", "outC"][Math.floor(Math.random() * 3)];
+            chip.__out = true; setFrame(false);
+            chip.classList.remove("up"); chip.classList.add(k);
+            setTimeout(function () { chip.__out = false; hide(); }, 1500);
+          } else hide();
+          return;
+        }
+        if (!chip) { chip = document.createElement("div"); chip.className = "stk-chip"; chip.__n = 0; cam.appendChild(chip); }
+        chip.__pid = pid;
+        chip.style.display = "";
+        var tier = Math.min(n, 5);
+        ["t2", "t3", "t4", "t5"].forEach(function (c) { chip.classList.toggle(c, c === "t" + tier); });
+        var txt = "🎯" + n + "連続中";
+        if (chip.textContent !== txt) chip.textContent = txt;
+        if (n > (chip.__n || 0)) {                                         // 数が増えた（出た瞬間も）＝ポン
+          chip.classList.remove("up"); void chip.offsetWidth; chip.classList.add("up");
+          setTimeout(function () { chip.classList.remove("up"); }, 600);
+        }
+        chip.__n = n;
+        setFrame(n >= 5);
+      });
+    });
+  }
+  if (DEBUG) window.__stk = { at: streakAt, cur: currentStreakOf, render: renderStreakChips };
   /* ══ §157 バッジは当てた人について行く（10/18 Naoto「席替えしたら演出はそのままやり切って、バッジから移す」） ══
      ・前奏（スロット・神降臨など）は始まった席でやり切る（途中の演出を動かすと CSS の動きとタイマーがずれる＝作り直しが要る）
      ・バッジは出る瞬間に当てた人の席へ（fireHitFx）／バッジが出ている35秒の間に席替えしたら、残り時間のままバッジと枠の光を新しい席へ（followBadges）
@@ -8693,8 +8781,10 @@
     renderBrb();
     renderAd();
     renderTimers();
+    renderStreakChips(); // §173
     renderDbg();
   }
+  setInterval(function () { try { renderStreakChips(); } catch (e) {} }, 1000); // §173 的中バッジが消えたら札を戻す（バッジの出入りは描き直しを起こさない）
 
   function renderDbg() {
     if (!DEBUG) return;
