@@ -1001,3 +1001,12 @@ html.theme-light #pred-narabi.pn-market .pm-group.box { background: #fff; border
 html.theme-light #pred-narabi.pn-market .r1 { color: #d32f2f !important; }
 html.theme-light #pred-narabi.pn-market .r2 { color: #1f5fc8 !important; }
 html.theme-light #pred-narabi.pn-market .pm-badge .pn-car.c1 { border-color: #9a9ea6; }
+
+/* 🎉§182 登録者のお祝いボタン（11/1 Naoto「目立つところに」）＝画面上の全幅・金 */
+.celebrate-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; width: calc(100% - 16px); margin: 8px auto 0; padding: 10px 12px;
+  border: 2px solid #b8740a; border-radius: 12px; cursor: pointer; font-family: inherit; color: #3a1e00;
+  background: linear-gradient(180deg, #fff3b8 0%, #ffd23e 55%, #f0a818 100%); box-shadow: 0 3px 0 #8a5a06, 0 0 14px rgba(255,190,40,.45); }
+.celebrate-btn .cb-main { font-size: 20px; font-weight: 900; letter-spacing: .03em; }
+.celebrate-btn .cb-sub { font-size: 12px; font-weight: 700; opacity: .8; }
+.celebrate-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5a06; }
+.celebrate-btn.armed { background: linear-gradient(180deg, #ffd0d8 0%, #ff6b88 60%, #e0335a 100%); border-color: #a3123a; color: #fff; box-shadow: 0 3px 0 #7a0f33, 0 0 16px rgba(255,80,120,.6); }

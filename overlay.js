@@ -1013,6 +1013,148 @@
     hitSwitched[k] = true;
     switchToScene("talk");
   }
+  /* ══ §182 登録者のお祝い（11/1 Naoto「登録者1万人いった」）＝コンソールの「🎉お祝い」ボタン → state.celebrate = { at, n } ══
+     ・出すのは①トークだけ（全画面・約11.5秒）。②③が映っているときに押されたら、映っているソースが①へ切り替える（FB149と同じ手口・同じ権限）
+     ・①は「映っている」ときだけ流す。裏で受け取ったら、映った瞬間に流す（押してから CEL_FRESH 秒まで）
+     ・流れ＝暗転＋紙吹雪 → 0→(n−10)を1.5秒・最後の10人は1人ずつ間を広げて → ドン（フラッシュ・後光・決定音）→「ありがとう！」
+       → 6色が乾杯ポーズで下から登場（2人ずつ3組で向かい合ってグラスを合わせる）→ フェードアウト。見本＝モック/登録者1万人お祝い/
+     ・同じ合図は1回だけ（localStorage に記憶＝読み直しで2回流れない・②③も①が流した合図では切り替えない）。
+       押してから CEL_FRESH 秒を過ぎた合図は流さない（翌日・遅れて開いたOBS）
+     ・コマ送り・紙吹雪は setTimeout/setInterval 駆動（rAF が来ない環境でも止まらない・サンバと同じ）
+     ・&cel=0 で止める */
+  var CEL = params.get("cel") !== "0";
+  var CEL_FRESH = 120;
+  var CEL_KEY = "stagekit.celebrated";
+  var CEL_COLORS = ["pink", "red", "orange", "yellow", "green", "blue"];
+  // 絵の元の向きが色でまちまち＝組の左は右向き・組の右は左向きにそろえる反転の表（red・yellow・green は元が右向き）
+  var CEL_FLIP = { pink: true, red: true, orange: true, yellow: true, green: false, blue: false };
+  var celPending = null, celBusy = false, celSwitched = {};
+  function celSeen(id) {
+    try { return (localStorage.getItem(CEL_KEY) || "").split(",").indexOf(id) >= 0; } catch (e) { return false; }
+  }
+  function celMark(id) {
+    try {
+      var a = (localStorage.getItem(CEL_KEY) || "").split(",").filter(Boolean).slice(-9);
+      a.push(id);
+      localStorage.setItem(CEL_KEY, a.join(","));
+    } catch (e) {}
+  }
+  function celFresh(c) {
+    var t = Date.parse(c && c.at);
+    return !!t && Math.abs(Date.now() - t) < CEL_FRESH * 1000;
+  }
+  function celebrateCheck(s) {
+    if (!CEL || !s || !s.celebrate || !s.celebrate.at) return;
+    var c = s.celebrate;
+    if (!celFresh(c) || celSeen(c.at)) return;
+    if (SCENE === "talk") {
+      if (celBusy) return;
+      celPending = c;
+      celTry();
+      return;
+    }
+    if (SCENE !== "race" && SCENE !== "tenkai") return;
+    if (celSwitched[c.at] || HITSW_OFF) return;
+    if (!window.obsstudio || typeof window.obsstudio.setCurrentScene !== "function") return;
+    if (document.visibilityState !== "visible") return; // 表示中のソースだけが切り替える（FB60）
+    celSwitched[c.at] = true;
+    switchToScene("talk");
+  }
+  function celTry() {
+    if (!celPending || celBusy) return;
+    if (document.visibilityState !== "visible") return;
+    var c = celPending;
+    celPending = null;
+    if (!celFresh(c) || celSeen(c.at)) return;
+    celMark(c.at);
+    spawnCelebrate(+c.n || 10000);
+  }
+  if (SCENE === "talk") document.addEventListener("visibilitychange", celTry);
+  var CEL_CF = ["#ffd23e", "#ff5fa2", "#35d07f", "#48b7ff", "#ff9430", "#c66bff", "#fff"];
+  function celConfetti(box, n, fast) {
+    for (var i = 0; i < n; i++) {
+      var p = document.createElement("span");
+      p.className = "cel-cf";
+      p.style.left = (Math.random() * 100) + "%";
+      p.style.setProperty("--c", CEL_CF[Math.floor(Math.random() * CEL_CF.length)]);
+      p.style.setProperty("--d", (fast ? 1.6 + Math.random() : 2.6 + Math.random() * 1.6) + "s");
+      p.style.setProperty("--sx", Math.round((Math.random() - .5) * 500) + "px");
+      p.style.setProperty("--rot", Math.round(360 + Math.random() * 720) + "deg");
+      box.appendChild(p);
+      p.addEventListener("animationend", function () { this.remove(); });
+    }
+  }
+  function spawnCelebrate(goal) {
+    var stage = $("stage");
+    if (!stage) return;
+    celBusy = true;
+    var fmt = function (v) { return v.toLocaleString("en-US"); };
+    var box = document.createElement("div");
+    box.className = "cel";
+    box.innerHTML =
+      '<div class="cel-dim"></div><div class="cel-halo"></div>' +
+      '<div class="cel-txt"><div class="cel-sub">チャンネル登録者</div>' +
+      '<div class="cel-num"><span>0</span><small>人</small></div><div class="cel-thx">ありがとう！</div></div>' +
+      '<div class="cel-row"></div><div class="cel-clink" style="left:50%"><i></i><b>カンッ！</b></div><div class="cel-flash"></div>';
+    var num = box.querySelector(".cel-num span"), row = box.querySelector(".cel-row");
+    CEL_COLORS.forEach(function (c, i) {
+      var d = document.createElement("div");
+      d.className = "cel-ch" + (CEL_FLIP[c] ? " l" : "") + (i % 2 ? " pr" : " pl");
+      d.style.backgroundImage = 'url("fx_kp_' + c + '_p.png")';
+      row.appendChild(d);
+    });
+    stage.appendChild(box);
+    // 端の2組にも「カンッ」の光（文字は真ん中の組だけ）＝組の境目に置く
+    var chs = row.children;
+    for (var p = 0; p < chs.length; p += 2) {
+      if (p === 2) continue;
+      var ck = document.createElement("div");
+      ck.className = "cel-clink";
+      ck.style.left = Math.round(row.offsetLeft + chs[p + 1].offsetLeft + 6) + "px";
+      ck.innerHTML = "<i></i>";
+      box.appendChild(ck);
+    }
+    var RUN = 1500, LAST = Math.min(10, goal), STEP0 = 70, STEPUP = 22;
+    var CU = RUN;
+    for (var s = 0; s < LAST; s++) CU += STEP0 + s * STEPUP;
+    var base = goal - LAST, snd = null;
+    setTimeout(function () {
+      box.classList.add("on");
+      snd = cuLifeStart();
+    }, 30);
+    var rain = setInterval(function () {
+      if (!box.isConnected) { clearInterval(rain); return; }
+      celConfetti(box, 5, false);
+    }, 150);
+    var st = Date.now();
+    (function run() {
+      if (!box.isConnected) return;
+      var t = Math.min(1, (Date.now() - st) / RUN);
+      num.textContent = fmt(Math.round(base * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) return setTimeout(run, 33);
+      (function last(k) {
+        if (k > LAST) return;
+        setTimeout(function () { num.textContent = fmt(base + k); last(k + 1); }, STEP0 + (k - 1) * STEPUP);
+      })(1);
+    })();
+    setTimeout(function () {
+      if (snd) { try { snd.stop(); } catch (e) {} }
+      cuDecide(0, true);
+      box.classList.add("boom");
+      celConfetti(box, 90, true);
+    }, CU + 50);
+    setTimeout(function () { box.classList.add("thx"); }, CU + 450);
+    for (var i = 0; i < chs.length; i++) (function (el, k) {
+      setTimeout(function () { el.classList.add("in"); }, CU + 900 + [2, 3, 1, 4, 0, 5][k] * 160);
+    })(chs[i], i);
+    setTimeout(function () { box.classList.add("kp"); celConfetti(box, 70, true); }, CU + 2100);
+    setTimeout(function () { clearInterval(rain); box.classList.add("out"); }, CU + 7200);
+    setTimeout(function () {
+      if (box.parentNode) box.parentNode.removeChild(box);
+      celBusy = false;
+      celTry();
+    }, CU + 8000);
+  }
   /* ②が表示された瞬間をコンソールへ通知（FB96＝予想レースの自動追従のトリガー）。
      OBS内のソースだけが送る＝通常ブラウザで閲覧しているだけのタブが盤面を動かさないように */
   if (SCENE === "race" && window.obsstudio) {
@@ -8824,6 +8966,7 @@
     renderAll();
     followBadges(); // §157 席替えでバッジを新しい席へ
     checkNewHits();
+    celebrateCheck(state); // §182 登録者のお祝い
   }
 
   function renderAll() {

@@ -2638,6 +2638,36 @@
     if (changed) { save(); renderAll(); }
   }
 
+  /* 🎉§182 登録者のお祝い（11/1 Naoto）＝画面上の全幅の金ボタン（目立つ所に・Naoto指定）。
+     押す→「もう一度押すと①で流れます」→3秒以内にもう一度で state.celebrate = { at, n } を保存（OBSのドックは confirm() が出ないことがあるため2度押し式・§96と同じ）。
+     OBS は②③が映っていれば①へ切り替えてから流す（overlay.js §182）。レース中に押すとレース映像から①へ切り替わる＝レースとレースの間に押す。
+     数字は CEL_GOAL（次の節目はここを書き換える） */
+  var CEL_GOAL = 10000;
+  (function () {
+    var b = document.getElementById("btn-celebrate");
+    if (!b) return;
+    var main = b.querySelector(".cb-main"), sub = b.querySelector(".cb-sub");
+    var M0 = "🎉 登録者 " + CEL_GOAL.toLocaleString("en-US") + "人 お祝い演出を流す";
+    var S0 = "①トークに約12秒（②③を映していたら①へ自動で切り替わります）";
+    var show = function (m, s, armed) { main.textContent = m; sub.textContent = s; b.classList.toggle("armed", !!armed); };
+    show(M0, S0);
+    var armedUntil = 0, timer = null;
+    b.addEventListener("click", function () {
+      if (Date.now() > armedUntil) {
+        armedUntil = Date.now() + 3000;
+        show("もう一度押すと①で流れます", "レース中なら、レースが終わってから押してください", true);
+        clearTimeout(timer);
+        timer = setTimeout(function () { show(M0, S0); }, 3000);
+        return;
+      }
+      armedUntil = 0; clearTimeout(timer);
+      state.celebrate = { at: new Date().toISOString(), n: CEL_GOAL };
+      save();
+      show("✅ 流しました", "もう一度流すときは、もう一度押してください");
+      timer = setTimeout(function () { show(M0, S0); }, 15000);
+    });
+  })();
+
   /* 🧪§96（9/29 Naoto「テスト用OBSだけにはリセットボタンほしい」）テスト接続（IS_TEST_BACKEND）のときだけ「配信」カードの見出しに出す。
      押す→「本当にリセット？（もう一度押す）」→3秒以内にもう一度で実行（OBSのドックは confirm() が出ないことがあるため2度押し式）。
      消すもの（Naoto指定）＝今日の結果・的中（手動追加・非表示）・予想（買目・俺たち目・投資・note予想）＋コンソール手元の下書き。
