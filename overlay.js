@@ -16,6 +16,40 @@
   var SCENES = ["talk", "race", "tenkai", "result", "brb", "ad"];
   var SCENE = SCENES.indexOf(params.get("scene")) >= 0 ? params.get("scene") : "talk";
   var DEBUG = params.get("debug") === "1";
+  /* §183 OBSの中で表示倍率がずれたとき、ページ側で打ち消す（11/2 Naoto）。
+     11/1 23:30 配信者OBSで①②③が同時に約1.1倍（左上起点・右下が切れる）になった。レース映像・カメラは無事、
+     ページ（本番ファイル）は無変更、Naotoのテスト用OBSでは正常＝配信者OBSの中で「このサイトの拡大110%」が
+     記憶された事故と判定。Ctrl+0・OBS再起動・ロック解除→「画面に合わせる」のどれでも戻らなかった。
+     仕組み＝この画面は1920×1080固定。OBSの中（window.obsstudio）で見えている幅が1920と違えば、
+     body を transform で縮めて（または広げて）1920×1080がちょうど収まるようにする。
+     getBoundingClientRect は transform 後の見た目の値を返すので、レイアウト値（offsetWidth・clientWidth 等）と
+     混ぜて使っている既存コードがずれないよう、倍率で割って元の座標系に戻す。
+     普段（幅1920）は何もしない。倍率が途中で変わっても resize で追従する。
+     検証＝ブラウザで &fit=1 を付け、Ctrl+ホイールで拡大・縮小しても画面が崩れないこと。
+     🔴止める＝ソースURLに &fit=0（デプロイ不要） */
+  var FIT = params.get("fit") === "0" ? false : (!!window.obsstudio || params.get("fit") === "1");
+  var fitK = 1;
+  var fitOrigRect = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function () {
+    var r = fitOrigRect.call(this);
+    if (fitK === 1) return r;
+    return new DOMRect(r.x / fitK, r.y / fitK, r.width / fitK, r.height / fitK);
+  };
+  function fitApply() {
+    if (!FIT) return;
+    var w = window.innerWidth, h = window.innerHeight;
+    if (!w || !h) return;
+    var k = Math.min(w / 1920, h / 1080);
+    if (Math.abs(k - 1) < 0.005) k = 1;
+    if (k < 0.5 || k > 2) k = 1;
+    if (k === fitK) return;
+    fitK = k;
+    document.body.style.transformOrigin = "0 0";
+    document.body.style.transform = k === 1 ? "" : "scale(" + k + ")";
+    if (DEBUG) console.log("fit", k, w, h);
+  }
+  fitApply();
+  window.addEventListener("resize", fitApply);
   /* ②レース観戦の中央ライン＋メンバーカラー枠の太線化（8/13 Naoto案）。
      2026-08-13にテスト検証を経て本番既定ONへ昇格。
      ロールバック＝ソースURLに &v2=0（旧レイアウトへ即復帰・デプロイ不要）。
