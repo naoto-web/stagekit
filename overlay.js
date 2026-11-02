@@ -26,14 +26,22 @@
      混ぜて使っている既存コードがずれないよう、倍率で割って元の座標系に戻す。
      普段（幅1920）は何もしない。倍率が途中で変わっても resize で追従する。
      検証＝ブラウザで &fit=1 を付け、Ctrl+ホイールで拡大・縮小しても画面が崩れないこと。
-     🔴止める＝ソースURLに &fit=0（デプロイ不要） */
+     🔴止める＝ソースURLに &fit=0（デプロイ不要）
+     §185（11/2 Naoto「えーす予想の文字の上に線が入ってる」）＝transform で縮めると要素の縁が小数画素になり、
+     同色で重なる「カメラ枠の下端｜パネル枠｜帯（panel-head）」の境目に下の色（透過＝OBSの背景・パネルのクリーム）が
+     1行だけ透けて薄い筋になる（1745×982 で再現＝検証ハーネス/fit_seam.js）。CSS の zoom は配置そのものを縮めて
+     画素に揃えるので境目に隙間が出ない → transform から zoom に変更（普段＝幅1920 のときは何もしないのは同じ）。
+     zoom のときの getBoundingClientRect は Chromium 128 以降（zoom 標準化後）は画面座標（縮んだ値）、
+     それより前（古い CEF）は縮む前の値を返す＝どちらでも合うように、body の実測（見た目の幅÷レイアウト幅）で割る倍率を決める */
   var FIT = params.get("fit") === "0" ? false : (!!window.obsstudio || params.get("fit") === "1");
   var fitK = 1;
+  /* §185 getBoundingClientRect を割る倍率＝標準化後の Chromium では fitK・旧 CEF では 1（fitApply が実測で決める） */
+  var fitR = 1;
   var fitOrigRect = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function () {
     var r = fitOrigRect.call(this);
-    if (fitK === 1) return r;
-    return new DOMRect(r.x / fitK, r.y / fitK, r.width / fitK, r.height / fitK);
+    if (fitR === 1) return r;
+    return new DOMRect(r.x / fitR, r.y / fitR, r.width / fitR, r.height / fitR);
   };
   function fitApply() {
     if (!FIT) return;
@@ -44,9 +52,14 @@
     if (k < 0.5 || k > 2) k = 1;
     if (k === fitK) return;
     fitK = k;
-    document.body.style.transformOrigin = "0 0";
-    document.body.style.transform = k === 1 ? "" : "scale(" + k + ")";
-    if (DEBUG) console.log("fit", k, w, h);
+    /* §185 transform（縁の隙間＝薄い筋）→ zoom（配置ごと縮める＝隙間なし）。古い transform の残りは消しておく */
+    document.body.style.transformOrigin = "";
+    document.body.style.transform = "";
+    document.body.style.zoom = k === 1 ? "" : String(k);
+    /* 標準化後の Chromium は zoom 後の見た目の幅（1920×k）、旧 CEF は 1920 を返す＝その比で割る */
+    var bw = fitOrigRect.call(document.body).width, lw = document.body.offsetWidth || 1920;
+    fitR = (k !== 1 && bw > 0 && lw > 0 && Math.abs(bw / lw - 1) > 0.005) ? bw / lw : 1;
+    if (DEBUG) console.log("fit", k, w, h, "rect/layout", fitR);
   }
   fitApply();
   window.addEventListener("resize", fitApply);
