@@ -1938,6 +1938,52 @@
      ⚠️今の席にいない人の行・この形で読めない行（メモ・複数場の1行など）は**消さずにそのまま残す**
        ＝昼の人が入れた行は夜の人が操作しても消えない。並びは「残した行→今の配信者の行」。
      押した瞬間に保存（本日設定の「設定を保存」は読まない） */
+  /* ---------- §184 note勝負レースの登録が「場の消し直し」で落ちないようにする（11/2 Naoto） ----------
+     11/1 夜、画面ずれ（§183）の対応で配信者が本日の場を全部消して入れ直したあと、西武園7Rの note 登録（2人分）が落ちていた。
+     データ上は、場を消しても state.noteRaces の行（noteParse の keep に残る）も予想の isNote も消えない作りだが、
+     入れ直したあとの操作で落ちたとみられる（操作の記録が無く特定できない）。対策は2つ：
+       ① 場を足した（入れ直した）瞬間に、その場の note 登録（本日設定の行）に載っているレースの予想へ isNote=true を
+          付け直す（本日設定が正）。予想カードの✓と OBS の🔥が「残っている」と見える＝押し直す動機をなくす。
+          器が無ければ note チップの ON と同じ形で空の器を作る（買目は空のまま＝投資・点数・的中計算は text/investInput しか見ない）
+       ② note 登録が変わるたび「経路・誰の・どの場・何R・ON/OFF・時刻」を state.noteLog に直近 NOTE_LOG_MAX 件だけ残す
+          （配信者には見せない。次に同じことが起きたとき GET ?action=state で原因を追える）
+     確認ダイアログは入れない（Naoto「外すときだけ一言はいらない」） */
+  var NOTE_LOG_MAX = 20;
+  /** by＝"chip"（チップの押下）／"del"（ほかの行の✕・who は消した行の文章）／"sync"（①の付け直し） */
+  function noteLog(by, who, v, r, on) {
+    if (!state) return;
+    var log = Array.isArray(state.noteLog) ? state.noteLog : [];
+    log.push({ t: new Date().toISOString(), by: by, who: String(who || ""), v: String(v || ""), r: +r || 0, on: !!on });
+    while (log.length > NOTE_LOG_MAX) log.shift();
+    state.noteLog = log;
+  }
+  /** 足した場 names について、本日設定の note 登録どおりに予想の isNote を付け直す（保存は呼び出し側）。付け直した件数を返す */
+  function noteResyncVenues(names) {
+    if (!state || !names || !names.length) return 0;
+    var pr = noteParse();
+    var n = 0;
+    (state.racers || []).forEach(function (rc) {
+      var m = pr.model[rc.name] || {};
+      names.forEach(function (vn) {
+        Object.keys(m[vn] || {}).forEach(function (r) {
+          var rk = window.Derive.raceKey(vn, +r);
+          var ent = (((state.preds || {})[rk] || {}).byRacer || {})[rc.id];
+          if (!ent) {
+            ent = ensurePredEntry(rk, rc.id);
+            state.preds[rk].cars = autoCars(rk);
+          }
+          if (ent.isNote) return;
+          ent.isNote = true;
+          var dd = predDrafts[draftKey(rk, rc.id)];
+          if (dd) dd.note = true;
+          noteLog("sync", rc.name, vn, +r, true);
+          n++;
+        });
+      });
+    });
+    return n;
+  }
+
   function noteParse() {
     var roster = (state.roster || []).filter(function (r) { return r && r.name; });
     var cur = {};
@@ -2050,6 +2096,7 @@
         var set = m[v] || (m[v] = {});
         if (set[r]) delete set[r]; else set[r] = 1;
         state.noteRaces = noteBuild(pr);
+        noteLog("chip", n, v, r, !!set[r]);
         /* 予想入力のnote予想チェックと連動（9/25 Naoto「押したのにチェックが付かない」）。
            ⚠️勝負レース照合の既定ON（isNoteRaceDefault）は「保存値も下書きも無い新規カード」にしか効かない。
              下書きは描画のたびに全カード分できる＝一度表示された予想には効かなかった。
@@ -2081,6 +2128,7 @@
         var pr = noteParse();
         var gone = pr.keep.splice(+b.getAttribute("data-k"), 1)[0];
         noteUnsetLine(gone); // 9/25＝行を消しても予想の「noteあり」が残っていた（席にいない人の分）
+        noteLog("del", gone, "", 0, false);
         state.noteRaces = noteBuild(pr);
         save();
         renderAll();
@@ -2092,6 +2140,8 @@
   /** 本日の場を names に置き換える（手の操作と §61 の自動で共用）。保存は呼び出し側 */
   function applyVenueNames(names) {
     var curName = activeVenueName();
+    /* §184 足した（入れ直した）場を控える＝下で note 登録を予想へ付け直す */
+    var before = (state.venues || []).map(function (v) { return v.name; });
     state.venues = names.map(function (x) { return { name: x }; });
     // 操作中の場は場名で引き継ぐ（外した場が操作中なら先頭へ）→開催の早い順に並べ直す（9/26）
     state.activeVenue = Math.max(0, names.indexOf(curName));
@@ -2107,6 +2157,8 @@
         if (tv && tv.grade) state.grade[v.name] = tv.grade;
       }
     });
+    /* §184 足した場の note 登録（本日設定）どおりに予想の isNote を付け直す（保存は呼び出し側） */
+    noteResyncVenues(names.filter(function (x) { return before.indexOf(x) < 0; }));
   }
 
   /* 🧪§61（9/28 Naoto）本日の場を時刻表で自動に＝1R発走の60分前に足す・最終レースの確定＋10分（確定なしは発走＋30分）で外す・最大4場
