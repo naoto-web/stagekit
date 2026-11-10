@@ -3511,7 +3511,10 @@
   var VCOL = SCENE === "talk" && params.get("vcol") !== "0";
   if (VCOL) {
     document.documentElement.classList.add("vcol");
-    setInterval(function () {
+    /* 🐞11/10 18:00（Naoto「本番で一瞬グレーになる」）＝①は数秒ごとに札を描き直す→0.4秒おきの見回りだけだと、次の見回りまで元のグレーで見えていた
+       （手元の計測＝20秒で10回・最大約0.4秒）。描き直しを MutationObserver で拾って、画面に出る前（同じ描画の中）に色を付ける。
+       見回りは締切を跨いだときの色の外し用に残す（1秒おき） */
+    var vcolApply = function () {
       var names = (state.venues || []).map(function (v) { return v.name; });
       if (!names.length) return;
       document.querySelectorAll("#scene-talk .race-col-head, #scene-talk .sl-vr, #scene-talk .stc-vr").forEach(function (el) {
@@ -3532,7 +3535,11 @@
         if (hit) { if (tg.getAttribute("data-vc") !== String(hit)) tg.setAttribute("data-vc", hit); }
         else if (tg.hasAttribute("data-vc")) tg.removeAttribute("data-vc");
       });
-    }, 400);
+    };
+    setInterval(vcolApply, 1000);
+    // 札の付け外し（属性の変更）は childList ではない＝自分の変更で呼び戻されない
+    var vcolRoot = document.getElementById("scene-talk");
+    if (vcolRoot && window.MutationObserver) new MutationObserver(vcolApply).observe(vcolRoot, { childList: true, subtree: true });
   }
   function raceColHead(rc, k, split, fireLeft) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
