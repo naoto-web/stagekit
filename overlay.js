@@ -3898,6 +3898,44 @@
     });
     return out;
   }
+  /* §187（11/10 Naoto）的中で回収額がカウントアップしている間、回収額のところをメンバーカラーの上矢印が下から上へ流れる（すべての的中・増えたときだけ）。
+     矢印はシーン（.scene）の直下に置く（.cuarrow）＝見出しの中身はカウントのたびに描き直すので、中に入れると消える。数字の裏を通す（下の cu-top）。
+     位置は出すたびに回収額（最後の .bi-v）を測る＝桁が増えて幅が変わってもついていく。数字が止まったら新しい矢印は出さない（流れている分は約0.9秒で消える）。
+     &cuarrow=0 で出さない／&cuarrowms=＝矢印を出す間隔（ミリ秒・既定110） */
+  var CUARROW = params.get("cuarrow") !== "0";
+  var CUARROW_MS = +params.get("cuarrowms") > 0 ? +params.get("cuarrowms") : 110;
+  var CUARROW_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120"><path d="M50 6 L94 56 H68 V114 H32 V56 H6 Z" fill="currentColor" stroke="#fff" stroke-width="9" stroke-linejoin="round"/></svg>';
+  function cuArrowTick(rid, a) {
+    var now = Date.now();
+    if (a._arAt && now - a._arAt < CUARROW_MS) return;
+    a._arAt = now;
+    // 色＝その人のメンバーカラー（白フチつき＝同じ色の帯の上でも形が分かる）
+    var seats = seatMap(), rc = seats.a && seats.a.id === rid ? seats.a : seats.b && seats.b.id === rid ? seats.b : null;
+    var col = (rc && window.Derive.colorOf(rc.color)) || "#22d45a";
+    refpopBandInvs(rid).forEach(function (el) {
+      var vs = el.querySelectorAll(".bi-v"), v = vs[vs.length - 1]; // 最後の金額＝回収
+      var scene = el.closest(".scene");
+      if (!v || !scene) return;
+      var r = v.getBoundingClientRect();
+      if (!r.width || !r.height) return; // 非表示のシーン
+      // 矢印は数字の裏を通す＝シーンの中に置き（.cuarrow z5）、数えている間だけ見出しの金額を手前へ（.cu-top z6）。
+      //   ②ワイプの上の帯（.winv z6・中を切り抜く）は帯ごと手前＝矢印は帯の裏から上へ出てくる
+      el.classList.add("cu-top");
+      clearTimeout(el._cuTopT); el._cuTopT = setTimeout(function () { el.classList.remove("cu-top"); }, 1300);
+      var s = r.height * (0.5 + Math.random() * 0.3); // 矢印の幅＝数字の高さの5〜8割
+      var ar = document.createElement("div");
+      ar.className = "cuarrow";
+      ar.style.color = col;
+      ar.innerHTML = CUARROW_SVG;
+      ar.style.width = s.toFixed(1) + "px"; ar.style.height = (s * 1.2).toFixed(1) + "px";
+      // 横＝回収額の幅（左右に少しはみ出す）のどこか／縦＝数字の下端あたりから出て、上へ抜ける
+      ar.style.left = (r.left - s * 0.5 + Math.random() * r.width).toFixed(1) + "px";
+      ar.style.top = (r.bottom - s * 0.9).toFixed(1) + "px";
+      ar.style.setProperty("--rise", (-(r.height * 1.5 + s)).toFixed(1) + "px");
+      scene.appendChild(ar);
+      setTimeout(function () { if (ar.parentNode) ar.parentNode.removeChild(ar); }, 1000); // CSS 0.9s＋余裕
+    });
+  }
   function refpopRun(rid) {
     var a = refAnim[rid];
     if (!a || a.running || a.target === null) return;
@@ -3953,6 +3991,7 @@
       if (cuOn && p > 0 && !cuLp && !cuEnded) cuLp = cuLifeStart(); // カウント開始と同時に「とぅるるる」
       a.text = textOf(p >= 1 ? to : cur);
       refpopBandInvs(rid).forEach(function (el) { setBandInv(el, a.text); });
+      if (CUARROW && delta > 0 && p > 0 && p < 1) cuArrowTick(rid, a); // §187 数字が増えている間だけ緑の上矢印
       // プラ転＝カウントアップが投資を追い越した瞬間（9/26 Naoto「的中演出→ピコーン→投資を追い越したところでプラ転」）
       var ps = platenSt[rid], shownV = Math.round(p >= 1 ? to : cur);
       if (ps && ps.armed && shownV > bt.invest) { if (cuOn) cuPikon(); platenFire(rid); } // §159 プラ転の瞬間に「ピコーン」

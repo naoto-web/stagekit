@@ -4217,6 +4217,19 @@ html.sidecmp .talk-band .race-t-side > .race-col > .ore-row { grid-column: 2; al
 html.sidecmp .talk-band .race-t-side > .race-col > .race-col-head, html.sidecmp .talk-band .race-t-side > .race-col > .ore-row, html.sidecmp .talk-band .race-t-side > .race-col > .ore-row * { white-space: nowrap; }
 /* 10/1 Naoto＝確定し直しで減った差額のピコーン「−¥」＝薄い青（REFIX） */
 .refpop.minus { color: #cfe3ff; }
+/* §187（11/10 Naoto）的中のカウントアップ中、回収額のところを流れるメンバーカラーの上矢印（JS cuArrowTick がシーンの直下に置く・色は color）。
+   白フチ＋濃い影＝同じ色の帯の上でも形が分かる。数字の裏を通す＝矢印 z5・数えている間の金額 z6（.cu-top）。
+   ②ワイプの上の帯（.winv z6）は帯ごと矢印より手前＝帯の裏から上へ出てくる */
+.cuarrow { position: absolute; z-index: 5; pointer-events: none;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, .7));
+  animation: cuArrowUp .9s cubic-bezier(.3, .6, .4, 1) forwards; }
+.cuarrow svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.band-inv.cu-top { position: relative; z-index: 6; }
+@keyframes cuArrowUp {
+  0%   { opacity: 0; transform: translateY(0) scale(.7); }
+  18%  { opacity: .95; transform: translateY(calc(var(--rise, -80px) * .18)) scale(1); }
+  70%  { opacity: .9; }
+  100% { opacity: 0; transform: translateY(var(--rise, -80px)) scale(1); } }
 /* 10/1 Naoto＝②で2人とも予想なしのときは右のパネルを隠す＝左のパネルが横いっぱい（1人配信で予想なしと同じ見た目・1〜18番人気）。&rkmerge=0 で旧 */
 body.rk-merge #scene-race .race-band > .panel.slot-b { display: none; } /* 🐞10/1 16:07 下の予想帯のパネルだけ＝旧 .panel.slot-b は右のNEXT枠（.sub-panel.slot-b）まで消していた */
 /* §110（10/1 Naoto・&tkrk=0 で出さない）①の予想枠に3連単人気順＝②（.race-band）と同じ見た目を①（.talk-band）にも */
