@@ -96,6 +96,9 @@ var CONFIG = (function () {
     /* 🆕10/26 えーす要望「スタートの位置からラインの並びに」＝スタートも並びの一列（ライン順・全員内）で置く・連結バーもスタートから出す。
        旧＝スタートは車番順の升目→赤板までの1周で一列へ組み替え（9/27）。?startgrid=1 で旧の升目 */
     START_LINE: (function () { try { return new URLSearchParams(location.search).get('startgrid') !== '1'; } catch (e) { return true; } })(),
+    /* 🆕11/10 Naoto「競りはもう競っている状態で置くのが自然」＝競りの2人を同じ前後位置に横並び（持ち主が内・競りに行く側が外）。
+       並びの文字のカッコ（例 1(52)3）が競り。?seri=0 で旧＝カッコを読み飛ばして一列 */
+    SERI: (function () { try { return new URLSearchParams(location.search).get('seri') !== '0'; } catch (e) { return true; } })(),
     D_MIN: -0.6,        // 下限＝ゴール線の先。決着で3人がゴール線を完全に越えるところまで走るため（9/27 Naoto）。
                         // −0.25→−0.6（9/27）＝ゴール後のホイールで9車の最後尾まで線を越えさせると、先頭は約0.35周先まで行く
                         // （下限に当たると丸が詰まって重なる）。局面ボタン・ゴール前のホイールは今までどおりゴール線で止まる

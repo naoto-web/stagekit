@@ -20,13 +20,14 @@ var Undo = (function () {
     return {
       riders: State.copyRiders(d.riders),
       lines: JSON.parse(JSON.stringify(d.lines || [])),
+      seri: JSON.parse(JSON.stringify(d.seri || [])),
       cars: (d.cars || []).slice(),
       lineupText: d.lineupText || ''
     };
   }
 
   function restore(s) {
-    State.set({ lines: s.lines, cars: s.cars, lineupText: s.lineupText });
+    State.set({ lines: s.lines, seri: s.seri || [], cars: s.cars, lineupText: s.lineupText });
     State.setRiders(s.riders);
   }
 

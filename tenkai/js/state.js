@@ -56,6 +56,8 @@ var State = (function () {
       lineupText: '',
       /* ライン構成。連結バーの描画と「ラインごと動かす」の単位。例：[[1,3,5],[2,7],[4,6,9]] */
       lines: [],
+      /* 競りの組（11/10）。並びのカッコの中の順＝最後が持ち主（内）・前が競りに行く側（外）。例：[[5,2]] */
+      seri: [],
       /* 決着した着順（9/27・3連単の入力や最終ストレートの動詞）。先頭がゴール線にいるあいだだけ盤面に「決着 4-2-7」と出す */
       finish: null,
       /* 車番 → { d:周回位置, lane:内外 } */
@@ -122,6 +124,16 @@ var State = (function () {
         if (l.length) cleaned.push(l);
       });
       d.lines = cleaned;
+    }
+
+    if (Array.isArray(raw.seri)) {
+      var usedSeri = {};
+      raw.seri.forEach(function (g) {
+        var grp = carList(g).filter(function (no) { return !usedSeri[no]; });
+        if (grp.length < 2) return;
+        grp.forEach(function (no) { usedSeri[no] = true; });
+        d.seri.push(grp);
+      });
     }
 
     if (Array.isArray(raw.finish)) {
@@ -235,6 +247,7 @@ var State = (function () {
       data.names = {};
       data.jimoto = [];
       data.lines = [];
+      data.seri = [];
       data.lineupText = '';
       data.finish = null;
       data.titleMain = '';

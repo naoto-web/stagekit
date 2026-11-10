@@ -76,7 +76,9 @@ var Verbs = (function () {
   /** ラインを並べ直した一列（全員内）に移る通り道。前へ出るライン（movers）は真ん中のレーンを通る */
   function requeue(order, head, movers) {
     var lanes = {};
-    movers.forEach(function (no) { lanes[no] = 0; });
+    /* 11/10 競りの選手が真ん中のレーンにいる盤面では、前へ出るラインは外を通る＝真ん中の選手と重ならない */
+    var pass = (CONFIG.SERI && (data().seri || []).length) ? 1 : 0;
+    movers.forEach(function (no) { lanes[no] = pass; });
     return requeueLanes(order, head, lanes);
   }
   /** requeue の一般形：passLanes＝{車番: 追い抜きに使うレーン}。載っていない選手は内のまま前後だけ動く。

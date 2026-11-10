@@ -67,8 +67,25 @@ var RaceCard = (function () {
               '&race=' + (+raceNo || 0);
     return fetch(url, { redirect: 'follow' })
       .then(function (r) { return r.json(); })
-      .then(function (j) { return (j && j.ok && j.narabi) ? String(j.narabi) : ''; })
+      .then(function (j) { return (j && j.ok && j.narabi) ? narabiText(String(j.narabi), j.lines) : ''; })
       .catch(function () { return ''; });
+  }
+
+  /** 並びの文字（競りを潰した版）と構造版（[ライン][位置][車番]）→ 盤面に渡す並びの文字（11/10）。
+      構造版に競り（同じ位置に2人以上）があり、文字版と車番がそろっていれば、カッコ付き（例 1(52)3 47）にして返す。
+      それ以外は文字版のまま＝古い構造や欠けた構造は使わない（OBS overlay.js の nbSeriLines と同じ考え） */
+  function narabiText(narabi, struct) {
+    var plain = String(narabi || '');
+    if (!CONFIG.SERI || !plain || !struct || !struct.length) return plain;
+    var has = false, flat = [];
+    struct.forEach(function (line) { (line || []).forEach(function (pos) {
+      if ((pos || []).length > 1) has = true;
+      (pos || []).forEach(function (c) { flat.push(+c); });
+    }); });
+    if (!has) return plain;
+    var want = (plain.match(/[1-9]/g) || []).map(Number).sort().join('');
+    if (want !== flat.slice().sort().join('')) return plain;
+    return Lineup.fromStruct(struct);
   }
 
   /** 「山出 裕幸」→「山出」。
@@ -162,6 +179,7 @@ var RaceCard = (function () {
     venues: venues,
     fetchTimetable: fetchTimetable,
     fetchNarabi: fetchNarabi,
+    narabiText: narabiText,
     fetchConsoleRace: fetchConsoleRace,
     selFromState: selFromState,
     findVenue: findVenue,

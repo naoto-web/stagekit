@@ -48,11 +48,25 @@ var Bars = (function () {
     return pts.map(function (p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
   }
 
+  /** バーを通す選手。競りに行く側（持ち主の外に並ぶ選手）は通さない＝バーは持ち主の側を一列でつなぐ（11/10）。
+      通さない選手も nos には残す＝帯を掴めばライン全員が動く */
+  function pathNos(nos, seri) {
+    var slots = (CONFIG.SERI && typeof Lineup !== 'undefined') ? Lineup.seriSlots(seri) : {};
+    var out = nos.filter(function (no, j) {
+      var s = slots[no];
+      if (!s || s.lane === -1) return true;
+      /* 同じ組の選手がライン内で隣にいるときだけ外す（組がばらけていれば普通の一列） */
+      var a = j > 0 ? slots[nos[j - 1]] : null, b = j + 1 < nos.length ? slots[nos[j + 1]] : null;
+      return !((a && a.g === s.g) || (b && b.g === s.g));
+    });
+    return out.length >= 2 ? out : nos;
+  }
+
   function sync(d, view, px) {
     if (!items.length) return;
     items.forEach(function (it) {
-      it.vis.setAttribute('points', pointsFor(it.nos, view, px * 0.26));
-      it.hit.setAttribute('points', pointsFor(it.nos, view, px * 0.7));
+      it.vis.setAttribute('points', pointsFor(it.path || it.nos, view, px * 0.26));
+      it.hit.setAttribute('points', pointsFor(it.path || it.nos, view, px * 0.7));
       it.vis.style.strokeWidth = (px * 0.95) + 'px';
       /* 当たり判定＝アイコン径の1.8倍（丸の上下に18pxずつの掴みしろ）。
          隣のレーンのバーと重なる幅（1.8×46−54≈29px）は後に描いたほうが勝つ＝併走中だけの話なので許容 */
@@ -69,7 +83,7 @@ var Bars = (function () {
       var hit = Icons.el('polyline', { 'class': 'line-bar-hit' });
       layer.appendChild(vis);
       layer.appendChild(hit);
-      var item = { nos: nos, vis: vis, hit: hit };
+      var item = { nos: nos, path: pathNos(nos, d.seri), vis: vis, hit: hit };
       items.push(item);
       if (Bars.onCreate) Bars.onCreate(item);
     });

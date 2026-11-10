@@ -86,6 +86,7 @@
       並びが無い・?startgrid=1 のときは車番順の升目（9/27） */
   function startFormation(cars) {
     var d = State.data;
+    /* 11/10 競りの組（d.seri）は Lineup.layout が盤面から読む＝競りの2人はスタートから横並び */
     if (CONFIG.START_LINE && d.lines && d.lines.length) return Lineup.layout(d.lines, CONFIG.PHASES[0].d);
     return Lineup.grid(cars);
   }
@@ -118,12 +119,14 @@
     State.set({
       lineupText: text,
       lines: result.lines,
+      seri: result.seri || [],
       cars: carsFromLines(result.lines)
     });
     State.setRiders(startFormation(carsFromLines(result.lines)));   // スタート＝並びの一列（10/26〜）
     render();
 
     var shown = result.lines.map(function (l) { return l.join('-'); }).join(' / ');
+    if (result.seri && result.seri.length) shown += '（競り ' + result.seri.map(function (g) { return g.join('と'); }).join('・') + ' は横並び）';
     var msg = (CONFIG.START_LINE ? '配置しました（スタートから並びの一列）： ' : '配置しました（スタートは車番順・赤板で並びの一列になります）： ') + shown;
     var warn = false;
     if (result.missing.length) {
@@ -389,7 +392,7 @@
     State.set(State.sanitize(d));
 
     var sig = JSON.stringify([d.cars, d.lines, d.names, d.jimoto, d.titleMain, d.titleSub,   // §172 jimoto
-                              d.iconRatio, d.bg, d.showBars, d.showNames, d.sel]);
+                              d.iconRatio, d.bg, d.showBars, d.showNames, d.sel, d.seri || []]);   // 11/10 競りの組
     if (sig !== lastRemoteSig) {
       lastRemoteSig = sig;
       smoother.jump(State.copyRiders(State.data.riders));
@@ -633,7 +636,8 @@
       titleSub: [v.grade, r.cls, r.lineType].filter(Boolean).join('・')
     });
 
-    if (r.narabi) { applyRaceNarabi(r.narabi, v, r, auto); return; }
+    /* 11/10 競りがあるレースは、時刻表の構造版（r.lines）からカッコ付きの並び（例 1(52)3 47）にして渡す */
+    if (r.narabi) { applyRaceNarabi(RaceCard.narabiText(r.narabi, r.lines), v, r, auto); return; }
 
     showAllRaceCars(raceCars);
     setHint(RaceCard.labelOf(v, r) + '：並び予想が未公開です。別経路で取得を試みています…');
@@ -647,7 +651,7 @@
   /** 並びがまだ無いとき用。ライン無しで出走選手をスタートに1列で置くだけ */
   function showAllRaceCars(raceCars) {
     var solo = raceCars.map(function (no) { return [no]; });
-    State.set({ lineupText: '', lines: [], cars: raceCars.slice() });
+    State.set({ lineupText: '', lines: [], seri: [], cars: raceCars.slice() });
     State.setRiders(Lineup.grid(raceCars));
     render();
   }
@@ -660,6 +664,7 @@
     State.set({
       lineupText: narabi,
       lines: result.lines,
+      seri: result.seri || [],
       cars: carsFromLines(result.lines)
     });
     State.setRiders(startFormation(carsFromLines(result.lines)));   // スタート＝並びの一列（10/26〜）
@@ -858,6 +863,7 @@
       State.set({
         lineupText: narabi,
         lines: result.lines,
+        seri: result.seri || [],
         cars: carsFromLines(result.lines)
       });
       State.setRiders(startFormation(carsFromLines(result.lines)));

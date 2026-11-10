@@ -137,10 +137,31 @@ var Board = (function () {
     /* 1人ぶんの幅＝チップと苗字の広いほう */
     var cellW = {};
     lines.forEach(function (l) { l.forEach(function (no) { cellW[no] = Math.max(NB.chip, textW(names[no], NB.name) + 2); }); });
+    /* 11/10 競りの2人はカッコでくくる（OBS の並び §186 と同じ見た目・カッコの中は競りに行く側が先）。
+       toks＝ラインごとの並べる物（車番 or '(' ')'） */
+    var slots = (CONFIG.SERI && d.seri && d.seri.length) ? Lineup.seriSlots(d.seri) : {};
+    var PAR = 13;
+    var toks = lines.map(function (l) {
+      var out = [], j = 0;
+      while (j < l.length) {
+        var s = slots[l[j]], k = j + 1;
+        if (s) while (k < l.length && slots[l[k]] && slots[l[k]].g === s.g) k++;
+        if (s && k - j >= 2) {
+          var inLine = l.slice(j, k);
+          out.push('(');
+          d.seri[s.g].forEach(function (no) { if (inLine.indexOf(no) !== -1) out.push(no); });
+          out.push(')');
+          j = k;
+        } else { out.push(l[j]); j++; }
+      }
+      return out;
+    });
+    /* 物の前の空き＝ラインの先頭と「(」の直後・「)」の前は空けない */
+    function gapBefore(tk, j) { return (j && tk[j] !== ')' && tk[j - 1] !== '(') ? NB.inGap : 0; }
     var w = NB.arrow;
-    lines.forEach(function (l, i) {
+    toks.forEach(function (tk, i) {
       if (i) w += NB.dot;
-      l.forEach(function (no, j) { w += cellW[no] + (j ? NB.inGap : 0); });
+      tk.forEach(function (t, j) { w += gapBefore(tk, j) + (typeof t === 'number' ? cellW[t] : PAR); });
     });
     /* 左の空きの始まり＝場名と級班の右端（帯の高さいっぱいを使うので、下の段の級班とも横で分ける） */
     var left = Math.max(rightEdge(titleMain, HEAD_PAD + textW(d.titleMain, 42)),
@@ -150,10 +171,15 @@ var Board = (function () {
     var x = 0, cy = NB.top + NB.chip / 2;
     label(narabiG, x + NB.arrow / 2 - 3, cy + 10, '←', 30, 'rgba(255,255,255,.9)', 900);
     x += NB.arrow;
-    lines.forEach(function (l, i) {
+    toks.forEach(function (tk, i) {
       if (i) { label(narabiG, x + NB.dot / 2, cy + 9, '・', 24, 'rgba(255,255,255,.65)', 900); x += NB.dot; }
-      l.forEach(function (no, j) {
-        if (j) x += NB.inGap;
+      tk.forEach(function (no, j) {
+        x += gapBefore(tk, j);
+        if (typeof no !== 'number') {   // 競りのカッコ
+          label(narabiG, x + PAR / 2, NB.top + NB.chip * 0.82, no, NB.chip, 'rgba(255,255,255,.9)', 500);
+          x += PAR;
+          return;
+        }
         var c = CONFIG.COLORS[no] || CONFIG.COLORS[1], mid = x + cellW[no] / 2;
         narabiG.appendChild(el('rect', { x: mid - NB.chip / 2, y: NB.top, width: NB.chip, height: NB.chip, rx: 5,
           fill: c.bg, stroke: no === 2 ? 'rgba(255,255,255,.5)' : 'rgba(0,0,0,.35)', 'stroke-width': 2 }));
@@ -218,13 +244,15 @@ var Board = (function () {
 
   /** 苗字チップを出す側。内レーン＝インフィールド側／外レーン＝外側／真ん中＝空いている側、
       内外の両隣が埋まっていれば丸の後ろ（スタートの升目で真ん中の列の苗字が隠れた・9/27 Naoto） */
+  var seriNow = {};   // 競りの組に入っている車番（positions が毎回入れ直す）
   function chipMode(no, r, cars, view) {
     /* §172（10/26 Naoto「名前が真ん中の緑と被る・コース内に」）＝内レーンも札はコース側（外）。
        外の隣（中・外レーン）に並走がいるときだけ丸の後ろ（旧＝内レーンはインフィールド側） */
     if (r.lane < -0.5) {
       var nb = 0.9 * CONFIG.CAR, busy = false;
       cars.forEach(function (o) { if (o === no) return; var q = view[o]; if (q && Math.abs(q.d - r.d) < nb && q.lane >= -0.5) busy = true; });
-      return busy ? 'back' : 'out';
+      /* 11/10 競りの持ち主（内）は外に相手・後ろに3番手がいて、丸の後ろに出すと苗字が隠れる＝このときだけインフィールド側 */
+      return busy ? (seriNow[no] ? 'in' : 'back') : 'out';
     }
     if (r.lane > 0.5) return 'out';
     var near = 0.9 * CONFIG.CAR, inner = false, outer = false;
@@ -252,6 +280,7 @@ var Board = (function () {
     var px = CONFIG.iconPx(d.iconRatio);
     var leader = null;
     var cars = (d.cars || []).filter(function (no) { return !!view[no]; });
+    seriNow = (CONFIG.SERI && d.seri && d.seri.length) ? Lineup.seriSlots(d.seri) : {};
     cars.forEach(function (no) { var r = view[no]; if (leader === null || r.d < leader) leader = r.d; });
     cars.forEach(function (no) {
       var r = view[no];
