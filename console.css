@@ -980,6 +980,8 @@ html.con2 #pred-narabi.pn-market { display: block !important; }
 #pred-narabi.pn-market .pm-name { height: 18px; line-height: 18px; font-size: 13px; font-weight: 700; color: #c9ccd3; white-space: nowrap; }
 #pred-narabi.pn-market .pm-badge { height: 32px; display: inline-flex; align-items: center; }
 #pred-narabi.pn-market .pm-badge .pn-car { width: 30px; height: 30px; font-size: 19px; }
+/* §186追補（11/10 Naoto）競りの2人をカッコでくくる＝OBSの並びと同じ。カッコは車番の横（列の幅は少し広がる） */
+#pred-narabi.pn-market .pm-badge .pm-par { font-size: 24px; font-weight: 900; line-height: 1; margin: 0 1px; transform: translateY(-2px); }
 #pred-narabi.pn-market .pn-car.abs { opacity: .35; }
 /* §181 競走得点（バッジの下・1着率の上・10/27 Naoto） */
 #pred-narabi.pn-market .pm-score { height: 18px; line-height: 18px; font-size: 13px; font-weight: 700; color: #c9ccd3; white-space: nowrap; }

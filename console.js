@@ -774,10 +774,29 @@
       if (ms) winV[n] = Math.round((ms.win[n] || 0) * 100);
     });
     var scR = rankOf(scV), winR = rankOf(winV);
+    /* §186追補（11/10 Naoto「コンソールの並びも（）つく？」）競りの2人を OBS と同じくカッコでくくる。
+       構造版の並び（時刻表 r.lines ／ action=narabi の lines）で、ラインごとの車番が文字列版と一致するときだけ＝順番も構造版（競りに行く側が先）。
+       手で直した並び（state.narabi）は競りを書けない＝従来どおり。&nbseri=0 で旧 */
+    var seriEdge = {}, lineCars = null;
+    var L = (race && race.lines && race.lines.length) ? race.lines : (ent && ent.lines) || [];
+    if (hasLines && params.get("nbseri") !== "0" && !((state.narabi || {})[key]) && L.length === groups.length) {
+      var ok = true, hasSeri = false;
+      lineCars = L.map(function (line, gi) {
+        var flat = [];
+        (line || []).forEach(function (pos) {
+          if (pos.length > 1) hasSeri = true;
+          pos.forEach(function (c, i) { flat.push(+c); if (pos.length > 1) seriEdge[+c] = i === 0 ? "a" : i === pos.length - 1 ? "b" : "m"; });
+        });
+        if (flat.slice().sort().join("") !== groups[gi].split("").map(Number).sort().join("")) ok = false;
+        return flat;
+      });
+      if (!ok || !hasSeri) { lineCars = null; seriEdge = {}; }
+    }
     var col = function (n) {
       var num = absent[n] ? '<span class="pm-num none">ー</span>' : ms ? '<span class="pm-num' + (winR[n] || "") + '">' + pct(ms.win[n] || 0) + "</span>" : '<span class="pm-num">&nbsp;</span>';
       var sc = parseFloat(scores[n] || scores[String(n)]);
-      return '<span class="pm-col"><span class="pm-name">' + esc(names[n] || "") + '</span><span class="pm-badge"><i class="pn-car c' + n + (absent[n] ? " abs" : "") + '">' + n + "</i></span>" +
+      var pa = seriEdge[n] === "a" ? '<b class="pm-par">(</b>' : "", pb = seriEdge[n] === "b" ? '<b class="pm-par">)</b>' : "";
+      return '<span class="pm-col"><span class="pm-name">' + esc(names[n] || "") + '</span><span class="pm-badge">' + pa + '<i class="pn-car c' + n + (absent[n] ? " abs" : "") + '">' + n + "</i>" + pb + "</span>" +
         '<span class="pm-score' + (scR[n] || "") + '">' + (sc > 0 ? sc.toFixed(1) : "&nbsp;") + "</span>" + num + "</span>";
     };
     var lnV = {};
@@ -791,7 +810,7 @@
     if (hasLines) {
       // ラインごとに薄い枠で囲う（10/27 Naoto「囲むの見やすい」）＝列の間隔を広げてもラインの切れ目が分かる
       html += groups.map(function (g, gi) {
-        var cars = g.split("").map(Number), ln = ms && ms.lines[gi];
+        var cars = lineCars ? lineCars[gi] : g.split("").map(Number), ln = ms && ms.lines[gi];
         return '<span class="pm-group box"><span class="pm-cars">' + cars.map(col).join("") + "</span>" +
           '<span class="pm-line' + (ln ? lnR[gi] || "" : "") + '">' + (ln ? pct(ln.win) : "&nbsp;") + "</span>" +
           '<span class="pm-line' + (cars.length < 2 ? " solo" : "") + '">' + (cars.length < 2 ? "ー" : ln ? pct(ln.settle) : "&nbsp;") + "</span></span>";
@@ -820,7 +839,7 @@
       if (jo) {
         predNarabiAuto[key] = { val: "", scores: {}, pending: true };
         window.Sync.fetchNarabi(jo, rNo).then(function (info) {
-          predNarabiAuto[key] = { val: info.narabi || "", scores: info.scores || {} };
+          predNarabiAuto[key] = { val: info.narabi || "", scores: info.scores || {}, lines: info.lines || [] }; // §186追補 lines＝競りの構造
           if (predKey() === key) renderPredNarabi(key);
         }).catch(function () { delete predNarabiAuto[key]; });
       }
