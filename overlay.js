@@ -4784,6 +4784,8 @@
     // 🧪ライン順（9/27 Naoto「空席ワイプと同じくラインごとの並び・区切りは横線」・&slline=1）。
     //   並べ方は空席ワイプと同じ stcOrder（競りも同じ位置に並べる・並びが未発表なら車番順）
     var ord = SL2_LINE && !girlsNoOrd(race) ? stcOrder(race.racers, seatLinesOf(key, race)) : race.racers.map(function (p) { return { p: p, gap: false }; });
+    // §186 競りの車番を縦のカッコではさむ（ライン順のときだけ＝競りの2人が上下に並んでいる）
+    var seriEdge = NBSERI && SL2_LINE && !girlsNoOrd(race) ? seriEdgeOf(seatLinesOf(key, race)) : {};
     el.innerHTML = head + ord.map(function (o) {
       var p = o.p;
       var c = cards[String(p.no)] || {}, st = stOf(p);
@@ -4802,7 +4804,7 @@
       var shd = hitRow ? ' style="--shd:-' + (((Date.now() - hitPhase0) % 2000 + 2000) % 2000) + 'ms"' : "";
       var ab = slAbsent(key, p); // §129
       var hj = c.h && !/欠/.test(c.h) ? c.h : ""; // 補充・追加だけ（keirin.jp の同じ欄に「(欠場)」も入る＝括弧付きの補充扱いにしない）
-      return '<li class="sl2-row' + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + (ab ? " sl-abs" : "") + '"' + shd + '><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
+      return '<li class="sl2-row' + (seriEdge[+p.no] ? " sl2-seri sl2-seri-" + seriEdge[+p.no] : "") + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + (ab ? " sl-abs" : "") + '"' + shd + '><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
         '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (SL3 && hj ? "(" + esc(p.name) + ")" : esc(p.name)) +
         (!SL3 && hj ? '<span class="sl2-hj">(' + esc(String(hj).charAt(0)) + ")</span>" : "") + (ab ? ABS_TAG : "") + "</span>" +
         '<span class="sl2-sub">' + (isJimoto(vName, p.pref) && sub.indexOf(p.pref) === 0 // 地元は下段の県名も同じ色（§52）
@@ -5144,6 +5146,26 @@
   /* §137（10/16 Naoto）②の並びの苗字も、補充・追加なら半角括弧「(三宅)」。&nbhj=0 で旧 */
   // 🔄10/16 夜 Naoto「レース観戦の並びは（）なしに戻して」＝既定OFF（&nbhj=1 で出す）
   var NBHJ = params.get("nbhj") === "1";
+  /* §186（11/10 Naoto）競りの表記。並び（①②③）＝競りの2人をカッコでくくる／出走表（①③）＝競りの車番を縦のカッコではさむ。&nbseri=0 で旧 */
+  var NBSERI = params.get("nbseri") !== "0";
+  /** 構造版の並び L に競り（同じ位置に2人以上）があり、文字列版 groups と車番がそろっていれば L を返す。それ以外は null */
+  function nbSeriLines(groups, L) {
+    if (!L || !L.length) return null;
+    var has = false, flat = [];
+    L.forEach(function (line) { (line || []).forEach(function (pos) { if (pos.length > 1) has = true; pos.forEach(function (c) { flat.push(+c); }); }); });
+    if (!has) return null;
+    var want = groups.join("").split("").map(Number).sort().join(""), got = flat.slice().sort().join("");
+    return want === got ? L : null;
+  }
+  /** 出走表用：競りの車番 → "a"（上端）／"m"（中）／"b"（下端）。並び順に上下に並ぶ前提（stcOrder と同じ順） */
+  function seriEdgeOf(lines) {
+    var map = {};
+    (lines || []).forEach(function (line) { (line || []).forEach(function (pos) {
+      if (pos.length < 2) return;
+      pos.forEach(function (c, i) { map[+c] = i === 0 ? "a" : i === pos.length - 1 ? "b" : "m"; });
+    }); });
+    return map;
+  }
   /* opts.names＝車番チップの下に苗字を出す／opts.noType＝戦型（三分戦等）を出さない。
      どちらも②の中央ライン専用。①③は従来どおり（引数なし＝挙動不変） */
   function renderNarabi(vName, rNo, nbId, opts) {
@@ -5154,6 +5176,7 @@
     var manual = key ? ((state.narabi || {})[key] || "") : "";
     // keirin.jp経路では時刻表に並び・戦型（三分戦等）が同梱されている
     var ttNarabi = "";
+    var ttLines = [];
     var lineType = "";
     var nbAbs = {}; // §136 欠車の車番
     if (vName && rNo && timetable) {
@@ -5162,6 +5185,7 @@
         (tv.races || []).forEach(function (r) {
           if (r.no !== +rNo) return;
           if (r.narabi) ttNarabi = r.narabi;
+          if (r.lines && r.lines.length) ttLines = r.lines;
           if (r.lineType) lineType = r.lineType;
           if (NBABS) (r.racers || []).forEach(function (p) { if (slAbsent(key, p)) nbAbs[+p.no] = 1; });
         });
@@ -5174,6 +5198,10 @@
     var groups = window.Keirin.normalize(manual || ttNarabi || auto).split(/[^0-9]+/).filter(Boolean);
     if (!groups.length) { nb.classList.add("hidden"); return; }
     nb.classList.remove("hidden");
+    // §186 競りの2人をカッコでくくる。構造版の並び（[ライン][位置][車番]）に競りがあるときだけ使う。
+    //   手で直した並びは競りを書けない＝従来どおり。文字列版と車番がずれていたら使わない（古い構造を出さない）
+    var nbSeri = NBSERI && !manual ? nbSeriLines(groups, ttNarabi ? ttLines : ((narabiAuto[key] || {}).lines || [])) : null;
+    var nbStruct = nbSeri || groups.map(function (g) { return g.split("").map(function (n) { return [n]; }); });
     // §54（9/28 Naoto）的中の間は①の出走表の下の並びでも当たり目の車番を光らせる（買目チップと同じ拍子・光だけ）
     // §78（9/28 Naoto）②レース観戦の並び（narabi-race）も同じく光らせる。②は並びのレースを切り替えない＝出しているレースが的中レースのときだけ
     var shn = nbId === SL_TALK.narabi || nbId === "narabi-race" ? slHitNow() : null;
@@ -5186,8 +5214,14 @@
       // グレードバッジ＝R番号の右（9/26 Naoto「並びの左の場にグレードバッジを」）。F級は出ない（gradeBadge が空）
       (o.race ? '<span class="nb-race"><b>' + esc(vName) + "</b><b>" + esc(String(rNo)) + "R</b>" + gradeBadge(vName) + girlsBadge(vName, rNo) + "</span>" : "") +
       '<span class="nb-arrow">←</span>' +
-      groups.map(function (g) {
-        return '<span class="nb-group">' + g.split("").map(function (n) {
+      nbStruct.map(function (line) {
+        return '<span class="nb-group">' + line.map(function (pos) {
+          // 競り（同じ位置に2人以上）＝カッコでくくる。1人ならそのまま
+          if (pos.length > 1) return '<span class="nb-seri"><span class="nb-par">(</span>' + pos.map(nbCell).join("") + '<span class="nb-par">)</span></span>';
+          return nbCell(pos[0]);
+        }).join("") + "</span>";
+      }).join('<span class="nb-dot">・</span>');
+    function nbCell(n) {
           var glowN = !!(nbHit && nbHit[+n]);
           var abN = !!nbAbs[+n]; // §136 欠車＝出走表と同じ灰色（②は苗字ごと）
           var chip = '<i class="car c' + n + (glowN ? " hit-glow" : "") + (abN && !o.names ? " sl-abs" : "") + '"' + (glowN ? hitPhaseStyle() : "") + ">" + n + "</i>";
@@ -5198,8 +5232,7 @@
           if (hjN && !/欠/.test(hjN)) nm = "(" + nm + ")";
           return '<span class="nb-cell' + (abN ? " sl-abs" : "") + '">' + chip +
             '<b class="nb-nm' + (isJimoto(vName, prefOf(vName, rNo, n)) ? " jm" : "") + '">' + esc(nm) + "</b></span>";
-        }).join("") + "</span>";
-      }).join('<span class="nb-dot">・</span>');
+    }
     fitNarabi(nbId); // 収まらない時は行ごと縮小（8/6 FB44）
   }
 

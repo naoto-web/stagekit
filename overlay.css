@@ -808,6 +808,11 @@ body[data-theme="w"] .narabi-row .nb-type { color: #111; }
 .nb-arrow { font-size: 26px; font-weight: 900; color: var(--txt); flex: 0 0 auto; }
 .nb-dot { font-size: 18px; font-weight: 900; color: var(--sub); flex: 0 0 auto; }
 .nb-group { display: flex; gap: 3px; flex: 0 0 auto; }
+/* §186（11/10 Naoto）競りの2人をカッコでくくる（①③の並び）。カッコは車番と同じ高さの箱の中で上下中央 */
+.nb-seri { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.nb-par { display: flex; align-items: center; height: 32px; font-size: 32px; font-weight: 900; line-height: 1;
+  color: var(--txt); transform: translateY(-2px); }
+body[data-theme="w"] .narabi-row .nb-par { color: #111; }
 /* ライン＝出走表と同じ正方形チップ（8/5 FB→FB115で32px角に拡大→8/10 FB116で文字を箱いっぱいに）
    ＝出走表行のチップ（26px箱×24px文字）と同じ詰まり比率を32px箱に適用（Naoto「上の出走表と同じやつ」） */
 .narabi-row .car { width: 32px; height: 32px; font-size: 30px; border-radius: 5px; }
@@ -835,6 +840,14 @@ body[data-theme="w"] .slist.sl2 { --sl2-ink: #000; }
 .slist.sl3 .sl2-sub { font-size: min(calc(var(--sl2-rh) * .30), 16px); }
 /* 🧪ライン順（&slline=1）＝ラインの切れ目は濃い横線（空席ワイプと同じ考え方） */
 .sl2-row.sl2-lg { border-top: 3px solid var(--sl2-ink); }
+/* §186（11/10 Naoto）出走表の競り＝車番を縦のカッコ（︵ ︶）ではさむ。a＝上端の行（車番の上に ︵）・b＝下端の行（車番の下に ︶）・m＝中（何も描かない）。
+   カッコは字ではなく半円の線で描く（縦書き用の字は書体によって出ない）。幅＝車番バッジと同じ・高さ＝行の上下の余白 */
+.sl2-row.sl2-seri { position: relative; }
+.sl2-row.sl2-seri-a::before, .sl2-row.sl2-seri-b::before { content: ""; position: absolute; left: 8px; box-sizing: border-box; pointer-events: none;
+  width: min(calc(var(--sl2-rh) * .56), 32px); height: calc((var(--sl2-rh) - min(calc(var(--sl2-rh) * .56), 32px)) / 2 - 3px);
+  border: 3px solid var(--sl2-ink); }
+.sl2-row.sl2-seri-a::before { top: 1px; border-bottom: none; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+.sl2-row.sl2-seri-b::before { bottom: 1px; border-top: none; border-radius: 0 0 50% 50% / 0 0 100% 100%; }
 .sl2-row .car { width: calc(var(--sl2-rh) * .56); height: calc(var(--sl2-rh) * .56);
   font-size: calc(var(--sl2-rh) * .52); border-radius: 5px; max-width: 32px; max-height: 32px; font-size: min(calc(var(--sl2-rh) * .52), 30px); }
 .sl2-nm { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-left: 4px; }
@@ -3836,6 +3849,10 @@ body.v2:not(.ln-name) .rb-line .nb-dot { transform: none; }
 body.rbn-compact .bh-race .bhn-t { display: none; }
 body.v2 .rb-line .nb-group { gap: 10px; }
 body.v2 .rb-line .nb-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+/* §186 ②の並びの競り＝カッコは車番バッジの高さに合わせる（下の苗字ぶん下がらないよう上端そろえ） */
+body.v2 .rb-line .nb-seri { align-items: flex-start; gap: 4px; }
+body.v2 .rb-line .nb-par { height: var(--rbchip, 30px); font-size: calc(var(--rbchip, 30px) * 1.05); color: #16202e;
+  transform: translateY(calc(var(--rbchip, 30px) * -.06)); }
 /* サイズはJSがヘッダー行の実寸から計算して --rbchip / --rbnm に入れる（8/13）。
    固定pxで決め打ちすると「入らないから枠を広げる」＝買い目を削る方向に流れるため、
    与えられた高さの中で最大化する方式に変えた */
