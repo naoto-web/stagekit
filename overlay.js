@@ -3499,9 +3499,46 @@
     applyRaceClosed();
     setTimeout(function () { renderPreds(); renderStartList(); }, HIT_GLOW_LEAD + 20);
   }
-  function raceColHead(rc, k, split) {
+  /* §188（11/10 Naoto「炎マークは基本、名前の左側にあるはず＝他の表示に合わせたい」）NEXT枠の🔥を場名の左へ（タイマーの「🔥奈良 1R」と同じ並び）。
+     fireLeft＝NEXT枠だけ（renderPreds の sband-/ksband-）。①の2〜3場の列見出し（🔥note予想の2行目）は今のまま。&nxfire=0 で旧（場名の右） */
+  var NXFIRE = params.get("nxfire") !== "0";
+  /* §190（11/10 Naoto）①トークだけ・場ごとの色＝場名の札（買目の列見出し・人気順の札・出走表の見出しの帯・空席ワイプの人気順の札）の地を、
+     その日の場の順番（state.venues の並び）で決めた薄い4色にする（人気順の表の地も同じ色で一段薄く）。
+     ねらい＝①は出走表・オッズ・買目が点在する＝「この出走表の買目はどれ・この買目のオッズはどれ」を色でつなぐ。
+     決まり（11/10 Naoto）＝タイマーは色を付けない（緑→黄→赤に変わる地とぶつかる）／公式締切を過ぎたレースは札も人気順の地も出走表の見出しもグレー
+     （買目の区画のグレーアウトと同じ判定 raceCloseAt）／②③は今までどおり（迷う所が無く、つなぐ相手も無い）。
+     描いた後の札の文字から場名とRを読んで data-vc を付けるだけ（各描画には手を入れない）＝やめるときはこの塊と CSS を消せば済む。&vcol=0 で出さない */
+  var VCOL = SCENE === "talk" && params.get("vcol") !== "0";
+  if (VCOL) {
+    document.documentElement.classList.add("vcol");
+    setInterval(function () {
+      var names = (state.venues || []).map(function (v) { return v.name; });
+      if (!names.length) return;
+      document.querySelectorAll("#scene-talk .race-col-head, #scene-talk .sl-vr, #scene-talk .stc-vr").forEach(function (el) {
+        var t = el.textContent || "", hit = 0, vn = "";
+        names.forEach(function (n, i) { if (n && t.indexOf(n) >= 0) { hit = (i % 4) + 1; vn = n; } });
+        if (hit) {
+          var rm = t.match(/(\d+)\s*R/), cAt = rm ? raceCloseAt(vn + "|" + rm[1]) : null;
+          // 出走表の見出しの帯は元がクリーム色＝締切後は札と同じグレーにそろえる（data-vc="0"）。札は消す＝元のグレー
+          if (cAt != null && nowSec() >= cAt) hit = el.classList.contains("sl-vr") ? "0" : 0;
+        }
+        // 人気順の表の地（.rk-col）も同じ色に＝①の区画（札 .tk-rk-lab のすぐ下の .rk-box）／空席ワイプ（同じカードの中）
+        var cols = el.classList.contains("tk-rk-lab") && el.nextElementSibling && el.nextElementSibling.classList.contains("rk-box") ? el.nextElementSibling.querySelectorAll(".rk-col")
+          : el.classList.contains("stc-vr") && el.closest(".seat-card") ? el.closest(".seat-card").querySelectorAll(".rk-col") : [];
+        Array.prototype.forEach.call(cols, function (c) { if (hit && hit !== "0") c.setAttribute("data-vcb", hit); else c.removeAttribute("data-vcb"); });
+        // 出走表は見出しの帯ごと色を付ける（.sl-vr の2つ上＝見出しの帯）／空席ワイプは札の帯（.stc-hd）ごと
+        var tg = el.classList.contains("sl-vr") && el.parentElement && el.parentElement.parentElement ? el.parentElement.parentElement
+          : el.classList.contains("stc-vr") && el.parentElement ? el.parentElement : el;
+        if (hit) { if (tg.getAttribute("data-vc") !== String(hit)) tg.setAttribute("data-vc", hit); }
+        else if (tg.hasAttribute("data-vc")) tg.removeAttribute("data-vc");
+      });
+    }, 400);
+  }
+  function raceColHead(rc, k, split, fireLeft) {
     var p = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
     var note = p && p.entry.isNote;
+    if (note && fireLeft && NXFIRE) return '<div class="race-col-head nx-fire-l"><span class="note-tag"><span class="nt-fire">🔥</span></span>' + esc(keyLabel(k)) +
+      (k ? gradeBadge(String(k).split("|")[0]) + girlsBadge(String(k).split("|")[0], String(k).split("|")[1]) : "") + "</div>";
     return '<div class="race-col-head">' + esc(keyLabel(k)) +
       (k ? gradeBadge(String(k).split("|")[0]) + girlsBadge(String(k).split("|")[0], String(k).split("|")[1]) : "") +
       (note ? (split ? '<br>' : " ") + '<span class="note-tag"><span class="nt-fire">🔥</span>note予想</span>' : "") + // 🔥だけゆらゆら（9/27 Naoto・①も）
@@ -4561,7 +4598,7 @@
           var sKey = SPLIT ? nextKeyOf(rc, sp[2]) // §58 NEXT枠はレース単位の自動（③は盤面のレース基準＝nxCtxT）
             : svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
           // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
-          sBand.innerHTML = sKey ? raceColHead(rc, sKey) + raceBuyHtml(rc, sKey, false, false, true, true) : ""; // NEXT枠はオッズなし
+          sBand.innerHTML = sKey ? raceColHead(rc, sKey, false, true) + raceBuyHtml(rc, sKey, false, false, true, true) : ""; // NEXT枠はオッズなし・§188 🔥は場名の左
           sBand.classList.toggle("note-fire", noteFireOn(rc, sKey)); // 🧪NEXT枠も、そのレースが note なら内側だけ
           if (SUBV) {
             sBand.classList.add("subv-" + SUBV);
@@ -5672,7 +5709,9 @@
   var HIT_REPLAY_MS = 90000;
   var firedFx = (function () { try { return JSON.parse(sessionStorage.getItem(FIRED_SS) || "{}") || {}; } catch (e) { return {}; } })();
   function saveFired() { try { sessionStorage.setItem(FIRED_SS, JSON.stringify(firedFx)); } catch (e) {} }
-  var HIT_FX_MS = 35000; // 8/6 FB46：12秒→20秒→8/7 FB62：27秒→8/10 FB121：35秒に延長（バッジ・買目チップ強調共通）
+  var HIT_FX_MS = 25000; // 8/6 FB46：12秒→20秒→8/7 FB62：27秒→8/10 FB121：35秒に延長→11/10 §189：25秒に短縮（バッジ・買目チップ強調共通）
+  // §189（11/10 Naoto「的中の札の表示時間を短く・出走表の光る時間も同じ」）＝札・買目チップの光・出走表/並びの光はすべてこの1つの数字。&hitsec=秒 で上書き
+  if (+params.get("hitsec") > 0) HIT_FX_MS = +params.get("hitsec") * 1000;
 
   /* 的中買目の車番強調（8/10 FB119・Naoto依頼「当たった買目の車番だけ強調」）＝
      予想帯（①トーク・②メイン/サブ共通＝raceBuyHtml）の該当行で、当たり組合せの車番チップに

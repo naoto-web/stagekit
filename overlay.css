@@ -1115,6 +1115,20 @@ body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14
 .race-col-head .note-tag { white-space: nowrap; }
 /* NEXT枠の🔥（subPolish が「🔥note予想」→「🔥」にする）はタイマーと同じゆらゆら（9/26 Naoto）＝揺らすのは下の .nt-fire */
 .sub-line.subv-tight .race-col-head .note-tag { display: inline-block; }
+/* §190（11/10 Naoto）①トークだけ・場ごとの色＝場名の札の地を、その日の場の順番で4色（薄い地＋黒い字＝濃いメンバーカラーと混ざらない）。JS が html.vcol と data-vc を付ける・&vcol=0 で出さない */
+html.vcol [data-vc] { color: #111 !important; }
+html.vcol [data-vc="0"] { background: #e3e4e8 !important; } /* 締切後の出走表の見出し＝札と同じグレー */
+html.vcol [data-vc="1"] { background: #d3ecff !important; }
+html.vcol [data-vc="2"] { background: #ffe6c2 !important; }
+html.vcol [data-vc="3"] { background: #e8ddff !important; }
+html.vcol [data-vc="4"] { background: #dcf5d4 !important; }
+/* 人気順の表の地（札より一段薄く＝車番の色とぶつからないように） */
+html.vcol [data-vcb="1"] { background: #dff0ff !important; }
+html.vcol [data-vcb="2"] { background: #ffedd2 !important; }
+html.vcol [data-vcb="3"] { background: #eee6ff !important; }
+html.vcol [data-vcb="4"] { background: #e4f7dd !important; }
+/* §188（11/10 Naoto）NEXT枠の🔥は場名の左（タイマーと同じ並び）＝場名との間を少しあける */
+.race-col-head.nx-fire-l .note-tag { margin-right: .15em; }
 /* 🔥はどこでもゆらゆら（9/27 Naoto「①の買目エリアの炎も」）＝🔥だけを .nt-fire で包む（「note予想」の字は揺らさない） */
 .race-col-head .note-tag .nt-fire { display: inline-block; animation: vtFlicker 1.2s ease-in-out infinite; }
 /* ①1場の札は1行（9/26 Naoto「1場は🔥note予想まで1行・2場は2行」）。2〜3場は raceColHead の split で🔥note予想の前に <br>
