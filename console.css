@@ -897,6 +897,9 @@ html.theme-light.kcol[data-kc] .inp:focus, html.theme-light.kcol[data-kc] #res-p
 .hoju-alert .hj-r .pn-car { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
   border-radius: 4px; font-style: normal; font-size: 17px; font-weight: 900; border: 1px solid rgba(0,0,0,.25); }
 .hoju-alert .hj-sub { margin-top: 3px; font-size: 14px; color: #6b6f78; font-weight: 700; }
+/* §191（11/10 Naoto）欠車の印＝灰色の「欠」（補充の橙と同じ形）。アラートの欠車の行は車番を薄く（OBSの出走表の欠車と同じ見え方） */
+.rc .rc-hoju.rc-abs { background: #6b7280; }
+.hoju-alert .hj-r.hj-abs .pn-car { opacity: .45; }
 /* §141（10/16 Naoto・案G）ガールズのレースボタン＝立体のハート型。後ろに同じ形のハート2枚（裏＝2px下・表＝グラデ＋1pxの縁）。
    幅はボタン＋左右2pxまで（隣にかぶらない）・厚みはほかのボタンの半分（2px＝Naoto「半分がバランスいい」）。&girls=0 で出さない */
 .rc.has-girls { position: relative; background: none !important; border: none !important; box-shadow: none !important; isolation: isolate;

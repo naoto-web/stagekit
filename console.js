@@ -544,7 +544,7 @@
       if (state.currentRace[name] === r.no) cls += " cur";
       else if (next && next.no === r.no) cls += " next";
       if (s !== null && s + RC_DONE_SEC <= now) cls += " done";
-      var hj = hojuOf(window.Derive.raceKey(name, r.no)).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : ""; // §134
+      var hj = rcAlertBadge(window.Derive.raceKey(name, r.no)); // §134 補充／§191 欠車（両方なら「欠」）
       if (hj) cls += " has-hoju";
       var gl = girlsHeart(r); // §141
       if (gl) cls += " has-girls";
@@ -624,7 +624,7 @@
     if (!editVenue) { rg.innerHTML = ""; return; }
     var curNo = editRace || state.currentRace[editVenue];
     rg.innerHTML = venueRaces(editVenue).map(function (r) {
-      var hj = hojuOf(window.Derive.raceKey(editVenue, r.no)).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : ""; // §134
+      var hj = rcAlertBadge(window.Derive.raceKey(editVenue, r.no)); // §134 補充／§191 欠車（両方なら「欠」）
       var gl = girlsHeart(r); // §141
       return '<button class="rc' + kubunColorCls(editVenue) + (curNo === r.no ? " cur" : "") + (hj ? " has-hoju" : "") + (gl ? " has-girls" : "") + '" data-no="' + r.no + '">' + gl + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
     }).join("");
@@ -890,21 +890,33 @@
     if (!HOJU || !hoju || !state || hoju.date !== state.date || !key) return [];
     return hoju.races[key] || [];
   }
-  /** 予想入力の「1R 2R…」と「〇〇 の予想」の間のアラート＝入力先のレースに補充の選手がいるときだけ */
+  /* §191（11/10 Naoto）欠車も補充と同じくレースボタンの印＋予想入力の上のアラート。データ＝state.absent（§129・5分ごとに keirin.jp から）。
+     印＝灰色の「欠」。補充と両方あるレースは「欠」だけ（Naoto「どっちにしろ並びの再チェックが要る・欠車の方がレア」）。アラートは両方の文言を出す。&abshow=0 で旧（補充だけ） */
+  var ABSHOW = params.get("abshow") !== "0";
+  function absOfKey(key) { return ABSHOW && key ? (window.Derive.absentOf(state, key) || []) : []; }
+  function rcAlertBadge(key) {
+    if (absOfKey(key).length) return '<span class="rc-hoju rc-abs" title="欠車があります">欠</span>';
+    return hojuOf(key).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : "";
+  }
+  /** 予想入力の「1R 2R…」と「〇〇 の予想」の間のアラート＝入力先のレースに欠車か補充の選手がいるときだけ */
   function renderHoju(key) {
     var el = $("pred-hoju");
     if (!el) return;
-    var cars = hojuOf(key);
-    if (!cars.length) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+    var cars = hojuOf(key), abs = absOfKey(key);
+    if (!cars.length && !abs.length) { el.classList.add("hidden"); el.innerHTML = ""; return; }
     var p = key.split("|");
     var race = venueRaces(p[0]).filter(function (r) { return r.no === +p[1]; })[0];
     var names = {};
     ((race && race.racers) || []).forEach(function (x) { names[+x.no] = x.name; });
-    el.innerHTML = '<div class="hj-ic">⚠️</div><div class="hj-body"><div class="hj-t">' + esc(p[0]) + " " + esc(p[1]) + "R に補充の選手がいます</div>" +
+    var what = abs.length && cars.length ? "欠車と補充の選手がいます" : abs.length ? "欠車があります" : "補充の選手がいます";
+    el.innerHTML = '<div class="hj-ic">⚠️</div><div class="hj-body"><div class="hj-t">' + esc(p[0]) + " " + esc(p[1]) + "R に" + what + "</div>" +
+      abs.map(function (no) {
+        return '<div class="hj-r hj-abs"><i class="pn-car c' + no + '">' + no + "</i>" + esc(names[no] || "") + "（欠車）</div>";
+      }).join("") +
       cars.map(function (no) {
         return '<div class="hj-r"><i class="pn-car c' + no + '">' + no + "</i>" + esc(names[no] || "") + "（補充）</div>";
       }).join("") +
-      '<div class="hj-sub">並び・買目を確認してください</div></div>';
+      '<div class="hj-sub">並び・買目を確認してください' + (abs.length ? "（欠車の車番を含む買目は点数から外れます）" : "") + "</div></div>";
     el.classList.remove("hidden");
   }
 
