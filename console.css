@@ -1017,3 +1017,55 @@ html.theme-light #pred-narabi.pn-market .pm-badge .pn-car.c1 { border-color: #9a
 .celebrate-btn .cb-sub { font-size: 12px; font-weight: 700; opacity: .8; }
 .celebrate-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5a06; }
 .celebrate-btn.armed { background: linear-gradient(180deg, #ffd0d8 0%, #ff6b88 60%, #e0335a 100%); border-color: #a3123a; color: #fff; box-shadow: 0 3px 0 #7a0f33, 0 0 16px rgba(255,80,120,.6); }
+
+/* §193 AIアシスタント（11/10）＝①荒れ予報（オッズ支持率の下）②買い目の読み（予想カードのいちばん下）。たたんで置く */
+details.ai-box { margin-top: 8px; padding-top: 6px; border-top: 1px dashed #4a4f58; font-weight: 400; text-align: left; }
+details.ai-box > summary.ai-cap { font-size: 12px; font-weight: 700; color: #9aa0ab; cursor: pointer; list-style: none; margin: 0; }
+details.ai-box > summary.ai-cap::-webkit-details-marker { display: none; }
+details.ai-box > summary.ai-cap::before { content: "▸ "; color: #9aa0ab; }
+details.ai-box[open] > summary.ai-cap::before { content: "▾ "; }
+details.ai-box .ai-body { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; font-size: 14px; color: #c9ccd3; line-height: 1.5; }
+details.ai-box .ai-lv { font-size: 14px; font-weight: 900; padding: 1px 10px; margin: 0 8px; border-radius: 999px; color: #111; background: #c9ccd3; white-space: nowrap; }
+details.ai-box .ai-lv.m-hi { background: #ff8f6b; }
+details.ai-box .ai-lv.k-hi { background: #7fc4ff; }
+details.ai-box .ai-row { flex-basis: 100%; font-weight: 700; }
+details.ai-box .ai-row small { font-weight: 400; font-size: 12px; color: #8a8f99; margin-left: 2px; }
+html.theme-light details.ai-box .ai-row small { color: #7a7f88; }
+details.ai-box .ai-txt { font-weight: 700; }
+details.ai-box .ai-txt small { font-weight: 400; font-size: 12px; color: #8a8f99; margin-left: 2px; }
+details.ai-box .ai-txt.ai-br { flex-basis: 100%; }
+html.theme-light details.ai-box .ai-txt small { color: #7a7f88; }
+details.ai-box .ai-sub { flex-basis: 100%; font-size: 12px; color: #8a8f99; }
+details.ai-box .ai-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+details.ai-box .ai-tags i { font-style: normal; font-size: 14px; font-weight: 800; padding: 1px 10px; border-radius: 999px; border: 1px solid #5a606b; color: #e4e6ea; line-height: 1.4; }
+html.theme-light details.ai-box { border-top-color: #c9cbd1; }
+html.theme-light details.ai-box > summary.ai-cap, html.theme-light details.ai-box > summary.ai-cap::before { color: #7a7f88; }
+html.theme-light details.ai-box .ai-body { color: #33373e; }
+html.theme-light details.ai-box .ai-sub { color: #7a7f88; }
+html.theme-light details.ai-box .ai-tags i { border-color: #b9bcc4; color: #2a2d33; }
+
+/* §193追補（11/11 Naoto）＝並び・苗字・競走得点はいつも出す。オッズ支持率／オッズ一覧／荒れ予報は並びの下に縦に3つ、たたんで置く。
+   同じ表を上（.pm-top）と下（.pm-sub＝オッズ支持率の中）に描き、いらない行を高さ0にする＝幅は残るので列の位置が上下でそろう */
+#pred-narabi.pn-market .pm-top .pm-num, #pred-narabi.pn-market .pm-top .pm-line,
+#pred-narabi.pn-market .pm-sub .pm-name, #pred-narabi.pn-market .pm-sub .pm-badge, #pred-narabi.pn-market .pm-sub .pm-score {
+  height: 0 !important; line-height: 0 !important; overflow: hidden; visibility: hidden; }
+#pred-narabi.pn-market .pm-sub .pm-dot { height: 0; line-height: 0; margin-top: 0 !important; overflow: hidden; visibility: hidden; }
+#pred-narabi.pn-market .pm-sub { flex-basis: 100%; }
+/* 並びの下の3つ＝見出しを押せるボタンの形に（点線の区切りはやめる） */
+#pred-narabi.pn-market details.ai-box { margin-top: 8px; padding-top: 0; border-top: 0; }
+#pred-narabi.pn-market details.ai-box > summary.ai-cap { display: inline-block; padding: 3px 12px 3px 8px; border: 1px solid #4a4f58; border-radius: 6px; background: rgba(255, 255, 255, .05); font-size: 13px; color: #c9ccd3; }
+#pred-narabi.pn-market details.ai-box > summary.ai-cap:hover { border-color: #7a808c; }
+#pred-narabi.pn-market details.ai-box > summary.ai-cap .pm-note { margin-left: 8px; color: #6d7480; font-weight: 700; }
+html.theme-light #pred-narabi.pn-market details.ai-box > summary.ai-cap { border-color: #c9cbd1; background: #fff; color: #4a4f58; }
+html.theme-light #pred-narabi.pn-market details.ai-box > summary.ai-cap .pm-note { color: #9a9ea6; }
+/* オッズ一覧（3連単・人気順の上位30）＝10点×3列（幅が足りないときは15点×2列） */
+#pred-narabi.pn-market .ol-cols { flex-basis: 100%; columns: 3 150px; column-gap: 20px; max-width: 600px; font-variant-numeric: tabular-nums; }
+#pred-narabi.pn-market .ol-row { display: flex; align-items: center; gap: 6px; height: 28px; white-space: nowrap; break-inside: avoid; }
+#pred-narabi.pn-market .ol-rk { width: 20px; text-align: right; font-size: 12px; font-weight: 700; color: #8a8f99; }
+#pred-narabi.pn-market .ol-combo { display: inline-flex; align-items: center; gap: 2px; }
+#pred-narabi.pn-market .ol-combo .pn-car { width: 22px; height: 22px; font-size: 14px; }
+#pred-narabi.pn-market .ol-combo .ol-sep { font-weight: 800; font-size: 14px; color: #8a8f99; line-height: 22px; margin: 0 1px; }
+#pred-narabi.pn-market .ol-odds { min-width: 50px; text-align: right; font-weight: 800; font-size: 15px; color: #d9a441; }
+#pred-narabi.pn-market .ol-odds small { font-weight: 700; font-size: .85em; margin-left: 1px; }
+html.theme-light #pred-narabi.pn-market .ol-rk, html.theme-light #pred-narabi.pn-market .ol-combo .ol-sep { color: #7a7f88; }
+html.theme-light #pred-narabi.pn-market .ol-odds { color: #9a6b0a; }

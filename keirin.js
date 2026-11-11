@@ -648,8 +648,98 @@
     return { win: win, lines: lines, n: keys.length };
   }
 
+  /* §193 AIアシスタント①荒れ予報（11/10 Naoto）＝3連単のオッズだけから「万車券（100倍以上）の見込み」と「堅い決着（10倍未満）の見込み」を出す。
+     予想アプリの万車モデル（§6.176）のオッズだけ版＝特徴は同じ3つ [上位10点の割合, 1番人気の目の割合, log(1番人気の目の倍率)/3]。
+     式は過去のレースで1回学習して固定（学習の道具＝予想アプリ kaikata/are_console_fit.js・傾きは2026-03-26〜の全レース・目盛りは締切10分前のオッズの期間で合わせ直し）。
+       w・b＝万車の式／kw・kb＝堅いの式／lo・hi＝3段階の境目（万車の見込みの下25%＝堅そう／上25%＝荒れそう）
+       klo・khi＝堅いの見込みの境目（下25%／上25%）／base・kbase＝その車数の全体の割合（%）
+       off＝true の車数は出さない（null を返す）。11/11 Naoto＝**9車は出さない**：確かめたレースが166本と少なく、見込みと実際が20ポイント近く外れた帯があった（堅い 7%→27%・万車 45%→27%）。式は残してある＝学習をやり直して合えば off を外す。evenOff＝true で off でも計算する（検査用）
+       showPct＝見込みの%を画面に出すか（false ならバッジだけ・今はどちらも true）
+       mlv・klv＝万車・堅いそれぞれの3段階（"hi"＝高め／"mid"＝普通／"lo"＝低め・見込みの上25%／下25%）
+     戻り＝pct（万車の見込み%）・kpct（堅いの見込み%）ほか。男子の7車・9車だけ（ガールズ・欠車で減ったレース・オッズが出そろっていない＝null）。
+     表示だけ＝買目・判定には使わない */
+  var ARE = {
+    7: { w: [-1.391728, -0.385528, 0.756845], b: -0.95736, lo: 0.2111, hi: 0.3053, kw: [3.118462, 1.235865, -3.88467], kb: -0.62175, klo: 0.0611, khi: 0.2727, full: 210, base: 26, kbase: 19, showPct: true },
+    9: { w: [-1.626605, -0.258856, 1.494152], b: -1.006573, lo: 0.3592, hi: 0.5129, kw: [3.781958, 1.409614, -5.66306], kb: 0.238539, klo: 0.0133, khi: 0.0948, full: 504, base: 43, kbase: 9, showPct: true, off: true },
+  };
+  function areForecast(o, carCount, girls, evenOff) {
+    var c = ARE[carCount];
+    if (!o || !c || girls || (c.off && !evenOff)) return null;
+    var ks = Object.keys(o).filter(function (k) { return /^\d{3}$/.test(k) && o[k] > 0; }).sort(function (a, b) { return o[a] - o[b]; });
+    if (ks.length < c.full * 0.9) return null;
+    var inv = 0, top = 0;
+    ks.forEach(function (k, i) { var v = 1 / o[k]; inv += v; if (i < 10) top += v; });
+    var x = [top / inv, (1 / o[ks[0]]) / inv, Math.log(Math.max(o[ks[0]], 1)) / 3];
+    var u = c.b + c.w[0] * x[0] + c.w[1] * x[1] + c.w[2] * x[2];
+    var s = 1 / (1 + Math.exp(-u));
+    var kScore = 1 / (1 + Math.exp(-(c.kb + c.kw[0] * x[0] + c.kw[1] * x[1] + c.kw[2] * x[2])));
+    var level = s >= c.hi ? "are" : s < c.lo ? "kata" : "futsu";
+    return { level: level, label: level === "are" ? "荒れそう" : level === "kata" ? "堅そう" : "普通", base: c.base, pct: Math.round(s * 100), kpct: Math.round(kScore * 100), kbase: c.kbase, showPct: !!c.showPct, mlv: s >= c.hi ? "hi" : s < c.lo ? "lo" : "mid", klv: kScore >= c.khi ? "hi" : kScore < c.klo ? "lo" : "mid", score: s, favOdds: o[ks[0]], fav: ks[0], top10: x[0] };
+  }
+
+  /* §193 AIアシスタント②買い目の逆算（11/10 Naoto・8/14 の readback）＝配信者が入れた3連単の買目から「どんな決着を読んでいるか」を言葉にする。
+     予想はしない＝買目に書いてあることの言い換えと、オッズから逆算した数字だけ。
+       head  ＝1着に置いた車（点数の多い順）とその位置（ラインの先頭／番手／3番手以降／単騎）
+       tags  ＝["2番の押し切り読み", "ライン決着重め", "3着広め"] のような短い札
+       cover ＝当たる確率＝買っている目のオッズ支持率の合計（控除率は割り算で消える）
+       rankLo/rankHi＝買っている目の人気順の範囲（1＝いちばん売れている目）
+     groups＝並び（[[2,3],[4,5,6],[7],[1]]・先頭から）。無ければライン関係の札は出さない。3連単の目が無い・オッズが無い＝null */
+  function readback(parsed, o, groups, carCount) {
+    if (!o || !parsed || !parsed.lines) return null;
+    var seen = {}, combos = [];
+    parsed.lines.forEach(function (l) {
+      if (!l.ok || l.cut || l.allDup || l.type !== "3連単" || !l.combos) return;
+      l.combos.forEach(function (c) { var k = c.join(""); if (!seen[k]) { seen[k] = true; combos.push(c); } });
+    });
+    if (!combos.length) return null;
+    var keys = Object.keys(o).filter(function (k) { return /^\d{3}$/.test(k) && o[k] > 0; }).sort(function (a, b) { return o[a] - o[b]; });
+    if (!keys.length) return null;
+    var sum = 0, rank = {};
+    keys.forEach(function (k, i) { sum += 1 / o[k]; rank[k] = i + 1; });
+    var cover = 0, rLo = 0, rHi = 0;
+    combos.forEach(function (c) {
+      var k = c.join(""); if (!(o[k] > 0)) return;
+      cover += (1 / o[k]) / sum;
+      if (!rLo || rank[k] < rLo) rLo = rank[k];
+      if (rank[k] > rHi) rHi = rank[k];
+    });
+    // 並び＝車番→{ライン番号, 位置（0＝先頭）, ラインの人数}
+    var pos = {};
+    (groups || []).forEach(function (g, gi) { g.forEach(function (c, i) { pos[+c] = { g: gi, i: i, n: g.length }; }); });
+    var hasLines = Object.keys(pos).length > 0;
+    var n = combos.length, headCnt = {}, third = {}, sameLine = 0;
+    combos.forEach(function (c) {
+      headCnt[c[0]] = (headCnt[c[0]] || 0) + 1; third[c[2]] = true;
+      var a = pos[c[0]], b = pos[c[1]];
+      if (a && b && a.g === b.g) sameLine++;
+    });
+    var heads = Object.keys(headCnt).map(Number).sort(function (a, b) { return headCnt[b] - headCnt[a] || a - b; });
+    var role = function (c) { var p = pos[c]; return !p ? "" : p.n < 2 ? "単騎" : p.i === 0 ? "先頭" : p.i === 1 ? "番手" : "3番手"; };
+    var tags = [];
+    // 1着の読み
+    var headTag;
+    if (heads.length === 1) {
+      var h = heads[0], r = role(h);
+      headTag = r === "先頭" ? h + "番の押し切り読み" : r === "番手" ? h + "番の番手抜け出し読み" : r === "3番手" ? h + "番（3番手）の頭読み" : r === "単騎" ? "単騎" + h + "番の頭読み" : h + "番の頭固定";
+    } else if (hasLines && heads.every(function (c) { return pos[c] && pos[c].g === pos[heads[0]].g; })) {
+      headTag = heads.slice().sort(function (a, b) { return pos[a].i - pos[b].i; }).join("・") + "番（同じライン）で頭を取る読み";
+    } else {
+      headTag = "頭は" + heads.join("・") + "番の" + heads.length + "車";
+    }
+    tags.push(headTag);
+    // ライン決着（1着・2着が同じライン）
+    var settle = hasLines ? sameLine / n : null;
+    if (settle !== null) tags.push(settle >= 0.8 ? "ライン決着重め" : settle <= 0.2 ? "別線との決着重め" : "ライン決着" + Math.round(settle * 10) + "割");
+    // 3着の広さ（3着に置いた車の数）
+    var n3 = Object.keys(third).length, room = Math.max(1, (carCount || 7) - 2);
+    tags.push(n3 >= Math.ceil(room * 0.6) ? "3着広め（" + n3 + "車）" : n3 <= 2 ? "3着しぼり（" + n3 + "車）" : "3着" + n3 + "車");
+    return { tags: tags, heads: heads, settle: settle, third: n3, points: n, cover: cover, rankLo: rLo, rankHi: rHi, total: keys.length };
+  }
+
   return {
     TYPES: TYPES,
+    areForecast: areForecast, // 11/10 §193 AIアシスタント①荒れ予報
+    readback: readback,       // 11/10 §193 AIアシスタント②買い目の逆算
     normalize: normalize,
     oddsInt: oddsInt,         // 9/25 §13（10倍未満は小数第1位）
     synthFmt: synthFmt,       // 9/25 §13（合成オッズ＝常に小数第1位）

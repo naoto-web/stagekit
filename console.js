@@ -802,27 +802,105 @@
     var lnV = {};
     if (hasLines && ms) ms.lines.forEach(function (ln, gi) { lnV[gi] = Math.round(ln.win * 100); });
     var lnR = rankOf(lnV);
-    var html = '<div class="pm-cap">オッズ支持率（3連単の売れ方から逆算）' +
-      (!ms ? '<span class="pm-note">オッズ待ち</span>' : "") +
-      (!girls && !groups.length ? '<span class="pm-note">並び' + (ent && ent.pending ? "取得中…" : "未発表") + "</span>" : "") + "</div>";
-    html += '<div class="pm-rows"><span class="pm-legend"><span class="pm-name">&nbsp;</span><span class="pm-badge">' + (hasLines ? "並び" : "車番") + '</span><span class="pm-score">競走得点</span><span class="pm-num">1着率（個人）</span>' +
+    var noteLines = !girls && !groups.length ? '<span class="pm-note">並び' + (ent && ent.pending ? "取得中…" : "未発表") + "</span>" : "";
+    var noteOdds = !ms ? '<span class="pm-note">オッズ待ち</span>' : "";
+    var rows = '<span class="pm-legend"><span class="pm-name">&nbsp;</span><span class="pm-badge">' + (hasLines ? "並び" : "車番") + '</span><span class="pm-score">競走得点</span><span class="pm-num">1着率（個人）</span>' +
       (hasLines ? '<span class="pm-line">1着率（ライン）</span><span class="pm-line">ライン決着率</span>' : "") + "</span>";
     if (hasLines) {
       // ラインごとに薄い枠で囲う（10/27 Naoto「囲むの見やすい」）＝列の間隔を広げてもラインの切れ目が分かる
-      html += groups.map(function (g, gi) {
+      rows += groups.map(function (g, gi) {
         var cars = lineCars ? lineCars[gi] : g.split("").map(Number), ln = ms && ms.lines[gi];
         return '<span class="pm-group box"><span class="pm-cars">' + cars.map(col).join("") + "</span>" +
           '<span class="pm-line' + (ln ? lnR[gi] || "" : "") + '">' + (ln ? pct(ln.win) : "&nbsp;") + "</span>" +
           '<span class="pm-line' + (cars.length < 2 ? " solo" : "") + '">' + (cars.length < 2 ? "ー" : ln ? pct(ln.settle) : "&nbsp;") + "</span></span>";
       }).join('<span class="pm-dot">・</span>');
     } else {
-      html += '<span class="pm-group"><span class="pm-cars">' + carNos.map(col).join("") + "</span></span>";
+      rows += '<span class="pm-group"><span class="pm-cars">' + carNos.map(col).join("") + "</span></span>";
     }
-    html += "</div>";
+    var html;
+    if (FOLD) {
+      /* §193追補（11/11 Naoto）＝並び・苗字・競走得点はいつも出す。その下に、たたんだ欄を縦に3つ（オッズ支持率／オッズ一覧／荒れ予報）。
+         上と下に同じ表を2回描き、上は%の行・下は名前の行を高さ0にする（console.css の .pm-top／.pm-sub）＝列の位置が上下でそろう */
+      html = (noteLines ? '<div class="pm-cap">' + noteLines + "</div>" : "") + '<div class="pm-rows pm-top">' + rows + "</div>" +
+        aiDetails(key, "ms", "オッズ支持率（3連単の売れ方から逆算）" + noteOdds, '<div class="pm-rows pm-sub">' + rows + "</div>") +
+        aiListHtml(key, odds);
+    } else {
+      html = '<div class="pm-cap">オッズ支持率（3連単の売れ方から逆算）' + noteOdds + noteLines + "</div>" + '<div class="pm-rows">' + rows + "</div>";
+    }
+    html += aiAreHtml(key, odds, Math.max.apply(null, carNos.concat([0])), girls); // §193 AIアシスタント 荒れ予報（たたんで置く）
     box.classList.add("pn-market");
     box.classList.toggle("pm-boxed", hasLines);                                  // 囲いあり＝左の見出しと黒点の高さを合わせる
     box.classList.toggle("pm-nine", Math.max.apply(null, carNos.concat([0])) >= 8); // 8車以上＝少し詰める（9車4ラインが1行に収まる）
     box.innerHTML = html;
+    aiBind(box, key);
+  }
+  /* §193 AIアシスタント（11/10 Naoto・11/5決定「配信者だけが見るアシスタント」）＝荒れ予報（並びの下・7車だけ）。
+     🔴AIは買目を出さない（しょーた「AIが当たって俺たちが外れると食われる」）＝荒れやすさの見込みだけ。席の誰かが note のレースでは出さない。
+     「買い目の読み」は 11/11 に外した（Naoto「本人が知っていることの言い換え」）＝計算（Keirin.readback）は視聴者向けの第二弾用に残してある。
+     §193追補（11/11 Naoto「みんなこの情報見てんのかな」）＝たたむ欄を4つにして、開かれた回数を数える：
+       ms＝オッズ支持率／ol＝オッズ一覧（3連単の人気順 上位30）／are＝荒れ予報（ここまで並びの下に縦に3つ）／as＝参考オッズ（各カードの合計の下）
+     ・どれも最初は閉じている。開閉はレースごとにこのページの中だけで覚える（レースを替えると閉じた状態から）
+     ・開いた回数を state.aiLog に残す（いつ・何を・誰のカード・席の2人・場・レース）＝配信者には見せない。毎時のスナップショットに一緒に残る
+     ・コンソールだけ＝OBS・保存する予想・点数・的中には出ない。&ai=0＝荒れ予報を出さない／&fold=0＝支持率と参考オッズを前の出し方（開いたまま）に戻す */
+  var AI = params.get("ai") !== "0";
+  var FOLD = params.get("fold") !== "0";
+  var AI_LOG_MAX = 300;
+  var aiOpenMem = {}; // aiOpenMem[レースのキー + "|" + 欄の名前] = true（開いている）
+  function aiLog(kind, who, key) {
+    if (!state || !stateLoaded) return;
+    var p = String(key || "").split("|");
+    var log = Array.isArray(state.aiLog) ? state.aiLog : [];
+    log.push({ t: new Date().toISOString(), k: kind, who: String(who || ""), seats: (state.racers || []).map(function (rc) { return rc.name; }), v: p[0] || "", r: +p[1] || 0 });
+    while (log.length > AI_LOG_MAX) log.shift();
+    state.aiLog = log;
+    save();
+  }
+  /** たたむ欄の共通の器。id＝欄の名前（"ms"／"ol"／"are"／"as:<配信者id>"） */
+  function aiDetails(key, id, cap, body) {
+    return '<details class="ai-box" data-ai="' + esc(id) + '"' + (aiOpenMem[key + "|" + id] ? " open" : "") + '><summary class="ai-cap">' + cap + "</summary>" +
+      '<div class="ai-body">' + body + "</div></details>";
+  }
+  /** 描いたあとに開閉を見張る。⚠️Chrome は <details open> を挿入しただけでも toggle が飛ぶ＝覚えている値と違うときだけ「人が押した」と数える */
+  function aiBind(root, key) {
+    root.querySelectorAll("details[data-ai]").forEach(function (det) {
+      det.addEventListener("toggle", function () {
+        var id = det.getAttribute("data-ai"), mk = key + "|" + id;
+        if (!!aiOpenMem[mk] === det.open) return;
+        aiOpenMem[mk] = det.open;
+        if (det.open) aiLog(id.split(":")[0], det.getAttribute("data-who") || "", key);
+      });
+    });
+  }
+  function aiAreHtml(key, odds, cars, girls) {
+    if (!AI || !odds || !window.Keirin.areForecast || raceHasNote(key)) return "";
+    var f = window.Keirin.areForecast(odds, cars, girls);
+    if (!f) return "";
+    // 9車は欄ごと出さない（Keirin.areForecast が null を返す・11/11 Naoto）。f.showPct＝false の車数は%を出さずバッジだけ（今は使っていない）
+    // 11/11 Naoto＝行ごとに3段階のバッジ（高め／普通／低め）・堅い決着を上に。色が付くのは「高め」だけ（堅い＝水色・万車＝オレンジ）
+    var lvTxt = { hi: "高め", mid: "普通", lo: "低め" };
+    var row = function (cls, cap, lv, pct, base) {
+      return '<span class="ai-row">' + cap + 'の見込み<b class="ai-lv ' + (lv === "hi" ? cls : "") + '">' + lvTxt[lv] + "</b>" + (f.showPct ? "約" + pct + "%<small>（" + cars + "車の平均は" + base + "%）</small>" : "") + "</span>";
+    };
+    return aiDetails(key, "are", "🤖 AIアシスタント：荒れ予報",
+      row("k-hi", "堅い決着（10倍未満）", f.klv, f.kpct, f.kbase) +
+      row("m-hi", "万車券（100倍以上）", f.mlv, f.pct, f.base) +
+'<span class="ai-sub">1番人気の目 ' + window.Keirin.oddsInt(f.favOdds) + "倍・オッズが動くと変わります</span>");
+  }
+  /** オッズ一覧＝3連単の倍率の低い順に上位30（10点×3列・左の列から縦に）。オッズが無い間は「オッズ待ち」 */
+  function aiListHtml(key, odds) {
+    var body = '<span class="ai-sub">オッズ待ち</span>';
+    if (odds) {
+      var ks = Object.keys(odds).filter(function (k) { return /^[1-9]{3}$/.test(k) && odds[k] > 0; })
+        .sort(function (a, b) { return odds[a] - odds[b] || (a < b ? -1 : 1); }).slice(0, 30);
+      var cell = function (k, i) {
+        return '<span class="ol-row"><span class="ol-rk">' + (i + 1) + '</span><span class="ol-combo">' +
+          k.split("").map(function (n) { return '<i class="pn-car c' + n + '">' + n + "</i>"; }).join('<b class="ol-sep">-</b>') +
+          '</span><span class="ol-odds">' + window.Keirin.oddsInt(odds[k]) + "<small>倍</small></span></span>";
+      };
+      // 1本の列に30行を流し、幅に合わせて3列（10点ずつ）か2列（15点ずつ）に折る＝console.css の columns
+      if (ks.length) body = '<div class="ol-cols">' + ks.map(cell).join("") + "</div>";
+    }
+    return aiDetails(key, "ol", "オッズ一覧（3連単・人気順の上位30）", body);
   }
   function renderPredNarabi(key) {
     var box = $("pred-narabi");
@@ -1064,6 +1142,7 @@
         form.querySelector(".pf-note-tag").classList.toggle("off", !this.checked);
         alignPredHeads(); // §79 バッジが増減して見出しの行数が変わる＝隣と俺たち目の位置を合わせ直す
         refreshResultFire(); // 結果入力の見出しの🔥も同時に（update→stash で下書きに入った後に呼ぶ）
+        if (AI && MARKET) renderPredNarabi(predKey()); // §193 note のレースは荒れ予報を出さない＝チェックと同時に出し入れ
       });
       // 保存本体（8/10 FB118で分離）：extraLine＝【追加して保存】で俺たち目を買目に足す1行
       var doSave = function (extraLine) {
@@ -1136,7 +1215,7 @@
   var ASSIST = params.get("assist") !== "0";
   var ASSIST_LS = "stagekit.assistOpen";
   function assistOpen() { try { return localStorage.getItem(ASSIST_LS) !== "0"; } catch (e) { return true; } }
-  function assistHtml(parsed, odds, cars, absent) {
+  function assistHtml(parsed, odds, cars, absent, key, racerId, who) {
     if (!ASSIST || !odds || !window.Keirin.assistCombos) return "";
     var sets = window.Keirin.assistCombos(parsed, odds, cars, absent);
     if (!sets.length) return "";
@@ -1147,7 +1226,10 @@
         return '<div class="pa-row">' + chips(r.combo) + '<span class="pa-odds">' + r.txt + "<small>倍</small></span></div>";
       }).join("") + "</div>";
     };
-    return '<details class="pf-assist"' + (assistOpen() ? " open" : "") + '><summary class="pa-cap">参考オッズ（買目に近い未購入の目）</summary>' +
+    // §193追補（11/11）＝最初は閉じる・開閉はレースとカードごと（aiOpenMem）・開いたら aiLog に as で残す。&fold=0 は前のまま（開いて始まる・2枚一緒・このPCで覚える）
+    var head = FOLD ? '<details class="pf-assist" data-ai="as:' + esc(racerId) + '" data-who="' + esc(who) + '"' + (aiOpenMem[key + "|as:" + racerId] ? " open" : "") + ">"
+      : '<details class="pf-assist"' + (assistOpen() ? " open" : "") + ">";
+    return head + '<summary class="pa-cap">参考オッズ（買目に近い未購入の目）</summary>' +
       sets.map(function (s) { return '<div class="pa-line">' + esc(s.raw) + '</div><div class="pa-cols">' + col(s.add) + col(s.shift) + "</div>"; }).join("") +
       "</details>";
   }
@@ -1318,10 +1400,11 @@
     if (!form.querySelector(".pf-ore").value.trim() && (saved.text || "").trim()) {
       html += '<div class="unit-warn">⚠ 「俺たち目」が入力されていません（買い目だけの表示はOK・レースまでに入力→保存）</div>';
     }
-    html += assistHtml(parsed, odds, cars, window.Derive.absentOf(state, key)); // §179 買目アシスト（いちばん下）
+    html += assistHtml(parsed, odds, cars, window.Derive.absentOf(state, key), key, racerId, rcNow ? rcNow.name : racerId); // §179 買目アシスト（いちばん下）
     form.querySelector(".pf-total").innerHTML = html;
+    aiBind(form.querySelector(".pf-total"), key);
     var det = form.querySelector(".pf-assist");
-    if (det) det.addEventListener("toggle", function () {
+    if (det && !FOLD) det.addEventListener("toggle", function () {
       // 開閉は2枚のカードで一緒（10/27 Naoto）＝片方を押したらもう片方も同じに。覚える値も1つ。
       // ⚠️Chrome は <details open> を挿入しただけでも toggle が飛ぶ＝描き直しのたびに同じ値を書き直すだけで無害
       var v = det.open;
