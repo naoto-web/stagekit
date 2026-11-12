@@ -283,13 +283,19 @@
   }
   /* §129（10/8 えーす要望）absent＝欠車の車番の配列。欠車を含む組み合わせは買えない＝点数・的中判定・合成オッズから外す
      （かぶり目と同じ場所で除く）。表示（disp）は書いたまま＝「7-135-全」は全のまま点数だけ減る。行の全部が欠車絡みなら absentAll */
+  /* §194（11/12 えーす要望→Naoto決定）行またぎの「かぶり目」は消さない＝打ったとおりに出す（点数・表示・合成オッズとも2回ぶん）。
+     発端＝口で言いながら打った買目と画面の買目が違って視聴者が困惑／noteは売った文面と点数をそろえたい。
+     代わりにコンソールが「⚠️ 3-7-1 が2つの行でかぶっています」と知らせる（out.kaburi）。的中は1回だけ（settle）。
+     切り目・欠車は今までどおり除く。&dupkeep=0 で旧（かぶり目を消す）＝コンソールとOBSの両方に付けること */
+  var DUPKEEP = !(typeof location !== "undefined" && /[?&]dupkeep=0(&|$)/.test(String(location.search || "")));
   function parsePrediction(text, defaultType, carCount, absent) {
     var lines = String(text || "").split(/\r?\n/);
-    var out = { lines: [], memos: [], points: 0 };
+    var out = { lines: [], memos: [], points: 0, kaburi: [] };
     var absSet = {};
     (absent || []).forEach(function (n) { if (+n) absSet[+n] = true; });
     var hasAbs = Object.keys(absSet).length > 0;
-    var seen = {}; // 行またぎの「かぶり目」除外（先に書いた行が優先・点数/的中/表示すべてから除外）
+    // 行またぎの「かぶり目」＝先の行にもう出ている目。§194 から消さずに数える（kaburi）。旧（DUPKEEP=false）は点数/的中/表示すべてから除外
+    var seen = {};
     // 1周目＝切り目行を先に集める（順不同で効かせるため）
     var cutSet = {}, cutParsed = {};
     lines.forEach(function (raw, i) {
@@ -316,15 +322,29 @@
       }
       var p = parseLine(raw, defaultType, carCount);
       if (p.ok) {
-        var nAbs = 0;
+        var nAbs = 0, nKab = 0;
         var kept = p.combos.filter(function (c) {
           if (hasAbs && c.some(function (n) { return absSet[n]; })) { nAbs++; return false; } // §129 欠車絡み
           var k = p.type + "|" + normalizedComboKey(p.type, c);
-          if (seen[k] || cutSet[k]) return false; // かぶり目 or 切り目
-          seen[k] = true;
+          // 切り目
+          if (cutSet[k]) return false;
+          if (seen[k]) {
+            // 旧＝かぶり目を消す
+            if (!DUPKEEP) return false;
+            // §194 かぶり目は残す。知らせ用に「どの目が何行に出たか」を1目1件で控える
+            nKab++;
+            if (seen[k] === 1) out.kaburi.push({ type: p.type, label: comboLabel(p.type, c), key: k, n: 1 });
+            seen[k]++;
+            out.kaburi.forEach(function (x) { if (x.key === k) x.n = seen[k]; });
+            return true;
+          }
+          seen[k] = 1;
           return true;
         });
         p.absentCount = nAbs;
+        // §194 kaburi＝この行の目のうち、先の行にもう出ている目の数（消していない）
+        p.kaburi = nKab;
+        // dupCount＝この行から消した数（§194 から切り目だけ・旧はかぶり目も）＝表示が打った形と変わる行の目印
         p.dupCount = p.combos.length - kept.length - nAbs;
         if (nAbs) {
           p.combos = kept;
@@ -334,8 +354,9 @@
         if (p.dupCount) {
           p.combos = kept;
           p.points = kept.length;
-          if (kept.length) p.disp = dispOf(kept); // かぶり・切り目を表示からも消す
-          else { p.allDup = true; p.disp = ""; }  // 行ごと全部かぶり/切り→画面に出さない
+          // 切り目（旧はかぶり目も）を表示からも消す。行ごと全部消えたら画面に出さない（allDup）
+          if (kept.length) p.disp = dispOf(kept);
+          else { p.allDup = true; p.disp = ""; }
         }
       }
       out.lines.push(p);
@@ -424,6 +445,8 @@
     var res = { hits: [], refund: 0, invest: prediction.points * (unit || 0) };
     var orders = normalizeOrders(order); // 同着は着順2本（8/27 FB148）
     if (!orders.length) return res;
+    // §194 かぶり目（同じ目が2つの行）＝的中は1件だけ（演出・ティッカーを2回出さない）。回収は買った回数ぶん
+    var hitSeen = {};
     prediction.lines.forEach(function (line) {
       if (!line.ok) return;
       if (line.cut) return; // 切り目行＝買っていない目＝的中判定外（8/10 FB122）
@@ -431,6 +454,9 @@
         var pay = findPayout(payouts, line.type, combo);
         var amount = pay ? pay.amount : 0;
         var refund = amount * (unit || 0) / 100;
+        var hk = line.type + "|" + normalizedComboKey(line.type, combo);
+        if (hitSeen[hk]) { res.refund += refund; return; }
+        hitSeen[hk] = true;
         res.hits.push({
           type: line.type,
           combo: combo,
@@ -752,6 +778,8 @@
     oreNormalize: oreNormalize,
     parseLine: parseLine,
     parsePrediction: parsePrediction,
+    // §194 かぶり目を残しているか（&dupkeep=0 のとき false）＝コンソールの説明文の出し分け用
+    dupKeep: DUPKEEP,
     cutHasMultiTargets: cutHasMultiTargets, // 8/11 FB134（テスト・将来の別UIから使えるように）
     normalizeOrders: normalizeOrders,       // 8/27 FB148（同着＝着順2本）
     ordersFromPayouts: ordersFromPayouts,   // 8/27 FB148

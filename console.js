@@ -1309,9 +1309,11 @@
          式別・かぶり除外・画面表示はマウスを乗せると出る（title）。3連単以外は式別の頭文字を添える（見落とし防止） */
       if (!l.ok) return '<div class="pl-row pl-memo" title="メモ行（点数外）">メモ</div>';
       if (l.cut) return '<div class="pl-row pl-memo" title="切り目（買目から除外・的中判定外）">切り目</div>';
-      if (l.allDup) return '<div class="pl-row pl-memo" title="全部かぶり/切り目（0点・画面に出ません）">0点</div>';
+      // §194 かぶり目は消さない＝「除外」は切り目だけ。かぶりは点数に入ったまま（何点かぶっているかだけ添える）。&dupkeep=0 のときは旧の文言
+      var cutWord = window.Keirin.dupKeep === false ? "かぶり/切り" : "切り目";
+      if (l.allDup) return '<div class="pl-row pl-memo" title="全部' + cutWord + '（0点・画面に出ません）">0点</div>';
       var showDisp = l.disp && l.disp !== window.Keirin.normalize(l.raw).replace(/\s+/g, "");
-      var tip = l.type + " " + l.points + "点" + (l.dupCount ? "　かぶり/切り" + l.dupCount + "点除外" : "") + (showDisp ? "　画面 " + l.disp : "");
+      var tip = l.type + " " + l.points + "点" + (l.dupCount ? "　" + cutWord + l.dupCount + "点除外" : "") + (l.kaburi ? "　かぶり" + l.kaburi + "点" : "") + (showDisp ? "　画面 " + l.disp : "");
       var typeMark = l.type !== "3連単" ? '<span class="pl-memo">' + esc(l.type) + "</span> " : "";
       var ol = odds ? window.Keirin.oddsLabel(l, odds) : ""; // 9/25 Naoto「右側は点数じゃなくオッズ（整数）」
       // §74（9/28 Naoto）「倍」は付けない・金色・細い字（右列を細くして買目欄を広く）。範囲の「〜」は半角の「~」に＝幅を取らない
@@ -1368,6 +1370,15 @@
         (syn ? '　<span class="pt-u">合成 <span class="pt-syn">' + window.Keirin.synthFmt(syn) + "倍</span>" + synInHtml + "</span>" : "") + cutWarn
       : "合計 " + parsed.points + "点　投資 " + fmtYen(investInput) +
         (syn ? "　合成 " + window.Keirin.synthFmt(syn) + "倍" : "") + cutWarn;
+    /* §194（11/12 えーす要望→Naoto）かぶり目の知らせ＝同じ目が2つの行にあっても消さずに出す代わりに、打った本人へ「どの目か」だけ伝える。
+       保存・放送は止めない。ほかの注意書き（.unit-warn）は非表示のまま＝これだけ別クラス（.kab-warn）で見せる。5点以上は「ほか◯点」 */
+    var kab = parsed.kaburi || [];
+    if (kab.length) {
+      var kabTxt = kab.slice(0, 4).map(function (x) { return (x.type !== "3連単" ? x.type + " " : "") + x.label; }).join("・") +
+        (kab.length > 4 ? " ほか" + (kab.length - 4) + "点" : "");
+      var kabRows = kab.every(function (x) { return x.n === 2; }) ? "2つの行" : "複数の行";
+      html += '<div class="kab-warn">⚠️ ' + esc(kabTxt) + " が" + kabRows + "でかぶっています</div>";
+    }
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
     var oreOut = oreMissingInBuys(key, form.querySelector(".pf-text").value, form.querySelector(".pf-ore").value.trim());
     if (oreOut) {

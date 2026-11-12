@@ -267,6 +267,10 @@ textarea.inp { resize: vertical; line-height: 1.6; }
 /* 予想入力のカード内の注意書き（⚠投資額未入力／俺たち目未入力・買目外／✏️未保存／切り目の書き方）は非表示（9/25 Naoto「いったん予想入力のタブのみ」）。
    ⚠️JS側の判定・文言は残してある＝戻すならこの2行を消すだけ。結果入力・精算の .unit-warn は対象外（#pred-forms で閉じる） */
 #pred-forms .unit-warn, #pred-forms .draft-warn { display: none; }
+/* §194（11/12）かぶり目の知らせ＝予想入力のカードでただ1つ見せる注意書き（上の .unit-warn とは別クラス） */
+#pred-forms .kab-warn { margin-top: 6px; font-size: 13px; font-weight: 800; color: #ffd166; line-height: 1.5; }
+html.theme-light #pred-forms .kab-warn { color: var(--lt-red); }
+html.bigtext #pred-forms .kab-warn { font-size: 15px; }
 /* 投資額（9/25 Naoto）＝欄内の上下矢印を消し、「円」の右の −／＋ ボタン（1000円ずつ）で増減 */
 .pf-invest::-webkit-outer-spin-button,
 .pf-invest::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
