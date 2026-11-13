@@ -213,6 +213,17 @@
       if (rp.entry.oreTachi) {
         var op = K.parsePrediction(K.oreNormalize(rp.entry.oreTachi), "3連単", (state.preds[key] || {}).cars || 9, absentOf(state, key));
         s.oreHits = K.settle(op, 0, orders, result.payouts || []).hits;
+        /* §195（11/13 Naoto・松阪4R しょーた）買目欄で「切り目」にした目は、俺たち目の的中にもしない。
+           旧＝俺たち目は買目欄と別々に読むので切り目が効かず、切った目が来ると的中演出・的中速報が出ていた。
+           root.DERIVE_ORECUT_OFF を立てると旧（URLの切り替えは未配線） */
+        if (s.oreHits.length && !root.DERIVE_ORECUT_OFF) {
+          var cutKeys = {};
+          rp.parsed.lines.forEach(function (l) {
+            if (!l.ok || !l.cut) return;
+            l.combos.forEach(function (c) { cutKeys[l.type + "|" + K.comboLabel(l.type, c)] = true; });
+          });
+          s.oreHits = s.oreHits.filter(function (h) { return !cutKeys[h.type + "|" + h.comboLabel]; });
+        }
       }
       byRacer[pid] = s;
     });
