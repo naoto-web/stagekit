@@ -23,13 +23,45 @@
      **この転送先がときどき404を返す**（実測：1段目は常に302で、2段目だけ失敗する）。
      Google側の一時的な不安定さなので、少し待って叩き直せば通る。
      ⚠️読み取りは何度やっても副作用が無いので、やり直して安全 */
-  function getJson(url, attempt) {
+  function getJson(url, attempt, timeoutMs, toTried) {
     attempt = attempt || 0;
-    return fetch(url, { redirect: "follow" }).then(asJson).catch(function (e) {
+    return fetchWithTimeout(url, timeoutMs).then(asJson).catch(function (e) {
+      // §196 時間切れは1回だけすぐ取り直す（GASの順番待ちに1回つかまっても、2回目はふつう1秒で返る）
+      if (e && e.isReadTimeout) {
+        if (toTried) throw e;
+        return getJson(url, attempt, timeoutMs, true);
+      }
       if (attempt >= READ_RETRY) throw e;
       return new Promise(function (r) { setTimeout(r, READ_BACKOFF_MS * (attempt + 1)); })
-        .then(function () { return getJson(url, attempt + 1); });
+        .then(function () { return getJson(url, attempt + 1, timeoutMs, toTried); });
     });
+  }
+
+  /* §196 読み取りの時間切れ（11/17 配信中「結果入力のオッズが自動で入らない・出走表が出たり出なかったり」）。
+     GASは保存済みの値を返すだけの問い合わせでも、ときどき処理の始まりまで37〜93秒待たされる（11/17 実測）。
+     以前は返事が来るまで待ちっぱなし＝その間コンソールは同じレースを取り直さず、オッズ・結果が空のままだった。
+     ⚠️打ち切ってもGAS側の処理は止まらない＝取り直しは1回だけ（雪だるまにしない）。&rdto=0 で旧（待ちっぱなし） */
+  var READ_TO = (function () {
+    try { return new URLSearchParams(location.search).get("rdto") !== "0"; } catch (e) { return true; }
+  })();
+  var TO_SHORT = 12000;     // 結果・オッズ・並び（ふだん1〜3秒）
+  var TO_ABSENT = 30000;    // 欠車一覧（取り直しで全場を読む回がある）
+  var TO_TT = 45000;        // 時刻表（作り直しは keirin.jp 9場直列で20〜40秒＝それより長く）
+  function fetchWithTimeout(url, ms) {
+    if (!READ_TO || !ms) return fetch(url, { redirect: "follow" });
+    var ac = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer;
+    var to = new Promise(function (_, rej) {
+      timer = setTimeout(function () {
+        var err = new Error("GASの返事が" + Math.round(ms / 1000) + "秒来ませんでした");
+        err.isReadTimeout = true;
+        rej(err); // 先に時間切れで決着させてから止める（AbortError を普通の失敗として数えない）
+        if (ac) { try { ac.abort(); } catch (e) {} }
+      }, ms);
+    });
+    var req = fetch(url, ac ? { redirect: "follow", signal: ac.signal } : { redirect: "follow" });
+    return Promise.race([req, to]).then(function (r) { clearTimeout(timer); return r; },
+      function (e) { clearTimeout(timer); throw e; });
   }
 
   /* GASは混雑・エラー・権限切れのとき、JSONではなく**HTMLのエラーページ**を返す。
@@ -82,7 +114,7 @@
     },
     fetchTimetable: function (day, refresh) {
       var url = cfg.GAS_URL + "?action=timetable&day=" + (day ? 1 : 0) + (refresh ? "&refresh=1" : "");
-      return getJson(url)
+      return getJson(url, 0, TO_TT)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "timetable fetch failed");
           return j.timetable;
@@ -90,7 +122,7 @@
     },
     /** §129 本日の欠車一覧 {date, absent:{"場|R":[車番]}, venues}（GAS 5分キャッシュ・コンソールが5分ごとに読む） */
     fetchAbsent: function () {
-      return getJson(cfg.GAS_URL + "?action=absent").then(function (j) {
+      return getJson(cfg.GAS_URL + "?action=absent", 0, TO_ABSENT).then(function (j) {
         if (!j.ok) throw new Error(j.error || "absent fetch failed");
         return j.absent;
       });
@@ -98,7 +130,7 @@
     /** 確定済みレース結果の自動取得。[{no, order, names, kimarite, payouts}] */
     fetchResults: function (jo, force) {
       var url = cfg.GAS_URL + "?action=results&jo=" + encodeURIComponent(jo) + (force ? "&force=1" : "");
-      return getJson(url)
+      return getJson(url, 0, TO_SHORT)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "results fetch failed");
           return j.results || [];
@@ -108,7 +140,7 @@
         {narabi:'147 26 35', scores:{車番:'111.72'}, ages:{車番:'36'}} */
     fetchNarabi: function (jo, race) {
       var url = cfg.GAS_URL + "?action=narabi&jo=" + encodeURIComponent(jo) + "&race=" + (+race || 0);
-      return getJson(url)
+      return getJson(url, 0, TO_SHORT)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "narabi fetch failed");
           // lines＝競り込みの並び構造／cards＝車番→{c:級班,t:期別,k:脚質,st:直近4ヶ月10列}（9/25・空席の出走表用。旧GASは返さない＝空）
@@ -119,7 +151,7 @@
     /** 買目のリアルタイムオッズ（§13・3連単）。races＝[2,3] → { '2': {st,end,fin,cnt,at,o:{'123':65.1}}|null } */
     fetchOdds: function (jo, races) {
       var url = cfg.GAS_URL + "?action=odds&jo=" + encodeURIComponent(jo) + "&races=" + races.join(",");
-      return getJson(url)
+      return getJson(url, 0, TO_SHORT)
         .then(function (j) {
           if (!j.ok) throw new Error(j.error || "odds fetch failed");
           return j.odds || {};
