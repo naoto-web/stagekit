@@ -5069,10 +5069,9 @@
     who.forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
     return names.slice(0, 2).map(spColorOfName);
   }
-  function spNote(k) { // 今の席の人の note予想（勝負レース）
-    var seats = seatMap(), on = false;
-    ["a", "b"].forEach(function (s) { var rc = seats[s]; if (!rc) return; var p = window.Derive.resolvePred(state, k, rc.id); if (p && p.entry && p.entry.isNote) on = true; });
-    return on;
+  function spNote(k) { // 勝負レース＝今日そのレースを note予想にした人なら誰でも（席にいない人も・11/18 Naoto）
+    var br = ((state.preds || {})[k] || {}).byRacer || {};
+    return Object.keys(br).some(function (pid) { var p = window.Derive.resolvePred(state, k, pid); return !!(p && p.entry && p.entry.isNote); });
   }
   function spVenueList() { // 帯に出す場 [{name, f, ended, set}]（左→右の順・最大4）
     var set = {}; (state.venues || []).forEach(function (v) { set[v.name] = 1; });
