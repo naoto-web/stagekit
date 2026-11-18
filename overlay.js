@@ -5069,10 +5069,6 @@
     who.forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
     return names.slice(0, 2).map(spColorOfName);
   }
-  function spNote(k) { // 勝負レース＝今日そのレースを note予想にした人なら誰でも（席にいない人も・11/18 Naoto）
-    var br = ((state.preds || {})[k] || {}).byRacer || {};
-    return Object.keys(br).some(function (pid) { var p = window.Derive.resolvePred(state, k, pid); return !!(p && p.entry && p.entry.isNote); });
-  }
   function spVenueList() { // 帯に出す場 [{name, f, ended, set}]（左→右の順・最大4）
     var set = {}; (state.venues || []).forEach(function (v) { set[v.name] = 1; });
     var has = {}; Object.keys(state.results || {}).forEach(function (k) { has[k.split("|")[0]] = 1; });
@@ -5153,7 +5149,7 @@
       var h = v ? '<div class="sp-head' + (v.ended ? " sp-ended" : "") + '">' + esc(v.name) + (v.ended ? '<small class="sp-end">終了</small>' : gradeBadgeShort(v.name)) + "</div>" + mine.map(function (x) {
         var hc = spHitColors(x.v, x.no), st = "";
         if (hc.length) st = ' style="--c1:' + hc[0] + ";--c2:" + (hc[1] || hc[0]) + '"';
-        return '<div class="sp-item' + (hc.length ? " sp-hit" : "") + (hc.length > 1 ? " sp-hit2" : "") + '" data-k="' + esc(x.k) + '"' + st + '><span class="sp-vr">' + x.no + "R" + (spNote(x.k) ? '<i class="sp-fire">🔥</i>' : "") + '</span><span class="sp-m">' + spMult(x.amount) + "</span></div>";
+        return '<div class="sp-item' + (hc.length ? " sp-hit" : "") + (hc.length > 1 ? " sp-hit2" : "") + '" data-k="' + esc(x.k) + '"' + st + '><span class="sp-vr">' + x.no + "R" + '</span><span class="sp-m">' + spMult(x.amount) + "</span></div>";
       }).join("") : "";
       if (el.getAttribute("data-h") === h) return;
       var had = {};
