@@ -5047,6 +5047,21 @@
      的中＝今の席の人が当てた行をメンバーカラーの薄い地（2人的中＝右上の角→左下の角の斜め線で2色）。勝負レース（note予想）は R の右に🔥。新しい結果は少し落ちて金色にふわっと光る。
      一人配信＝帯は2人配信と同じ4本。空いた席のワイプは真ん中の4:3に縮めて真っ白（中身は未定・人気順はワイプに出さない＝予想枠には出ている） */
   var SIDEPAY = params.get("sidepay") !== "0";
+  /* #18（11/18 Naoto＝C案）帯の文字を大きく。既定ON・&sp18=0 で旧 */
+  var SP18 = params.get("sp18") !== "0";
+  if (SP18) document.documentElement.classList.add("sp18");
+  function sp18Mult(amount) { // 整数と小数を別の箱に（小数点の位置を縦にそろえる・1,000倍以上は整数だけ）
+    var t = spMult(amount), i = t.indexOf(".");
+    var a = i < 0 ? t : t.slice(0, i), b = i < 0 ? "" : t.slice(i);
+    return '<span class="sp-m' + (t.length >= 6 ? " sp-m-long" : "") + '"><b class="sp-mi">' + a + '</b><i class="sp-md">' + b + "</i></span>";
+  }
+  function sp18FitHead(el) { // 場名が帯の幅に入りきらなければ1pxずつ縮める（22px→最小14px）
+    var hd = el.querySelector(".sp-head");
+    if (!hd || !hd.clientWidth) return;
+    hd.style.fontSize = "";
+    var fs = parseFloat(getComputedStyle(hd).fontSize) || 22;
+    while (hd.scrollWidth > hd.clientWidth + 1 && fs > 14) { fs -= 1; hd.style.fontSize = fs + "px"; }
+  }
   var SP_ITEM_H = 31, SP_HEAD_H = 36; // 1行の高さ・場名の高さ
   var SP_END_AFTER = 30 * 60; // 外した場は最終レースの発走からこれだけたったら「終了」（結果が全部そろわなくても）
   if (SIDEPAY) document.documentElement.classList.add("sidepay");
@@ -5146,15 +5161,16 @@
       var capN = Math.max(0, Math.floor((el.clientHeight - SP_HEAD_H) / SP_ITEM_H));
       var mine = v ? done.filter(function (x) { return x.v === v.name; }) : [];
       mine = mine.slice(Math.max(0, mine.length - capN)); // 入りきらなければその場の古いレースから押し出す
-      var h = v ? '<div class="sp-head' + (v.ended ? " sp-ended" : "") + '">' + esc(v.name) + (v.ended ? '<small class="sp-end">終了</small>' : gradeBadgeShort(v.name)) + "</div>" + mine.map(function (x) {
+      var h = v ? '<div class="sp-head' + (v.ended ? " sp-ended" : "") + '">' + esc(v.name) + (v.ended ? '<small class="sp-end">' + (SP18 ? "終" : "終了") + '</small>' : gradeBadgeShort(v.name)) + "</div>" + mine.map(function (x) {
         var hc = spHitColors(x.v, x.no), st = "";
         if (hc.length) st = ' style="--c1:' + hc[0] + ";--c2:" + (hc[1] || hc[0]) + '"';
-        return '<div class="sp-item' + (hc.length ? " sp-hit" : "") + (hc.length > 1 ? " sp-hit2" : "") + '" data-k="' + esc(x.k) + '"' + st + '><span class="sp-vr">' + x.no + "R" + '</span><span class="sp-m">' + spMult(x.amount) + "</span></div>";
+        return '<div class="sp-item' + (hc.length ? " sp-hit" : "") + (hc.length > 1 ? " sp-hit2" : "") + '" data-k="' + esc(x.k) + '"' + st + '><span class="sp-vr">' + x.no + (SP18 ? "" : "R") + '</span>' + (SP18 ? sp18Mult(x.amount) : '<span class="sp-m">' + spMult(x.amount) + "</span>") + "</div>";
       }).join("") : "";
       if (el.getAttribute("data-h") === h) return;
       var had = {};
       el.querySelectorAll(".sp-item").forEach(function (it) { had[it.getAttribute("data-k")] = 1; });
       el.setAttribute("data-h", h); el.innerHTML = h;
+      if (SP18) sp18FitHead(el);
       if (el.getAttribute("data-init")) el.querySelectorAll(".sp-item").forEach(function (it) { if (!had[it.getAttribute("data-k")]) it.classList.add("sp-new"); });
       el.setAttribute("data-init", "1");
     });
