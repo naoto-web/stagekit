@@ -4496,3 +4496,7 @@ html.sp18 .sp-strip .sp-m { align-self: center; display: inline-flex; align-item
 html.sp18 .sp-strip .sp-m .sp-mi { font-weight: 900; }
 html.sp18 .sp-strip .sp-m .sp-md { font-style: normal; }
 html.sp18 .sp-strip .sp-m.sp-m-long { font-size: 18px; }
+
+/* #19（11/19 Naoto）帯の倍率の色分け＝10倍未満は赤・100倍以上は青（既定ON・&sp19=0 で旧） */
+html.sp18 .sp-strip .sp-m.sp-lo { color: #dc2626; }
+html.sp18 .sp-strip .sp-m.sp-hi { color: #1d4ed8; }

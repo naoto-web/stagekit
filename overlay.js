@@ -5050,10 +5050,13 @@
   /* #18（11/18 Naoto＝C案）帯の文字を大きく。既定ON・&sp18=0 で旧 */
   var SP18 = params.get("sp18") !== "0";
   if (SP18) document.documentElement.classList.add("sp18");
+  /* #19（11/19 Naoto）倍率の色分け＝10倍未満は赤（オッズ画面の赤オッズと同じ読み方）・100倍以上は青。既定ON・&sp19=0 で旧 */
+  var SP19 = params.get("sp19") !== "0";
+  function sp19Cls(amount) { var m = amount / 100; return !SP19 ? "" : m < 10 ? " sp-lo" : m >= 100 ? " sp-hi" : ""; }
   function sp18Mult(amount) { // 整数と小数を別の箱に（小数点の位置を縦にそろえる・1,000倍以上は整数だけ）
     var t = spMult(amount), i = t.indexOf(".");
     var a = i < 0 ? t : t.slice(0, i), b = i < 0 ? "" : t.slice(i);
-    return '<span class="sp-m' + (t.length >= 6 ? " sp-m-long" : "") + '"><b class="sp-mi">' + a + '</b><i class="sp-md">' + b + "</i></span>";
+    return '<span class="sp-m' + (t.length >= 6 ? " sp-m-long" : "") + sp19Cls(amount) + '"><b class="sp-mi">' + a + '</b><i class="sp-md">' + b + "</i></span>";
   }
   function sp18FitHead(el) { // 場名が帯の幅に入りきらなければ1pxずつ縮める（22px→最小14px）
     var hd = el.querySelector(".sp-head");
