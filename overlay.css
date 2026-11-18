@@ -4456,3 +4456,32 @@ body.stk-tr .stk-chip.t4::after, body.stk-tr .stk-chip.t5::after { right: 6px; b
 @keyframes celClinkBurst { 0% { opacity: 1; transform: scale(.3); } 40% { opacity: 0; transform: scale(1.3); } 100% { opacity: 0; } }
 .cel-cf { position: absolute; top: -30px; width: 16px; height: 26px; background: var(--c); border-radius: 3px; animation: celFall var(--d) linear forwards; }
 @keyframes celFall { to { transform: translate(var(--sx), 1160px) rotate(var(--rot)); } }
+
+/* #17（11/17〜18 Naoto）①ワイプの左右の帯に終わったレースの配当（既定ON・&sidepay=0 で旧） */
+.sp-strip { position: absolute; top: 0; bottom: 0; z-index: 3; display: flex; flex-direction: column; overflow: hidden; pointer-events: none; background: #fff; }
+.sp-strip.sp-l { left: 0; border-right: 2px solid #c9ced6; }
+.sp-strip.sp-r { right: 0; border-left: 2px solid #c9ced6; }
+.sp-strip .sp-head { flex: 0 0 36px; display: flex; align-items: center; justify-content: center; gap: 3px; background: #d9dce1; color: #111; font-size: 17px; font-weight: 900; white-space: nowrap; border-bottom: 2px solid #b8bdc5; }
+.sp-strip .sp-head .grade-badge { font-size: 11px; padding: 1px 4px; margin-left: 2px; }
+.sp-strip .sp-item { position: relative; flex: 0 0 31px; box-sizing: border-box; display: flex; flex-direction: row; justify-content: space-between; align-items: baseline; padding: 0 5px;
+  border-bottom: 1px solid #e3e6ea; color: #111; line-height: 1.1; isolation: isolate; }
+.sp-strip .sp-vr { font-size: 13px; font-weight: 700; color: #555; white-space: nowrap; }
+.sp-strip .sp-m { font-size: 17px; font-weight: 900; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* 新しい結果＝少し落ちて金色にふわっと光る。光りは行の地の上・字の下に重ねる（モックは行の地そのものを動かしていて、終わると的中の色が消えていた） */
+.sp-strip .sp-item.sp-new { animation: spIn .8s ease-out backwards; }
+.sp-strip .sp-item.sp-new::after { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(255,214,90,.55); animation: spGlow .8s ease-out both; }
+/* 的中＝メンバーカラーの薄い地。2人とも的中＝右上の角→左下の角の斜め線（左上側＝左の席の人・右下側＝右の席の人） */
+.sp-strip .sp-item.sp-hit { background: linear-gradient(90deg, color-mix(in srgb, var(--c1) 26%, #fff) 50%, color-mix(in srgb, var(--c2) 26%, #fff) 50%); }
+.sp-strip .sp-item.sp-hit2 { background: linear-gradient(to bottom right, color-mix(in srgb, var(--c1) 30%, #fff) 50%, color-mix(in srgb, var(--c2) 30%, #fff) 50%); }
+.sp-fire { font-style: normal; font-size: 11px; margin-left: 1px; font-family: "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+/* 終わって本日設定から外れた場＝灰色の見出し＋「終了」 */
+.sp-strip .sp-head.sp-ended { background: #eceef1; color: #8a9099; border-bottom-color: #d3d7dc; }
+.sp-strip .sp-head .sp-end { font-size: 11px; font-weight: 800; color: #fff; background: #9aa1aa; border-radius: 3px; padding: 1px 4px; margin-left: 3px; }
+/* 名札・連続的中の札（§176）は帯をよけてカメラの映像の中へ */
+html.sidepay #scene-talk .talk-cams .cam .nameplate { left: calc(var(--spw, 0px) + 14px); z-index: 4; }
+html.sidepay #scene-talk .talk-cams .cam .stk-chip { margin-right: var(--spw, 0px); }
+/* 一人配信＝空いた席のワイプは真ん中の4:3に縮めて（両脇は帯）真っ白 */
+html.sidepay #scene-talk .talk-cams .cam .seat-card { left: var(--spw, 0px); right: var(--spw, 0px); z-index: 2; }
+.seat-card.stc-blank { background: #fff; }
+@keyframes spIn { 0% { opacity: 0; transform: translateY(-8px); } 60% { opacity: 1; transform: none; } }
+@keyframes spGlow { 0% { opacity: 1; } 100% { opacity: 0; } }

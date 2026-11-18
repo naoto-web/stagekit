@@ -5039,10 +5039,132 @@
     });
     return true;
   }
+  /* #17（11/17〜18 Naoto）①トークのカメラのワイプの左右の帯（4:3のカメラの左右の黒）に、終わったレースの3連単の配当。既定ON・&sidepay=0 で旧（帯なし）。
+     帯1本＝1場（帯は左から①②③④＝左の人の左・右、右の人の左・右）。上に場名・下へ1R→（1行「7R 1,036」・「倍」は付けない・12Rまで入る）。
+     対象＝今日、結果が1つでも出た場＋今の本日設定の場（本日設定から外した場も残す）。並び＝1Rの発走が早い順に左から埋める。
+     5場目＝全レースが終わり本日設定にもない場の一番早いものを押し出して左へ詰め、新しい場は④（本日設定の場は押し出さない＝なるべく4場表示）。
+     終わって本日設定から外れた場は見出しを灰色＋「終了」。使わない帯は白いまま。
+     的中＝今の席の人が当てた行をメンバーカラーの薄い地（2人的中＝右上の角→左下の角の斜め線で2色）。勝負レース（note予想）は R の右に🔥。新しい結果は少し落ちて金色にふわっと光る。
+     一人配信＝帯は2人配信と同じ4本。空いた席のワイプは真ん中の4:3に縮めて真っ白（中身は未定・人気順はワイプに出さない＝予想枠には出ている） */
+  var SIDEPAY = params.get("sidepay") !== "0";
+  var SP_ITEM_H = 31, SP_HEAD_H = 36; // 1行の高さ・場名の高さ
+  var SP_END_AFTER = 30 * 60; // 外した場は最終レースの発走からこれだけたったら「終了」（結果が全部そろわなくても）
+  if (SIDEPAY) document.documentElement.classList.add("sidepay");
+  function spMult(amount) { // 100円あたりの払戻→倍率（1,000倍以上はカンマ付きの整数）
+    var m = amount / 100;
+    return m >= 1000 ? Math.round(m).toLocaleString("ja-JP") : (Math.round(m * 10) / 10).toFixed(1);
+  }
+  function spHitColors(vName, no) { // そのレースを当てた今の席の人のメンバーカラー（席aの人が先）
+    var seats = seatMap(), out = [];
+    ["a", "b"].forEach(function (s) {
+      var rc = seats[s];
+      if (!rc) return;
+      var hit = shownHits().some(function (h) { return h.racerName === rc.name && h.place === vName + no + "R"; });
+      if (hit) out.push(window.Derive.colorOf(rc.color) || "#888");
+    });
+    return out;
+  }
+  function spNote(k) { // 今の席の人の note予想（勝負レース）
+    var seats = seatMap(), on = false;
+    ["a", "b"].forEach(function (s) { var rc = seats[s]; if (!rc) return; var p = window.Derive.resolvePred(state, k, rc.id); if (p && p.entry && p.entry.isNote) on = true; });
+    return on;
+  }
+  function spVenueList() { // 帯に出す場 [{name, f, ended, set}]（左→右の順・最大4）
+    var set = {}; (state.venues || []).forEach(function (v) { set[v.name] = 1; });
+    var has = {}; Object.keys(state.results || {}).forEach(function (k) { has[k.split("|")[0]] = 1; });
+    var out = [];
+    (timetable.venues || []).forEach(function (tv) {
+      if (!set[tv.name] && !has[tv.name]) return;
+      var f = 1e9, last = -1, all = (tv.races || []).length > 0;
+      (tv.races || []).forEach(function (r) { var s = timeToSec(r.start); if (s !== null && s < f) f = s; if (s !== null && s > last) last = s; if (!(state.results && state.results[window.Derive.raceKey(tv.name, r.no)])) all = false; });
+      // 終了＝本日設定から外れていて、全レースの結果がそろった か 最終レースの発走から30分たった（11/18 本番＝外した場の最終レースの結果が取れていなかった）
+      out.push({ name: tv.name, f: f, ended: !set[tv.name] && (all || (last >= 0 && nowSec() >= last + SP_END_AFTER)), set: !!set[tv.name] });
+    });
+    out.sort(function (a, b) { return a.f - b.f; });
+    while (out.length > 4) { // 押し出し＝終わった場の古い方から。なければ本日設定にない古い方から
+      var i = -1;
+      out.some(function (v, j) { if (v.ended) { i = j; return true; } return false; });
+      if (i < 0) out.some(function (v, j) { if (!v.set) { i = j; return true; } return false; });
+      if (i < 0) i = 0;
+      out.splice(i, 1);
+    }
+    return out;
+  }
+  function spBlankWipe() { // 一人配信の空いた席のワイプ＝真っ白（出したら true＝出走表・人気順は描かない）
+    var boxes = (STC_BOX.talk || []).map(function (id) { return $(id); }).filter(Boolean);
+    var sm = seatMap(), one = SIDEPAY && SCENE === "talk" && state ? (sm.a && !sm.b ? "b" : (sm.b && !sm.a ? "a" : null)) : null;
+    var hit = false;
+    boxes.forEach(function (b) {
+      if (one && b.id === "seatcard-" + one) {
+        if (!b.classList.contains("stc-blank")) { b.innerHTML = ""; b._html = ""; b._stcN = 0; }
+        b.classList.add("stc-blank");
+        b.classList.remove("stc-rk", "stc-one");
+        b.removeAttribute("data-rkh");
+        hit = true;
+      } else if (b.classList.contains("stc-blank")) { // 白をやめる＝次の描画で出走表を描き直させる
+        b.classList.remove("stc-blank");
+        b._html = null;
+      }
+    });
+    return hit;
+  }
+  function sidePayRender() {
+    if (!SIDEPAY || SCENE !== "talk" || !state || !timetable) return;
+    var seats = seatMap();
+    var vs = spVenueList();
+    var done = []; // 帯に出す場の終わったレース（3連単の払戻が入っている）を発走の順に
+    vs.forEach(function (v) {
+      (timetable.venues || []).forEach(function (tv) {
+        if (tv.name !== v.name) return;
+        (tv.races || []).forEach(function (r) {
+          var k = window.Derive.raceKey(tv.name, r.no), res = state.results && state.results[k];
+          if (!res || !res.payouts) return;
+          var p = res.payouts.filter(function (x) { return x.type === "3連単" && x.amount > 0; })[0];
+          if (p) done.push({ k: k, v: tv.name, no: r.no, s: timeToSec(r.start) || 0, amount: p.amount });
+        });
+      });
+    });
+    done.sort(function (a, b) { return a.s - b.s; });
+    var strips = []; // 帯＝左の人の左・右、右の人の左・右（一人配信でも4本）。誰も座っていなければ出さない
+    ["a", "b"].forEach(function (s) {
+      var cam = document.querySelector("#scene-talk .talk-cams .cam.slot-" + s);
+      if (!cam) return;
+      var mk = function (side) {
+        var el = cam.querySelector(".sp-strip.sp-" + side);
+        if (!seats.a && !seats.b) { if (el) el.parentNode.removeChild(el); return; }
+        if (!el) { el = document.createElement("div"); el.className = "sp-strip sp-compact sp-" + side; cam.appendChild(el); }
+        var w = Math.max(0, Math.round((cam.clientWidth - cam.clientHeight * 4 / 3) / 2)); // 4:3のカメラの左右の黒の幅
+        el.style.width = w + "px";
+        cam.style.setProperty("--spw", w + "px"); // 名札・連続的中の札をカメラの映像の中へ
+        strips.push(el);
+      };
+      mk("l"); mk("r");
+    });
+    spBlankWipe();
+    strips.forEach(function (el, si) {
+      var v = vs[si] || null; // 左から埋める
+      var capN = Math.max(0, Math.floor((el.clientHeight - SP_HEAD_H) / SP_ITEM_H));
+      var mine = v ? done.filter(function (x) { return x.v === v.name; }) : [];
+      mine = mine.slice(Math.max(0, mine.length - capN)); // 入りきらなければその場の古いレースから押し出す
+      var h = v ? '<div class="sp-head' + (v.ended ? " sp-ended" : "") + '">' + esc(v.name) + (v.ended ? '<small class="sp-end">終了</small>' : gradeBadgeShort(v.name)) + "</div>" + mine.map(function (x) {
+        var hc = spHitColors(x.v, x.no), st = "";
+        if (hc.length) st = ' style="--c1:' + hc[0] + ";--c2:" + (hc[1] || hc[0]) + '"';
+        return '<div class="sp-item' + (hc.length ? " sp-hit" : "") + (hc.length > 1 ? " sp-hit2" : "") + '" data-k="' + esc(x.k) + '"' + st + '><span class="sp-vr">' + x.no + "R" + (spNote(x.k) ? '<i class="sp-fire">🔥</i>' : "") + '</span><span class="sp-m">' + spMult(x.amount) + "</span></div>";
+      }).join("") : "";
+      if (el.getAttribute("data-h") === h) return;
+      var had = {};
+      el.querySelectorAll(".sp-item").forEach(function (it) { had[it.getAttribute("data-k")] = 1; });
+      el.setAttribute("data-h", h); el.innerHTML = h;
+      if (el.getAttribute("data-init")) el.querySelectorAll(".sp-item").forEach(function (it) { if (!had[it.getAttribute("data-k")]) it.classList.add("sp-new"); });
+      el.setAttribute("data-init", "1");
+    });
+  }
+  if (SIDEPAY && SCENE === "talk") setInterval(sidePayRender, 1000);
   function renderSeatCard(vName, rNo) {
     var cmp = SCENE !== "talk"; // ②③＝得点までの短い版
     var boxes = (STC_BOX[SCENE] || []).map(function (id) { return $(id); }).filter(Boolean);
     if (!boxes.length) return;
+    if (SCENE === "talk" && spBlankWipe()) return; // #17 一人配信の空いた席のワイプ＝真っ白
     if (soloOddsWipe(vName, rNo, boxes)) return;
     boxes.forEach(function (b) { b.classList.remove("stc-rk"); b.removeAttribute("data-rkh"); });
     var race = null;

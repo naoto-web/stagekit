@@ -2896,6 +2896,22 @@
       if (names.indexOf(name) >= 0 || (state.results && state.results[key])) return;
       if (predHasEntry(key)) names.push(name);
     });
+    // #17（11/18）外した場でも、今日結果が入っている場は全レースの結果がそろうまで取りにいく（最終レースの発走から1時間まで）
+    // ＝OBSの①ワイプの帯に最終レースの配当を出し、「終了」札を付けるため。1場あたりの取りにいく回数は最終レースの結果が入るまでの数回だけ
+    var gotV = {};
+    Object.keys(state.results || {}).forEach(function (k) { gotV[k.split("|")[0]] = 1; });
+    Object.keys(gotV).forEach(function (name) {
+      if (names.indexOf(name) >= 0) return;
+      var races = venueRaces(name) || [];
+      if (!races.length) return;
+      var last = -1, miss = false;
+      races.forEach(function (r) {
+        var s = timeToSec(r.start);
+        if (s !== null && s > last) last = s;
+        if (!state.results[window.Derive.raceKey(name, r.no)]) miss = true;
+      });
+      if (miss && last >= 0 && nowSec() <= last + 3600) names.push(name);
+    });
     return names;
   }
   /** そのレースに誰かが買目か投資を入れているか */
