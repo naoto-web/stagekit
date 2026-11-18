@@ -5054,15 +5054,20 @@
     var m = amount / 100;
     return m >= 1000 ? Math.round(m).toLocaleString("ja-JP") : (Math.round(m * 10) / 10).toFixed(1);
   }
-  function spHitColors(vName, no) { // そのレースを当てた今の席の人のメンバーカラー（席aの人が先）
-    var seats = seatMap(), out = [];
-    ["a", "b"].forEach(function (s) {
-      var rc = seats[s];
-      if (!rc) return;
-      var hit = shownHits().some(function (h) { return h.racerName === rc.name && h.place === vName + no + "R"; });
-      if (hit) out.push(window.Derive.colorOf(rc.color) || "#888");
-    });
-    return out;
+  function spColorOfName(name) { // 名前→メンバーカラー（名簿＝全員。なければ今の顔ぶれ）
+    var c = null;
+    (state.roster || []).forEach(function (r) { if (r && r.name === name && r.color) c = r.color; });
+    if (!c) (state.racers || []).forEach(function (r) { if (r && r.name === name && r.color) c = r.color; });
+    return (c && window.Derive.colorOf(c)) || "#888";
+  }
+  function spHitColors(vName, no) { // 11/18 Naoto（B案）＝今日そのレースを当てた人を全員（席にいない人も）。今の席の人（a→b）が先・最大2色
+    var seats = seatMap(), place = vName + no + "R", who = [];
+    (derived.hits || []).forEach(function (h) { if (h.place === place && who.indexOf(h.racerName) < 0) who.push(h.racerName); });
+    if (!who.length) return [];
+    var names = [];
+    ["a", "b"].forEach(function (s) { var rc = seats[s]; if (rc && who.indexOf(rc.name) >= 0) names.push(rc.name); });
+    who.forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
+    return names.slice(0, 2).map(spColorOfName);
   }
   function spNote(k) { // 今の席の人の note予想（勝負レース）
     var seats = seatMap(), on = false;
