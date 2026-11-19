@@ -544,7 +544,7 @@
       if (state.currentRace[name] === r.no) cls += " cur";
       else if (next && next.no === r.no) cls += " next";
       if (s !== null && s + RC_DONE_SEC <= now) cls += " done";
-      var hj = rcAlertBadge(window.Derive.raceKey(name, r.no)); // §134 補充／§191 欠車（両方なら「欠」）
+      var hj = rcAlertBadge(window.Derive.raceKey(name, r.no), r); // §134 補充／§191 欠車（両方なら「欠」）
       if (hj) cls += " has-hoju";
       var gl = girlsHeart(r); // §141
       if (gl) cls += " has-girls";
@@ -624,7 +624,7 @@
     if (!editVenue) { rg.innerHTML = ""; return; }
     var curNo = editRace || state.currentRace[editVenue];
     rg.innerHTML = venueRaces(editVenue).map(function (r) {
-      var hj = rcAlertBadge(window.Derive.raceKey(editVenue, r.no)); // §134 補充／§191 欠車（両方なら「欠」）
+      var hj = rcAlertBadge(window.Derive.raceKey(editVenue, r.no), r); // §134 補充／§191 欠車（両方なら「欠」）
       var gl = girlsHeart(r); // §141
       return '<button class="rc' + kubunColorCls(editVenue) + (curNo === r.no ? " cur" : "") + (hj ? " has-hoju" : "") + (gl ? " has-girls" : "") + '" data-no="' + r.no + '">' + gl + r.no + "R<small>" + r.start + "</small>" + hj + "</button>";
     }).join("");
@@ -972,8 +972,15 @@
      印＝灰色の「欠」。補充と両方あるレースは「欠」だけ（Naoto「どっちにしろ並びの再チェックが要る・欠車の方がレア」）。アラートは両方の文言を出す。&abshow=0 で旧（補充だけ） */
   var ABSHOW = params.get("abshow") !== "0";
   function absOfKey(key) { return ABSHOW && key ? (window.Derive.absentOf(state, key) || []) : []; }
-  function rcAlertBadge(key) {
+  /* #21（11/19 Naoto）並び予想に競りがあるレースは「競」。重なったら「欠」＞「競」＞「補」で1つだけ。既定ON・&rcseri=0 で旧 */
+  var RCSERI = params.get("rcseri") !== "0";
+  if (params.get("rcseric") === "blue") document.documentElement.classList.add("rcseri-blue");
+  function hasSeri(r) {
+    return !!(RCSERI && r && r.lines && r.lines.some(function (ln) { return (ln || []).some(function (pos) { return (pos || []).length > 1; }); }));
+  }
+  function rcAlertBadge(key, r) {
     if (absOfKey(key).length) return '<span class="rc-hoju rc-abs" title="欠車があります">欠</span>';
+    if (hasSeri(r)) return '<span class="rc-hoju rc-seri" title="並び予想に競りがあります">競</span>';
     return hojuOf(key).length ? '<span class="rc-hoju" title="補充の選手がいます">補</span>' : "";
   }
   /** 予想入力の「1R 2R…」と「〇〇 の予想」の間のアラート＝入力先のレースに欠車か補充の選手がいるときだけ */

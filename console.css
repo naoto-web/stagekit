@@ -1073,3 +1073,7 @@ html.theme-light #pred-narabi.pn-market details.ai-box > summary.ai-cap .pm-note
 #pred-narabi.pn-market .ol-odds small { font-weight: 700; font-size: .85em; margin-left: 1px; }
 html.theme-light #pred-narabi.pn-market .ol-rk, html.theme-light #pred-narabi.pn-market .ol-combo .ol-sep { color: #7a7f88; }
 html.theme-light #pred-narabi.pn-market .ol-odds { color: #9a6b0a; }
+
+/* #21（11/19 Naoto）競りの印＝紫の「競」（補充の橙・欠車の灰と同じ形）。&rcseric=blue で青 */
+.rc .rc-hoju.rc-seri { background: #7c3aed; }
+html.rcseri-blue .rc .rc-hoju.rc-seri { background: #2563eb; }
