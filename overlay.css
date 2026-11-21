@@ -4506,3 +4506,12 @@ html.sp18 .sp-strip .sp-m .sp-dg { display: inline-block; width: calc(1ch - .3px
 
 /* #22（11/19 Naoto）③も2人とも予想なし＝右のパネルを隠して左が横いっぱい（1〜18番人気）。&tkrk=0 で旧 */
 body.rk-merge-tk #scene-tenkai .race-band > .panel.slot-b { display: none; }
+
+/* #24（11/21 Naoto・C案）買っている目＝1行まるごと（順位＋車番＋オッズ）をメンバーカラーで光らせ、中は薄い地。&rkwide=0 で旧。
+   詰めた表（rk-tight＝列ごとのグリッド）では .rk-pair を3列ぶんの subgrid にして、列の幅・小数点そろえは今のまま */
+html.rkwide .rk-pair { display: inline-flex; align-items: center; border-radius: 6px; }
+html.rkwide .rk-odds.rk-tight .rk-pair { display: grid; grid-column: 1 / 4; grid-template-columns: subgrid; align-items: center; }
+html.rkwide .rk-pair .rk-n { padding-left: 4px; }
+html.rkwide .rk-pair .pl-odds { padding-right: 4px; }
+html.rkwide.rkmine-b .rk-pair.rk-mine { box-shadow: 0 0 0 2px var(--mc1), 0 0 9px 4px var(--mc1); background: color-mix(in srgb, var(--mc1) 22%, #fff); }
+html.rkwide.rkmine-b .rk-pair.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinite; }

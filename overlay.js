@@ -1995,7 +1995,11 @@
      対象＝3連単の行（切り目・重複行は除く＝合成オッズと同じ数え方） */
   var RKMINE = params.get("rkmine") !== "0" ? "b" : "";
   if (RKMINE) document.documentElement.classList.add("rkmine-" + RKMINE);
-  var RKMINE_CYCLE = 2400; // 2色の交互の1周（ms）＝CSS rkMineAlt と同じ
+  var RKMINE_CYCLE = 2400;
+  /* #24（11/21 Naoto・C案）買っている目の囲みを1行まるごと（順位の数字＋車番＋オッズ）＋メンバーカラーの薄い地。
+     順位・車番・オッズを1つの箱（.rk-pair）にまとめ、光と地はその箱に付ける。既定ON・&rkwide=0 で旧（車番だけ光る） */
+  var RKWIDE = params.get("rkwide") !== "0";
+  if (RKWIDE) document.documentElement.classList.add("rkwide"); // 2色の交互の1周（ms）＝CSS rkMineAlt と同じ
   /* 🧪（10/2 Naoto「レース展開シーンのワイプでもNEXTの枠出せる？」）③の右レールを②と同じ形（.race-sub-wrap＝NEXTパネル182px＋カメラ）に組み替える。
      ✅10/2 本番既定ON（&tknext=0 で旧）。③のワイプは②と同寸・同位置（OBSのカメラ x1368・544×404）＝NEXTが出る席はカメラの左182pxがパネルの下に隠れるだけ（②と同じ）。
      中身は②のNEXT枠と同じ（描画は sband-/ksband- を同じループで描く） */
@@ -2048,8 +2052,11 @@
       var mineAttr = mc.length ? ' rk-mine' + (mc.length > 1 ? " rk-mine2" : "") + '" style="--mc1:' + mc[0] + ";--mc2:" + (mc[1] || mc[0]) +
         (mc.length > 1 ? ";animation-delay:-" + (Date.now() % RKMINE_CYCLE) + "ms" : "") : "";
       // 区切りの「−」は省く（俺たち目と同じ）＝その分車番を大きく
-      return '<div class="rk-cell"><span class="rk-n' + (from + i < 3 ? " rk-top" : "") + '">' + (from + i + 1) + '</span><span class="rk-chips chips' + mineAttr + '">' + lineChips(raw, false, null, true) + "</span>" +
-        '<span class="pl-odds rk-v' + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '"><span class="odn rk-num" data-ok="' + esc(k + "|rk|" + c) + '">' + rkNumHtml(rkFmt(d.o[c])) + "</span></span></div>";
+      var nHtml = '<span class="rk-n' + (from + i < 3 ? " rk-top" : "") + '">' + (from + i + 1) + '</span>';
+      var vHtml = '<span class="pl-odds rk-v' + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '"><span class="odn rk-num" data-ok="' + esc(k + "|rk|" + c) + '">' + rkNumHtml(rkFmt(d.o[c])) + "</span></span>";
+      if (RKWIDE) return '<div class="rk-cell"><span class="rk-pair' + mineAttr + '">' + nHtml + '<span class="rk-chips chips">' + lineChips(raw, false, null, true) + "</span>" + vHtml + "</span></div>"; // #24
+      return '<div class="rk-cell">' + nHtml + '<span class="rk-chips chips' + mineAttr + '">' + lineChips(raw, false, null, true) + "</span>" +
+        vHtml + "</div>";
     });
     var cols = "";
     for (var ci = 0; ci < cells.length; ci += perCol) cols += '<div class="rk-col">' + cells.slice(ci, ci + perCol).join("") + "</div>";
