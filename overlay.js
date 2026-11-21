@@ -5083,6 +5083,10 @@
     var fs = parseFloat(getComputedStyle(hd).fontSize) || 22;
     while (hd.scrollWidth > hd.clientWidth + 1 && fs > 14) { fs -= 1; hd.style.fontSize = fs + "px"; }
   }
+  /* #28（11/21 Naoto）帯に全レース（まだのレースは番号だけ）・空白は斜めの縞・新しい結果は右から滑り込む・押し出しは縦。既定ON・&sp28=0 で旧 */
+  var SP28 = SIDEPAY && params.get("sp28") !== "0";
+  var SP28PSEC = 4, SP28STEP = 1067; // 押し出し＝4秒・帯ごとのずれ（右の帯から）
+  if (SP28) document.documentElement.classList.add("sp28");
   var SP_ITEM_H = 31, SP_HEAD_H = 36; // 1行の高さ・場名の高さ
   var SP_END_AFTER = 30 * 60; // 外した場は最終レースの発走からこれだけたったら「終了」（結果が全部そろわなくても）
   if (SIDEPAY) document.documentElement.classList.add("sidepay");
@@ -5181,6 +5185,7 @@
       var v = vs[si] || null; // 左から埋める
       var capN = Math.max(0, Math.floor((el.clientHeight - SP_HEAD_H) / SP_ITEM_H));
       var mine = v ? done.filter(function (x) { return x.v === v.name; }) : [];
+      if (SP28) { sp28Strip(el, si, strips.length, v, mine, capN); return; } // #28
       mine = mine.slice(Math.max(0, mine.length - capN)); // 入りきらなければその場の古いレースから押し出す
       var h = v ? '<div class="sp-head' + (v.ended ? " sp-ended" : "") + '">' + esc(v.name) + (v.ended ? '<small class="sp-end">' + (SP18 ? "終" : "終了") + '</small>' : gradeBadgeShort(v.name)) + "</div>" + mine.map(function (x) {
         var hc = spHitColors(x.v, x.no), st = "";
@@ -5197,6 +5202,59 @@
     });
   }
   if (SIDEPAY && SCENE === "talk") setInterval(sidePayRender, 1000);
+  /* #28 帯1本の中身。全レースを番号順に（終わったレース＝倍率／まだのレース＝番号だけ）・最終Rより下は縞。中身は .sp-in の箱に入れる（押し出しで古い箱と新しい箱を一緒に動かすため） */
+  function sp28Strip(el, si, nStrips, v, mine, capN) {
+    var rows = [], doneBy = {};
+    mine.forEach(function (x) { doneBy[x.no] = x; });
+    if (v) (timetable.venues || []).forEach(function (tv) {
+      if (tv.name !== v.name) return;
+      (tv.races || []).slice().sort(function (a, b) { return a.no - b.no; }).forEach(function (r) { rows.push(doneBy[r.no] || { no: r.no, wait: true }); });
+    });
+    if (rows.length > capN) { // 入りきらない＝終わったレースの古い方から外す（まだのレースは3つ残す）
+      var nDone = rows.filter(function (x) { return !x.wait; }).length;
+      var st = Math.max(0, Math.min(rows.length - capN, nDone - capN + 3));
+      rows = rows.slice(st, st + capN);
+    }
+    var head = v ? '<div class="sp-head' + (v.ended ? " sp-ended" : "") + '">' + esc(v.name) + (v.ended ? '<small class="sp-end">' + (SP18 ? "終" : "終了") + '</small>' : gradeBadgeShort(v.name)) + "</div>" : "";
+    var body = rows.map(function (x) {
+      if (x.wait) return '<div class="sp-item sp-wait" data-w="' + x.no + '"><span class="sp-vr">' + x.no + (SP18 ? "" : "R") + '</span><span class="sp-m"></span></div>';
+      var hc = spHitColors(x.v, x.no), stl = "";
+      if (hc.length) stl = ' style="--c1:' + hc[0] + ";--c2:" + (hc[1] || hc[0]) + '"';
+      return '<div class="sp-item' + (hc.length ? " sp-hit" : "") + (hc.length > 1 ? " sp-hit2" : "") + '" data-k="' + esc(x.k) + '"' + stl + '><span class="sp-vr">' + x.no + (SP18 ? "" : "R") + '</span>' + (SP18 ? sp18Mult(x.amount) : '<span class="sp-m">' + spMult(x.amount) + "</span>") + "</div>";
+    }).join("");
+    var h = v ? head + body + '<div class="sp-fill"></div>' : '<div class="sp-fill sp-unused"></div>';
+    var cur = el.querySelector(".sp-in:not(.sp-out)");
+    var vName = v ? v.name : "";
+    if (cur && cur.getAttribute("data-h") === h) return;
+    var had = {};
+    if (cur) cur.querySelectorAll(".sp-item[data-k]").forEach(function (it) { had[it.getAttribute("data-k")] = 1; });
+    var prevV = el.getAttribute("data-v");
+    var init = !!el.getAttribute("data-init");
+    var markNew = function (box) { box.querySelectorAll(".sp-item[data-k]").forEach(function (it) { if (!had[it.getAttribute("data-k")]) it.classList.add("sp-new28"); }); };
+    var box;
+    if (init && cur && prevV !== vName) { // 押し出し＝古い箱は下へ・新しい箱は上から（同じ速さで一緒に）。右の帯から順に動き出す
+      var dl = Math.max(0, nStrips - 1 - si) * SP28STEP;
+      el.querySelectorAll(".sp-in.sp-out").forEach(function (o) { o.parentNode.removeChild(o); });
+      box = document.createElement("div"); box.className = "sp-in sp-from"; box.setAttribute("data-h", h); box.innerHTML = h;
+      cur.classList.remove("sp-from"); cur.classList.add("sp-out"); cur.style.animationDelay = dl + "ms";
+      box.style.animationDelay = dl + "ms";
+      el.appendChild(box);
+      el._spPushUntil = Date.now() + SP28PSEC * 1000 + dl;
+      setTimeout(function () { if (cur.parentNode) cur.parentNode.removeChild(cur); box.classList.remove("sp-from"); box.style.animationDelay = ""; }, SP28PSEC * 1000 + 300 + dl);
+    } else if (cur && (el._spPushUntil || 0) > Date.now()) { // 押し出しの途中に中身が変わった＝動いている新しい箱の中身だけ差し替える（動きは止めない）
+      cur.setAttribute("data-h", h); cur.innerHTML = h; box = cur;
+      if (prevV === vName) markNew(box);
+    } else {
+      el.querySelectorAll(".sp-in").forEach(function (o) { o.parentNode.removeChild(o); });
+      box = document.createElement("div"); box.className = "sp-in"; box.setAttribute("data-h", h); box.innerHTML = h;
+      el.appendChild(box);
+      if (init && prevV === vName) markNew(box);
+    }
+    el.setAttribute("data-v", vName);
+    el.setAttribute("data-init", "1");
+    var hd = box.querySelector(".sp-head");
+    if (SP18 && hd && hd.clientWidth) { hd.style.fontSize = ""; var fs = parseFloat(getComputedStyle(hd).fontSize) || 22; while (hd.scrollWidth > hd.clientWidth + 1 && fs > 14) { fs -= 1; hd.style.fontSize = fs + "px"; } }
+  }
   function renderSeatCard(vName, rNo) {
     var cmp = SCENE !== "talk"; // ②③＝得点までの短い版
     var boxes = (STC_BOX[SCENE] || []).map(function (id) { return $(id); }).filter(Boolean);
