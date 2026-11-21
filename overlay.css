@@ -4503,3 +4503,6 @@ html.sp18 .sp-strip .sp-m.sp-hi { color: #1d4ed8; }
 
 /* #20（11/19 Naoto）帯の倍率＝数字1文字ずつ「0」の幅の箱に入れる（「1」が細くて桁がずれるのを直す・既定ON・&sp20=0 で旧） */
 html.sp18 .sp-strip .sp-m .sp-dg { display: inline-block; width: calc(1ch - .3px); text-align: center; text-decoration: none; letter-spacing: 0; }
+
+/* #22（11/19 Naoto）③も2人とも予想なし＝右のパネルを隠して左が横いっぱい（1〜18番人気）。&tkrk=0 で旧 */
+body.rk-merge-tk #scene-tenkai .race-band > .panel.slot-b { display: none; }

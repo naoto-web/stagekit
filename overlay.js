@@ -199,6 +199,13 @@
   /* §99（9/29 Naoto）②の予想帯で、放送のレースに予想を入れていない人の側（空いた半分）に3連単の人気順1〜9位。
      ✅9/29 本番既定ON（Naoto「いい感じ・本番反映」）。止める＝&rkodds=0 */
   var RKODDS = params.get("rkodds") !== "0";
+  /* #22（11/19 Naoto）③レース展開の予想帯も、何も入れていない人の側に3連単オッズ人気順（②§99と同じ決まり）。既定ON・&tkrk=0 で旧 */
+  var TKEMPTYRK = params.get("tkrk") !== "0";
+  var TKRK3 = params.get("tkrkcol") === "3";
+  /* 11/21 Naoto決定＝片側18位（6段×3列）・2人とも24位（6段×4列）。&tkrkn=9 / &tkrkm=18 で前の件数 */
+  var TKRKN = +params.get("tkrkn") || 18, TKRKM = +params.get("tkrkm") || 24;
+  function tkRkCount(n) { return n > 9 ? TKRKM : TKRKN; }
+  function tkRkPerCol(c) { return TKRK3 || c <= 9 ? 3 : c === 12 ? 4 : 6; }
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -4316,7 +4323,8 @@
       ["band-", "tband-", "kband-"].forEach(function (bp) {
         var bandHead = $(bp + "head-" + slot);
         if (!bandHead) return;
-        if (RKMERGE && bp === "band-" && slot === "a") document.body.classList.remove("rk-merge"); // 右のパネルを隠す印は毎回左の席で付け直す（10/1）
+        if (RKMERGE && bp === "band-" && slot === "a") document.body.classList.remove("rk-merge");
+        if (RKMERGE && bp === "kband-" && slot === "a") document.body.classList.remove("rk-merge-tk"); // #22 ③は別の印（②と同じページで描くため） // 右のパネルを隠す印は毎回左の席で付け直す（10/1）
         // §58 帯ごとのレース＝②（band-）は放送のレース／③（kband-）はトークのレース（SPLIT無しなら同じ）
         var k = bp === "band-" ? bKey : key;
         var rpk = rc && k ? window.Derive.resolvePred(state, k, rc.id) : null;
@@ -4528,10 +4536,10 @@
           var rkCount = (RKSOLO && !(seats.a && seats.b)) || rkMerge ? 18 : 9;
           // 🧪10/4 Naoto（SOLOODDS）1人配信の人気順は空きワイプに固定＝入力なしでも予想枠には出さない（空けておく）
           var soloWipeRk = SOLOODDS && !(seats.a && seats.b);
-          var rkHtml = RKODDS && bp === "band-" && rc && k && !hasContentKey(rc, k) && !soloWipeRk ? rankOddsHtml(k, rkFrom, rkCount) : "";
+          var rkHtml = RKODDS && (bp === "band-" || (TKEMPTYRK && bp === "kband-")) && rc && k && !hasContentKey(rc, k) && !soloWipeRk ? (bp === "kband-" ? rankOddsHtml(k, rkFrom, tkRkCount(rkCount), tkRkPerCol(tkRkCount(rkCount))) : rankOddsHtml(k, rkFrom, rkCount)) : "";
           // 10/1 Naoto「2人とも予想なしで18番人気まで出すときは、間の線と右上の『3連単オッズ』はいらない」→「1人配信で予想なしと同じ見た目に」
           //   ＝右のパネルを隠し（CSS body.rk-merge）、左のパネルが横いっぱいになって1〜18番人気。&rkmerge=0 で旧（左1〜9・右10〜18）
-          if (rkMerge && rkHtml) document.body.classList.add("rk-merge");
+          if (rkMerge && rkHtml) document.body.classList.add(bp === "kband-" ? "rk-merge-tk" : "rk-merge");
           band.classList.toggle("rk-on", !!rkHtml);
           // 見出しも「〇〇 予想」→「3連単オッズ」・メンバーカラー→灰色（9/29 Naoto）。投資/回収は隠す（.rk-head）。
           // 名前・色は上の見出し処理が毎回描き直す＝予想を入れ始めたら次の描画で元に戻る
