@@ -4514,4 +4514,9 @@ html.rkwide .rk-odds.rk-tight .rk-pair { display: grid; grid-column: 1 / 4; grid
 html.rkwide .rk-pair .rk-n { padding-left: 4px; }
 html.rkwide .rk-pair .pl-odds { padding-right: 4px; }
 html.rkwide.rkmine-b .rk-pair.rk-mine { box-shadow: 0 0 0 2px var(--mc1), 0 0 9px 4px var(--mc1); background: color-mix(in srgb, var(--mc1) 22%, #fff); }
-html.rkwide.rkmine-b .rk-pair.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinite; }
+html.rkwide.rkmine-b .rk-pair.rk-mine2 { animation: rkWideAlt 2.4s ease-in-out infinite; } /* #24 追補（11/21）2人とも＝光と地を一緒に交互（位相は JS が時計で合わせる・今までと同じ） */
+@keyframes rkWideAlt {
+  0%, 38% { box-shadow: 0 0 0 2px var(--mc1), 0 0 9px 4px var(--mc1); background: color-mix(in srgb, var(--mc1) 22%, #fff); }
+  50%, 88% { box-shadow: 0 0 0 2px var(--mc2), 0 0 9px 4px var(--mc2); background: color-mix(in srgb, var(--mc2) 22%, #fff); }
+  100% { box-shadow: 0 0 0 2px var(--mc1), 0 0 9px 4px var(--mc1); background: color-mix(in srgb, var(--mc1) 22%, #fff); }
+}
