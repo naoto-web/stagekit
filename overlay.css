@@ -4533,3 +4533,7 @@ html.sp28 .sp-strip .sp-in.sp-out { animation: sp28OutV 4s ease-in-out both; z-i
 html.sp28 .sp-strip .sp-in.sp-from { animation: sp28FromV 4s ease-in-out backwards; z-index: 2; }
 @keyframes sp28OutV { 0% { transform: none; } 100% { transform: translateY(100%); } }
 @keyframes sp28FromV { 0% { transform: translateY(-100%); } 100% { transform: none; } }
+
+/* #28 追補（11/21）結果の来ないレース＝「中止」を灰色で */
+html.sp28 .sp-strip .sp-item.sp-cxl .sp-vr { color: #a3a9b2; }
+html.sp28 .sp-strip .sp-item.sp-cxl .sp-cxlm { align-self: center; font-size: 17px; font-weight: 800; color: #9aa1aa; letter-spacing: 1px; }

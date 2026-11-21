@@ -5085,7 +5085,8 @@
   }
   /* #28（11/21 Naoto）帯に全レース（まだのレースは番号だけ）・空白は斜めの縞・新しい結果は右から滑り込む・押し出しは縦。既定ON・&sp28=0 で旧 */
   var SP28 = SIDEPAY && params.get("sp28") !== "0";
-  var SP28PSEC = 4, SP28STEP = 1067; // 押し出し＝4秒・帯ごとのずれ（右の帯から）
+  var SP28PSEC = 4, SP28STEP = 1067;
+  var SP28CXL = params.get("sp28cxl") !== "0"; // #28 追補（11/21）後のレースの結果があるのに結果の無いレース＝「中止」 // 押し出し＝4秒・帯ごとのずれ（右の帯から）
   if (SP28) document.documentElement.classList.add("sp28");
   var SP_ITEM_H = 31, SP_HEAD_H = 36; // 1行の高さ・場名の高さ
   var SP_END_AFTER = 30 * 60; // 外した場は最終レースの発走からこれだけたったら「終了」（結果が全部そろわなくても）
@@ -5210,6 +5211,10 @@
       if (tv.name !== v.name) return;
       (tv.races || []).slice().sort(function (a, b) { return a.no - b.no; }).forEach(function (r) { rows.push(doneBy[r.no] || { no: r.no, wait: true }); });
     });
+    if (SP28CXL) { // 後のレースの結果がもう入っているのに結果の無いレース＝中止（または不成立）
+      var lastDoneNo = -1; rows.forEach(function (x) { if (!x.wait && x.no > lastDoneNo) lastDoneNo = x.no; });
+      rows.forEach(function (x) { if (x.wait && x.no < lastDoneNo) { x.wait = false; x.cxl = true; } });
+    }
     if (rows.length > capN) { // 入りきらない＝終わったレースの古い方から外す（まだのレースは3つ残す）
       var nDone = rows.filter(function (x) { return !x.wait; }).length;
       var st = Math.max(0, Math.min(rows.length - capN, nDone - capN + 3));
@@ -5217,6 +5222,7 @@
     }
     var head = v ? '<div class="sp-head' + (v.ended ? " sp-ended" : "") + '">' + esc(v.name) + (v.ended ? '<small class="sp-end">' + (SP18 ? "終" : "終了") + '</small>' : gradeBadgeShort(v.name)) + "</div>" : "";
     var body = rows.map(function (x) {
+      if (x.cxl) return '<div class="sp-item sp-cxl" data-c="' + x.no + '"><span class="sp-vr">' + x.no + (SP18 ? "" : "R") + '</span><span class="sp-m sp-cxlm">中止</span></div>';
       if (x.wait) return '<div class="sp-item sp-wait" data-w="' + x.no + '"><span class="sp-vr">' + x.no + (SP18 ? "" : "R") + '</span><span class="sp-m"></span></div>';
       var hc = spHitColors(x.v, x.no), stl = "";
       if (hc.length) stl = ' style="--c1:' + hc[0] + ";--c2:" + (hc[1] || hc[0]) + '"';
