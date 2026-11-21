@@ -2303,9 +2303,21 @@
     if (!vp) return;
     var h = document.createElement("div");
     h.className = "hint venue-auto-hint";
-    h.textContent = "※本日の場は時刻表に合わせて自動で追加・削除されます（1R発走の40分前に追加／最終レースの結果確定から10分後に削除・同時に最大4場）。手で外した場は、その日は自動では戻りません。";
+    h.textContent = "※本日の場は時刻表に合わせて自動で追加・削除されます（1R発走の40分前に追加／最終レースの結果確定から10分後に削除・同時に最大4場）。手で外した場は、その日は自動では戻りません。終わったあとに手で足し直した場は、手で外すまで残ります（過去のレースの投資額などを直す用）。";
     vp.after(h);
   })();
+  /* 🆕11/21 人が足した場の時刻＝state.venueAdd = {date, at:{場名: 0時からの秒}}。derive.autoVenues の opt.addedAt
+     終わったあとに足した場は、その日は自動で外さない（えーす 11/19 静岡7R＝足しても30秒以内に外れて投資額を直せなかった） */
+  function venueAddedAt() {
+    var o = state && state.venueAdd;
+    return o && o.date === state.date && o.at && typeof o.at === "object" ? o.at : {};
+  }
+  function markVenueAdded(name, on) {
+    var at = {}, cur = venueAddedAt();
+    Object.keys(cur).forEach(function (k) { if (k !== name) at[k] = cur[k]; });
+    if (on) at[name] = nowSec();
+    state.venueAdd = { date: state.date, at: at };
+  }
   function venueOffNames() {
     var o = state && state.venueOff;
     return o && o.date === state.date && Array.isArray(o.names) ? o.names.slice() : [];
@@ -2322,7 +2334,7 @@
       return { name: v.name, races: (v.races || []).map(function (r) { return { no: +r.no, startSec: timeToSec(r.start) }; }) };
     });
     var cur = state.venues.map(function (v) { return v.name; });
-    var next = window.Derive.autoVenues(tt, cur, venueOffNames(), settleSecOf, nowSec());
+    var next = window.Derive.autoVenues(tt, cur, venueOffNames(), settleSecOf, nowSec(), { addedAt: venueAddedAt() });
     if (next.join("|") === cur.join("|")) return;
     applyVenueNames(next);
     ensureTalkRaces();
@@ -2344,8 +2356,9 @@
         var n = b.getAttribute("data-n");
         var i = selected.indexOf(n);
         if (i >= 0) selected.splice(i, 1);
-        else { if (selected.length >= 4) selected.shift(); selected.push(n); } // 最大4場（モーニング→昼の並走帯対応）
+        else { if (selected.length >= 4) { var pushed = selected.shift(); if (AUTOVENUE) markVenueAdded(pushed, false); } selected.push(n); } // 最大4場（モーニング→昼の並走帯対応）
         if (AUTOVENUE) markVenueOff(n, i >= 0); // §61 人が外した場は自動で戻さない・足したら解除
+        if (AUTOVENUE) markVenueAdded(n, i < 0); // 🆕11/21 足した時刻を控える（終わったあとに足した場は自動で外さない）・外したら消す
         applyVenueNames(selected);
         saveSettings(); // 押した瞬間に保存（9/26 Naoto・旧＝「設定を保存」かほかの操作の保存に便乗するまでOBSに出なかった）
       });

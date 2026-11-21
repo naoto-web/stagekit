@@ -420,7 +420,13 @@
       info[v.name] = { from: first.startSec - lead, first: first.startSec, end: end };
     });
     var off = offNames || [];
-    var out = (current || []).filter(function (n) { var i = info[n]; return !i || nowSec < i.end; });
+    /* 🆕11/21（Naoto）終わったあとに人が足し直した場は、その日は自動で外さない（人が外すまで残す）
+       発端＝終わった場を足して過去のレースの投資額を直そうとしても、30秒以内に自動で外れて入力できなかった（えーす・11/19 静岡7R）
+       opt.addedAt＝{ 場名: 人が足した時刻（0時からの秒） }。足した時刻がその場の終わり（end）以降なら残す。
+       終わる前に足した場（朝に早めに足した等）は今までどおり終われば外す＝枠をふさがない */
+    var added = opt.addedAt || {};
+    var keep = function (n) { var i = info[n]; return !!i && typeof added[n] === "number" && added[n] >= i.end; };
+    var out = (current || []).filter(function (n) { var i = info[n]; return !i || nowSec < i.end || keep(n); });
     Object.keys(info).filter(function (n) {
       var i = info[n];
       return out.indexOf(n) < 0 && off.indexOf(n) < 0 && nowSec >= i.from && nowSec < i.end;
