@@ -5987,6 +5987,7 @@
       saveFired();
       glowAdded = true; // 予想帯の的中買目チップ強調（8/10 FB119）＝時刻がバッジ基準になったので下の発火の後で足す（§54）
       fresh.push(h);
+      if (STKWAIT && h.racerName) stkHold[h.racerName] = Math.max(stkHold[h.racerName] || 0, Date.now() + FXWAIT_MS + 60000); // #30 仮置き（fireHitFx で正しい長さに）
       var gk = h.place + "|" + h.racerName;
       if (!groups[gk]) { groups[gk] = []; groupOrder.push(gk); }
       groups[gk].push(h);
@@ -6038,6 +6039,10 @@
     }
     // 帯はcheckNewHitsより先（renderAll内）に描画済みのため、強調が追加された時だけ描き直す（FB119）
     if (glowAdded) renderPreds();
+    if (STKWAIT) { // #30 席にいない人（演出なし）の仮置きを外す
+      var seatedNow = {}; ["a", "b"].forEach(function (s) { if (seats[s]) seatedNow[seats[s].name] = 1; });
+      fresh.forEach(function (h) { if (h.racerName && !seatedNow[h.racerName]) delete stkHold[h.racerName]; });
+    }
   }
 
   /* ══════════ 配信者ごとの個人演出（8/8 FB73＝テーブル化） ══════════
@@ -8890,6 +8895,7 @@
     // rainMs＝バッジが出るまで／HIT_FX_MS＝バッジ・買目強調の持続
     window.__fxUntil = Math.max(window.__fxUntil || 0, Date.now() + rainMs + HIT_FX_MS);
     window.__fxBadgeAt = Math.max(window.__fxBadgeAt || 0, Date.now() + rainMs); // 前奏が終わりバッジが出る時刻（回収のピコーンが待つ・9/25）
+    if (STKWAIT && hit.racerName) stkHold[hit.racerName] = Date.now() + rainMs + HIT_FX_MS; // #30 札はバッジが消えてから
     var wipes = fxWipes(slot);
     var stage = fxStageHost(hit);
     /* バッジ・枠パルス＝**常にワイプ**（8/30 Naoto決定「前奏だけ全画面」＝35秒残るのはこちら側
@@ -8991,6 +8997,17 @@
      ・数が増えた瞬間＝ポン（.up）／途切れた瞬間＝A 砕ける・B 灰色→しぼむ・C 落ちる をランダム（.outA/B/C・約1.5秒で片付け）。
        途切れた＝前回まで2以上で見えていて、同じ人のまま2未満になった。的中バッジで隠す・配信者が変わった ときは消え方を付けない */
   var STKCHIP = params.get("stkchip") !== "0";
+  /* #30（11/21 Naoto）新しい的中の演出（前奏＋的中バッジ）が終わってから札を出す。
+     stkHold[名前]＝この時刻まで隠す（checkNewHits で仮置き→fireHitFx で「前奏＋バッジの長さ」に）。
+     まだ checkNewHits が見ていない新しい的中（描画が先に走る）も隠す。&stkwait=0 で旧（確定の瞬間に出る） */
+  var STKWAIT = params.get("stkwait") !== "0";
+  var stkHold = {};
+  function stkHeld(name) {
+    if (!STKWAIT || !name) return false;
+    if ((stkHold[name] || 0) > Date.now()) return true;
+    if (seenHits === null || !derived || !derived.hits) return false;
+    return derived.hits.some(function (h) { return h.racerName === name && !h.resAuto && !seenHits[h.id] && !firedFx[h.id]; });
+  }
   // 既定＝5分10秒（10/26 Naoto 8分→7分→5分30秒→5分10秒）
   var STKHIDE = params.has("stkhide") ? +params.get("stkhide") || 0 : 310 / 60;
   // 10/26 Naoto「右下だと顔に被りそう」＝札はワイプの右上の角（&stkpos=br で旧の右下）
@@ -9040,7 +9057,7 @@
         if (chip && chip.__out) return;                                  // 消え方の途中は触らない
         if (chip && chip.__pid !== pid) hide();                           // 配信者が変わった
         var shown = !!chip && chip.style.display !== "none" && (chip.__n || 0) >= 2;
-        if (cam.querySelector(".hit-fx-badge")) {                         // 的中バッジの間は隠す（数は覚えたまま）
+        if (cam.querySelector(".hit-fx-badge") || stkHeld(rc && rc.name)) { // 的中バッジの間は隠す（数は覚えたまま）・#30 新しい的中の演出が終わるまでも
           if (chip) chip.style.display = "none";
           setFrame(false);
           return;
@@ -9086,7 +9103,7 @@
       });
     });
   }
-  if (DEBUG) window.__stk = { at: streakAt, cur: currentStreakOf, render: renderStreakChips };
+  if (DEBUG) window.__stk = { at: streakAt, cur: currentStreakOf, render: renderStreakChips, hold: stkHold };
   /* ══ §157 バッジは当てた人について行く（10/18 Naoto「席替えしたら演出はそのままやり切って、バッジから移す」） ══
      ・前奏（スロット・神降臨など）は始まった席でやり切る（途中の演出を動かすと CSS の動きとタイマーがずれる＝作り直しが要る）
      ・バッジは出る瞬間に当てた人の席へ（fireHitFx）／バッジが出ている35秒の間に席替えしたら、残り時間のままバッジと枠の光を新しい席へ（followBadges）
@@ -9283,6 +9300,7 @@
     renderAll();
     followBadges(); // §157 席替えでバッジを新しい席へ
     checkNewHits();
+    if (STKWAIT) { try { renderStreakChips(); } catch (e) {} } // #30
     celebrateCheck(state); // §182 登録者のお祝い
   }
 
