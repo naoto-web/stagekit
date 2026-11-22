@@ -5131,6 +5131,14 @@
     }
     return out;
   }
+  /* #29（11/22 Naoto）11/23 競輪祭の決勝の日だけ、一人配信の空いた席のワイプ（白の4:3）に C社公式配信への誘導画像（wipe_promo.png・16:9の真ん中4:3が見える）。
+     出す時間＝PROMO_DAY の PROMO_FROM〜PROMO_TO（端末の時計）。過ぎたら毎秒の sidePayRender で白に戻る。&promo=0 で出さない／&promoday=YYYYMMDD は検証用 */
+  var PROMO_DAY = params.get("promoday") || "20261123", PROMO_FROM = 15 * 3600, PROMO_TO = 21 * 3600;
+  function promoOn() {
+    if (params.get("promo") === "0") return false;
+    var d = nowDate(), ymd = d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()), s = nowSec();
+    return ymd === PROMO_DAY && s >= PROMO_FROM && s < PROMO_TO;
+  }
   function spBlankWipe() { // 一人配信の空いた席のワイプ＝真っ白（出したら true＝出走表・人気順は描かない）
     var boxes = (STC_BOX.talk || []).map(function (id) { return $(id); }).filter(Boolean);
     var sm = seatMap(), one = SIDEPAY && SCENE === "talk" && state ? (sm.a && !sm.b ? "b" : (sm.b && !sm.a ? "a" : null)) : null;
@@ -5139,11 +5147,12 @@
       if (one && b.id === "seatcard-" + one) {
         if (!b.classList.contains("stc-blank")) { b.innerHTML = ""; b._html = ""; b._stcN = 0; }
         b.classList.add("stc-blank");
+        b.classList.toggle("stc-promo", promoOn());
         b.classList.remove("stc-rk", "stc-one");
         b.removeAttribute("data-rkh");
         hit = true;
       } else if (b.classList.contains("stc-blank")) { // 白をやめる＝次の描画で出走表を描き直させる
-        b.classList.remove("stc-blank");
+        b.classList.remove("stc-blank", "stc-promo");
         b._html = null;
       }
     });
