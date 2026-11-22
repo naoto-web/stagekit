@@ -4485,6 +4485,7 @@ html.sidepay #scene-talk .talk-cams .cam .seat-card { left: var(--spw, 0px); rig
 .seat-card.stc-blank { background: #fff; }
 /* #29 11/23 だけ＝空いた席の白に誘導画像（16:9をcoverで敷く＝真ん中の4:3が見える） */
 html.sidepay #scene-talk .talk-cams .cam .seat-card.stc-blank.stc-promo { background: #fff url(wipe_promo.png) center / cover no-repeat; }
+html.sidepay #scene-talk .talk-cams .cam .seat-card.stc-blank.stc-promo-pre { background: #fff url(wipe_promo_pre.png) center / cover no-repeat; }
 @keyframes spIn { 0% { opacity: 0; transform: translateY(-8px); } 60% { opacity: 1; transform: none; } }
 @keyframes spGlow { 0% { opacity: 1; } 100% { opacity: 0; } }
 
