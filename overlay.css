@@ -1006,6 +1006,9 @@ html.bhgap.bhwinv body #scene-race .race-wipes .winv .band-inv { padding-right: 
 .rb2 .race-band .buy-line .pl-sep { padding: 0; }
 .rb2 .race-band .pl-odds { margin-left: 5px; }
 .rb2 .race-band .ore-row { padding: 2px 5px; }
+/* #26（11/26 Naoto「俺たち目のバッジの間が狭い・右の倍率も近い」）②の俺たち目の行だけ＝バッジの間5px・倍率の前10px（買目の行・③はそのまま）。&rbgap=0 で旧（html.rbgap-off） */
+html:not(.rbgap-off) #scene-race .race-band .ore-row { gap: 5px; }
+html:not(.rbgap-off) #scene-race .race-band .ore-row .pl-odds { margin-left: 10px; }
 /* 買い目は縦に並べ、高さが足りなくなったら右の列へ折り返す（列間は広めに離す） */
 .race-band .panel, .talk-band .panel { display: flex; flex-direction: column; }
 .race-band .buy-line, .talk-band .buy-line { flex: 1; min-height: 0;
