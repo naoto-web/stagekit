@@ -1032,6 +1032,12 @@ html.blgrid .talk-band .buy-line.bl-grid { display: grid; grid-auto-flow: column
 .has-synth .bm-syn { grid-column: 1 / span 2; grid-row: 1; justify-self: end; }
 .has-synth .bm-pts { grid-column: 1; grid-row: 2; }
 .has-synth .bm-inv { grid-column: 2; grid-row: 2; }
+/* 11/26 ①の狭い区画＝合成・合計・投資を1行に（overlay.js tkMetaOneLine・&tkm1=0 で旧） */
+.has-synth.tk-m1 { grid-template-columns: auto auto auto; column-gap: .35em; }
+.has-synth.tk-m1 .bm-syn { grid-column: 1; grid-row: 1; justify-self: start; }
+.has-synth.tk-m1 .bm-pts { grid-column: 2; grid-row: 1; }
+.has-synth.tk-m1 .bm-inv { grid-column: 3; grid-row: 1; }
+.buy-meta.tk-m1:not(.has-synth) { column-gap: .35em; gap: .35em; }
 /* ①トークの合計欄を右下へ（TMETA・テストGAS接続時のみ body.tmeta-on）。1場＝パネル右下の固定枠（tband-meta）・
    2〜3場＝場の区画の中で一番下・右寄せ（流れの中なので買目と重ならない） */
 .talk-band .band-meta { font-size: 27px; }

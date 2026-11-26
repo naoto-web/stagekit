@@ -2319,6 +2319,22 @@
       panel.appendChild(sw);
     });
   }
+  /* 11/26 Naoto（①3場の右側の狭い区画）＝合成・合計・投資を1行に詰めて「合4.9倍(5) 計4点 投¥4,000」＝買目に使える高さを空ける。
+     対象＝①トークの狭い区画（3場の右上下 .race-t-side／1人配信3場の1/4幅 .solo3 の .wide 以外／1人配信オッズ列つきの .tk1-4）。&tkm1=0 で旧（2段） */
+  var TKM1 = params.get("tkm1") !== "0";
+  var TKM1R = +(params.get("tkm1r") || 1.2);// 下の1行の高さ＝買目のバッジの高さ×これ（11/26）
+  var TKM1ORE = params.get("tkm1ore") !== "0"; // 狭い区画の俺たち目の箱は倍率の計算から外して、はみ出す分だけ縮める（11/26）
+  var TKM1OREMIN = +(params.get("tkm1oremin") || 0.75); // その下限（元の大きさの何倍まで）
+  function tkMetaOneLine(band) {
+    if (!TKM1 || !band) return;
+    band.querySelectorAll(".race-t-side > .race-col > .bm-total, .solo3 > .race-col:not(.wide) > .bm-total, .tk1-4 > .race-col > .bm-total").forEach(function (m) {
+      m.classList.add("tk-m1");
+      var syn = m.querySelector(".bm-syn");
+      if (syn && syn.firstChild && syn.firstChild.nodeType === 3) syn.firstChild.nodeValue = syn.firstChild.nodeValue.replace(/^合成\s*/, "合");
+      var p = m.querySelector(".bm-pts"); if (p) p.textContent = p.textContent.replace(/^合計\s*/, "計");
+      var i = m.querySelector(".bm-inv"); if (i) i.textContent = i.textContent.replace(/^投資\s*/, "投");
+    });
+  }
   /** 合計・合成・投資の中身（9/25 Naoto）＝1段目 合計｜合成・2段目 投資（合成の真下）。合成が無いときは従来の1行 */
   function metaPartsHtml(points, st, invest) {
     var a = points ? '<span class="bm-part bm-pts">合計 ' + points + "点</span>" : "";
@@ -3288,17 +3304,30 @@
     var availW = cr.width - padR, availH = cr.height - padB;
     var mw = meta ? meta.offsetWidth : 0, mh = meta ? meta.offsetHeight : 0;
     var MGAP = 4, mScale = 1;
+    var oreFree = null; // 11/26 .tk-m1＝幅を数えない俺たち目の箱
+    if (meta && meta.classList.contains("tk-m1") && TKM1ORE) { oreFree = col.querySelector(":scope > .ore-row"); if (oreFree) { oreFree.style.transform = ""; oreFree.style.transformOrigin = ""; } }
+    var chipH = 0; // 11/26 .tk-m1＝買目のバッジの高さ（区画を拡大する前の大きさ）
+    if (meta && meta.classList.contains("tk-m1")) col.querySelectorAll(".pred-line .car").forEach(function (c) { var h = c.getBoundingClientRect().height; if (h > chipH) chipH = h; });
     var needW, needH;
     function measureK() {
       var maxRight = cr.left, maxBottom = cr.top;
       for (var i = 0; i < col.children.length; i++) {
         if (col.children[i] === meta) continue;
         var r = col.children[i].getBoundingClientRect();
-        if (r.right > maxRight) maxRight = r.right;
+        if (r.right > maxRight && !(chipH > 0 && col.children[i] === oreFree)) maxRight = r.right; // 11/26 俺たち目の箱の幅は数えない
         if (r.bottom > maxBottom) maxBottom = r.bottom;
       }
       needW = maxRight - cr.left; needH = maxBottom - cr.top;
       if (!meta) return Math.min(availW / needW, availH / needH);
+      if (chipH > 0) { // 11/26 .tk-m1＝下にバッジ1段ぶんだけ取って買目の倍率を決める（横幅で買目を縮めない）
+        var km = Math.min(availW / needW, (availH - MGAP) / (needH + TKM1R * chipH));
+        if (oreFree) { // 11/26 俺たち目の箱は元の TKM1OREMIN 倍より小さくしない＝そこまで縮めても入らない倍率にはしない
+          var or0 = oreFree.getBoundingClientRect(), oL0 = or0.left - cr.left;
+          if (oL0 > 0) km = Math.min(km, (availW - or0.width * TKM1OREMIN) / oL0);
+        }
+        mScale = Math.min(TKM1R * chipH * Math.min(1.6, km) / Math.max(1, mh), (availW - padL) / Math.max(1, mw));
+        return km;
+      }
       // 一緒に縮める場合（従来と同じ＝合計欄も同じ倍率）
       var kj = Math.min(availW / needW, availH / (needH + MGAP + mh), (availW - padL) / Math.max(1, mw));
       if (kj < 1) { mScale = kj; return kj; }
@@ -3365,10 +3394,17 @@
       col.style.transform = "scale(" + Math.min(1.6, k).toFixed(3) + ")";
     }
     if (col.style.transform) col.style.transformOrigin = "left top";
+    if (oreFree && chipH > 0) { // 11/26 区画の右端（拡大後）からはみ出す分だけ俺たち目の箱を縮める
+      var ko = parseFloat((String(col.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+      var orr = oreFree.getBoundingClientRect(), ccr = col.getBoundingClientRect();
+      var oL = (orr.left - ccr.left) / ko, oW = orr.width / ko, room = availW / ko - oL;
+      if (oW > room && room > 0) { oreFree.style.transform = "scale(" + (room / oW).toFixed(3) + ")"; oreFree.style.transformOrigin = "left center"; }
+    }
     if (meta) {
       var kk = parseFloat((String(col.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
       // 合計欄の見た目の倍率＝縮めるときは区画と一緒（mScale<1）／拡大は余った高さの範囲だけ（mScale>1・9/26）
       var ms = mScale > 1 ? mScale : Math.min(mScale, kk);
+      if (chipH > 0) ms = Math.min(TKM1R * chipH * kk / Math.max(1, mh), (availW - padL) / Math.max(1, mw)); // 11/26 .tk-m1＝決まった区画の倍率のバッジに合わせる
       // 区画の拡大を打ち消して ms 倍で描く。右下の角を基準に縮めるので、その角（レイアウト上）を区画の右下に合わせる
       if (Math.abs(ms / kk - 1) > 0.001) {
         meta.style.transform = "scale(" + (ms / kk).toFixed(4) + ")";
@@ -4504,6 +4540,7 @@
             if (!fireCols.length && talkKeys[0]) { band.setAttribute("data-rck", talkKeys[0]); band.setAttribute("data-slot", slot); band.setAttribute("data-rid", rc ? rc.id : ""); }
             else { band.removeAttribute("data-rck"); band.classList.remove("rc-closed", "rc-fx"); }
           }
+          tkMetaOneLine(band); // 11/26 狭い区画の合計欄を1行に（縮小の計算より先）
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
           if (tkHalf || tk1Odds.length) { fitTkOdds(band); requestAnimationFrame(function () { fitTkOdds(band); }); } // §110 右半分のオッズ／🧪1人配信の列
