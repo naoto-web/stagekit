@@ -8537,6 +8537,53 @@
      「オリハルコン＝カチカチに固い伝説の鉱物」＝ガチガチの本命レースだった、の意。
      優先順位＝?fx=強制 > ダブル的中の共演 > FX_PIN > ギャル神 > **この表** > MEMBER_RATESの抽選。
      ⚠️MEMBER_RATESにもFX_KNOWNにも書かない（書くと通常倍率でも出る・galgod/hitouchと同じ安全弁） */
+
+  /* ══════════ 高倍率限定演出（11/26 Naoto #16＝ムネオ「ギャンブラーなめんな！！」の動画） ══════════
+     オリハルコン（LOWODDS_FX）の裏返し＝色キーを書くと、その人が HIGHODDS_MIN 倍**以上**を的中させたとき必ずこの演出（100%・抽選なし）。
+     11/26 Naoto＝A案「30倍以上は確定でなめんな」（10/1〜11/25 のムネオの的中183回のうち43回＝約1/4・万車8回も含む）。
+     倍率判定＝的中の倍率（同着で複数持つ時は一番高い方）。倍率が取れない的中（手動追加等）は通常の抽選へ。
+     ⚠️MEMBER_RATESにもFX_KNOWNにも書かない（書くと通常倍率でも出る・オリハルコンと同じ安全弁）。&nmn=0 で止める／&nmnmin=数 で線 */
+  var HIGHODDS_FX = params.get("nmn") === "0" ? {} : { yellow: "namenna" };
+  var HIGHODDS_MIN = +params.get("nmnmin") || 30;
+  function isHighOddsHit(hit) {
+    var ms = ((hit && hit.mults && hit.mults.length) ? hit.mults : [hit && hit.mult])
+      .filter(function (m) { return typeof m === "number" && m > 0; });
+    if (!ms.length) return false;
+    return Math.max.apply(null, ms) >= HIGHODDS_MIN;
+  }
+  /* 動画カットイン＝ワイプ全体（万車は全画面ホスト）を動画で覆い、セリフ・当たり目・払戻をコードで重ねる。
+     文字を出す時刻は動画の中身に合わせた秒数（ms）＝動画を作り直したらここを直す（11/13 のテスト用ページ main.js の T と同じ値）。
+     時計は動画の再生位置（再生が遅れて始まっても文字がずれない）。動画が止まったときの保険＝始めてからの実時間−1.5秒より遅れない */
+  var NMN_T = { SERIF_IN: 2250, SERIF_OUT: 4600, HIT_IN: 5000, OUT: 9400, END: 9900 };
+  function nmnTimes() { return NMN_T; }
+  var NMN_HOLD = params.get("nmnhold") !== "0"; // 11/26 Naoto 案1＝セリフは決めポーズの間も残す（フェードアウトまで）。&nmnhold=0 で叫ぶ間だけ
+  function spawnNamenna(cam, key, hit) {
+    var el = document.createElement("div");
+    el.className = "fx-nmn";
+    var v = document.createElement("video");
+    v.muted = true; v.setAttribute("muted", ""); v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "auto";
+    v.src = "fx_nmn_yellow.mp4";
+    el.appendChild(v);
+    var se = document.createElement("div");
+    se.className = "nmn-serif";
+    se.textContent = "ギャンブラーなめんな！！"; // 11/26 ギザギザの吹き出し案は見送り（顔にかかる・漫画のコマっぽくなる）
+    el.appendChild(se);
+    // 11/26 Naoto「下の帯の的中情報（3連単・当たり目・払戻）は表示不要」＝セリフだけ重ねる（的中の中身は後のバッジが出す）
+    cam.appendChild(el);
+    var t0 = Date.now();
+    var p = v.play(); if (p && p.catch) p.catch(function () {});
+    requestAnimationFrame(function () { el.classList.add("on"); });
+    (function step() {
+      if (!el.parentNode) return;
+      var t = Math.max(v.currentTime * 1000, Date.now() - t0 - 1500);
+      var sOut = NMN_HOLD ? NMN_T.OUT : NMN_T.SERIF_OUT; // 案1＝フェードアウトまで残す
+      se.classList.toggle("on", t >= NMN_T.SERIF_IN && t < sOut);
+      se.classList.toggle("off", t >= sOut);
+      el.classList.toggle("out", t >= NMN_T.OUT);
+      if (t >= NMN_T.END + 300) { if (el.parentNode) el.parentNode.removeChild(el); return; }
+      requestAnimationFrame(step);
+    })();
+  }
   var LOWODDS_FX = { orange: "ori" }; // 橙＝⛏オリハルコンレース
   var LOWODDS_MAX = 5;                // 「5倍未満」＝この値**未満**（5.0ちょうどは対象外）。
                                       // 9/2＝3（Y指定）→ 9/3 Naoto指示で5へ拡大
@@ -8646,6 +8693,7 @@
     if (GIRLS_FX[key] && isGirlsHit(hit)) return GIRLS_FX[key]; // ガールズ限定枠＝ギャル神（9/1）
     if (LOWODDS_FX[key] && isLowOddsHit(hit)) return LOWODDS_FX[key]; // 低倍率限定枠＝オリハルコン（9/2）
     if (isLuckyHit(key, hit)) return LUCKY_FX[key].fx; // ラッキーナンバー限定枠＝神降臨（10/17）
+    if (HIGHODDS_FX[key] && isHighOddsHit(hit)) return HIGHODDS_FX[key]; // 高倍率限定枠＝ムネオのなめんな（11/26・30倍以上）
     var kindFx = kindFxFor(key, hit); // 種別枠＝青の万車→虹の役物／note→金の役物（9/4・KIND_FX参照）
     if (kindFx) return kindFx;
     var rates = MEMBER_RATES[key];
@@ -8971,7 +9019,7 @@
 
   var fxGen = 0;
   var FX_ROOTS = ".hit-rain, .fx-yak, .fx-slot, .fx-schar, .fx-sumo, .fx-pray, .fx-tea, .fx-moro," +
-    " .fx-ori, .fx-adj, .fx-samba, .fx-dance, .fx-ent, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host";
+    " .fx-ori, .fx-adj, .fx-samba, .fx-dance, .fx-ent, .fx-peye, .fx-galgod, .fx-thx, .fx-ht, .hit-fx-badge, .fx-proto-host, .fx-nmn";
   function clearHitFx() {
     fxGen++;
     badgeLive = {}; // §157 消したバッジは追いかけない
@@ -9083,6 +9131,7 @@
       //    約1.4秒早く（既定の4500msで）出ていた＝もろたで追加のついでに修正
       : eff === "pray" || eff === "pray_ng" ? prayTimes().END
       : eff === "morotade" ? moroTimes().END
+      : eff === "namenna" ? nmnTimes().END   // ギャンブラーなめんな（11/26・黄の30倍以上）
       : eff === "ori" ? oriTimes().END
       : eff === "kami" ? kamiTimes(combo.length).END   // 神降臨（10/17・ピンクのラッキーナンバー限定）
       : eff === "tea" ? teaTimes().END
@@ -9125,6 +9174,7 @@
       else if (eff === "sumo") spawnSumo(cam, key, hit);
       else if (eff === "pray" || eff === "pray_ng") spawnPray(cam, key, eff === "pray_ng");
       else if (eff === "morotade") spawnMorotade(cam, key, rc);  // もろたで（9/1・黄の3つ目＝相方の名前入り）
+      else if (eff === "namenna") spawnNamenna(cam, key, hit);  // ギャンブラーなめんな（11/26・黄の30倍以上＝動画）
       else if (eff === "ori") spawnOri(cam, key, hit);           // オリハルコン（9/2・橙の低倍率限定）
       else if (eff === "kami") spawnKami(cam, key, hit, combo);  // 神降臨（10/17・ピンクのラッキーナンバー限定）
       else if (eff === "tea") spawnTea(cam, key);
