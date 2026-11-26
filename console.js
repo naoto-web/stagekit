@@ -822,8 +822,8 @@
       /* §193追補（11/11 Naoto）＝並び・苗字・競走得点はいつも出す。その下に、たたんだ欄を縦に3つ（オッズ支持率／オッズ一覧／荒れ予報）。
          上と下に同じ表を2回描き、上は%の行・下は名前の行を高さ0にする（console.css の .pm-top／.pm-sub）＝列の位置が上下でそろう */
       html = (noteLines ? '<div class="pm-cap">' + noteLines + "</div>" : "") + '<div class="pm-rows pm-top">' + rows + "</div>" +
-        aiDetails(key, "ms", "オッズ支持率（3連単の売れ方から逆算）" + noteOdds, '<div class="pm-rows pm-sub">' + rows + "</div>") +
-        aiListHtml(key, odds);
+        (AI_TRIM ? "" : aiDetails(key, "ms", "オッズ支持率（3連単の売れ方から逆算）" + noteOdds, '<div class="pm-rows pm-sub">' + rows + "</div>") +
+        aiListHtml(key, odds));
     } else {
       html = '<div class="pm-cap">オッズ支持率（3連単の売れ方から逆算）' + noteOdds + noteLines + "</div>" + '<div class="pm-rows">' + rows + "</div>";
     }
@@ -844,6 +844,9 @@
      ・コンソールだけ＝OBS・保存する予想・点数・的中には出ない。&ai=0＝荒れ予報を出さない／&fold=0＝支持率と参考オッズを前の出し方（開いたまま）に戻す */
   var AI = params.get("ai") !== "0";
   var FOLD = params.get("fold") !== "0";
+  /* L1 ふりかえり（11/26 Naoto）＝11/11〜11/26 の aiLog は 荒れ予報17回・支持率4回・参考オッズ1回・一覧0回 → 荒れ予報だけ残す
+     （えーすが使っていてアプリでも見たいと言っている）。支持率・一覧・参考オッズは出さない。&aitrim=0 で 11/11 の形に戻す */
+  var AI_TRIM = params.get("aitrim") !== "0";
   var AI_LOG_MAX = 300;
   var aiOpenMem = {}; // aiOpenMem[レースのキー + "|" + 欄の名前] = true（開いている）
   function aiLog(kind, who, key) {
@@ -1224,6 +1227,7 @@
   function assistOpen() { try { return localStorage.getItem(ASSIST_LS) !== "0"; } catch (e) { return true; } }
   function assistHtml(parsed, odds, cars, absent, key, racerId, who) {
     if (!ASSIST || !odds || !window.Keirin.assistCombos) return "";
+    if (FOLD && AI_TRIM) return ""; // L1 ふりかえり（11/26）＝参考オッズは開かれていなかった（15日で1回）
     var sets = window.Keirin.assistCombos(parsed, odds, cars, absent);
     if (!sets.length) return "";
     // バッジの間はハイフン（10/27 Naoto「ハイフンありがいい」＝買目欄の書き方 2-3-7 と同じ形）
