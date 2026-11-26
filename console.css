@@ -121,6 +121,57 @@ html.theme-light #payout-rows .pr-err { color: #c62828; }
 .btn.brk-btn .bk-sub { font-size: 12px; opacity: .8; }
 html .btn.brk-btn.brk-on { background: var(--mc, #f2c94c); border-color: var(--mc, #f2c94c); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
 .btn.brk-btn:disabled { opacity: .35; }
+
+/* 🧪見本 prep49：押せる形（立体） */
+html.btnui-3d body .btn.seat-swap {
+  background: linear-gradient(#6fe6f0, #22b8c6); background-image: linear-gradient(#6fe6f0, #22b8c6);
+  border: 0; border-bottom: 8px solid #12808b; border-radius: 16px;
+  box-shadow: 0 6px 12px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.65); }
+html.btnui-3d body .btn.brk-btn:not(.brk-on) {
+  background: linear-gradient(color-mix(in srgb, var(--mc, #888) 4%, #fff), color-mix(in srgb, var(--mc, #888) 26%, #fff));
+  border: 3px solid var(--mc, #888); border-bottom: 9px solid color-mix(in srgb, var(--mc, #888) 65%, #000); border-radius: 16px;
+  box-shadow: 0 6px 12px rgba(0,0,0,.25), inset 0 2px 0 rgba(255,255,255,.95); }
+html.btnui-3d body .btn.brk-btn.brk-on {
+  background: linear-gradient(color-mix(in srgb, var(--mc) 70%, #fff), var(--mc));
+  border: 3px solid color-mix(in srgb, var(--mc) 65%, #000); border-bottom-width: 9px; border-radius: 16px;
+  box-shadow: 0 6px 12px rgba(0,0,0,.25), inset 0 2px 0 rgba(255,255,255,.5); }
+html.btnui-3d body .btn.seat-swap:active, html.btnui-3d body .btn.brk-btn:active {
+  transform: translateY(5px); border-bottom-width: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.25), inset 0 2px 0 rgba(255,255,255,.5); }
+/* y＝カプセル形＋右端に「押す ▶」 */
+html.btnui-y body .btn.seat-swap, html.btnui-y.btnui-3d body .btn.brk-btn.brk-btn { border-radius: 40px; }
+/* 11/26 Naoto＝右端に「押す ▶」の札（休憩中は「戻す ▶」）＝押せるボタンだと分かるように */
+html.btnui-lab body .btn.seat-swap, html.btnui-lab.btnui-3d body .btn.brk-btn.brk-btn { position: relative; padding-right: 74px; padding-left: 20px; }
+html.btnui-lab body .btn.seat-swap::after, html.btnui-lab body .btn.brk-btn::after {
+  content: "押す ▶"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 13px; font-weight: 900; color: #fff; background: rgba(0,0,0,.55); padding: 4px 9px; border-radius: 20px; text-shadow: none; }
+html.btnui-lab body .btn.brk-btn.brk-on::after { content: "戻す ▶"; background: rgba(255,255,255,.9); color: #222; }
+/* 11/26 狭いドック＝文字は折り返さない・幅700px以下は絵と文字を小さく・560px以下は絵を外す（幅560pxで1文字ずつ折り返して崩れた） */
+.btn.brk-btn .bk-main, .btn.brk-btn .bk-sub { white-space: nowrap; }
+@media (max-width: 700px) {
+  html.btnui-lab.btnui-3d body .btn.brk-btn.brk-btn { padding-left: 10px; padding-right: 60px; gap: 6px; }
+  html.btnui-lab body .btn.seat-swap { padding-right: 60px; padding-left: 10px; }
+  html.btnui-lab body .btn.seat-swap::after, html.btnui-lab body .btn.brk-btn::after { right: 8px; font-size: 11px; padding: 3px 7px; }
+  html.brkui-b .btn.brk-btn .bk-thumb { height: 36px; }
+  html.brkui-b .btn.brk-btn .bk-main, html.brkui-a .btn.brk-btn .bk-main { font-size: 17px; }
+  html.brkui-b .btn.brk-btn .bk-sub, html.brkui-a .btn.brk-btn .bk-sub { font-size: 12px; }
+}
+@media (max-width: 560px) { html.brkui-b .btn.brk-btn .bk-thumb { display: none; } }
+.btn.brk-btn .bk-txt { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+/* 🧪見本 a/b：押せる見た目＝メンバーカラーの枠＋薄い地＋下に厚み */
+html.brkui-a .btn.brk-btn:not(.brk-on), html.brkui-b .btn.brk-btn:not(.brk-on) {
+  background: color-mix(in srgb, var(--mc, #888) 14%, #fff); background-image: none; color: #222;
+  border: 3px solid var(--mc, #888); border-bottom-width: 6px; border-bottom-color: color-mix(in srgb, var(--mc, #888) 70%, #000);
+  box-shadow: 0 2px 5px rgba(0,0,0,.18); }
+html.brkui-a .btn.brk-btn .bk-main, html.brkui-b .btn.brk-btn .bk-main { font-size: 21px; }
+html.brkui-a .btn.brk-btn .bk-sub, html.brkui-b .btn.brk-btn .bk-sub { font-size: 13px; font-weight: 700; opacity: 1; }
+html.brkui-a .btn.brk-btn:active, html.brkui-b .btn.brk-btn:active { transform: translateY(3px); border-bottom-width: 3px; }
+html.brkui-b .btn.brk-btn { flex-direction: row; justify-content: center; gap: 10px; }
+html.brkui-b .btn.brk-btn .bk-thumb { height: 48px; width: auto; flex: none; }
+/* 押した後＝塗りつぶし＋ゆっくり点滅 */
+html.brkui-a .btn.brk-btn.brk-on, html.brkui-b .btn.brk-btn.brk-on {
+  background: var(--mc); background-image: none; border: 3px solid color-mix(in srgb, var(--mc) 70%, #000); border-bottom-width: 6px; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5); animation: brkPulse 1.6s ease-in-out infinite; }
+@keyframes brkPulse { 0%, 100% { filter: none; } 50% { filter: brightness(1.25); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mc) 40%, transparent); } }
 .switcher {
   flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   padding: 11px 12px; line-height: 1.25; text-align: center;

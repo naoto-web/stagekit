@@ -2639,6 +2639,11 @@
   }
   /* #15（11/26 Naoto）休憩中アイコン＝席ごとのボタン。押すとその人に brk を付けて即保存（もう一度押すと外す）。
      左＝席a（左カメラ）・右＝席b（右カメラ）。席の決め方は席替えボタンと同じ式 */
+  var BRKUI = params.get("brkui") || "b"; // 11/26 Naoto 案2＝既定 b（色付き＋絵）・&brkui=a 色付きだけ・&brkui=0 旧
+  var BTNUI = params.get("btnui") || "x"; // 11/26 Naoto＝形は案X（立体）＋「押す ▶」の札（席替え・休憩）。&btnui=y でカプセル形・&btnui=0 で旧
+  if (BTNUI !== "0") document.documentElement.classList.add("btnui-" + BTNUI, "btnui-3d", "btnui-lab");
+  if (BRKUI) document.documentElement.classList.add("brkui-" + BRKUI);
+  var BRK_KEY = { "青": "blue", "緑": "green", "オレンジ": "orange", "橙": "orange", "ピンク": "pink", "赤": "red", "黄": "yellow" };
   function renderBreakBtns() {
     var row = $("brk-row");
     if (!row || !state) return;
@@ -2651,9 +2656,10 @@
       var r = by[s], side = s === "a" ? "左" : "右";
       var mc = r ? window.Derive.colorOf(r.color) : "";
       var on = !!(r && r.brk);
-      return '<button class="btn brk-btn' + (on ? " brk-on" : "") + '" data-seat="' + s + '"' + (r ? "" : " disabled") + (mc ? ' style="--mc:' + mc + '"' : "") + '>' +
-        '<span class="bk-main">' + (on ? "☕ 休憩中（押すと戻る）" : "☕ 休憩に入る") + "</span>" +
-        '<span class="bk-sub">' + side + "の席：" + esc(r ? r.name : "なし") + "</span></button>";
+      var thumb = BRKUI === "b" && r && BRK_KEY[r.color] ? '<img class="bk-thumb" alt="" src="break_' + BRK_KEY[r.color] + '.png">' : "";
+      return '<button class="btn brk-btn' + (on ? " brk-on" : "") + '" data-seat="' + s + '"' + (r ? "" : " disabled") + (mc ? ' style="--mc:' + mc + '"' : "") + '>' + thumb + '<span class="bk-txt">' +
+        '<span class="bk-main">' + (on ? (BTNUI !== "0" ? "☕ 休憩中" : "☕ 休憩中（押すと戻る）") : "☕ 休憩に入る") /* 11/26 札「戻す ▶」があるときは短く */ + "</span>" +
+        '<span class="bk-sub">' + side + "の席：" + esc(r ? r.name : "なし") + "</span></span></button>";
     }).join("");
     row.querySelectorAll(".brk-btn").forEach(function (b) {
       b.addEventListener("click", function () {
