@@ -2644,6 +2644,70 @@
   if (BTNUI !== "0") document.documentElement.classList.add("btnui-" + BTNUI, "btnui-3d", "btnui-lab");
   if (BRKUI) document.documentElement.classList.add("brkui-" + BRKUI);
   var BRK_KEY = { "青": "blue", "緑": "green", "オレンジ": "orange", "橙": "orange", "ピンク": "pink", "赤": "red", "黄": "yellow" };
+
+  /* 11/26 Naoto 休憩ボタンの押し忘れ対策（prep51）
+     ①促し＝片方の人の買目だけが BRK_N レース続き、もう片方に何も入っていなければ「〇〇さん、休憩中ですか？」
+     ②休憩に入ったら席替えも一緒に＝休憩に入らない人が必ずスイッチャー（右の席b） */
+  var BRKNUDGE = params.get("brknudge") !== "0";
+  var BRK_N = Math.max(1, +params.get("brkn") || 2);
+  var BRKSWAP = params.get("brkswap") !== "0";
+  var brkNudgeOff = {}; // 名前 → ［いいえ］を押したときの区切り（t0）＝相手の買目がもう1レース増えたらまた出す
+  function brkSeatOf(r, i) { return (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b"); }
+  function setBreak(rc, on) {
+    var rs = state.racers || [];
+    if (on) {
+      rc.brk = true;
+      if (BRKSWAP && rs.length > 1 && brkSeatOf(rc, rs.indexOf(rc)) === "b") {
+        rs.forEach(function (r, j) { r.seat = brkSeatOf(r, j) === "a" ? "b" : "a"; });
+      }
+    } else delete rc.brk;
+    save();
+    renderAll();
+  }
+  function brkHasEntry(p) { return !!(p && ((p.text && String(p.text).trim()) || p.isNote || (p.oreTachi && String(p.oreTachi).trim()))); }
+  function brkNudgeFor() {
+    var rs = state.racers || [];
+    if (!BRKNUDGE || rs.length < 2) return null;
+    var now = nowSec(), out = null;
+    rs.forEach(function (x) {
+      if (out || x.brk) return;
+      var y = rs.filter(function (r) { return r !== x; })[0];
+      if (!y || y.brk) return;
+      var ys = [], xs = [];
+      Object.keys(state.preds || {}).forEach(function (k) {
+        var br = (state.preds[k] || {}).byRacer || {};
+        var t = raceStartSecOf(k);
+        if (t === null || t > now + 3600 || t < now - 5400) return;
+        if (brkHasEntry(br[y.id] || br[y.name])) ys.push(t);
+        if (brkHasEntry(br[x.id] || br[x.name])) xs.push(t);
+      });
+      if (ys.length < BRK_N) return;
+      ys.sort(function (a, b) { return b - a; });
+      var t0 = ys[BRK_N - 1];
+      if (xs.some(function (t) { return t >= t0; })) return;
+      if (brkNudgeOff[x.name] === t0) return;
+      out = { x: x, y: y, t0: t0 };
+    });
+    return out;
+  }
+  function renderBrkNudge() {
+    var el = $("brk-nudge");
+    if (!el || !state) return;
+    var n = brkNudgeFor();
+    if (!n) { el.classList.add("hidden"); el.innerHTML = ""; el.removeAttribute("data-sig"); return; }
+    var sig = n.x.name + "|" + n.t0;
+    if (el.getAttribute("data-sig") === sig && !el.classList.contains("hidden")) return; // 同じ中身なら描き直さない（押そうとしたボタンを作り直さない）
+    el.setAttribute("data-sig", sig);
+    var mc = window.Derive.colorOf(n.x.color);
+    el.style.setProperty("--mc", mc || "#888");
+    el.innerHTML = '<div class="bn-title">☕ ' + esc(n.x.name) + "さんは休憩中ですか？</div>" + /* 11/26 Naoto＝押すのは席に残っている人＝その人がもう一人のことを答える言い方 */
+      '<div class="bn-sub">' + esc(n.y.name) + "さんの買目だけが" + BRK_N + "レース続いています。" + esc(n.x.name) + "さんが席を外していたら押してください</div>" +
+      '<div class="bn-btns"><button class="btn bn-yes">☕ ' + esc(n.x.name) + "さんを休憩中にする" + (BRKSWAP ? "（席替えも自動）" : "") + '</button><button class="btn bn-no">いいえ</button></div>'; /* 11/26 Naoto「いいえだけでOK」 */
+    el.classList.remove("hidden");
+    el.querySelector(".bn-yes").addEventListener("click", function () { setBreak(n.x, true); });
+    el.querySelector(".bn-no").addEventListener("click", function () { brkNudgeOff[n.x.name] = n.t0; renderBrkNudge(); });
+  }
+  setInterval(function () { try { renderBrkNudge(); } catch (e) {} }, 20000); // 時間がたって条件がそろう分（描き直しが無くても）
   function renderBreakBtns() {
     var row = $("brk-row");
     if (!row || !state) return;
@@ -2661,6 +2725,7 @@
         '<span class="bk-main">' + (on ? (BTNUI !== "0" ? "☕ 休憩中" : "☕ 休憩中（押すと戻る）") : "☕ 休憩に入る") /* 11/26 札「戻す ▶」があるときは短く */ + "</span>" +
         '<span class="bk-sub">' + side + "の席：" + esc(r ? r.name : "なし") + "</span></span></button>";
     }).join("");
+    renderBrkNudge(); // prep51
     row.querySelectorAll(".brk-btn").forEach(function (b) {
       b.addEventListener("click", function () {
         var s = b.getAttribute("data-seat"), hit = null;
@@ -2669,9 +2734,7 @@
           if (st === s && !hit) hit = r;
         });
         if (!hit) return;
-        if (hit.brk) delete hit.brk; else hit.brk = true;
-        save();
-        renderAll();
+        setBreak(hit, !hit.brk); // prep51＝休憩に入るときは席替えも一緒（休憩に入らない人が右の席b）
       });
     });
   }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20261126-213341">
+<link rel="stylesheet" href="console.css?v=20261126-220228">
 </head>
 <body>
 
@@ -85,6 +85,8 @@
        ⚠️本日設定の名簿・締切と違い、save()が読み戻す欄ではないのでDOMから消して問題ない -->
   <!-- 並び（9/25 Naoto「入力先のレースと予想の間に」）＝手修正＞時刻表同梱＞自動取得（OBSの②中央ラインと同じ優先順） -->
   <div class="pred-narabi hidden" id="pred-narabi"></div>
+  <!-- prep51 休憩の促し（11/26 Naoto＝並び・AIアシスタントの下、2人の予想欄のすぐ上＝買目を打つときに必ず目に入る場所） -->
+  <div class="brk-nudge hidden" id="brk-nudge"></div>
   <div id="pred-forms"></div>
   <!-- 「並びを手で直す」は9/25撤去（Naoto）。保存済みの手修正 state.narabi は並び表示で引き続き最優先 -->
 </details>
@@ -270,11 +272,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20261126-213341" data-au="banner"></script>
-<script src="config.js?v=20261126-213341"></script>
-<script src="keirin.js?v=20261126-213341"></script>
-<script src="derive.js?v=20261126-213341"></script>
-<script src="sync.js?v=20261126-213341"></script>
-<script src="console.js?v=20261126-213341"></script>
+<script src="autoupdate.js?v=20261126-220228" data-au="banner"></script>
+<script src="config.js?v=20261126-220228"></script>
+<script src="keirin.js?v=20261126-220228"></script>
+<script src="derive.js?v=20261126-220228"></script>
+<script src="sync.js?v=20261126-220228"></script>
+<script src="console.js?v=20261126-220228"></script>
 </body>
 </html>
