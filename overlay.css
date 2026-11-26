@@ -1085,6 +1085,9 @@ html.blgrid .talk-band .buy-line.bl-grid { display: grid; grid-auto-flow: column
 .rc-closed::before { content: ""; position: absolute; left: 0; top: 0; z-index: -1; pointer-events: none;
   width: calc(100% * var(--rcinv)); height: calc(100% * var(--rcinv)); background: #d5d8dd; }
 body:not([data-theme="w"]) .rc-closed::before { background: rgba(255,255,255,.14); }
+/* 11/26 ①トークの帯の中の区画＝帯の端に接している辺だけ帯の外枠まで塗る（overlay.js rcFillEdges・値は見た目のpx＝--rcinv で区画の倍率を打ち消す）。&rcfill=0 で旧 */
+.talk-band .buy-line .rc-closed::before { left: calc(var(--rcl, 0px) * -1 * var(--rcinv)); top: calc(var(--rct, 0px) * -1 * var(--rcinv));
+  width: calc(100% * var(--rcinv) + (var(--rcl, 0px) + var(--rcr, 0px)) * var(--rcinv)); height: calc(100% * var(--rcinv) + (var(--rct, 0px) + var(--rcb, 0px)) * var(--rcinv)); }
 .rc-closed::after { content: "締切"; position: absolute; left: calc(100% * var(--rcinv)); top: 0; z-index: 2; pointer-events: none;
   transform-origin: 0 0; transform: scale(var(--rcinv)) translate(calc(-100% - 10px), var(--rcty, 14px)) rotate(-8deg);
   color: #d63b3b; border: 3px solid #d63b3b; border-radius: 7px; background: rgba(255,255,255,.6);

@@ -3506,6 +3506,21 @@
     allRaces().forEach(function (r) { if (r.venue === parts[0] && +r.no === +parts[1]) hit = r; });
     return hit ? hit.startSec - (state.cfg.closeMin || 3) * 60 - CLOSE_LAG : null; // §160 配信の遅れぶん早めに
   }
+  /* 11/26 Naoto「ピーター側は枠の外に白い線」＝①トークの帯の中の区画（買目｜人気順・2〜3場）は帯の内側の余白が塗られず白く残った。
+     帯の端に接している辺だけ、帯の外枠までグレーを広げる（--rcl/--rct/--rcr/--rcb＝見た目のpx）。区画どうしの仕切り側は広げない。&rcfill=0 で旧 */
+  var RCFILL = params.get("rcfill") !== "0";
+  function rcFillEdges(el, closed, sc) {
+    var band = RCFILL && closed && el.closest ? el.closest(".talk-band .buy-line") : null;
+    if (!band || band === el) { ["--rcl", "--rct", "--rcr", "--rcb"].forEach(function (p) { el.style.removeProperty(p); }); return; }
+    var br = band.getBoundingClientRect(), bs = getComputedStyle(band), er = el.getBoundingClientRect();
+    var eR = er.left + er.width / sc, eB = er.top + er.height / sc; // 区画の枠（拡大縮小する前の大きさ＝区画の場所いっぱい）
+    var d = { l: er.left - br.left, t: er.top - br.top, r: br.right - eR, b: br.bottom - eB };
+    var pad = { l: parseFloat(bs.paddingLeft) || 0, t: parseFloat(bs.paddingTop) || 0, r: parseFloat(bs.paddingRight) || 0, b: parseFloat(bs.paddingBottom) || 0 };
+    ["l", "t", "r", "b"].forEach(function (s) {
+      var v = d[s] > 0.5 && d[s] <= pad[s] + 4 ? d[s] : 0; // 帯の中身の端に接している辺だけ
+      el.style.setProperty("--rc" + s, v.toFixed(1) + "px");
+    });
+  }
   function applyRaceClosed() {
     if (!RCCLOSE) return;
     var now = nowSec(), ms = Date.now();
@@ -3519,6 +3534,7 @@
       var sc = parseFloat((String(el.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
       el.style.setProperty("--rcinv", (1 / sc).toFixed(4));
       el.classList.toggle("rc-closed", closed);
+      rcFillEdges(el, closed, sc); // 11/26 帯の余白まで塗る
       var fx = closed && rcFxAt[id] && ms - rcFxAt[id] < RCFX_MS;
       el.classList.toggle("rc-fx", !!fx);
       if (fx) el.style.setProperty("--rcd", -(ms - rcFxAt[id]) + "ms");
