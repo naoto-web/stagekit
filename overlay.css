@@ -1574,11 +1574,6 @@ html.nxgap .sub-line.subv-tight .pred-line.chips.sg-alt { background: transparen
   display: flex; flex-direction: column; gap: 0; }
 .ad-wipe { width: 560px; height: 315px; }
 
-.promo-chip { position: absolute; left: 8px; top: 1022px;
-  font-size: 16px; font-weight: 700; color: var(--sub);
-  padding: 8px 18px; border: 1px dashed var(--panel-line); border-radius: 8px;
-  background: rgba(0,0,0,.3); }
-
 /* 的中者アイコンの走行（8/7 FB65→FB67で真横化）＝右から左へ駆け抜け＋砂埃。バッジ(z5)より下(z4) */
 .hit-rain { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 4; }
 .hit-runner { position: absolute; will-change: transform;
@@ -4497,9 +4492,6 @@ html.sidepay #scene-talk .talk-cams .cam .stk-chip { margin-right: var(--spw, 0p
 /* 一人配信＝空いた席のワイプは真ん中の4:3に縮めて（両脇は帯）真っ白 */
 html.sidepay #scene-talk .talk-cams .cam .seat-card { left: var(--spw, 0px); right: var(--spw, 0px); z-index: 2; }
 .seat-card.stc-blank { background: #fff; }
-/* #29 11/23 だけ＝空いた席の白に誘導画像（16:9をcoverで敷く＝真ん中の4:3が見える） */
-html.sidepay #scene-talk .talk-cams .cam .seat-card.stc-blank.stc-promo { background: #fff url(wipe_promo.png) center / cover no-repeat; }
-html.sidepay #scene-talk .talk-cams .cam .seat-card.stc-blank.stc-promo-pre { background: #fff url(wipe_promo_pre.png) center / cover no-repeat; }
 @keyframes spIn { 0% { opacity: 0; transform: translateY(-8px); } 60% { opacity: 1; transform: none; } }
 @keyframes spGlow { 0% { opacity: 1; } 100% { opacity: 0; } }
 
