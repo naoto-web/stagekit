@@ -1057,6 +1057,7 @@
       var p = saved || { text: "", defaultType: "3連単", unit: 100, investInput: null, oreTachi: "", isNote: false };
       var d = predDrafts[draftKey(key, rc.id)]; // 未保存の入力があればそれを表示（消さない）
       var vText = d ? d.text : p.text;
+      var vSplit = CUTBOX ? cutSplit(vText) : null; // #27 切り目は専用欄へ
       var vInvest = d ? d.invest : (p.investInput || "");
       var vOre = d ? d.ore : (p.oreTachi || "");
       // note予想チェック＝下書き＞保存値＞（新規のみ）勝負レース照合の既定ON（8/10 FB117）
@@ -1080,8 +1081,16 @@
         '<div class="pf-body">' +
         /* ⚠️開始タグ直後の "\n" は必須（9/25）：HTMLは <textarea> 直後の改行を1つ捨てる。保存値が改行で始まる
            （実例＝ムネオ熊本1Rの text "\n"）と欄の値がずれ、保存値と食い違って「未保存」の金の輪が出続けていた */
-        '<textarea class="inp pf-text" rows="5" wrap="off">\n' + esc(vText) + "</textarea>" +
+        '<textarea class="inp pf-text" rows="5" wrap="off">\n' + esc(vSplit ? vSplit.buy : vText) + "</textarea>" +
         '<div class="parse-info pf-info"></div>' +
+        // #27 切り目の専用欄＝買目欄と同じ表の左の列（左端・幅がそろう）・間に見出し「切り目」・1行に1つ・「切」は書かなくてよい
+        (vSplit ? '<div class="pf-cut-lbl">切り目' +
+          '<span class="pf-cn"><input type="hidden" class="pf-cnk" value="' + (vSplit.note ? vSplit.note.k : "") + '">' +
+          '<button type="button" class="pf-cn-btn" data-k="none">切り目なしです！</button>' +
+          '<button type="button" class="pf-cn-btn" data-k="ari">切り目あります！</button>' +
+          '<span class="pf-cn-btn pf-cn-num" data-k="n" role="button">切り目<input type="number" min="1" class="pf-cnnum" value="' + (vSplit.note && vSplit.note.k === "n" ? vSplit.note.n : "") + '">点です！</span>' +
+          '</span></div>' +
+          '<textarea class="inp pf-cut" rows="1" wrap="off">\n' + esc(vSplit.cut) + "</textarea>" : "") +
         "</div>" +
         '<div class="pred-opts">' +
         // 式別は3連単固定（例外は買い目の行頭に「ワイド」等と書けば行単位で指定可）
@@ -1105,7 +1114,7 @@
       var racerId = form.getAttribute("data-racer");
       var stash = function () { // 1文字打つごとに下書きへ退避＝以後どんな再描画が来ても残る
         predDrafts[draftKey(key, racerId)] = {
-          text: form.querySelector(".pf-text").value,
+          text: formText(form), // #27 切り目欄も入れた保存の形
           invest: form.querySelector(".pf-invest").value,
           ore: form.querySelector(".pf-ore").value,
           note: form.querySelector(".pf-note").checked
@@ -1121,19 +1130,36 @@
          ・旧「俺たち目が買目にない→追加して保存／追加せず保存」の確認バーは出せない（止める場所が無い）
            → updatePredInfo のカード内警告に置き換え */
       var live = function () { update(); doSave(); };
-      ["pf-text", "pf-invest", "pf-ore"].forEach(function (cls) {
-        form.querySelector("." + cls).addEventListener("input", live);
+      ["pf-text", "pf-invest", "pf-ore", "pf-cut"].forEach(function (cls) {
+        var el0 = form.querySelector("." + cls); // #27 pf-cut は &cutbox=0 のとき無い
+        if (el0) el0.addEventListener("input", live);
       });
       form.querySelector(".pf-note").addEventListener("change", live);
       // §84 買目を打った時刻を覚え、打ち終わり（3秒）の直後に合成を測り直す＝そこで「入力時の合成」を記録
-      form.querySelector(".pf-text").addEventListener("input", function () {
+      // 11/26 切り目の言葉のボタン（1つだけ・もう一度押すと外れる・□点は数字を打つと自動で選ぶ）
+      var cnK = form.querySelector(".pf-cnk"), cnNum = form.querySelector(".pf-cnnum");
+      if (cnK) {
+        form.querySelectorAll(".pf-cn-btn").forEach(function (b) {
+          b.addEventListener("click", function (ev) {
+            if (b.classList.contains("lock")) return;
+            var k = b.getAttribute("data-k");
+            if (k === "n" && ev.target === cnNum) { if (cnK.value !== "n") { cnK.value = "n"; live(); } return; } // 数字の欄を押しただけ＝選ぶ（外さない）
+            cnK.value = cnK.value === k ? "" : k;
+            if (cnK.value === "n") cnNum.focus();
+            live();
+          });
+        });
+        cnNum.addEventListener("input", function () { if (cnNum.value) cnK.value = "n"; live(); });
+      }
+      var cutEl = form.querySelector(".pf-cut"); // #27 切り目も点数と合成が変わる＝買目と同じく打ち終わりで測り直す
+      [form.querySelector(".pf-text")].concat(cutEl ? [cutEl] : []).forEach(function (bx) { bx.addEventListener("input", function () {
         buyEditAt[draftKey(key, racerId)] = Date.now();
         setTimeout(function () {
           if (predKey() !== key) return;
           var f = document.querySelector('#pred-forms .pred-form[data-racer="' + racerId + '"]');
           if (f) updatePredInfo(f, key);
         }, SYNIN_SETTLE_MS + 100);
-      });
+      }); });
       /* §72（9/28 Naoto「投資額は入力完了したらカンマ付けて右寄りに」）CON2＝欄から離れたら「2,000」を欄の上に重ねて表示（右寄せ）。
          欄の値は数字のまま＝保存・計算・未保存判定は従来どおり。クリック（フォーカス）で重ねた表示を消して元の数字を編集 */
       if (CON2) attachYenFmt(form.querySelector(".pf-invest"));
@@ -1161,7 +1187,7 @@
           ta.value = (ta.value.trim() ? ta.value.replace(/\s+$/, "") + "\n" : "") + extraLine;
         }
         var entry = ensurePredEntry(key, racerId);
-        entry.text = form.querySelector(".pf-text").value;
+        entry.text = formText(form); // #27 切り目欄は末尾に「切 …」の行で
         entry.defaultType = form.querySelector(".pf-type").value;
         entry.unit = 0; // 単価×点数方式は廃止（投資・回収とも実額入力）
         var inv = +form.querySelector(".pf-invest").value;
@@ -1188,6 +1214,60 @@
     }
   }
 
+  /* #27（11/26 Naoto）切り目の専用欄。保存の形は今まで通り（買目テキストの中の「切 1-2-3」の行）＝読むときに分け、保存するときに末尾へ戻す */
+  var CUTBOX = params.get("cutbox") !== "0";
+  /* 11/26 Naoto 切り目の言葉（note予想のときだけ）＝「切り目なしです！」「切り目あります！」「切り目N点です！」から1つ。保存テキストの末尾に1行。
+     画面では買目が入りだしたら消える（overlay.js）。読むときは書き方の揺れ（切り目なし／切り目あり／切り目3点 など）も受ける */
+  var CUTNOTE_RE = /^\s*切り?目?\s*(?:(なし|無し)|(あり|有り)(?:ます)?|(\d+)\s*点)[\s!！。.、です]*$/;
+  function cutNoteOf(line) { var m = CUTNOTE_RE.exec(line); return m ? (m[1] ? { k: "none" } : m[2] ? { k: "ari" } : { k: "n", n: +m[3] }) : null; }
+  function cutNoteText(cn) { return !cn || !cn.k ? "" : cn.k === "none" ? "切り目なしです！" : cn.k === "ari" ? "切り目あります！" : cn.n > 0 ? "切り目" + cn.n + "点です！" : ""; }
+  /** 「切 1-2-3」「1-2-3 切」「※1-2-3切」から目だけを取り出す（keirin.js の CUT_RE／CUT_TAIL_RE と同じ書き方を受ける） */
+  function cutStrip(s) {
+    s = String(s || "");
+    var head = /^\s*(切り目|切目|切り|切)[\s:：]*/;
+    if (head.test(s)) return s.replace(head, "").trim();
+    return s.replace(/\s*(?:は|を)?\s*(切り目|切目|切り|切)\s*$/, "").replace(/^[\s※＊*・●○◎▲△☆★]+/, "").trim();
+  }
+  /** 保存テキスト → {buy, cut}。切り目として読める行（1行ずつ読んで cut）だけ切り目へ。「思い切」のような文章は買目欄に残る */
+  function cutSplit(text) {
+    var buy = [], cut = [], note = null;
+    String(text || "").split(/\r?\n/).forEach(function (line) {
+      var cn = cutNoteOf(line); if (cn) { note = cn; return; } // 切り目の言葉はボタンへ
+      var p = line.trim() ? window.Keirin.parsePrediction(line, "3連単", 9, []) : null;
+      // 書きかけ（「切 1」「切 1-」＝まだ目として読めない）も、行頭が切で残りが数字と区切りだけなら切り目（描き直しで買目欄へ移らないように）
+      var typing = /^\s*(切り目|切目|切り|切)[\s:：]*[\s0-9０-９\-－ー=＝→>＞]*$/.test(line);
+      if ((p && p.lines.length === 1 && p.lines[0].cut) || typing) cut.push(cutStrip(line)); else buy.push(line);
+    });
+    return { buy: buy.join("\n"), cut: cut.join("\n"), note: note };
+  }
+  function cutLines(cut) { return String(cut || "").split(/\r?\n/).map(cutStrip).filter(Boolean); }
+  /** {買目欄, 切り目欄} → 保存テキスト（切り目は末尾に「切 …」の行で）。切り目が無ければ買目欄そのまま */
+  function cutJoin(buy, cut, note) {
+    var cs = note && note.k === "none" ? [] : cutLines(cut).map(function (c) { return "切 " + c; });
+    var nt = cutNoteText(note); if (nt) cs.push(nt); // 切り目の言葉は最後の1行
+    if (!cs.length) return buy;
+    var b = String(buy || "").replace(/\s+$/, "");
+    return (b.trim() ? b + "\n" : "") + cs.join("\n");
+  }
+  /** カードの入力 → 保存テキスト（切り目欄が無いときは買目欄そのまま） */
+  function formText(form) {
+    var c = form.querySelector(".pf-cut");
+    return c ? cutJoin(form.querySelector(".pf-text").value, c.value, cutNoteForm(form)) : form.querySelector(".pf-text").value;
+  }
+  /** カードで選んでいる切り目の言葉 {k, n}（無ければ null） */
+  function cutNoteForm(form) {
+    var kEl = form.querySelector(".pf-cnk"), k = kEl ? kEl.value : "";
+    if (!k) return null;
+    return k === "n" ? { k: "n", n: +((form.querySelector(".pf-cnnum") || {}).value || 0) } : { k: k };
+  }
+  /** 保存値と同じか（切り目は並び順・書き方の違いを無視して中身で比べる） */
+  function formTextSame(form, savedText) {
+    var c = form.querySelector(".pf-cut");
+    if (!c) return form.querySelector(".pf-text").value === (savedText || "");
+    var s = cutSplit(savedText || "");
+    var curNote = cutNoteForm(form);
+    return form.querySelector(".pf-text").value.replace(/\s+$/, "") === s.buy.replace(/\s+$/, "") && (curNote && curNote.k === "none" ? "" : cutLines(c.value).join("|")) === cutLines(s.cut).join("|") && cutNoteText(curNote) === cutNoteText(s.note);
+  }
   /** 買目欄の高さを中身に合わせる（9/25）＝欄内でスクロールさせない＝右列の読み取り結果と行がずれない。
       最低は rows="5" ぶん（height:auto に戻すと rows の高さになる） */
   /* 9/25 Naoto「隣のカードは全体でなく同じ買目欄が伸びる形に」＝左右に並んだカードの買目欄は高さをそろえる
@@ -1301,7 +1381,21 @@
     var type = form.querySelector(".pf-type").value;
     var ta = form.querySelector(".pf-text");
     fitPredText(ta);
-    var parsed = window.Keirin.parsePrediction(ta.value, type, cars, window.Derive.absentOf(state, key)); // §129 欠車は点数から外す
+    var parsed = window.Keirin.parsePrediction(formText(form), type, cars, window.Derive.absentOf(state, key)); // §129 欠車は点数から外す／#27 切り目欄も入れて読む（切り目は末尾＝右列は買目欄の行のまま）
+    var cutBox = form.querySelector(".pf-cut");
+    var cnKey = form.querySelector(".pf-cnk");
+    if (cutBox && cnKey) { // 11/26 切り目の言葉：選んでいるボタンに色・「なし」の間は切り目欄に打てない／切り目欄に何かある間は「なし」を選べない／note予想のときだけ見せる（選んであれば見せる）
+      var kNow = cnKey.value;
+      cutBox.disabled = kNow === "none";
+      form.querySelectorAll(".pf-cn-btn").forEach(function (b) {
+        var bk = b.getAttribute("data-k");
+        b.classList.toggle("on", bk === kNow);
+        b.classList.toggle("lock", bk === "none" && kNow !== "none" && !!cutBox.value.trim());
+      });
+      form.classList.toggle("cutnote-show", !!(form.querySelector(".pf-note") || {}).checked || !!kNow);
+      form.classList.toggle("cutnone-on", kNow === "none");
+    }
+    if (cutBox) { cutBox.style.height = "auto"; cutBox.style.height = (cutBox.scrollHeight + cutBox.offsetHeight - cutBox.clientHeight) + "px"; } // #27 行数に合わせて伸ばす
     var cutWarn = "";
     /* 右列＝買目欄の1行に1行ずつ対応（9/25）。parsePrediction は空行を飛ばすので、
        欄の行を頭から歩いて空行には空の行を置く＝高さがそろう。入力そのものは左に見えているので右には結果だけ */
@@ -1331,6 +1425,9 @@
       if (ol) return '<div class="pl-row pl-ok pl-odds" title="' + esc(tip) + '">' + "<b>" + String(ol).replace("〜", "~") + "</b>" + "</div>";
       return '<div class="pl-row pl-ok" title="' + esc(tip) + '">' + typeMark + "<b>" + l.points + "点</b>" + (l.dupCount ? '<span class="pl-memo">*</span>' : "") + "</div>";
     }).join("");
+    if (cutBox && !cutWarn && parsed.lines.some(function (l) { return l.cutMulti; })) { // #27 切り目欄に1行で2つ書いた
+      cutWarn = '<div class="unit-warn">⚠ 切り目は1行に1つずつ（1-2-3 と 4-5-6 は2行に分けてください。1行に並べると別の目として読まれます）</div>';
+    }
     var investInput = +form.querySelector(".pf-invest").value || 0;
     /* 入れ忘れの欄を強調（9/26 Naoto「買目を入れたのに投資額と俺たち目を入れ忘れた」）＝買目が1点以上あるのに
        俺たち目／投資が空なら、その欄だけ赤枠＋「未入力」。買目を打った瞬間から出す（Naoto(a)）・カードの枠は変えない。
@@ -1391,7 +1488,7 @@
       html += '<div class="kab-warn">⚠️ ' + esc(kabTxt) + " が" + kabRows + "でかぶっています</div>";
     }
     // 俺たち目が買目に入っていない（9/25・旧 保存時の確認バー FB118 の置き換え）＝的中しても回収を入れられない
-    var oreOut = oreMissingInBuys(key, form.querySelector(".pf-text").value, form.querySelector(".pf-ore").value.trim());
+    var oreOut = oreMissingInBuys(key, formText(form), form.querySelector(".pf-ore").value.trim()); // #27 切り目欄も入れて
     if (oreOut) {
       html += '<div class="unit-warn">⚠ 俺たち目 ' + esc(oreOut) + " が買目に入っていません（このままだと的中しても回収を入れられません）</div>";
     }
@@ -1409,7 +1506,7 @@
        ⚠️自動更新の cuUnsavedWhy も同じ比べ方＝ここと食い違うと「表示は未保存なのに読み直す」等がずれる */
     var rcNow = (state.racers || []).filter(function (x) { return x.id === racerId; })[0];
     var noteBase = savedEntry ? !!savedEntry.isNote : isNoteRaceDefault(key, rcNow);
-    var dirty = form.querySelector(".pf-text").value !== (saved.text || "") ||
+    var dirty = !formTextSame(form, saved.text) || // #27 切り目は中身で比べる（並び順の違いで未保存にしない）
       (form.querySelector(".pf-invest").value || "") !== (saved.investInput ? String(saved.investInput) : "") ||
       form.querySelector(".pf-ore").value.trim() !== (saved.oreTachi || "") ||
       form.querySelector(".pf-note").checked !== noteBase;

@@ -2497,6 +2497,9 @@
     var okLines = rp ? rp.parsed.lines.filter(function (l) { return (l.ok && !l.allDup) || isTypingLine(l); }) : [];
     var memos = rp ? rp.parsed.lines.filter(function (l) { return !l.ok && !isTypingLine(l) && l.memo; })
       .map(function (l) { return l.memo; }) : [];
+    /* 11/26 Naoto 切り目の言葉（コンソールのボタン＝「切り目なしです！」「切り目あります！」「切り目N点です！」）は買目を出す前に切り目の情報だけ先に出すためのもの
+       ＝買目（書きかけを含む・切り目の行は数えない）が1行でも入ったら出さない。&cutnonehide=0 で旧（出しっぱなし） */
+    if (okLines.some(function (l) { return !l.cut; }) && params.get("cutnonehide") !== "0") memos = memos.filter(function (m) { return !/^\s*切り?目?\s*(なし|無し|あり|有り|\d+\s*点)/.test(m); });
     var ore = rp && rp.entry.oreTachi ? rp.entry.oreTachi : "";
     // 合計・投資の行：買い目が無くても投資額が入っていれば表示する（メモだけの運用対応・8/6）
     var metaLine = "";
