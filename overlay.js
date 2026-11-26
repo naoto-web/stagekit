@@ -3297,6 +3297,7 @@
   /* 11/26 Naoto「左右4行ずつ高さをそろえる方がきれい・空いた右上に俺たち目」＝1段目に札（左）と俺たち目（右の列の頭）・
      2段目から買目（とメモ）を左右に半分ずつ（左が多いか同じ）。同じ段の左右は上端がそろう（段の高さ＝高い方）。&bl2=0 で旧 */
   var BL2 = params.get("bl2") !== "0";
+  var MFIX = params.get("mfix") !== "0"; // 11/27 ①1場の列の数と合計欄の形を決める順番（&mfix=0 で旧）
   function blGrid2(band) {
     var kids = Array.prototype.slice.call(band.children);
     var head = kids.filter(function (k) { return k.classList.contains("race-col-head"); })[0] || null;
@@ -4633,12 +4634,36 @@
           tkMetaOneLine(band); // 11/26 狭い区画の合計欄を1行に（縮小の計算より先）
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
-          // 11/26 Naoto「2列のとき合成・合計・投資は下に1行」＝1場の固定枠を1行に→下の余白を取り直して測り直す（1列のときは今まで通り2段）
-          if (tMeta) tMeta.classList.remove("tb-m1");
-          if (BL2 && tMeta && !tMeta.classList.contains("hidden") && band.classList.contains("bl-grid2")) {
-            tMeta.classList.add("tb-m1");
-            band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
-            fitRaceCols(band);
+          // 11/27 Naoto「6行なのに2列・2列なのに合計欄が1行になっていない」＝列の数と合計欄の形を決める順番をそろえる（&mfix=0 で旧）。
+          //   ①合計欄は2段のまま大きさ（帯の拡大に合わせる）まで決めて並べる→1列ならそれで終わり
+          //   ②2列になったら合計欄を1行にして、大きさから並べ直す→2列のまま（2列＋1行）か、空いた高さで1列に戻る（1列＋1行＝列を増やさない方）
+          if (MFIX && tMeta && !tMeta.classList.contains("hidden")) {
+            var sizeMeta = function () {
+              tMeta.style.fontSize = "";
+              band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
+              fitRaceCols(band);
+              if (!TMETAK) return;
+              var bk = parseFloat((String(band.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+              var onlyHead = Array.prototype.every.call(band.children, function (c) { return c.classList.contains("race-col-head"); });
+              if (onlyHead) bk = 1.4;
+              if (bk > 1.02) {
+                tMeta.style.fontSize = Math.round(27 * Math.min(1.4, bk)) + "px";
+                if (tMeta.classList.contains("tb-m1") && tMeta.offsetWidth > band.clientWidth * 0.96) tMeta.style.fontSize = Math.max(27, Math.floor(parseFloat(tMeta.style.fontSize) * band.clientWidth * 0.96 / tMeta.offsetWidth)) + "px";
+                band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
+                fitRaceCols(band);
+              }
+            };
+            tMeta.classList.remove("tb-m1");
+            sizeMeta();
+            if (BL2 && band.classList.contains("bl-grid2")) { tMeta.classList.add("tb-m1"); sizeMeta(); }
+          } else {
+            // 11/26 Naoto「2列のとき合成・合計・投資は下に1行」＝1場の固定枠を1行に→下の余白を取り直して測り直す（1列のときは今まで通り2段）
+            if (tMeta) tMeta.classList.remove("tb-m1");
+            if (BL2 && tMeta && !tMeta.classList.contains("hidden") && band.classList.contains("bl-grid2")) {
+              tMeta.classList.add("tb-m1");
+              band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
+              fitRaceCols(band);
+            }
           }
           if (tkHalf || tk1Odds.length) { fitTkOdds(band); requestAnimationFrame(function () { fitTkOdds(band); }); } // §110 右半分のオッズ／🧪1人配信の列
           if (tkHalf && !tk1Html) { tkMarkClose(band, tkSpec, slot); applyRaceClosed(); }
@@ -4647,20 +4672,22 @@
             applyRaceClosed();
           }
           if (tk1) tk1Shown = tk1Odds.slice(); // ワイプとの被り判定（soloOddsWipe）
-          // 1場の右下の固定枠は帯の拡大率に合わせて大きく（9/26 Naoto「買目の大きさに対して点数と投資の字が小さい」）。
-          // 帯は最大1.6倍に拡大されるが固定枠は帯の外＝27pxのまま取り残されていた。上限1.4倍（約38px）。
-          // 枠が大きくなると買目に使える高さが減る＝大きさを決めてから下の余白を取り直し、もう一度だけ測り直す。戻す＝&tmetak=0
-          if (TMETAK && tMeta && !tMeta.classList.contains("hidden")) {
-            tMeta.style.fontSize = "";
-            var bk = parseFloat((String(band.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
-            // 買目がまだ無い（中身が札だけ）＝帯は拡大されない→上限の1.4倍で（9/26・note予想は投資額だけ先に入れる運用）
-            var onlyHead = Array.prototype.every.call(band.children, function (c) { return c.classList.contains("race-col-head"); });
-            if (onlyHead) bk = 1.4;
-            if (bk > 1.02) {
-              tMeta.style.fontSize = Math.round(27 * Math.min(1.4, bk)) + "px";
-              if (tMeta.classList.contains("tb-m1") && tMeta.offsetWidth > band.clientWidth * 0.96) tMeta.style.fontSize = Math.max(27, Math.floor(parseFloat(tMeta.style.fontSize) * band.clientWidth * 0.96 / tMeta.offsetWidth)) + "px"; // 11/26 1行は帯の幅まで
-              band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
-              fitRaceCols(band);
+          if (!MFIX) {
+            // 1場の右下の固定枠は帯の拡大率に合わせて大きく（9/26 Naoto「買目の大きさに対して点数と投資の字が小さい」）。
+            // 帯は最大1.6倍に拡大されるが固定枠は帯の外＝27pxのまま取り残されていた。上限1.4倍（約38px）。
+            // 枠が大きくなると買目に使える高さが減る＝大きさを決めてから下の余白を取り直し、もう一度だけ測り直す。戻す＝&tmetak=0
+            if (TMETAK && tMeta && !tMeta.classList.contains("hidden")) {
+              tMeta.style.fontSize = "";
+              var bk = parseFloat((String(band.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+              // 買目がまだ無い（中身が札だけ）＝帯は拡大されない→上限の1.4倍で（9/26・note予想は投資額だけ先に入れる運用）
+              var onlyHead = Array.prototype.every.call(band.children, function (c) { return c.classList.contains("race-col-head"); });
+              if (onlyHead) bk = 1.4;
+              if (bk > 1.02) {
+                tMeta.style.fontSize = Math.round(27 * Math.min(1.4, bk)) + "px";
+                if (tMeta.classList.contains("tb-m1") && tMeta.offsetWidth > band.clientWidth * 0.96) tMeta.style.fontSize = Math.max(27, Math.floor(parseFloat(tMeta.style.fontSize) * band.clientWidth * 0.96 / tMeta.offsetWidth)) + "px"; // 11/26 1行は帯の幅まで
+                band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
+                fitRaceCols(band);
+              }
             }
           }
           applyRaceClosed(); // §53（倍率が決まった後に打ち消し値を入れる）
