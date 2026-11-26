@@ -1017,6 +1017,11 @@ html.bhgap.bhwinv body #scene-race .race-wipes .winv .band-inv { padding-right: 
    ①2列のとき左右の行がそろわない＝縦の折り返し（flex column wrap）は列ごとに積むだけ → 2列になったときだけ JS（blGrid）が表に組み替える：
      左の列の行数は折り返しのときと同じ・同じ段の行は上端をそろえる（段の高さ＝その段の高い方）。&blgrid=0 で旧 */
 html.blclip .talk-band .buy-line { overflow: visible; }
+/* 11/26 ①1場の2列（blGrid2）＝1段目に札｜俺たち目・2段目から左右に半分ずつ。右下の固定枠は1行（.tb-m1）。&bl2=0 で旧 */
+.has-synth.tb-m1 { grid-template-columns: auto auto auto; }
+.has-synth.tb-m1 .bm-syn { grid-column: 1; grid-row: 1; justify-self: start; }
+.has-synth.tb-m1 .bm-pts { grid-column: 2; grid-row: 1; }
+.has-synth.tb-m1 .bm-inv { grid-column: 3; grid-row: 1; }
 html.blgrid .talk-band .buy-line.bl-grid { display: grid; grid-auto-flow: column; grid-template-columns: max-content max-content;
   justify-content: start; align-content: start; align-items: start;
   justify-items: start; } /* 🐞10/20 Naoto「俺たち目の枠が伸びちゃってる」＝表のマスは既定で横いっぱい（stretch）＝札・俺たち目の枠が列の幅まで伸びていた→左寄せ */

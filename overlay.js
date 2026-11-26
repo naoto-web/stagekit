@@ -161,6 +161,8 @@
      ①は行ごとに枠幅へ縮める作り＝倍率ぶん行が短くなれば縮まない。②は縦が狭いので対象外（1段のまま）。
      1点の行・俺たち目は倍率が短いので従来どおり右。9/25 本番既定ON・&odds2=0 で1段に戻す */
   var ODDS2 = SCENE !== "race" && params.get("odds2") !== "0";
+  /* 11/26 Naoto「倍率が下の段に改行されると見づらい・バッジが小さくなっても改行なしの方がいい」＝①トークだけ倍率を下の段へ回さない（入らない行は行ごと縮める）。&nostack=0 で旧 */
+  var NOSTACK = SCENE === "talk" && params.get("nostack") !== "0";
   // ⚠️tmeta-on は下の className 代入の中で付ける（9/25 当初は classList.add を先に書いていて、直後の代入で消えていた
   //    ＝①の2〜3場で合計欄が区画の右下に寄らなかった）
 
@@ -2636,7 +2638,7 @@
       // ODDS2：まず1段で測り、入りきらないときだけ倍率を下の段へ（.stack）→測り直す
       if (el.classList.contains("pl-2row")) {
         el.classList.remove("stack");
-        if (avail > 0 && el.scrollWidth > avail) el.classList.add("stack");
+        if (avail > 0 && el.scrollWidth > avail && !NOSTACK) el.classList.add("stack"); // 11/26 ①は下の段へ回さない
       }
       var w = el.scrollWidth;
       if (w > avail && avail > 0) {
@@ -3256,14 +3258,52 @@
   if (BLGRID) document.documentElement.classList.add("blgrid");
   if (BLCLIP) document.documentElement.classList.add("blclip");
   function blGrid(band) {
-    band.classList.remove("bl-grid"); band.style.gridTemplateRows = "";
+    band.classList.remove("bl-grid", "bl-grid2"); band.style.gridTemplateRows = "";
     var kids = band.children;
+    band.style.rowGap = ""; // 11/26 前回足したすき間も消す（blGrid2 の余りの配り直し）
+    for (var c0 = 0; c0 < kids.length; c0++) { kids[c0].style.gridRow = ""; kids[c0].style.gridColumn = ""; } // 11/26 前回の置き場所を消してから折り返しを見る
     if (kids.length < 2) return;
     var x0 = kids[0].offsetLeft, n1 = 0;
     for (var i = 0; i < kids.length; i++) if (kids[i].offsetLeft <= x0 + 4) n1++; else break;
     if (n1 >= kids.length) return; // 1列＝今まで通り
+    if (BL2) { blGrid2(band); return; }
     band.style.gridTemplateRows = "repeat(" + Math.ceil(kids.length / 2) + ", auto)";
     band.classList.add("bl-grid");
+  }
+  /* 11/26 Naoto「左右4行ずつ高さをそろえる方がきれい・空いた右上に俺たち目」＝1段目に札（左）と俺たち目（右の列の頭）・
+     2段目から買目（とメモ）を左右に半分ずつ（左が多いか同じ）。同じ段の左右は上端がそろう（段の高さ＝高い方）。&bl2=0 で旧 */
+  var BL2 = params.get("bl2") !== "0";
+  function blGrid2(band) {
+    var kids = Array.prototype.slice.call(band.children);
+    var head = kids.filter(function (k) { return k.classList.contains("race-col-head"); })[0] || null;
+    var ore = kids.filter(function (k) { return k.classList.contains("ore-row"); })[0] || null;
+    var items = kids.filter(function (k) { return k !== head && k !== ore; });
+    var r = Math.ceil(items.length / 2);
+    band.classList.add("bl-grid", "bl-grid2");
+    // under＝俺たち目を札の下（2段目・左）／それ以外＝右上（1段目・右の列の頭）
+    var place = function (under) {
+      var top = head || ore ? (under && head && ore ? 2 : 1) : 0;
+      band.style.gridTemplateRows = "repeat(" + (r + top) + ", auto)";
+      if (head) { head.style.gridRow = "1"; head.style.gridColumn = "1"; }
+      if (ore) { ore.style.gridRow = under && head ? "2" : "1"; ore.style.gridColumn = under || !head ? "1" : "2"; }
+      items.forEach(function (it, i) { it.style.gridRow = String(1 + top + (i < r ? i : i - r)); it.style.gridColumn = i < r ? "1" : "2"; });
+    };
+    /* 11/26 Naoto「俺たち目は場の下に（下が空いているので）」＝札の下に置いてもバッジが小さくならない（2%以内）なら札の下・小さくなるなら右上。&bl2ore=0 で常に右上 */
+    if (BL2ORE && head && ore) {
+      place(true); var ku = blFitK(band);
+      place(false); var kr = blFitK(band);
+      if (ku >= kr * 0.98) place(true);
+    } else place(false);
+  }
+  var BL2ORE = params.get("bl2ore") !== "0";
+  /** 帯の中身が帯に収まる倍率（上限1.6）＝fitColBox と同じ測り方の簡易版（子の実座標・帯の拡大は外してある前提） */
+  function blFitK(band) {
+    var cr = band.getBoundingClientRect(), cs = getComputedStyle(band);
+    var aw = cr.width - (parseFloat(cs.paddingRight) || 0), ah = cr.height - (parseFloat(cs.paddingBottom) || 0);
+    var mr = cr.left, mb = cr.top;
+    for (var i = 0; i < band.children.length; i++) { var q = band.children[i].getBoundingClientRect(); if (q.right > mr) mr = q.right; if (q.bottom > mb) mb = q.bottom; }
+    if (mr <= cr.left || mb <= cr.top) return 0;
+    return Math.min(1.6, aw / (mr - cr.left), ah / (mb - cr.top));
   }
   function fitColBox(col) {
     col.style.transform = "";
@@ -3359,7 +3399,7 @@
        （旧＝拡大の途中でも5%以上大きくなれば回した。幅の狭い区画では短い買目でも+19〜42%と出て改行されていた・実測）。
        戻す＝&stack=grow（旧ルール） */
     var flat = col.querySelectorAll(".pred-line.pl-2row:not(.stack)");
-    if (flat.length && (STACK_GROW ? k < 1.6 : k < 1)) {
+    if (flat.length && !NOSTACK && (STACK_GROW ? k < 1.6 : k < 1)) { // 11/26 ①は下の段へ回さない
       var saved = [];
       flat.forEach(function (el) { saved.push(el.style.transform); el.style.transform = ""; el.classList.add("stack"); });
       var wOld = needW, hOld = needH, kStack = measureK();
@@ -3412,6 +3452,16 @@
       }
       meta.style.marginTop = (availH / kk - needH - rowGap - mh).toFixed(1) + "px";
       meta.style.marginLeft = (availW / kk - padL - mw).toFixed(1) + "px";
+    }
+    /* 11/26 ①1場の2列（blGrid2）＝買目の倍率が決まったあと、下に余った高さを段と段のすき間（1段目と2段目の間も含む）に均等に足す。倍率の計算には入れない */
+    if (col.classList.contains("bl-grid2")) {
+      var kq = parseFloat((String(col.style.transform).match(/scale\(([\d.]+)\)/) || [])[1]) || 1;
+      var nRows = parseInt((String(col.style.gridTemplateRows).match(/repeat\((\d+)/) || [])[1], 10) || 0;
+      var cq = col.getBoundingClientRect(), mbq = cq.top;
+      for (var qi = 0; qi < col.children.length; qi++) { var rq = col.children[qi].getBoundingClientRect(); if (rq.bottom > mbq) mbq = rq.bottom; }
+      var freeH = availH / kq - (mbq - cq.top) / kq - 10; // 下に少し余白を残す
+      var chq = 0; col.querySelectorAll(".pred-line .car").forEach(function (c) { var h = c.getBoundingClientRect().height / kq; if (h > chq) chq = h; }); // 11/26 すき間はバッジ1つ分まで（Naoto「買目の間は買目ぐらい」）
+      if (nRows > 1 && freeH > 2) col.style.rowGap = (rowGap + Math.min(freeH / (nRows - 1), chq > 0 ? chq : 1e9)).toFixed(1) + "px";
     }
   }
   function fitRaceCols(scope) {
@@ -4543,6 +4593,13 @@
           tkMetaOneLine(band); // 11/26 狭い区画の合計欄を1行に（縮小の計算より先）
           fitPredLines(band); // 長い行は枠幅に合わせて自動縮小
           fitRaceCols(band);  // 買い目が多い列は縦にも自動縮小（見切れ防止・8/6 FB9）
+          // 11/26 Naoto「2列のとき合成・合計・投資は下に1行」＝1場の固定枠を1行に→下の余白を取り直して測り直す（1列のときは今まで通り2段）
+          if (tMeta) tMeta.classList.remove("tb-m1");
+          if (BL2 && tMeta && !tMeta.classList.contains("hidden") && band.classList.contains("bl-grid2")) {
+            tMeta.classList.add("tb-m1");
+            band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
+            fitRaceCols(band);
+          }
           if (tkHalf || tk1Odds.length) { fitTkOdds(band); requestAnimationFrame(function () { fitTkOdds(band); }); } // §110 右半分のオッズ／🧪1人配信の列
           if (tkHalf && !tk1Html) { tkMarkClose(band, tkSpec, slot); applyRaceClosed(); }
           if (tk1Odds.length && TKRKCLOSE && RCCLOSE) { // 🧪1人配信のオッズ列にも締切の印（そのオッズのレース・誰の買目でもない）
@@ -4561,6 +4618,7 @@
             if (onlyHead) bk = 1.4;
             if (bk > 1.02) {
               tMeta.style.fontSize = Math.round(27 * Math.min(1.4, bk)) + "px";
+              if (tMeta.classList.contains("tb-m1") && tMeta.offsetWidth > band.clientWidth * 0.96) tMeta.style.fontSize = Math.max(27, Math.floor(parseFloat(tMeta.style.fontSize) * band.clientWidth * 0.96 / tMeta.offsetWidth)) + "px"; // 11/26 1行は帯の幅まで
               band.style.paddingBottom = (tMeta.offsetHeight + 12) + "px";
               fitRaceCols(band);
             }
