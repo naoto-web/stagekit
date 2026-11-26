@@ -2635,6 +2635,39 @@
     box.classList.toggle("empty", !who);
     box.style.background = mc || "";
     box.style.borderColor = mc || "";
+    renderBreakBtns(); // #15
+  }
+  /* #15（11/26 Naoto）休憩中アイコン＝席ごとのボタン。押すとその人に brk を付けて即保存（もう一度押すと外す）。
+     左＝席a（左カメラ）・右＝席b（右カメラ）。席の決め方は席替えボタンと同じ式 */
+  function renderBreakBtns() {
+    var row = $("brk-row");
+    if (!row || !state) return;
+    var by = { a: null, b: null };
+    (state.racers || []).forEach(function (r, i) {
+      var st = (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b");
+      if (!by[st]) by[st] = r;
+    });
+    row.innerHTML = ["a", "b"].map(function (s) {
+      var r = by[s], side = s === "a" ? "左" : "右";
+      var mc = r ? window.Derive.colorOf(r.color) : "";
+      var on = !!(r && r.brk);
+      return '<button class="btn brk-btn' + (on ? " brk-on" : "") + '" data-seat="' + s + '"' + (r ? "" : " disabled") + (mc ? ' style="--mc:' + mc + '"' : "") + '>' +
+        '<span class="bk-main">' + (on ? "☕ 休憩中（押すと戻る）" : "☕ 休憩に入る") + "</span>" +
+        '<span class="bk-sub">' + side + "の席：" + esc(r ? r.name : "なし") + "</span></button>";
+    }).join("");
+    row.querySelectorAll(".brk-btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var s = b.getAttribute("data-seat"), hit = null;
+        (state.racers || []).forEach(function (r, i) {
+          var st = (r.seat === "a" || r.seat === "b") ? r.seat : (i === 0 ? "a" : "b");
+          if (st === s && !hit) hit = r;
+        });
+        if (!hit) return;
+        if (hit.brk) delete hit.brk; else hit.brk = true;
+        save();
+        renderAll();
+      });
+    });
   }
 
   /* キャンペーン応募人数のクイック増減（8/9 FB98）：配信中に応募が入るたび更新する運用のため、

@@ -113,6 +113,14 @@ html.theme-light #payout-rows .pr-err { color: #c62828; }
    ⚠️席替えは幅だけ半分に変える＝色・押した後の緑（.done）は従来どおり */
 .seat-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .seat-row .btn.seat-swap { flex: 1 1 0; width: auto; margin-bottom: 0; }
+/* #15 休憩中ボタン（左右の席ごと）。オン＝その人のメンバーカラーで塗る */
+.brk-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.brk-row:empty { display: none; }
+.btn.brk-btn { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 9px 10px; line-height: 1.25; border-radius: 10px; }
+.btn.brk-btn .bk-main { font-size: 17px; font-weight: 900; }
+.btn.brk-btn .bk-sub { font-size: 12px; opacity: .8; }
+html .btn.brk-btn.brk-on { background: var(--mc, #f2c94c); border-color: var(--mc, #f2c94c); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.btn.brk-btn:disabled { opacity: .35; }
 .switcher {
   flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   padding: 11px 12px; line-height: 1.25; text-align: center;

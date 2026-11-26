@@ -149,6 +149,26 @@
      B＝複数点の行の倍率は下限だけ「49〜」（行幅を縮める）／C＝右下の合計・合成・投資を1行に
      9/25 Naoto「OK・本番反映」＝本番も既定ON。&rb2=0 で従来の②に戻せる（OBSのソースURLだけで） */
   var RB2 = (SCENE === "race" || SCENE === "tenkai") && params.get("rb2") !== "0";
+  /* #15（11/26 Naoto）休憩中アイコン＝コンソールで「休憩に入る」を押した人（state.racers[].brk）の席のワイプに break_<色キー>.png を重ねる。
+     演出中は隠す＝演出の部品（FX_ROOTS）が画面にある・どこかのワイプが hit-fx の間。0.3秒ごとに見る（描き直しの経路に混ぜない＝どのシーンでも同じ動き）。&brk=0 で出さない */
+  var BRK = params.get("brk") !== "0";
+  function brkTick() {
+    if (!state || !state.racers) return;
+    var seats = seatMap();
+    var fx = !!document.querySelector(FX_ROOTS + ", .cam.hit-fx");
+    document.documentElement.classList.toggle("brk-fx", fx);
+    Array.prototype.forEach.call(document.querySelectorAll(".cam.slot-a, .cam.slot-b"), function (cam) {
+      if (cam.classList.contains("fx-proto-host")) return;
+      var rc = seats[cam.classList.contains("slot-a") ? "a" : "b"];
+      var key = rc && rc.brk ? memberKey(rc) : "";
+      var img = cam.querySelector(":scope > .brk-ic");
+      if (!key) { if (img) img.remove(); return; }
+      if (!img) { img = document.createElement("img"); img.className = "brk-ic"; img.alt = ""; cam.appendChild(img); }
+      var src = "break_" + key + ".png";
+      if (img.getAttribute("src") !== src) img.setAttribute("src", src);
+    });
+  }
+  if (BRK) setInterval(function () { try { brkTick(); } catch (e) {} }, 300);
   if (params.get("rbgap") === "0") document.documentElement.classList.add("rbgap-off"); // #26 ②の俺たち目のすき間を旧に
   /* ③レース展開も②の詰め方（RB2）を使う（9/26 Naoto「③は買目と右下の投資額の文字サイズの調整ができていない・トークと同じ要領で」）。
      ③の予想帯は②と同じ .race-band の部品＝パッキング（並べ替え総当たり・列間の自動調整・合計欄2段/1行の選択）と

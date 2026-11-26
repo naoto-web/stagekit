@@ -4495,6 +4495,14 @@ html.sidepay #scene-talk .talk-cams .cam .stk-chip { margin-right: var(--spw, 0p
 /* 一人配信＝空いた席のワイプは真ん中の4:3に縮めて（両脇は帯）真っ白 */
 html.sidepay #scene-talk .talk-cams .cam .seat-card { left: var(--spw, 0px); right: var(--spw, 0px); z-index: 2; }
 .seat-card.stc-blank { background: #fff; }
+/* #15（11/26 Naoto）休憩中アイコン＝その人の席のワイプの真ん中に重ねる（ネームプレートより下・一人配信の両脇の帯は避ける）。演出中は隠す（html.brk-fx） */
+.cam > .brk-ic { position: absolute; top: 0; bottom: 0; left: var(--spw, 0px); right: var(--spw, 0px); margin: auto; z-index: 3;
+  max-width: calc(100% - 2 * var(--spw, 0px) - 24px); max-height: 82%; width: auto; height: auto; object-fit: contain; pointer-events: none;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.35)); animation: brkIn .5s ease-out; }
+/* ②はワイプの上の端に「投資・回収」の帯（§133 winv・約54px）が重なる＝帯の下から置く（頭が帯に隠れないように） */
+#scene-race .race-wipes .cam > .brk-ic { top: 56px; max-height: calc(100% - 56px - 24px); }
+html.brk-fx .cam > .brk-ic { visibility: hidden; }
+@keyframes brkIn { 0% { opacity: 0; transform: scale(.85); } 100% { opacity: 1; transform: none; } }
 @keyframes spIn { 0% { opacity: 0; transform: translateY(-8px); } 60% { opacity: 1; transform: none; } }
 @keyframes spGlow { 0% { opacity: 1; } 100% { opacity: 0; } }
 
