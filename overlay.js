@@ -164,7 +164,7 @@
       var img = cam.querySelector(":scope > .brk-ic");
       if (!key) { if (img) img.remove(); return; }
       if (!img) { img = document.createElement("img"); img.className = "brk-ic"; img.alt = ""; cam.appendChild(img); }
-      var src = "break_" + key + ".png";
+      var src = "break_" + key + ".png?r=20261127"; // 11/27 しょーたの絵を差し替え＝古い絵のキャッシュを避ける（絵を替えたらこの数字も替える）
       if (img.getAttribute("src") !== src) img.setAttribute("src", src);
     });
   }

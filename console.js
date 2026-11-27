@@ -2720,7 +2720,7 @@
       var r = by[s], side = s === "a" ? "左" : "右";
       var mc = r ? window.Derive.colorOf(r.color) : "";
       var on = !!(r && r.brk);
-      var thumb = BRKUI === "b" && r && BRK_KEY[r.color] ? '<img class="bk-thumb" alt="" src="break_' + BRK_KEY[r.color] + '.png">' : "";
+      var thumb = BRKUI === "b" && r && BRK_KEY[r.color] ? '<img class="bk-thumb" alt="" src="break_' + BRK_KEY[r.color] + '.png?r=20261127">' : "";
       return '<button class="btn brk-btn' + (on ? " brk-on" : "") + '" data-seat="' + s + '"' + (r ? "" : " disabled") + (mc ? ' style="--mc:' + mc + '"' : "") + '>' + thumb + '<span class="bk-txt">' +
         '<span class="bk-main">' + (on ? (BTNUI !== "0" ? "☕ 休憩中" : "☕ 休憩中（押すと戻る）") : "☕ 休憩に入る") /* 11/26 札「戻す ▶」があるときは短く */ + "</span>" +
         '<span class="bk-sub">' + side + "の席：" + esc(r ? r.name : "なし") + "</span></span></button>";
