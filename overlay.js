@@ -2111,7 +2111,7 @@
         (mc.length > 1 ? ";animation-delay:-" + (Date.now() % RKMINE_CYCLE) + "ms" : "") : "";
       // 区切りの「−」は省く（俺たち目と同じ）＝その分車番を大きく
       var nHtml = '<span class="rk-n' + (from + i < 3 ? " rk-top" : "") + '">' + (from + i + 1) + '</span>';
-      var vHtml = '<span class="pl-odds rk-v' + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '"><span class="odn rk-num" data-ok="' + esc(k + "|rk|" + c) + '">' + rkNumHtml(rkFmt(d.o[c])) + "</span></span>";
+      var vHtml = '<span class="pl-odds rk-v' + (d.fin ? " od-fin" : "") + '" data-rk="' + esc(k) + '"><span class="odn rk-num' + (ODCOL ? (d.o[c] < 10 ? " od-lo" : d.o[c] >= 100 ? " od-hi" : "") : "") + '" data-ok="' + esc(k + "|rk|" + c) + '">' + rkNumHtml(rkFmt(d.o[c])) + "</span></span>";
       if (RKWIDE) return '<div class="rk-cell"><span class="rk-pair' + mineAttr + '">' + nHtml + '<span class="rk-chips chips">' + lineChips(raw, false, null, true) + "</span>" + vHtml + "</span></div>"; // #24
       return '<div class="rk-cell">' + nHtml + '<span class="rk-chips chips' + mineAttr + '">' + lineChips(raw, false, null, true) + "</span>" +
         vHtml + "</div>";
@@ -2341,6 +2341,9 @@
       b.appendChild(sw);
     });
   }
+  /* #52（11/28 Naoto）オッズの色分け＝人気順の表・買目の倍率は10倍未満 赤／100倍以上 青（合成は付けない・金色が勝つ）＋上下の演出は上昇 青・下落 赤に。&odcol=0 で旧 */
+  var ODCOL = params.get("odcol") !== "0";
+  if (ODCOL) document.documentElement.classList.add("odcol");
   function markOdds() {
     document.querySelectorAll(".od-sweep").forEach(function (o) { if (!(WIPEFIN && o.closest(".seat-card"))) o.remove(); }); // #38 ワイプの帯は wipeFin
     if (!ODDS) return;
@@ -2364,6 +2367,11 @@
         }
       }
       odShown[id] = { t: t, at: now };
+      if (ODCOL && id && id.indexOf("|syn|") < 0) { // #52 ふだんの色（切り替え待ちのときは変わったあとの値で）
+        var ov = parseFloat(String(t).replace(/,/g, ""));
+        e.classList.toggle("od-lo", !isNaN(ov) && ov < 10);
+        e.classList.toggle("od-hi", !isNaN(ov) && ov >= 100);
+      }
       var mv = odMove[id];
       if (mv && now - mv.at < (mv.big ? OD_BIG_MS : OD_MOVE_MS)) {
         e.classList.add(mv.dir === "up" ? "od-up" : "od-down");

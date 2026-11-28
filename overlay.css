@@ -4136,6 +4136,20 @@ body.odhold .odn.od-nup   { animation: odNumUp var(--odh, 1500ms) ease-out; anim
 body.odhold .odn.od-ndown { animation: odNumDown var(--odh, 1500ms) ease-out; animation-delay: var(--odnd, 0ms); }
 @keyframes odNumUp   { 0% { color: #e0282e; } 70% { color: #e0282e; } }
 @keyframes odNumDown { 0% { color: #1f5fd6; } 70% { color: #1f5fd6; } }
+/* #52（11/28 Naoto）オッズのふだんの色＝10倍未満 赤・100倍以上 青（ワイプの帯 #19 と同じ色）。締切後の金色（.od-fin）が勝つ */
+html.odcol .odn.od-lo { color: #dc2626; }
+html.odcol .odn.od-hi { color: #1d4ed8; }
+html.odcol .od-fin .odn.od-lo, html.odcol .od-fin .odn.od-hi { color: inherit; }
+/* 上下の演出の色を逆に＝上昇（荒れる方向）青▲・下落（堅い方向）赤▼ */
+html.odcol .odn.od-up { animation-name: odUpF; }
+html.odcol .odn.od-down { animation-name: odDownF; }
+html.odcol body.odhold .odn.od-up, html.odcol body.odhold .odn.od-down { animation: none; }
+html.odcol body.odhold .odn.od-nup { animation-name: odNumDown; }
+html.odcol body.odhold .odn.od-ndown { animation-name: odNumUp; }
+html.odcol .odn.od-up::after { color: #1f5fd6; }
+html.odcol .odn.od-down::after { color: #e0282e; }
+@keyframes odUpF   { 0% { color: #1f5fd6; } 60% { color: #1f5fd6; } }
+@keyframes odDownF { 0% { color: #e0282e; } 60% { color: #e0282e; } }
 .odn.od-up.od-big::after { content: "▲" attr(data-dv); animation-name: odBigUp; }
 .odn.od-down.od-big::after { content: "▼" attr(data-dv); animation-name: odBigDown; }
 @keyframes odBigUp   { 0% { opacity: 1; transform: translate(-50%, -50%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -1.8em); } }
