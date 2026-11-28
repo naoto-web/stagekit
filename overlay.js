@@ -1996,6 +1996,9 @@
   var TKNOYOSO = params.get("tknoyoso") !== "0"; // ①枠全体がオッズのとき見出しは「名前」だけ（10/1）。&tknoyoso=0 で「名前 予想」
   var TK1SOLO = params.get("tk1solo") !== "0"; // ✅10/4 本番既定ON（§124）①1人配信の予想枠にオッズ（renderPreds の tk1）・&tk1solo=0 で旧（①1人配信はオッズなし）
   var tk1Shown = null; // ①1人配信で予想枠に出しているオッズのレース（null＝この仕組みを使っていない）
+  /* #41（11/28 Naoto「一人配信のトーク画面、出走表だしたレースのオッズがでない」→「予想枠の中がいい」）出走表のレースが予想に無い1場・2場の日も
+     予想枠に出走表のレースの人気順（1場＝買目｜そのオッズ｜出走表のオッズ／2場＝買目A｜買目B｜出走表のオッズ）。既定ON・&slodds=0 で旧 */
+  var SLODDS = params.get("slodds") !== "0";
   var TKRK = params.get("tkrk") !== "0"; // §110（10/1 Naoto「本番反映」）①2人配信の人気順オッズ（tkOddsPlan）。&tkrk=0 で出さない
   function rkFmt(v) {
     var s = (Math.round(v * 10) / 10).toFixed(1).split(".");
@@ -4620,6 +4623,7 @@
             return '<div class="race-col' + (wide ? " wide" : "") + '">' + raceColHead(rc, k, !wide) + raceBuyHtml(rc, k, !wide, false, true) + "</div>";
           };
           var tk1Html = "", tk1Odds = []; // [{k}]＝予想枠に出したオッズの列（締切の印・ワイプとの被り判定）
+          var tkFire = null; // #41 .race-col の並びが talkKeys と違うとき
           if (tk1 && talkKeys.length) {
             var oc = function (k, count, pair) { // pair＝すぐ左の買目と組（同じレース）＝間の線を消して組に見せる
               var h = tkOddsCol(k, 0, count, 9);
@@ -4627,7 +4631,16 @@
               tk1Odds.push(k);
               return '<div class="tk-rk-col' + (pair ? " tk1-pair" : "") + '">' + h + "</div>";
             };
-            if (talkKeys.length === 1) {
+            var slOut = SLODDS && key && talkKeys.indexOf(key) < 0; // #41 出走表のレースを予想していない
+            if (talkKeys.length === 1 && slOut) {
+              tk1Html = '<div class="race-split tk1-3">' + colHtml(talkKeys[0], true) + oc(talkKeys[0], 9, true) + oc(key, 9) + "</div>";
+            } else if (talkKeys.length === 2 && slOut) {
+              // 🔄11/28 Naoto「平塚か松阪のオッズも出して4枠に」＝締切の近い方のオッズを、その買目のすぐ右に（右端は出走表のレースのオッズ）
+              var slNow = nowSec(), slRank = function (k) { var s = raceStartSecOf(k); return s === null ? 3e5 : (s > slNow ? s : 2e5 - s); };
+              var slNear = slRank(talkKeys[0]) <= slRank(talkKeys[1]) ? talkKeys[0] : talkKeys[1], slFar = slNear === talkKeys[0] ? talkKeys[1] : talkKeys[0];
+              tkFire = [slFar, slNear]; // .race-col の並び（締切のグレー・燃える枠の対応）
+              tk1Html = '<div class="race-split tk1-4">' + colHtml(slFar, false) + colHtml(slNear, false) + oc(slNear, 9, true) + oc(key, 9) + "</div>";
+            } else if (talkKeys.length === 1) {
               tk1Html = '<div class="race-split">' + colHtml(talkKeys[0], true) + oc(talkKeys[0], 18, true) + "</div>";
             } else if (talkKeys.length === 2) {
               tk1Html = '<div class="race-split tk1-4">' + colHtml(talkKeys[0], false) + oc(talkKeys[0], 9, true) + colHtml(talkKeys[1], false) + oc(talkKeys[1], 9, true) + "</div>";
@@ -4685,7 +4698,7 @@
           }
           // 🧪燃える枠は「場の区画」単位（9/25 Naoto「〇〇予想の見出しまで光る・複数場だとおかしい」）＝
           // 2〜3場は note の場の .race-col だけ、1場は買目エリア（band）全体
-          var fireKeys = talkKeys.length >= 3 ? tk : talkKeys;
+          var fireKeys = tkFire || (talkKeys.length >= 3 ? tk : talkKeys);
           var fireCols = band.querySelectorAll(".race-col");
           band.classList.toggle("note-fire", fireCols.length === 0 && noteFireOn(rc, talkKeys[0]));
           Array.prototype.forEach.call(fireCols, function (col, ci) { col.classList.toggle("note-fire", noteFireOn(rc, fireKeys[ci])); });

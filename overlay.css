@@ -4320,6 +4320,10 @@ html.rkmine-b .rk-chips.rk-mine2 { animation: rkMineAlt 2.4s ease-in-out infinit
 
 /* （10/4 Naoto・§124・✅本番既定ON・&tk1solo=0 で旧）①1人配信の予想枠を縦4等分（2場＝買目A｜Aの人気順｜買目B｜Bの人気順／3場＝買目A｜B｜C｜出走表のレースの人気順） */
 .talk-band .buy-line .race-split.tk1-4 > * { flex: 1 1 0; min-width: 0; }
+/* #41（11/28）①一人配信1場で出走表のレースを予想していない＝［買目（半分）｜そのオッズ｜出走表のオッズ］ */
+.talk-band .buy-line .race-split.tk1-3 > .race-col { flex: 2 1 0; min-width: 0; }
+.talk-band .buy-line .race-split.tk1-3 > .tk-rk-col { flex: 1 1 0; min-width: 0; }
+.talk-band .buy-line .race-split.tk1-3 > .tk-rk-col + .tk-rk-col { border-left: 2px solid var(--panel-line); }
 /* 組（買目＋そのレースのオッズ）の間は線なし・組と組の間は線（10/4）＝どの買目のオッズかを線で見せる */
 .talk-band .buy-line .race-split > .race-col + .tk-rk-col.tk1-pair { border-left-color: transparent; }
 .talk-band .buy-line .race-split.tk1-4 > .tk-rk-col + .race-col { border-left: 2px solid var(--panel-line); }
