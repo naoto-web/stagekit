@@ -3737,8 +3737,9 @@ html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note .tick-mn-note .tn-t {
 .abs-tag { display: inline-block; margin-left: .3em; padding: 0 .28em; font-size: .72em; font-weight: 900; line-height: 1.35;
   color: #fff; background: #555; border-radius: 4px; vertical-align: .12em; white-space: nowrap; }
 /* #46（11/28 Naoto）補充・追加の札＝欠と同じ形。補＝青・追＝緑（html.hjcol-same で両方青）。.pre＝名前の前に置くとき（すき間は右側） */
-.abs-tag.hj-tag { background: #1565c0; }
-.abs-tag.hj-tag.hj-tsui { background: #2e7d32; }
+/* #50（11/28 Naoto「案E」）補・追とも水色（車番の青＝4・緑＝6、メンバーカラーと重ならない色）。旧＝補 青 #1565c0／追 緑 #2e7d32 */
+.abs-tag.hj-tag { background: #00a6d6; }
+.abs-tag.hj-tag.hj-tsui { background: #00a6d6; }
 html.hjcol-same .abs-tag.hj-tag.hj-tsui { background: #1565c0; }
 .abs-tag.pre { margin-left: 0; margin-right: .3em; }
 

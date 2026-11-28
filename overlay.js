@@ -5186,7 +5186,8 @@
   /* #46（11/28 Naoto「（）の選手って何？とよく聞かれる」）補充・追加＝「補」「追」の札（欠と同じ形）。札は名前の前（欠も）・補＝青／追＝緑。
      &hjpos=post＝名前の後ろ（欠も後ろ＝旧の位置）／&hjcol=same＝補・追とも青／&hjtag=0＝旧（括弧・欠は後ろ） */
   var HJTAG = params.get("hjtag") !== "0";
-  var HJPRE = HJTAG && params.get("hjpos") !== "post";
+  // #50（11/28 Naoto「やっぱり名前の後ろ・車番と近い・名前の書き出しがずれる」）既定＝後ろ。&hjpos=pre で前
+  var HJPRE = HJTAG && params.get("hjpos") === "pre";
   if (HJTAG && params.get("hjcol") === "same") document.documentElement.classList.add("hjcol-same");
   function hjTag(hj) { var k = String(hj).charAt(0); return '<span class="abs-tag hj-tag' + (k === "追" ? " hj-tsui" : "") + (HJPRE ? " pre" : "") + '">' + esc(k) + "</span>"; }
   function absTag() { return HJPRE ? '<span class="abs-tag pre">欠</span>' : ABS_TAG; }
