@@ -1293,6 +1293,31 @@ html.rbmfit .band-meta.rbm-bottom .rbm-ore { flex: 0 0 auto; overflow: visible; 
 .sub-line.subv-col .ore-row .car, .sub-line.subv-tight .ore-row .car { width: calc(var(--cz, 28px) * .8);
   height: calc(var(--cz, 28px) * .8); font-size: calc(var(--cz, 28px) * .66); }
 .sub-line.subv-col, .sub-line.subv-tight { gap: 4px; }
+/* #49（11/28 Naoto）NEXT欄を順番に表示しているときの印（場名Rの札の右・●＝今出しているレース） */
+.nx-dots { margin-left: .35em; font-size: .7em; letter-spacing: .05em; color: var(--sub); white-space: nowrap; }
+/* 🔄11/28 Naoto「ドアがバタン」＝切り替えの動き（.nx-out＝今の中身が出ていく 0.28秒 → .nx-swap＝新しい中身が入る）。種類は html.nxa-* */
+/* door＝左の蝶番で閉じて（横向きに）→ バタンと開いて少し揺れる */
+html.nxa-door .sub-line.nx-rot { transform-origin: left center; }
+html.nxa-door .sub-line.nx-out { animation: nxDoorOut calc(.28s * var(--nxk, 1)) ease-in forwards; }
+html.nxa-door .sub-line.nx-swap { animation: nxDoorIn calc(.7s * var(--nxk, 1)) ease-out both; }
+@keyframes nxDoorOut { to { transform: perspective(600px) rotateY(88deg); } }
+@keyframes nxDoorIn { 0% { transform: perspective(600px) rotateY(88deg); } 45% { transform: perspective(600px) rotateY(-14deg); }
+  65% { transform: perspective(600px) rotateY(7deg); } 82% { transform: perspective(600px) rotateY(-3deg); } 100% { transform: none; } }
+/* spin＝札がくるっと横に1回転して替わる */
+html.nxa-spin .sub-line.nx-out { animation: nxSpinOut calc(.28s * var(--nxk, 1)) ease-in forwards; }
+html.nxa-spin .sub-line.nx-swap { animation: nxSpinIn calc(.5s * var(--nxk, 1)) cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes nxSpinOut { to { transform: perspective(600px) rotateX(90deg); } }
+@keyframes nxSpinIn { from { transform: perspective(600px) rotateX(-90deg); } to { transform: none; } }
+/* drop＝下へ抜けて、新しい中身が上から落ちてきて弾む */
+html.nxa-drop .sub-line.nx-out { animation: nxDropOut calc(.28s * var(--nxk, 1)) ease-in forwards; }
+html.nxa-drop .sub-line.nx-swap { animation: nxDropIn calc(.6s * var(--nxk, 1)) ease-out both; }
+@keyframes nxDropOut { to { transform: translateY(40px); opacity: 0; } }
+@keyframes nxDropIn { 0% { transform: translateY(-70px); opacity: 0; } 55% { transform: translateY(8px); opacity: 1; } 75% { transform: translateY(-4px); } 100% { transform: none; } }
+/* slide＝左へ抜けて、右から入る */
+html.nxa-slide .sub-line.nx-out { animation: nxSlideOut calc(.28s * var(--nxk, 1)) ease-in forwards; }
+html.nxa-slide .sub-line.nx-swap { animation: nxSlideIn calc(.45s * var(--nxk, 1)) cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes nxSlideOut { to { transform: translateX(-40px); opacity: 0; } }
+@keyframes nxSlideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; } }
 /* #47（11/28 Naoto）NEXT枠の俺たち目＝車番を買目と同じ大きさ（slim は幅0.85倍も同じ）・札「俺」は車番の0.7倍。html.nxore（&nxore=0 で旧＝0.8倍・13px） */
 html.nxore .sub-line.subv-col .ore-row .car, html.nxore .sub-line.subv-tight .ore-row .car { width: var(--cz, 24px); height: var(--cz, 28px); font-size: calc(var(--cz, 28px) * .82); }
 html.nxore .sub-line.subv-slim .ore-row .car { width: calc(var(--cz, 28px) * .85); }

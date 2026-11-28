@@ -116,6 +116,29 @@
      28pxでも1行に入らない長い買目だけ区切りの後ろで折り返す（縞＋字下げ）・合計/投資は「計5点 投¥5,000」の1行・noteは札の右に🔥だけ。
      &subv=tight＝正方形バッジ版／&subv=col＝着順の列（見送り案）／&subv=0＝従来 */
   var SUBV = params.get("subv") || "slim";
+  /* #49（11/28 Naoto「3場配信の時、NEXT欄に入らない分は交互に表示」）NEXTに出せるレースが2つ以上なら NXROT 秒ごとに順番に。見出しに「●○」。&nxrot=秒・0 で旧 */
+  var NXROT = params.has("nxrot") ? Math.max(0, +params.get("nxrot") || 0) : 8;
+  var nxMulti = false, nxTick = 0, nxLast = null, nxPrevKey = {}; // nxMulti＝どこかのNEXT欄が2つ以上を回している／nxLast＝直前に選んだ {i, n}
+  /* 🔄11/28 Naoto「ドアがバタンってなるパターン」＝切り替えは2段階：①今の中身が出ていく（.nx-out・0.28秒）→②描き直して新しい中身が入る（.nx-swap）。
+     動きの種類＝&nxanim=drop（既定＝11/28 Naoto「C案」・上から落ちて弾む）｜door（左の蝶番でバタン）｜spin（くるっと回転）｜slide（横にスライド） */
+  var NXANIM = params.get("nxanim") || "drop"; // 11/28 Naoto「C案でお願いします」＝既定は drop
+  document.documentElement.classList.add("nxa-" + NXANIM);
+  // 🔄11/28 Naoto「それぞれのアニメーションもっとゆっくり」＝動きの時間の倍率（既定2＝最初の案の2倍の時間）。&nxk=1 で最初の速さ
+  var NXK = Math.max(0.3, +params.get("nxk") || 2);
+  document.documentElement.style.setProperty("--nxk", String(NXK));
+  if (NXROT) setInterval(function () {
+    var t = Math.floor(Date.now() / (NXROT * 1000));
+    if (t === nxTick || nxTick === -1) return;
+    if (!(nxMulti && state && SCENE !== "talk")) { nxTick = t; return; }
+    var outs = document.querySelectorAll(".sub-line.nx-rot");
+    Array.prototype.forEach.call(outs, function (b) { b.classList.remove("nx-swap"); b.classList.add("nx-out"); });
+    nxTick = -1; // 出ていく間は次の判定を止める
+    setTimeout(function () {
+      nxTick = t;
+      Array.prototype.forEach.call(outs, function (b) { b.classList.remove("nx-out"); });
+      try { renderPreds(); } catch (e) {}
+    }, outs.length ? Math.round(280 * NXK) : 0);
+  }, 200);
   // #47（11/28 Naoto「俺たち目のバッジ小さい？」）NEXT枠の俺たち目の車番を買目と同じ大きさに（旧＝0.8倍）・札「俺」も合わせて大きく。&nxore=0 で旧
   if (params.get("nxore") !== "0") document.documentElement.classList.add("nxore");
   if (SUBV === "0") SUBV = "";
@@ -4490,6 +4513,33 @@
       });
       return best || splitAutoNext;
     };
+    // #49 NEXTに出せるレースが2つ以上なら順番に（今の選び方の1つ目＋ほかの場の今のレースで入力あり・未発走）。
+    // 🔄11/28 Naoto「切り替わるならレース順の表示でいい・noteが先ならそれでも」＝回すときは全部を発走の早い順に並べる（noteで買目なしを後ろへ回す §NXSKIP は1つだけのときに残る）
+    var nextKeyOf0 = nextKeyOf;
+    nextKeyOf = function (rc, ctx) {
+      var k0 = nextKeyOf0(rc, ctx);
+      nxLast = null;
+      if (!NXROT || !k0 || !rc) return k0;
+      ctx = ctx || nxCtxB;
+      var s0 = raceStartSecOf(k0), list = [], more = [{ k: k0, sec: s0 === null ? Infinity : s0 }];
+      state.venues.forEach(function (v) {
+        var vn = v.name, r = state.currentRace[vn];
+        if (vn === ctx.name || !r) return;
+        var k = window.Derive.raceKey(vn, r);
+        if (k === k0 || !hasContentKey(rc, k)) return;
+        var sec = raceStartSecOf(k);
+        if (sec !== null && sec <= nowSec()) return;
+        more.push({ k: k, sec: sec === null ? Infinity : sec });
+      });
+      more.sort(function (a, b) { return a.sec - b.sec; }); // 発走の早い順（同じ時刻は今の選び方を先）
+      more.forEach(function (o) { list.push(o.k); });
+      if (list.length < 2) return k0;
+      nxMulti = true;
+      var tk = nxTick > 0 ? nxTick : Math.floor(Date.now() / (NXROT * 1000));
+      var i = (tk % list.length + list.length) % list.length;
+      nxLast = { i: i, n: list.length };
+      return list[i];
+    };
     var subFrameOf = function (rc, ctx) {
       if (!rc) return false;
       if (SPLIT) { var nk = nextKeyOf(rc, ctx); return !!nk && (SUB_FIXED || !SUBAUTO || hasContentKey(rc, nk)); }
@@ -4840,6 +4890,7 @@
 
       // ②サブ予想帯（8/6 FB13・FB17）：配信者ごとの場＝raceSubBy。サブ未選択の配信者の枠は畳む
       // 🧪10/2 Naoto「③レース展開のワイプにもNEXT枠」＝③にも同じ枠（ksband-）を作って描く（中身は③の盤面のレース基準）
+      if (slot === "a") nxMulti = false; // #49 席aの描き直しから数え直す
       [["sband-", "#scene-race", nxCtxB], ["ksband-", "#scene-tenkai", nxCtxT]].forEach(function (sp) {
       var sHead = $(sp[0] + "head-" + slot);
       if (sHead) {
@@ -4848,6 +4899,7 @@
         // 席ごとに枠を出し入れ（9/7・§10項98）：ON＝パネル表示＋カメラ穴362（.sub-on）／OFF＝パネル非表示＋カメラ穴544。
         // 丸かぶり・SUB_FIXEDでは svn が null でも枠は出る（ヘッダーだけ残る）
         var sFrame = subFrameOf(rc, sp[2]);
+        var nxDots = nxLast && nxLast.n > 1 ? '<span class="nx-dots">' + Array.apply(null, Array(nxLast.n)).map(function (_, j) { return j === nxLast.i ? "●" : "○"; }).join("") + "</span>" : ""; // #49
         if (sPanel) sPanel.classList.toggle("sub-on", sFrame);
         var sCam = document.querySelector(sp[1] + " .race-sub-wrap .race-wipes .cam.slot-" + slot);
         if (sCam) sCam.classList.toggle("sub-on", sFrame);
@@ -4881,6 +4933,7 @@
             : svn && state.currentRace[svn] ? window.Derive.raceKey(svn, state.currentRace[svn]) : null;
           // 第5引数keepAll=true＝NEXT枠だけ「全」を展開せず元記法で描く（8/8 FB70）
           sBand.innerHTML = sKey ? raceColHead(rc, sKey, false, true) + raceBuyHtml(rc, sKey, false, false, true, true) : ""; // NEXT枠はオッズなし・§188 🔥は場名の左
+          if (nxDots) { var nxHd = sBand.querySelector(".race-col-head"); if (nxHd) nxHd.insertAdjacentHTML("beforeend", nxDots); } // #49
           sBand.classList.toggle("note-fire", noteFireOn(rc, sKey)); // 🧪NEXT枠も、そのレースが note なら内側だけ
           if (SUBV) {
             sBand.classList.add("subv-" + SUBV);
@@ -4890,6 +4943,11 @@
             fitSubGrow(sBand);
           }
           fitSubRows(sBand); // 買い目・合計とも折り返さず幅ぴったりに自動縮小（8/6 FB14）
+          // #49 順番に出しているレースが替わった瞬間だけ入ってくる動き（大きさを測り終えたあとに付ける）
+          var nxId = sp[0] + slot, nxWas = nxPrevKey[nxId];
+          nxPrevKey[nxId] = sKey;
+          sBand.classList.toggle("nx-rot", !!nxDots); // 順番に出している枠の目印（出ていく動きの対象）
+          if (nxDots && nxWas && sKey && nxWas !== sKey) { sBand.classList.remove("nx-swap"); void sBand.offsetWidth; sBand.classList.add("nx-swap"); clearTimeout(sBand.__nxT); sBand.__nxT = setTimeout(function () { sBand.classList.remove("nx-swap"); }, Math.round(900 * NXK)); }
         }
       }
       });
