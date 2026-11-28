@@ -1175,6 +1175,8 @@ html.vcol [data-vcb="4"] { background: #e4f7dd !important; }
 .rb2 .race-band .band-meta.rbm-bottom { right: auto; bottom: auto; font-size: 24px; line-height: 1.15; }
 .band-meta.rbm-bottom { display: flex; align-items: center; gap: 18px; padding-top: 4px; border-top: 2px solid #d5d9e1; box-sizing: border-box; min-height: 38px; } /* 高さ固定＝俺たち目のある枠とない枠で線の高さがそろう */
 .band-meta.rbm-bottom .bm-part { white-space: nowrap; }
+/* #48（11/28 Naoto）俺たち目は縮めない・切り取らない（右が長いと .buy-line の flex:1＋overflow:hidden でオッズと枠の右の線が切れていた）。入らないときは JS rbmFit が字を小さく */
+html.rbmfit .band-meta.rbm-bottom .rbm-ore { flex: 0 0 auto; overflow: visible; }
 .band-meta.rbm-bottom .rbm-ore + .bm-part, .band-meta.rbm-bottom > .bm-part:first-child { margin-left: auto; }
 /* 🐞10/16 隠した欄（.hidden）は必ず隠す＝上の display:flex が後に書いてあるので .hidden に勝っていた（人気順の表の上に区切り線だけ出た） */
 .band-meta.rbm-left.hidden, .band-meta.rbm-top.hidden, .band-meta.rbm-bottom.hidden { display: none; }

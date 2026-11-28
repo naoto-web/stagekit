@@ -2445,6 +2445,17 @@
     var w = car ? car.getBoundingClientRect().width : 0;
     ore.style.marginLeft = w > 0 ? (w * ORER_N).toFixed(1) + "px" : "";
   }
+  /* #48（11/28 Naoto「俺たち目のオッズの右側の枠線が切れてる」）下の1行（rbm-bottom）の俺たち目は縮めない（CSS html.rbmfit）。
+     1行に入らないときは下の1行の字を1pxずつ小さくする（下限16px）。組んだ直後と見回り（fitRaceBands）で確かめる。&rbmfit=0 で旧 */
+  var RBMFIT = params.get("rbmfit") !== "0";
+  if (RBMFIT) document.documentElement.classList.add("rbmfit");
+  function rbmFit(band) {
+    if (!RBMFIT || !band || !band.parentElement) return;
+    var meta = band.parentElement.querySelector(".band-meta.rbm-bottom");
+    if (!meta || meta.classList.contains("hidden") || !meta.clientWidth) return;
+    var fs = parseFloat(getComputedStyle(meta).fontSize) || 24, g = 0;
+    while (meta.scrollWidth > meta.clientWidth + 0.5 && fs > 16 && g++ < 12) { fs -= 1; meta.style.fontSize = fs + "px"; }
+  }
   var RB1COL = params.get("rb1col") !== "0", RB1COL_PX = +(params.get("rb1colpx") || 25); // §150 1列のときの左の空き（上限px）
   function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
   /** 合計欄（band-meta）を左の列／上の1行に置き、俺たち目をその中へ移し、買目が使える場所（帯の padding）を空ける。
@@ -3028,6 +3039,7 @@
       if (band.firstChild && !band.querySelector(".rb-flow")) { packRaceBand(band); return; }
       fitRbScale(band);
       orePad(band); // #40
+      rbmFit(band); // #48
     });
   }
 
@@ -3293,6 +3305,7 @@
     }
     fitRbScale(band); // 実描画ベースの最終検証（はみ出し・合計/投資への重なりが残れば縮める）
     orePad(band); // #40
+    rbmFit(band); // #48
   }
   /* 🐞9/29 Naoto「入力していなくても買目欄がぴくぴくする」＝リアルタイムオッズの文字数が変わる（「31」→「8.2」）たびに
      「枠いっぱいの倍率」を計算し直し、区画全体が 1.529⇄1.55倍 のように伸び縮みしていた（20〜30秒ごと）。
