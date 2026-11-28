@@ -9373,6 +9373,10 @@
   var STKHIDE = params.has("stkhide") ? +params.get("stkhide") || 0 : 310 / 60;
   // 10/26 Naoto「右下だと顔に被りそう」＝札はワイプの右上の角（&stkpos=br で旧の右下）
   if (params.get("stkpos") !== "br") document.body.classList.add("stk-tr");
+  /* #42（11/28 Naoto）連続の数で色が変わる＝2 オレンジ→3 赤→4 紫→5〜 虹（的中バッジ .skN・札は body.skc で t2〜t5 の地を変える）。
+     note・万車のバッジは地を残して外側の輪だけ色。既定ON・&skcolor=0 で旧 */
+  var SKCOLOR = params.get("skcolor") !== "0";
+  if (SKCOLOR) document.body.classList.add("skc");
   function currentStreakOf(pid) {
     if (!state || !state.results) return 0;
     var best = null, bestSec = -1;
@@ -9518,7 +9522,7 @@
     badge.setAttribute("data-hid", String(hit.id)); // §157 席替えで移すときの目印
     var streak = hitStreakOf(hit);
     badge.className = "hit-fx-badge" + (hit.manche ? " manche" : "") + (hit.note ? " note" : "") +
-      (streak >= 2 ? " streak" : "") + (streak >= 4 ? " streak-hi" : "") + (key ? " m-" + key : "");
+      (streak >= 2 ? " streak" : "") + (streak >= 4 ? " streak-hi" : "") + (SKCOLOR && streak >= 2 ? " sk" + Math.min(streak, 5) : "") + (key ? " m-" + key : "");
     // 式別が混ざった同時的中ではラベルを出さない（片方だけ出すと嘘になる・8/27 FB148）
     var typeLabel = (!hit.mixedType && hit.type && hit.type !== "3連単") ? " " + hit.type : "";
     // 同時に複数当たったら倍率を全部並べる（同着で両方の並びを持っていた時など・8/27 FB148）。

@@ -3560,6 +3560,38 @@ html.nxgap .sub-line.subv-tight .pred-line.chips.sg-alt { background: transparen
   0%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 3px #fff, 0 0 18px 6px rgba(255,110,0,.75); }
   50%      { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 3px #fff, 0 0 34px 14px rgba(255,60,0,.95); }
 }
+/* #42（11/28 Naoto）連続の数で的中バッジの色が変わる（body.skc・&skcolor=0 で旧）。
+   普通の的中＝地の色：2 オレンジ／3 赤／4 紫／5〜 虹（流れる）。note・万車＝地はそのまま、外側の輪が同じ色の段階（5〜は虹の輪） */
+body.skc .hit-fx-badge.sk2:not(.manche) { background: linear-gradient(120deg, #ffe0b2, #ffa726 35%, #f57c00 55%, #ffa726 75%, #ffe0b2); color: #2a1200; border: 2px solid #fff; }
+body.skc .hit-fx-badge.sk3:not(.manche) { background: linear-gradient(120deg, #ffcdd2, #ef5350 35%, #c62828 55%, #ef5350 75%, #ffcdd2); color: #fff; border: 2px solid #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,.6); }
+body.skc .hit-fx-badge.sk4:not(.manche) { background: linear-gradient(120deg, #f3d1ff, #b04ce0 35%, #7b1fa2 55%, #b04ce0 75%, #f3d1ff); color: #fff; border: 2px solid #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,.6); }
+body.skc .hit-fx-badge.sk5:not(.manche) {
+  background: linear-gradient(90deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff,
+    #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff, #ff5252);
+  background-size: 200% 100%; color: #fff; border: 2px solid #fff; text-shadow: 0 2px 6px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.9);
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite, rainbowSweep 1.6s linear .5s infinite, streakGlow 1.1s ease-in-out .5s infinite; }
+body.skc .hit-fx-badge.sk2 { --skc: #ff9800; --skg: rgba(255,152,0,.85); }
+body.skc .hit-fx-badge.sk3 { --skc: #e53935; --skg: rgba(229,57,53,.9); }
+body.skc .hit-fx-badge.sk4 { --skc: #9c27b0; --skg: rgba(156,39,176,.9); }
+body.skc .hit-fx-badge.manche.sk2, body.skc .hit-fx-badge.manche.sk3, body.skc .hit-fx-badge.manche.sk4 {
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitShake .55s linear .5s infinite, rainbowSweep 1.6s linear .5s infinite, skRing 1.1s ease-in-out .5s infinite; }
+body.skc .hit-fx-badge.manche.sk5 {
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitShake .55s linear .5s infinite, rainbowSweep 1.6s linear .5s infinite, skRing5 1.1s ease-in-out .5s infinite; }
+/* 🔄11/28 Naoto「noteも地は連続の色・noteは文字と枠の色で」＝note（万車でない）の連続は地を普通と同じ色にして、金の太い枠＋金の光（「note」は普通の文字＝🔄Naoto「普通の文字でいいよ」） */
+body.skc .hit-fx-badge.note.sk2:not(.manche), body.skc .hit-fx-badge.note.sk3:not(.manche), body.skc .hit-fx-badge.note.sk4:not(.manche) {
+  border: 4px solid #ffd54f; animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite, noteGlow 1.6s ease-in-out .5s infinite; }
+body.skc .hit-fx-badge.note.sk5:not(.manche) { border: 4px solid #ffd54f;
+  animation: hitPop .5s cubic-bezier(.2, 1.6, .4, 1), hitBounce 1.4s ease-in-out .5s infinite, rainbowSweep 1.6s linear .5s infinite, noteGlow 1.6s ease-in-out .5s infinite; }
+@keyframes skRing {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 5px var(--skc), 0 0 16px 5px var(--skg); }
+  50%      { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 5px var(--skc), 0 0 32px 13px var(--skg); }
+}
+@keyframes skRing5 {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 3px #fff, 0 0 0 7px #ff5252, 0 0 0 10px #ffb300, 0 0 0 13px #43d675, 0 0 0 16px #5a7bff, 0 0 20px 16px rgba(196,107,255,.6); }
+  50%      { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 3px #fff, 0 0 0 7px #ff5252, 0 0 0 10px #ffb300, 0 0 0 13px #43d675, 0 0 0 16px #5a7bff, 0 0 36px 22px rgba(196,107,255,.9); }
+}
 
 /* ---------- ティッカー ---------- */
 .ticker {
@@ -4421,6 +4453,20 @@ body.stk-tr .stk-chip.t4::after, body.stk-tr .stk-chip.t5::after { right: 6px; b
 @keyframes stkOutB { 0% { filter: none; opacity: 1; transform: none; } 45% { filter: grayscale(1) brightness(.85); opacity: 1; transform: scale(1); } 100% { filter: grayscale(1); opacity: 0; transform: scale(.4); } }
 .stk-chip.outC { animation: stkOutC 1s cubic-bezier(.5,0,.75,0) forwards !important; }
 @keyframes stkOutC { 0% { transform: none; opacity: 1; } 20% { transform: translateY(-10px); } 100% { transform: translateY(90px) rotate(-8deg); opacity: 0; } }
+/* #42（11/28 Naoto）🎯N連続中の札も的中バッジと同じ色の段階（body.skc）＝2 オレンジ／3 赤（光の帯はそのまま）／4 紫（虹のふちはそのまま）／5〜 虹の地（流れる）＋白のふち */
+body.skc .stk-chip.t2 { background: linear-gradient(120deg, #ffe0b2, #ffa726 35%, #f57c00 55%, #ffa726 75%, #ffe0b2); color: #2a1200; border-color: #fff; }
+body.skc .stk-chip.t3 { color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6);
+  background-image: linear-gradient(105deg, rgba(255,255,255,0) 40%, rgba(255,255,255,.75) 50%, rgba(255,255,255,0) 60%), linear-gradient(120deg, #ffcdd2, #ef5350 35%, #c62828 55%, #ef5350 75%, #ffcdd2); }
+body.skc .stk-chip.t4 { color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6);
+  background: linear-gradient(120deg, #f3d1ff, #b04ce0 35%, #7b1fa2 55%, #b04ce0 75%, #f3d1ff) padding-box,
+              linear-gradient(90deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff, #ff5252) border-box;
+  background-size: 100% 100%, 300% 100%; }
+body.skc .stk-chip.t5 { color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,.8), 0 0 2px #000;
+  background: linear-gradient(90deg, #ff5252, #ffb300, #ffe14d, #43d675, #35c4e8, #5a7bff, #c46bff, #ff5252) padding-box,
+              linear-gradient(#fff, #fff) border-box;
+  background-size: 300% 100%, 100% 100%;
+  animation: skChip5 2s linear infinite, stkBounce 1s ease-in-out infinite, stkGlow4 1s ease-in-out infinite; }
+@keyframes skChip5 { from { background-position: 0 0, 0 0; } to { background-position: 300% 0, 0 0; } }
 
 /* ══ §182 登録者のお祝い（11/1 Naoto）＝①トークに全画面・約11.5秒（overlay.js spawnCelebrate・見本＝モック/登録者1万人お祝い/） ══ */
 .cel { position: absolute; inset: 0; z-index: 9000; pointer-events: none; opacity: 0; transition: opacity .35s; overflow: hidden; }
