@@ -2421,6 +2421,18 @@
   /* #39（11/28 Naoto「横にしたいわけではなく、あきらかに横が大きいなら横・バッジが大きく表示されるなら2行でも全然OK」）
      ②の買目2行は「縦に積む」決まり（9/26 SOLOV2・§148 RB2V）を外し、バッジが大きく入る方（縦／横）をそのまま選ぶ。既定ON・&rb2h=0 で旧（2行は縦） */
   var RB2H = params.get("rb2h") !== "0";
+  /* #40（11/28 Naoto「一人配信の俺たち目＝左寄せだけど1マス分空ける」）②の一人配信は下の1行の俺たち目の左に、すぐ上の買目の車番バッジ N個ぶんの空き。
+     バッジの大きさは帯ごとに変わる＝買目を組んだ直後と見回り（fitRaceBands）で測り直す。&orer=0.5（既定＝半マス）｜1｜2｜0＝旧（左端） */
+  var ORER_N = params.get("orer") === "0" ? 0 : (+params.get("orer") > 0 ? +params.get("orer") : 0.5);
+  function orePad(band) {
+    var meta = band && band.parentElement ? band.parentElement.querySelector(".band-meta.rbm-bottom") : null;
+    var ore = meta ? meta.querySelector(".rbm-ore") : null;
+    if (!ore) return;
+    var solo = document.body.classList.contains("seat-a-off") !== document.body.classList.contains("seat-b-off");
+    var car = ORER_N && solo ? band.querySelector(".pred-line .car") : null;
+    var w = car ? car.getBoundingClientRect().width : 0;
+    ore.style.marginLeft = w > 0 ? (w * ORER_N).toFixed(1) + "px" : "";
+  }
   var RB1COL = params.get("rb1col") !== "0", RB1COL_PX = +(params.get("rb1colpx") || 25); // §150 1列のときの左の空き（上限px）
   function rbMetaMode(band) { return RBMETA && SCENE === "race" && /^band-pred-/.test(band.id || "") ? RBMETA : ""; }
   /** 合計欄（band-meta）を左の列／上の1行に置き、俺たち目をその中へ移し、買目が使える場所（帯の padding）を空ける。
@@ -3003,6 +3015,7 @@
       // 非表示中にrenderPredsされた帯はパック未実施のまま残る（旧48px予約も廃止済み）→表示復帰を検知して自己修復
       if (band.firstChild && !band.querySelector(".rb-flow")) { packRaceBand(band); return; }
       fitRbScale(band);
+      orePad(band); // #40
     });
   }
 
@@ -3267,6 +3280,7 @@
       });
     }
     fitRbScale(band); // 実描画ベースの最終検証（はみ出し・合計/投資への重なりが残れば縮める）
+    orePad(band); // #40
   }
   /* 🐞9/29 Naoto「入力していなくても買目欄がぴくぴくする」＝リアルタイムオッズの文字数が変わる（「31」→「8.2」）たびに
      「枠いっぱいの倍率」を計算し直し、区画全体が 1.529⇄1.55倍 のように伸び縮みしていた（20〜30秒ごと）。
