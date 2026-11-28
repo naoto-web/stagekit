@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>配信コンソール</title>
-<link rel="stylesheet" href="console.css?v=20261128-205245">
+<link rel="stylesheet" href="console.css?v=20261128-211216">
 </head>
 <body>
 
@@ -72,6 +72,10 @@
 <!-- 🎉§182 登録者のお祝い（11/1 Naoto「目立つところに」→「配信と予想入力の間に」）＝押す→もう一度押すと①で流れる（中身は console.js） -->
 <!-- 11/10 Naoto「隠す」＝hidden で画面から消す（コードは12/7の1万人記念 全員配信で使い回す）。出すときは下の hidden を外すだけ -->
 <button class="celebrate-btn" id="btn-celebrate" type="button" hidden><span class="cb-main"></span><span class="cb-sub"></span></button>
+
+<!-- #45（11/28 Naoto）配信者へのメッセージ＝あるときだけ出る（中身は console.js の renderNMsg・送り主は出さない）。
+     🔄11/28 Naoto「配信タブと予想入力タブの間が気づきやすい」＝一番上から移した -->
+<div class="n-msg hidden" id="n-msg" role="alert" aria-live="assertive"></div>
 
 <!-- ══════════ 予想入力 ══════════ -->
 <details class="card" open>
@@ -272,11 +276,11 @@
 </div>
 </main>
 
-<script src="autoupdate.js?v=20261128-205245" data-au="banner"></script>
-<script src="config.js?v=20261128-205245"></script>
-<script src="keirin.js?v=20261128-205245"></script>
-<script src="derive.js?v=20261128-205245"></script>
-<script src="sync.js?v=20261128-205245"></script>
-<script src="console.js?v=20261128-205245"></script>
+<script src="autoupdate.js?v=20261128-211216" data-au="banner"></script>
+<script src="config.js?v=20261128-211216"></script>
+<script src="keirin.js?v=20261128-211216"></script>
+<script src="derive.js?v=20261128-211216"></script>
+<script src="sync.js?v=20261128-211216"></script>
+<script src="console.js?v=20261128-211216"></script>
 </body>
 </html>

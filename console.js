@@ -2739,6 +2739,33 @@
     });
   }
 
+  /* #45（11/28 Naoto）配信者へのメッセージ。GAS の action=msg を20秒ごとに読み、確認していないメッセージがあれば一番上に枠を出す。
+     ［確認しました］＝その場で消して GAS に確認の時刻と席の人の名前を残す（ackMsg）。旧GAS（msg を知らない）なら何も出ない。&nmsg=0 で出さない */
+  var NMSG = params.get("nmsg") !== "0";
+  var nMsgAcked = {}; // id → true＝この端末で確認済み（GAS への送信が遅れても出し直さない）
+  function renderNMsg(m) {
+    var el = $("n-msg");
+    if (!el) return;
+    if (!m || !m.text || m.ackAt || nMsgAcked[m.id]) { el.classList.add("hidden"); el.innerHTML = ""; el.removeAttribute("data-id"); return; }
+    if (el.getAttribute("data-id") === m.id && !el.classList.contains("hidden")) return; // 同じメッセージなら描き直さない
+    el.setAttribute("data-id", m.id);
+    var d = new Date(m.at), at = isNaN(d) ? "" : (d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2));
+    el.innerHTML = '<div class="nm-head">📢 お知らせ' + (m.to ? '<span class="nm-to">' + esc(m.to) + 'さんへ</span>' : "") + '<span class="nm-at">' + at + '</span></div>' +
+      '<div class="nm-text">' + esc(m.text) + '</div><button class="btn nm-ok">確認しました</button>';
+    el.classList.remove("hidden");
+    el.querySelector(".nm-ok").addEventListener("click", function () {
+      nMsgAcked[m.id] = true; renderNMsg(m);
+      var by = ((state && state.racers) || []).map(function (r) { return r.name; }).join("・");
+      window.Sync.post({ key: KEY, action: "ackMsg", id: m.id, by: by }).catch(function () {});
+    });
+  }
+  function pollNMsg() {
+    if (!NMSG) return;
+    fetch(window.APP_CONFIG.GAS_URL + "?action=msg", { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.ok) renderNMsg(j.msg); }).catch(function () {});
+  }
+  if (NMSG) { setTimeout(pollNMsg, 2000); setInterval(pollNMsg, 20000); }
+
   /* キャンペーン応募人数のクイック増減（8/9 FB98）：配信中に応募が入るたび更新する運用のため、
      本日設定を開かず「場・レース」カード見出しの＋1/−1で1タップ確定（席替えクイックFB74と同じ
      即時保存・本日設定フォームは読まない）。現在人数も隣に常時表示。

@@ -70,6 +70,16 @@ html.theme-light #payout-rows .pr-err { color: #c62828; }
 .refund-alert .btn.ra-later:hover { background: rgba(0,0,0,.4); }
 @keyframes raPulse { 0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,.55), 0 0 0 0 rgba(255,93,93,.7); } 50% { box-shadow: 0 8px 24px rgba(0,0,0,.55), 0 0 0 14px rgba(255,93,93,0); } }
 .refund-alert.fresh { animation: raPulse 1.2s ease-out 3; }
+/* #45（11/28 Naoto）配信者へのメッセージ＝配信のカードと予想入力の間（あるときだけ） */
+.n-msg { margin: 10px 0; padding: 12px 14px; border-radius: 12px; background: #fff7d6; color: #222; border: 3px solid #f2a900;
+  box-shadow: 0 6px 18px rgba(0,0,0,.35); animation: nMsgPulse 1.4s ease-out 4; }
+.n-msg.hidden { display: none; }
+.n-msg .nm-head { display: flex; align-items: baseline; gap: 10px; font-size: 15px; font-weight: 900; color: #8a5a00; }
+.n-msg .nm-to { color: #222; }
+.n-msg .nm-at { margin-left: auto; font-size: 12px; font-weight: 700; color: #8a7a50; font-variant-numeric: tabular-nums; }
+.n-msg .nm-text { margin: 8px 0 10px; font-size: 20px; font-weight: 800; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.n-msg .btn.nm-ok { width: 100%; font-size: 18px; font-weight: 900; padding: 10px; background: #f2a900; border-color: #f2a900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+@keyframes nMsgPulse { 0%, 100% { box-shadow: 0 6px 18px rgba(0,0,0,.35), 0 0 0 0 rgba(242,169,0,.8); } 50% { box-shadow: 0 6px 18px rgba(0,0,0,.35), 0 0 0 12px rgba(242,169,0,0); } }
 
 /* 俺たち目が買目にない保存の確認バー（8/10 FB118）＝予想フォーム内に出るインライン選択 */
 .ore-guard {
