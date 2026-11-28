@@ -3740,6 +3740,17 @@ html.ticknote.tnaura.tnbox body[data-theme="w"] .tick-note .tick-mn-note .tn-t {
 /* #50（11/28 Naoto「案E」）補・追とも水色（車番の青＝4・緑＝6、メンバーカラーと重ならない色）。旧＝補 青 #1565c0／追 緑 #2e7d32 */
 .abs-tag.hj-tag { background: #00a6d6; }
 .abs-tag.hj-tag.hj-tsui { background: #00a6d6; }
+/* #51（11/28 Naoto）2文字の縦書きの札（補充・追加・欠車）。高さは名前の1行ぶんに収まる大きさ。補充＝薄い青・追加＝薄い赤・欠車＝灰色のまま */
+.abs-tag.v2 { writing-mode: vertical-rl; text-orientation: upright; font-size: .54em; line-height: 1; letter-spacing: 0;
+  padding: .1em .12em; border-radius: 4px; vertical-align: middle; }
+.abs-tag.hj-tag.v2 { background: #d6eaff; color: #0d47a1; box-shadow: inset 0 0 0 1px #90caf9; }
+.abs-tag.hj-tag.hj-tsui.v2 { background: #ffd9d9; color: #b71c1c; box-shadow: inset 0 0 0 1px #ef9a9a; }
+/* 🔄①③の出走表＝札は名前＋下の段（出身・期・年齢）の2行ぶんの右に縦長で（.sl2-nm.nm-side を2列の表に） */
+.sl2-nm.nm-side { display: grid; grid-template-columns: minmax(0, max-content) auto; grid-template-rows: auto auto; justify-content: start; align-content: center; column-gap: 5px; }
+.sl2-nm.nm-side > .sl2-name { grid-column: 1; grid-row: 1; min-width: 0; }
+.sl2-nm.nm-side > .sl2-sub { grid-column: 1; grid-row: 2; min-width: 0; }
+.sl2-nm.nm-side > .sl2-tags { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 3px; align-self: center; }
+.sl2-tags .abs-tag.v2 { margin-left: 0; font-size: min(calc(var(--sl2-rh) * .3), 19px); padding: .14em .16em; border-radius: 5px; }
 html.hjcol-same .abs-tag.hj-tag.hj-tsui { background: #1565c0; }
 .abs-tag.pre { margin-left: 0; margin-right: .3em; }
 

@@ -5189,8 +5189,12 @@
   // #50（11/28 Naoto「やっぱり名前の後ろ・車番と近い・名前の書き出しがずれる」）既定＝後ろ。&hjpos=pre で前
   var HJPRE = HJTAG && params.get("hjpos") === "pre";
   if (HJTAG && params.get("hjcol") === "same") document.documentElement.classList.add("hjcol-same");
-  function hjTag(hj) { var k = String(hj).charAt(0); return '<span class="abs-tag hj-tag' + (k === "追" ? " hj-tsui" : "") + (HJPRE ? " pre" : "") + '">' + esc(k) + "</span>"; }
-  function absTag() { return HJPRE ? '<span class="abs-tag pre">欠</span>' : ABS_TAG; }
+  /* #51（11/28 Naoto「2文字出して縦表示に・追加は薄い赤・補充は薄い青」）札の文字を2文字の縦書きに（欠場は「欠車」）。&hjv=0 で旧（1文字） */
+  var HJV = HJTAG && params.get("hjv") !== "0";
+  var HJSIDE = HJV && !HJPRE && params.get("hjside") !== "0"; // 🔄札を名前＋下の段の2行ぶんの右に大きく
+  if (HJV) ABS_TAG = '<span class="abs-tag v2">欠車</span>';
+  function hjTag(hj) { var k = String(hj).charAt(0), t = HJV ? (k === "追" ? "追加" : k === "補" ? "補充" : String(hj).slice(0, 2)) : k; return '<span class="abs-tag hj-tag' + (k === "追" ? " hj-tsui" : "") + (HJV ? " v2" : "") + (HJPRE ? " pre" : "") + '">' + esc(t) + "</span>"; }
+  function absTag() { return HJPRE ? (HJV ? '<span class="abs-tag v2 pre">欠車</span>' : '<span class="abs-tag pre">欠</span>') : ABS_TAG; }
   function isJimoto(vName, pref) {
     var vp = VENUE_PREF[String(vName || "").replace(/\s/g, "")];
     return !!(JIMOTO && vp && String(pref || "").replace(/\s/g, "") === vp);
@@ -5229,10 +5233,11 @@
       var ab = slAbsent(key, p); // §129
       var hj = c.h && !/欠/.test(c.h) ? c.h : ""; // 補充・追加だけ（keirin.jp の同じ欄に「(欠場)」も入る＝括弧付きの補充扱いにしない）
       return '<li class="sl2-row' + (seriEdge[+p.no] ? " sl2-seri sl2-seri-" + seriEdge[+p.no] : "") + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + (ab ? " sl-abs" : "") + '"' + shd + '><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
-        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (HJPRE ? (ab ? absTag() : "") + (hj ? hjTag(hj) : "") : "") + (SL3 && hj && !HJTAG ? "(" + esc(p.name) + ")" : esc(p.name)) +
-        (HJPRE ? "" : (hj && HJTAG ? hjTag(hj) : !SL3 && hj ? '<span class="sl2-hj">(' + esc(String(hj).charAt(0)) + ")</span>" : "") + (ab ? ABS_TAG : "")) + "</span>" +
+        '<span class="sl2-nm' + (HJSIDE && (hj || ab) ? " nm-side" : "") + '"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (HJPRE ? (ab ? absTag() : "") + (hj ? hjTag(hj) : "") : "") + (SL3 && hj && !HJTAG ? "(" + esc(p.name) + ")" : esc(p.name)) +
+        (HJPRE || HJSIDE ? "" : (hj && HJTAG ? hjTag(hj) : !SL3 && hj ? '<span class="sl2-hj">(' + esc(String(hj).charAt(0)) + ")</span>" : "") + (ab ? ABS_TAG : "")) + "</span>" +
         '<span class="sl2-sub">' + (isJimoto(vName, p.pref) && sub.indexOf(p.pref) === 0 // 地元は下段の県名も同じ色（§52）
-          ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span></span>" +
+          ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span>" +
+        (HJSIDE && (hj || ab) ? '<span class="sl2-tags">' + (hj ? hjTag(hj) : "") + (ab ? ABS_TAG : "") + "</span>" : "") + "</span>" +
         '<span class="sl2-ky">' + esc(c.k || p.kyaku || "") + "</span>" +
         '<span class="sl2-sc' + topCls(sc, scRank) + '">' + esc(sc || "-") + "</span>" + nums + "</li>";
     }).join("");
