@@ -2260,8 +2260,54 @@
     if (active) odHoldRaf = requestAnimationFrame(odHoldStep);
   }
   var OD_BIG_RATIO = 0.15, OD_BIG_MS = 5000; // 大きい変動＝±15%以上・5秒（CSS .od-big と同じ長さ）。9/26 Naoto＝20%→15%・3秒→5秒
+  /* #38（11/28 Naoto「一人配信のレース観戦シーンのオッズ表にも確定キラーン・買目と同じやつ」）
+     空いた席のワイプの3連単オッズ人気順（soloOddsWipe）にも、オッズ確定の演出（§41＝金の光の帯が左→右・通った数字から「キラン」✦→金色）。
+     markOdds は予想パネル（.panel）の中しか見ない＋ワイプは renderPreds の後に描き直される＝ワイプを描いた直後にここを呼ぶ。
+     時刻は買目と同じ odFinAt（確定に変わった瞬間）＝描き直しても続きから。ワイプの表は拡大縮小される＝通過時刻は見た目の位置の割合で出す。
+     既定ON・&wipefin=0 で旧（金色になるだけ） */
+  var WIPEFIN = params.get("wipefin") !== "0";
+  function wipeFin(boxes) {
+    if (!WIPEFIN) return;
+    var now = Date.now();
+    boxes.forEach(function (b) {
+      b.querySelectorAll(".od-sweep").forEach(function (o) { o.remove(); });
+      if (!ODDS) return;
+      var body = b.querySelector(".stc-rkbody");
+      if (!body || !body.clientWidth) return;
+      var br = body.getBoundingClientRect();
+      var passAt = function (el) {
+        var r = el.getBoundingClientRect();
+        if (!r.width || !br.width) return null;
+        return Math.max(0, Math.min(1, ((r.left + r.right) / 2 - br.left) / br.width)) * OD_SWEEP_MS;
+      };
+      var sweepAt = 0;
+      b.querySelectorAll(".od-fin").forEach(function (e) {
+        var at = odFinAt[e.getAttribute("data-rk")];
+        if (!at || now - at >= (ODFX2 ? OD_SWEEP_MS + OD_KIRA_MS : OD_FIN_MS)) return;
+        if (!ODFX2) { e.classList.add("od-finfx"); e.style.setProperty("--odf", -(now - at) + "ms"); }
+        else {
+          e.querySelectorAll(".odn").forEach(function (n) {
+            var t = passAt(n);
+            if (t === null || now - at >= t + OD_KIRA_MS) return;
+            n.classList.add("od-kira");
+            n.style.setProperty("--odkr", (t - (now - at)) + "ms");
+          });
+          var tb = passAt(e);
+          if (tb !== null && now - at < tb + OD_KIRA_MS) { e.classList.add("od-kira-box"); e.style.setProperty("--odkb", (tb - (now - at)) + "ms"); }
+        }
+        if (now - at < OD_SWEEP_MS) sweepAt = at;
+      });
+      if (!sweepAt) return;
+      // 光の帯＝見出し（場名・3連単オッズ人気順）より下の表の面だけ（買目の帯が予想パネルの見出しより下を通るのと同じ）
+      var sw = document.createElement("div");
+      sw.className = "od-sweep";
+      sw.style.cssText = "left:" + body.offsetLeft + "px;top:" + body.offsetTop + "px;width:" + body.offsetWidth + "px;height:" + body.offsetHeight + "px;";
+      sw.style.setProperty("--ods", -(now - sweepAt) + "ms");
+      b.appendChild(sw);
+    });
+  }
   function markOdds() {
-    document.querySelectorAll(".od-sweep").forEach(function (o) { o.remove(); });
+    document.querySelectorAll(".od-sweep").forEach(function (o) { if (!(WIPEFIN && o.closest(".seat-card"))) o.remove(); }); // #38 ワイプの帯は wipeFin
     if (!ODDS) return;
     var now = Date.now();
     document.querySelectorAll(".odn").forEach(function (e) {
@@ -5214,6 +5260,8 @@
       fitRankOdds(body);
       requestAnimationFrame(function () { fitRankOdds(body); });
     });
+    wipeFin(boxes); // #38 確定キラーン
+    requestAnimationFrame(function () { wipeFin(boxes); });
     return true;
   }
   /* #17（11/17〜18 Naoto）①トークのカメラのワイプの左右の帯（4:3のカメラの左右の黒）に、終わったレースの3連単の配当。既定ON・&sidepay=0 で旧（帯なし）。
