@@ -5110,6 +5110,13 @@
     return !!p.absent || /欠/.test(cd.h || "") || window.Derive.absentOf(state, key).indexOf(+p.no) >= 0;
   }
   var ABS_TAG = '<span class="abs-tag">欠</span>';
+  /* #46（11/28 Naoto「（）の選手って何？とよく聞かれる」）補充・追加＝「補」「追」の札（欠と同じ形）。札は名前の前（欠も）・補＝青／追＝緑。
+     &hjpos=post＝名前の後ろ（欠も後ろ＝旧の位置）／&hjcol=same＝補・追とも青／&hjtag=0＝旧（括弧・欠は後ろ） */
+  var HJTAG = params.get("hjtag") !== "0";
+  var HJPRE = HJTAG && params.get("hjpos") !== "post";
+  if (HJTAG && params.get("hjcol") === "same") document.documentElement.classList.add("hjcol-same");
+  function hjTag(hj) { var k = String(hj).charAt(0); return '<span class="abs-tag hj-tag' + (k === "追" ? " hj-tsui" : "") + (HJPRE ? " pre" : "") + '">' + esc(k) + "</span>"; }
+  function absTag() { return HJPRE ? '<span class="abs-tag pre">欠</span>' : ABS_TAG; }
   function isJimoto(vName, pref) {
     var vp = VENUE_PREF[String(vName || "").replace(/\s/g, "")];
     return !!(JIMOTO && vp && String(pref || "").replace(/\s/g, "") === vp);
@@ -5148,8 +5155,8 @@
       var ab = slAbsent(key, p); // §129
       var hj = c.h && !/欠/.test(c.h) ? c.h : ""; // 補充・追加だけ（keirin.jp の同じ欄に「(欠場)」も入る＝括弧付きの補充扱いにしない）
       return '<li class="sl2-row' + (seriEdge[+p.no] ? " sl2-seri sl2-seri-" + seriEdge[+p.no] : "") + (o.gap ? " sl2-lg" : "") + (hitRow ? " sl2-hit" : "") + (ab ? " sl-abs" : "") + '"' + shd + '><i class="car c' + p.no + (hitRow ? " hit-glow" : "") + '"' + ph + ">" + p.no + "</i>" +
-        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (SL3 && hj ? "(" + esc(p.name) + ")" : esc(p.name)) +
-        (!SL3 && hj ? '<span class="sl2-hj">(' + esc(String(hj).charAt(0)) + ")</span>" : "") + (ab ? ABS_TAG : "") + "</span>" +
+        '<span class="sl2-nm"><span class="sl2-name' + (isJimoto(vName, p.pref) ? " jm" : "") + '">' + (HJPRE ? (ab ? absTag() : "") + (hj ? hjTag(hj) : "") : "") + (SL3 && hj && !HJTAG ? "(" + esc(p.name) + ")" : esc(p.name)) +
+        (HJPRE ? "" : (hj && HJTAG ? hjTag(hj) : !SL3 && hj ? '<span class="sl2-hj">(' + esc(String(hj).charAt(0)) + ")</span>" : "") + (ab ? ABS_TAG : "")) + "</span>" +
         '<span class="sl2-sub">' + (isJimoto(vName, p.pref) && sub.indexOf(p.pref) === 0 // 地元は下段の県名も同じ色（§52）
           ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</span></span>" +
         '<span class="sl2-ky">' + esc(c.k || p.kyaku || "") + "</span>" +
@@ -5589,8 +5596,8 @@
         return (o.gap ? gapRow : "") +
           '<div class="stc-row stc-tr' + (ab ? " sl-abs" : "") + '"><span><i class="car c' + p.no + '">' + p.no + "</i></span>" +
           // 補充・追加の選手は名前の後ろに「(補)」「(追)」（9/25 Naoto・当初「(補充)」→頭1文字に短縮。GAS cards.h＝「補充」「追加」のまま）
-          '<span class="nm">' + (hj ? '<span class="nm1' + (jm ? " jm" : "") + '">' + esc(p.name) + '<span class="hj">(' + esc(String(hj).charAt(0)) + ")</span></span>"
-            : (jm ? '<span class="jm">' + esc(p.name) + "</span>" : esc(p.name))) + (ab ? ABS_TAG : "") +
+          '<span class="nm">' + (HJPRE && ab ? absTag() : "") + (hj ? '<span class="nm1' + (jm ? " jm" : "") + '">' + (HJPRE ? hjTag(hj) : "") + esc(p.name) + (HJPRE ? "" : HJTAG ? hjTag(hj) : '<span class="hj">(' + esc(String(hj).charAt(0)) + ")</span>") + "</span>"
+            : (jm ? '<span class="jm">' + esc(p.name) + "</span>" : esc(p.name))) + (!HJPRE && ab ? ABS_TAG : "") +
           "<small>" + (jm && sub.indexOf(p.pref) === 0 ? '<span class="jm">' + esc(p.pref) + "</span>" + esc(sub.slice(p.pref.length)) : esc(sub)) + "</small></span>" +
           "<span>" + esc(c.c || "") + "</span><span>" + esc(c.k || p.kyaku || "") + "</span>" +
           '<span class="sc' + scls + '">' + esc(sc) + "</span>" + nums +
