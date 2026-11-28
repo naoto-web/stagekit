@@ -152,10 +152,17 @@
   /* #15（11/26 Naoto）休憩中アイコン＝コンソールで「休憩に入る」を押した人（state.racers[].brk）の席のワイプに break_<色キー>.png を重ねる。
      演出中は隠す＝演出の部品（FX_ROOTS）が画面にある・どこかのワイプが hit-fx の間。0.3秒ごとに見る（描き直しの経路に混ぜない＝どのシーンでも同じ動き）。&brk=0 で出さない */
   var BRK = params.get("brk") !== "0";
+  /* #43（11/28 Naoto「休憩中を押しても反応しない・読み込み直すと出る」）全画面演出の入れ物（#fx-proto-host）は万車の前奏のあと空のまま残る＝
+     それを「演出中」と数えてアイコンを隠し続けていた。入れ物は中に演出が入っている間だけ数える。&brkhost=0 で旧 */
+  var BRKHOST = params.get("brkhost") !== "0";
+  /* #44（11/28 Naoto「理想は的中バッジが上のレイヤーになって被って表示」）隠すのは前奏の間だけ＝バッジ（.hit-fx-badge）と枠の光（.cam.hit-fx）では隠さない
+     （バッジ z-index 5 がアイコン 3 の上に重なる）。&brkbadge=0 で旧 */
+  var BRKBADGE = params.get("brkbadge") !== "0";
   function brkTick() {
     if (!state || !state.racers) return;
     var seats = seatMap();
-    var fx = !!document.querySelector(FX_ROOTS + ", .cam.hit-fx");
+    var brkSel = BRKHOST ? FX_ROOTS.replace(", .fx-proto-host", ", .fx-proto-host:not(:empty)") : FX_ROOTS;
+    var fx = !!document.querySelector(BRKBADGE ? brkSel.replace(", .hit-fx-badge", "") : brkSel + ", .cam.hit-fx");
     document.documentElement.classList.toggle("brk-fx", fx);
     Array.prototype.forEach.call(document.querySelectorAll(".cam.slot-a, .cam.slot-b"), function (cam) {
       if (cam.classList.contains("fx-proto-host")) return;
