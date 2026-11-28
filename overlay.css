@@ -1291,6 +1291,10 @@ html.vcol [data-vcb="4"] { background: #e4f7dd !important; }
 .sub-line.subv-col .ore-row .car, .sub-line.subv-tight .ore-row .car { width: calc(var(--cz, 28px) * .8);
   height: calc(var(--cz, 28px) * .8); font-size: calc(var(--cz, 28px) * .66); }
 .sub-line.subv-col, .sub-line.subv-tight { gap: 4px; }
+/* #47（11/28 Naoto）NEXT枠の俺たち目＝車番を買目と同じ大きさ（slim は幅0.85倍も同じ）・札「俺」は車番の0.7倍。html.nxore（&nxore=0 で旧＝0.8倍・13px） */
+html.nxore .sub-line.subv-col .ore-row .car, html.nxore .sub-line.subv-tight .ore-row .car { width: var(--cz, 24px); height: var(--cz, 28px); font-size: calc(var(--cz, 28px) * .82); }
+html.nxore .sub-line.subv-slim .ore-row .car { width: calc(var(--cz, 28px) * .85); }
+html.nxore .sub-line.subv-tight .ore-label, html.nxore .sub-line.subv-col .ore-label { font-size: calc(var(--cz, 28px) * .7); }
 /* tight＝区切り「−」を消して細い隙間に */
 /* 区切りは「ごく短い横棒」（9/26 Naoto「ハイフンは入れる・めちゃくちゃ短くてOK」）＝文字でなく線で描く（幅を読みやすく固定） */
 .sub-line.subv-tight .pl-sep { font-size: 0; padding: 0; width: calc(var(--cz, 28px) * .3);

@@ -116,6 +116,8 @@
      28pxでも1行に入らない長い買目だけ区切りの後ろで折り返す（縞＋字下げ）・合計/投資は「計5点 投¥5,000」の1行・noteは札の右に🔥だけ。
      &subv=tight＝正方形バッジ版／&subv=col＝着順の列（見送り案）／&subv=0＝従来 */
   var SUBV = params.get("subv") || "slim";
+  // #47（11/28 Naoto「俺たち目のバッジ小さい？」）NEXT枠の俺たち目の車番を買目と同じ大きさに（旧＝0.8倍）・札「俺」も合わせて大きく。&nxore=0 で旧
+  if (params.get("nxore") !== "0") document.documentElement.classList.add("nxore");
   if (SUBV === "0") SUBV = "";
   var SUBV_SLIM = SUBV === "slim"; // slim＝tight の細めバッジ版（CSS .subv-tight と .subv-slim の両方を付ける）
   if (SUBV_SLIM) SUBV = "tight";
